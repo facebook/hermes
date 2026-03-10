@@ -30,6 +30,7 @@
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSCallableProxy.h"
 #include "hermes/VM/JSError.h"
+#include "hermes/VM/JSFinalizationRegistry.h"
 #include "hermes/VM/JSLib.h"
 #include "hermes/VM/JSLib/JSLibStorage.h"
 #include "hermes/VM/JSMapImpl.h"
@@ -282,6 +283,7 @@ Runtime::Runtime(
       verifyEvalIR(runtimeConfig.getVerifyEvalIR()),
       optimizedEval(runtimeConfig.getOptimizedEval()),
       asyncBreakCheckInEval(runtimeConfig.getAsyncBreakCheckInEval()),
+      test262(runtimeConfig.getTest262()),
       traceMode(runtimeConfig.getSynthTraceMode()),
       serializationValues_(
           runtimeConfig.getGCConfig().getOccupancyTarget(),
@@ -390,6 +392,12 @@ Runtime::Runtime(
 
   // Initialize the pre-allocated character strings.
   initCharacterStrings();
+
+  // Allocate a sentinel StringPrimitive for Symbol.description.  Symbols
+  // created without a description, so Symbol(undefined), store this sentinel as
+  // their description string.
+  strForSymbolNoDescription = vmcast<StringPrimitive>(ignoreAllocationFailure(
+      StringPrimitive::createLongLived(*this, ASCIIRef("", (size_t)0))));
 
   GCScope scope(*this);
 
@@ -581,9 +589,21 @@ void Runtime::markRoots(RootAcceptorWithNames &acceptor, bool markLongLived) {
     MarkRootsPhaseTimer timer(*this, RootAcceptor::Section::Locals);
     acceptor.beginRootSection(RootAcceptor::Section::Locals);
     for (Locals *locals = vmLocals; locals; locals = locals->prev) {
-      PinnedHermesValue *pinned = locals->locals();
-      for (size_t i = 0, e = locals->numLocals; i < e; ++i)
-        acceptor.acceptNullable(pinned[i]);
+      for (size_t i = 0, e = locals->numLocals; i < e; ++i) {
+        auto &phv = locals->locals()[i];
+#ifdef HERMESVM_BOXED_DOUBLES
+        if (LLVM_UNLIKELY(phv.isRawHV32())) {
+          PinnedSmallHermesValue sphv{
+              SmallHermesValue::decodeFromHermesValue(phv)};
+          // The encoded HV32 can't be null pointer.
+          acceptor.accept(sphv);
+          phv = sphv.encodeAsHermesValue();
+        } else
+#endif
+        {
+          acceptor.acceptNullable(phv);
+        }
+      }
     }
     acceptor.endRootSection();
   }
@@ -757,6 +777,9 @@ void Runtime::markWeakRoots(WeakRootAcceptor &acceptor, bool markLongLived) {
     for (auto &entry : fixedReadPropCache_) {
       acceptor.acceptWeak(entry.clazz);
     }
+  }
+  for (auto &registry : finalizationRegistries_) {
+    acceptor.acceptWeak(registry);
   }
   for (auto &rm : runtimeModuleList_)
     rm.markWeakRoots(acceptor, markLongLived);
@@ -1022,7 +1045,7 @@ size_t Runtime::mallocSize() const {
       identifierTable_.additionalMemorySize();
 }
 
-#ifdef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES != 0
 void Runtime::potentiallyMoveHeap() {
   // Do a dummy allocation which could force a heap move if handle sanitization
   // is on.
@@ -2017,6 +2040,47 @@ ExecutionStatus Runtime::addToKeptObjects(Handle<> obj) {
 
 void Runtime::clearKeptObjects() {
   keptObjects_ = nullptr;
+}
+
+void Runtime::addFinalizationRegistry(JSFinalizationRegistry *registry) {
+  finalizationRegistries_.emplace_back(registry, *this);
+}
+
+ExecutionStatus Runtime::cleanUpFinalizationCallbacks() {
+  struct : Locals {
+    PinnedValue<JSFinalizationRegistry> registry;
+  } lv;
+  LocalsRAII lraii{*this, &lv};
+
+  // Iterate each registry to run the callback (if it has dead registered
+  // targets). This is conservative but still compliant with the spec. We don't
+  // immediately enqueue a cleanup task when a registered target is dead,
+  // instead, we iterate all registries in a single step at microtask
+  // checkpoint.
+  // Don't cache the size because cleanup() call in the loop may add new
+  // entries. Use index-based iteration because adding new entries can
+  // invalidate iterators.
+  for (size_t i = 0; i < finalizationRegistries_.size();) {
+    // Check if the pointer is null. This registry could have been freed by the
+    // GC when running last cleanup.
+    WeakRoot<JSFinalizationRegistry> &element = finalizationRegistries_[i];
+    if (element) {
+      auto *frPtr = element.get(*this, getHeap());
+      lv.registry = frPtr;
+      if (JSFinalizationRegistry::cleanup(lv.registry, *this) ==
+          ExecutionStatus::EXCEPTION)
+        return ExecutionStatus::EXCEPTION;
+      ++i;
+    } else {
+      // Swap with the last element and pop it out.
+      // We don't need a read barrier here because if the read weak root is
+      // freed later by the GC, we will just skip it because it's dead and it's
+      // spec compliant to do so.
+      element = finalizationRegistries_.back().getNoBarrierUnsafe();
+      finalizationRegistries_.pop_back();
+    }
+  }
+  return ExecutionStatus::RETURNED;
 }
 
 uint64_t Runtime::gcStableHashHermesValue(HermesValue value) {

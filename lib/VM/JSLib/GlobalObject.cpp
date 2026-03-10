@@ -518,6 +518,9 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   // "Forward declaration" of WeakSet.prototype.
   runtime.weakSetPrototype = JSObject::create(runtime);
 
+  // "Forward declaration" of FinalizationRegistry.prototype.
+  runtime.finalizationRegistryPrototype = JSObject::create(runtime);
+
   // Only define WeakRef if microtasks are being used.
   if (LLVM_UNLIKELY(runtime.hasMicrotaskQueue())) {
     // "Forward declaration" of WeakRef.prototype.
@@ -626,6 +629,11 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   // WeakSet constructor.
   runtime.weakSetConstructor.castAndSetHermesValue<NativeConstructor>(
       createWeakSetConstructor(runtime));
+
+  // FinalizationRegistry constructor.
+  runtime.finalizationRegistryConstructor
+      .castAndSetHermesValue<NativeConstructor>(
+          createFinalizationRegistryConstructor(runtime));
 
   // Only define WeakRef constructor if microtasks are being used.
   if (LLVM_UNLIKELY(runtime.hasMicrotaskQueue())) {

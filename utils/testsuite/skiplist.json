@@ -108,6 +108,12 @@
   "skip_list": [
     {
       "paths": [
+        "test262/test/built-ins/FinalizationRegistry/prototype/cleanupSome/"
+      ],
+      "comment": "FinalizationRegistry.prototype.cleanupSome is not supported yet."
+    },
+    {
+      "paths": [
         "test262/test/language/expressions/async-generator/early-errors-expression-binding-identifier-arguments.js",
         "test262/test/language/expressions/async-generator/early-errors-expression-binding-identifier-eval.js",
         "test262/test/language/statements/for-await-of/async-func-decl-dstr-array-elem-init-simple-no-strict.js",
@@ -149,7 +155,6 @@
         "test262/test/language/statements/class/async-gen-method-static/dflt-params-trailing-comma.js",
         "test262/test/language/statements/class/async-gen-method-static/params-trailing-comma-multiple.js",
         "test262/test/language/statements/class/async-gen-method-static/params-trailing-comma-single.js",
-        "test262/test/built-ins/AsyncFromSyncIteratorPrototype/throw/iterator-result-rejected-promise-close.js",
         "test262/test/built-ins/AsyncGeneratorFunction/invoked-as-constructor-no-arguments.js",
         "test262/test/built-ins/AsyncGeneratorFunction/prototype/not-callable.js",
         "test262/test/built-ins/AsyncGeneratorFunction/name.js",
@@ -596,9 +601,6 @@
         "test262/test/built-ins/Promise/any/resolve-before-loop-exit-from-same.js",
         "test262/test/built-ins/Promise/any/resolve-before-loop-exit.js",
         "test262/test/built-ins/Promise/any/resolve-from-same-thenable.js",
-        "test262/test/built-ins/Promise/any/invoke-resolve-error-close.js",
-        "test262/test/built-ins/Promise/any/invoke-then-error-close.js",
-        "test262/test/built-ins/Promise/any/invoke-then-get-error-close.js",
         "test262/test/built-ins/Promise/executor-function-extensible.js",
         "test262/test/built-ins/Promise/executor-function-length.js",
         "test262/test/built-ins/Promise/executor-function-name.js",
@@ -665,10 +667,6 @@
         "test262/test/built-ins/Promise/resolve/resolve-from-promise-capability.js",
         "test262/test/built-ins/Promise/resolve-function-nonconstructor.js",
         "test262/test/built-ins/Promise/undefined-newtarget.js",
-        "test262/test/built-ins/Promise/withResolvers/ctx-ctor.js",
-        "test262/test/built-ins/Promise/withResolvers/promise.js",
-        "test262/test/built-ins/Promise/withResolvers/resolvers.js",
-        "test262/test/built-ins/Promise/withResolvers/result.js",
         "test/built-ins/Promise/all/ctx-ctor.js",
         "test/built-ins/Promise/allSettled/ctx-ctor.js",
         "test/built-ins/Promise/any/ctx-ctor.js",
@@ -676,10 +674,7 @@
         "test/built-ins/Promise/prototype/then/capability-executor-not-callable.js",
         "test/built-ins/Promise/race/ctx-ctor.js",
         "test/built-ins/Promise/reject/ctx-ctor.js",
-        "test/built-ins/Promise/resolve/ctx-ctor.js",
-        "test/built-ins/Promise/race/invoke-resolve-error-close.js",
-        "test/built-ins/Promise/race/invoke-then-error-close.js",
-        "test/built-ins/Promise/race/invoke-then-get-error-close.js"
+        "test/built-ins/Promise/resolve/ctx-ctor.js"
       ],
       "comment": "We support Promise but not every features of it."
     },
@@ -710,20 +705,6 @@
         "test262/test/language/expressions/assignment/destructuring/iterator-destructuring-property-reference-target-evaluation-order.js"
       ],
       "comment": "We have wrong evaluation order for destructing, V8/JSC can't pass them as well."
-    },
-    {
-      "paths": [
-        "test262/test/language/expressions/object/fn-name-class.js",
-        "test262/test/language/expressions/object/method-definition/fn-name-fn.js",
-        "test262/test/language/expressions/object/method-definition/fn-name-gen.js",
-        "test262/test/language/expressions/object/method-definition/generator-name-prop-symbol.js",
-        "test262/test/language/expressions/object/method-definition/name-name-prop-symbol.js",
-        "test262/test/language/statements/class/definition/fn-name-accessor-get.js",
-        "test262/test/language/statements/class/definition/fn-name-accessor-set.js",
-        "test262/test/language/statements/class/definition/fn-name-gen-method.js",
-        "test262/test/language/statements/class/definition/fn-name-method.js"
-      ],
-      "comment": "Computed properties on function methods need special names: T208569602"
     },
     {
       "paths": [
@@ -976,14 +957,7 @@
     "test262/test/language/statements/for/head-lhs-let.js",
     "test262/test/harness/assert-throws-early-syntaxerror.js",
     "test262/test/language/global-code/script-decl-lex-var.js",
-    "test262/test/language/expressions/object/fn-name-accessor-get.js",
-    "test262/test/language/expressions/object/fn-name-accessor-set.js",
-    "test262/test/language/expressions/object/fn-name-arrow.js",
-    "test262/test/language/expressions/object/fn-name-cover.js",
-    "test262/test/language/expressions/object/fn-name-fn.js",
     "test262/test/annexB/built-ins/Object/prototype/__proto__/set-cycle-shadowed.js",
-    "test262/test/built-ins/Proxy/getOwnPropertyDescriptor/resultdesc-is-not-configurable-not-writable-targetdesc-is-writable.js",
-    "test262/test/built-ins/Proxy/defineProperty/targetdesc-not-configurable-writable-desc-not-writable.js",
     "test262/test/built-ins/Array/prototype/concat/create-ctor-poisoned.js",
     "test262/test/built-ins/Array/prototype/filter/create-ctor-poisoned.js",
     "test262/test/built-ins/Array/prototype/map/create-ctor-poisoned.js",
@@ -1117,7 +1091,6 @@
     "test262/test/built-ins/TypedArrays/typedarray-arg-other-ctor-buffer-ctor-not-object-throws.js",
     "test262/test/built-ins/TypedArrays/typedarray-arg-same-ctor-buffer-ctor-value-not-obj-throws.js",
     "test262/test/built-ins/TypedArrayConstructors/ctors/buffer-arg/defined-negative-length.js",
-    "test262/test/built-ins/TypedArrayConstructors/ctors/object-arg/iterator-throws.js",
     "test262/test/built-ins/TypedArrayConstructors/ctors/typedarray-arg/other-ctor-buffer-ctor-not-object-throws.js",
     "test262/test/built-ins/TypedArrayConstructors/ctors/typedarray-arg/same-ctor-buffer-ctor-value-not-obj-throws.js",
     "test262/test/built-ins/TypedArrayConstructors/ctors/typedarray-arg/same-ctor-buffer-ctor-access-throws.js",
@@ -1172,36 +1145,16 @@
     "test262/test/built-ins/TypedArrayConstructors/internals/GetOwnProperty/BigInt/detached-buffer.js",
     "test262/test/built-ins/TypedArrayConstructors/internals/HasProperty/BigInt/detached-buffer.js",
     "test262/test/built-ins/TypedArrayConstructors/internals/HasProperty/BigInt/abrupt-from-ordinary-has-parent-hasproperty.js",
-    "test262/test/built-ins/TypedArrayConstructors/ctors/object-arg/iterating-throws.js",
-    "test262/test/built-ins/TypedArrayConstructors/ctors/object-arg/iterator-not-callable-throws.js",
-    "test262/test/built-ins/TypedArrayConstructors/ctors/object-arg/as-generator-iterable-returns.js",
-    "test262/test/built-ins/TypedArrayConstructors/ctors-bigint/object-arg/as-generator-iterable-returns.js",
-    "test262/test/built-ins/TypedArrayConstructors/ctors-bigint/object-arg/iterator-throws.js",
-    "test262/test/built-ins/TypedArrayConstructors/ctors-bigint/object-arg/iterating-throws.js",
-    "test262/test/built-ins/TypedArrayConstructors/ctors-bigint/object-arg/iterator-not-callable-throws.js",
-    "test262/test/built-ins/TypedArrayConstructors/from/BigInt/iter-next-error.js",
-    "test262/test/built-ins/TypedArrayConstructors/from/BigInt/iter-next-value-error.js",
-    "test262/test/built-ins/TypedArrayConstructors/from/BigInt/iter-access-error.js",
-    "test262/test/built-ins/TypedArrayConstructors/from/BigInt/iter-invoke-error.js",
     "test262/test/built-ins/TypedArrays/object-arg-iterator-not-callable-throws.js",
     "test262/test/built-ins/TypedArrays/from/iter-invoke-error.js",
     "test262/test/built-ins/TypedArrays/from/iter-access-error.js",
     "test262/test/built-ins/TypedArrays/from/iter-next-value-error.js",
     "test262/test/built-ins/TypedArrays/from/iter-next-error.js",
-    "test262/test/built-ins/TypedArray/from/iter-invoke-error.js",
-    "test262/test/built-ins/TypedArray/from/iter-next-error.js",
-    "test262/test/built-ins/TypedArray/from/iter-next-value-error.js",
-    "test262/test/built-ins/TypedArray/from/iter-access-error.js",
     "test262/test/built-ins/TypedArrayConstructors/from/iter-invoke-error.js",
     "test262/test/built-ins/TypedArrayConstructors/from/iter-access-error.js",
     "test262/test/built-ins/TypedArrayConstructors/from/iter-next-value-error.js",
     "test262/test/built-ins/TypedArrayConstructors/from/iter-next-error.js",
-    "test262/test/built-ins/ArrayBuffer/prototype/byteLength/detached-buffer.js",
     "test262/test/built-ins/DataView/custom-proto-access-detaches-buffer.js",
-    "test262/test/built-ins/DataView/detached-buffer.js",
-    "test262/test/built-ins/DataView/prototype/byteLength/detached-buffer.js",
-    "test262/test/built-ins/DataView/prototype/byteLength/instance-has-detached-buffer.js",
-    "test262/test/built-ins/DataView/prototype/byteOffset/detached-buffer.js",
     "test262/test/built-ins/TypedArray/prototype/reduce/callbackfn-detachbuffer.js",
     "test262/test/built-ins/TypedArray/prototype/reduceRight/callbackfn-detachbuffer.js",
     "test262/test/built-ins/TypedArray/prototype/map/callbackfn-detachbuffer.js",
@@ -1280,7 +1233,6 @@
     "test262/test/built-ins/Date/parse/time-value-maximum-range.js",
     "test262/test/built-ins/Date/parse/year-zero.js",
     "mjsunit/string-replace-gc.js",
-    "test262/test/language/expressions/object/fn-name-gen.js",
     "test262/test/built-ins/Object/defineProperties/proxy-no-ownkeys-returned-keys-order.js",
     "test262/test/built-ins/Object/freeze/proxy-no-ownkeys-returned-keys-order.js",
     "test262/test/built-ins/Object/freeze/proxy-with-defineProperty-handler.js",
@@ -2694,9 +2646,7 @@
     "test262/test/built-ins/TypedArrayConstructors/internals/Set/BigInt/key-is-canonical-invalid-index-reflect-set.js",
     "test262/test/staging/sm/Proxy/proxy-no-receiver-overwrite.js",
     "test262/test/staging/sm/Proxy/revoked-get-function-realm-typeerror.js",
-    "test262/test/staging/sm/Proxy/define-writable-as-non-writable.js",
     "test262/test/staging/sm/Proxy/proxy-with-revoked-arguments.js",
-    "test262/test/staging/sm/Proxy/report-writable-as-non-writable.js",
     "test262/test/staging/sm/Array/sort-delete-ascending-order.js",
     "test262/test/staging/sm/Array/pop-no-has-trap.js",
     "test262/test/staging/sm/Array/redefine-nonwritable-length-nonnumeric.js",
@@ -2850,8 +2800,6 @@
     "test262/test/staging/sm/extensions/regress-650753.js",
     "test262/test/staging/sm/extensions/arguments-property-access-in-function.js",
     "test262/test/built-ins/Math/sumPrecise/not-a-constructor.js",
-    "test262/test/built-ins/Math/sumPrecise/throws-on-non-number.js",
-    "test262/test/built-ins/Math/sumPrecise/prop-desc.js",
     "test262/test/staging/sm/statements/property-reference-self-assignment.js",
     "test262/test/staging/sm/statements/try-completion.js",
     "test262/test/staging/sm/statements/for-in-with-gc-and-unvisited-deletion.js",
@@ -3643,14 +3591,10 @@
     },
     {
       "paths": [
-        "mjsunit/harmony/regress/regress-crbug-1372500.js",
-        "mjsunit/weakrefs/basics.js",
         "mjsunit/weakrefs/minor-gc-weak-unregistertoken.js",
-        "mjsunit/weakrefs/symbol-as-weakref-target.js",
         "mjsunit/weakrefs/weak-unregistertoken.js",
         "mjsunit/weakrefs/weak-cell-basics.js",
         "mjsunit/weakrefs/cleanup-is-not-a-microtask.js",
-        "mjsunit/regress/regress-372298921.js",
         "mjsunit/weakrefs/cleanup.js",
         "mjsunit/weakrefs/finalizationregistry-and-weakref.js",
         "mjsunit/weakrefs/finalizationregistry-independent-lifetime-multiple.js",
@@ -3692,7 +3636,7 @@
         "mjsunit/weakrefs/unregister-many.js",
         "mjsunit/weakrefs/unregister-when-cleanup-already-scheduled.js"
       ],
-      "comment": "Finalization Registry"
+      "comment": "Finalization Registry tests that use V8 specific gc()."
     },
     {
       "paths": [
@@ -4640,6 +4584,7 @@
     "test262/test/built-ins/encodeURIComponent/S15.1.3.4_A2.3_T1.js",
     "test262/test/built-ins/parseInt/S15.1.2.2_A8.js",
     "test262/test/built-ins/parseFloat/S15.1.2.3_A6.js",
+    "test262/test/built-ins/TypedArray/prototype/copyWithin/coerced-values-end-detached-prototype.js",
     "test262/test/built-ins/String/prototype/repeat/repeat-string-n-times.js",
     "test262/test/built-ins/RegExp/property-escapes/generated/"
   ],
@@ -4650,8 +4595,6 @@
     "caller",
     "decorators",
     "dynamic-import",
-    "FinalizationGroup",
-    "FinalizationRegistry",
     "import-assertions",
     "regexp-unicode-property-escapes",
     "resizable-arraybuffer",

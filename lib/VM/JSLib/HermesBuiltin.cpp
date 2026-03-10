@@ -17,6 +17,7 @@
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/PrimitiveBox.h"
 #include "hermes/VM/StackFrame-inline.h"
+#include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringView.h"
 
 #include <random>
@@ -923,6 +924,96 @@ CallResult<HermesValue> hermesBuiltinInitRegexNamedGroups(
   return HermesValue::encodeUndefinedValue();
 }
 
+/// \code
+///   HermesBuiltin.setFunctionName = function(F, name, prefix) {}
+/// \endcode
+/// This implements a subset of ES2025 10.2.9 SetFunctionName. This is only ever
+/// used to initialize the names of methods and accessors for object literals
+/// and classes.
+/// \p F is the function object.
+/// \p name is the property key. Only string and symbols are passed.
+/// \p prefix is a number: 0 = no prefix, 1 = "get", 2 = "set".
+CallResult<HermesValue> hermesBuiltinSetFunctionName(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  struct : public Locals {
+    PinnedValue<JSObject> F;
+    PinnedValue<StringPrimitive> computedName;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  lv.F = vmcast<JSObject>(args.getArg(0));
+
+  HermesValue nameArg = args.getArg(1);
+  int prefix = 0;
+  if (args.getArgCount() > 2 && args.getArg(2).isNumber())
+    prefix = static_cast<int>(args.getArg(2).getNumber());
+
+  // Do these spec steps out of order for better efficiency.
+  ASCIIRef prefixStr{};
+  // 5. If prefix is present, then
+  // a. Set name to the string-concatenation of prefix, the code unit 0x0020
+  // (SPACE), and name.
+  if (prefix == 0) {
+    prefixStr = createASCIIRef("");
+  } else if (prefix == 1) {
+    prefixStr = createASCIIRef("get ");
+  } else if (prefix == 2) {
+    prefixStr = createASCIIRef("set ");
+  }
+  SafeUInt32 len(prefixStr.size());
+
+  bool needBrackets = false;
+  // 2. If name is a Symbol, then
+  if (nameArg.isSymbol()) {
+    // a. Let description be name's [[Description]] value.
+    auto *description = runtime.getStringPrimFromSymbolID(nameArg.getSymbol());
+    // b. If description is undefined, set name to the empty String.
+    if (description == runtime.strForSymbolNoDescription.get()) {
+      lv.computedName = runtime.getPredefinedString(Predefined::emptyString);
+    } else {
+      // c. Else, set name to the string-concatenation of "[", description, and
+      // "]".
+      len.add(2);
+      lv.computedName = description;
+      needBrackets = true;
+    }
+  } else {
+    // name is guaranteed to be a string.
+    lv.computedName = vmcast<StringPrimitive>(nameArg);
+  }
+
+  len.add(lv.computedName->getStringLength());
+  auto builderRes = StringBuilder::createStringBuilder(runtime, len);
+  if (LLVM_UNLIKELY(builderRes == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+  auto builder = *builderRes;
+
+  builder.appendASCIIRef(prefixStr);
+  if (needBrackets)
+    builder.appendCharacter('[');
+  builder.appendStringPrim(lv.computedName);
+  if (needBrackets)
+    builder.appendCharacter(']');
+  lv.computedName = *builder.getStringPrimitive();
+
+  // Step 6: Define the "name" property with
+  // { writable: false, enumerable: false, configurable: true }.
+  DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
+  dpf.writable = 0;
+  dpf.enumerable = 0;
+
+  auto defineRes = JSObject::defineOwnProperty(
+      lv.F,
+      runtime,
+      Predefined::getSymbolID(Predefined::name),
+      dpf,
+      lv.computedName);
+  if (LLVM_UNLIKELY(defineRes == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+
+  return HermesValue::encodeUndefinedValue();
+}
+
 void createHermesBuiltins(Runtime &runtime) {
   struct : public Locals {
     PinnedValue<NativeFunction> method;
@@ -1011,6 +1102,11 @@ void createHermesBuiltins(Runtime &runtime) {
       B::HermesBuiltin_initRegexNamedGroups,
       P::initRegexNamedGroups,
       hermesBuiltinInitRegexNamedGroups);
+  defineInternMethod(
+      B::HermesBuiltin_setFunctionName,
+      P::setFunctionName,
+      hermesBuiltinSetFunctionName,
+      3);
 
   // Define the 'requireFast' function, which takes a number argument.
   defineInternMethod(

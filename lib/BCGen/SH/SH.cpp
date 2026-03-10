@@ -3137,7 +3137,8 @@ SHPrivateNameCacheEntry *get_private_name_cache(SHUnit *unit) {
       OS << R"(
 typedef struct SHConsoleContext SHConsoleContext;
 
-SHConsoleContext *init_console_bindings(SHRuntime *shr);
+SHConsoleContext *init_console_bindings(
+    SHRuntime *shr, int scriptArgc, const char *const *scriptArgv);
 
 void free_console_context(SHConsoleContext *consoleContext);
 
@@ -3146,8 +3147,20 @@ bool run_event_loop(
     SHConsoleContext *consoleContext);
 
 SHERMES_EXPORT int main(int argc, char **argv) {
-  SHRuntime *shr = _sh_init(argc, argv);
-  SHConsoleContext *consoleContext = init_console_bindings(shr);
+  int scriptArgc = 0;
+  char **scriptArgv = NULL;
+  int clArgc = argc;
+  for (int i = 1; i < argc; ++i) {
+    if (argv[i][0] == '-' && argv[i][1] == '-' && argv[i][2] == '\0') {
+      scriptArgc = argc - i - 1;
+      scriptArgv = argv + i + 1;
+      clArgc = i;
+      break;
+    }
+  }
+  SHRuntime *shr = _sh_init(clArgc, argv);
+  SHConsoleContext *consoleContext =
+      init_console_bindings(shr, scriptArgc, (const char *const *)scriptArgv);
   bool success =
     _sh_initialize_units(shr, 1, CREATE_THIS_UNIT) &&
     run_event_loop(shr, consoleContext);

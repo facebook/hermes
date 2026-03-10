@@ -1104,7 +1104,7 @@ ExecutionStatus serializeArrayBuffer(
   // 3. Let dataCopy be ? CreateByteDataBlock(size).
   // 4. Perform CopyDataBlockBytes(dataCopy, 0, value.[[ArrayBufferData]], 0,
   // size).
-  auto *bufferData = arrayBuffer->getDataBlock(runtime);
+  auto *bufferData = arrayBuffer->getDataBlock();
   serialized.content.insert(
       serialized.content.end(), bufferData, bufferData + size);
 
@@ -1143,7 +1143,7 @@ CallResult<PseudoHandle<JSArrayBuffer>> deserializeArrayBuffer(
   }
 
   if (size > 0) {
-    auto *block = lv.self->getDataBlock(runtime);
+    auto *block = lv.self->getDataBlock();
     memcpy(block, content, size);
     content += size;
   }
@@ -1166,7 +1166,7 @@ void serializeArrayBufferForTransfer(
 
   // 5.4.2.2. Set dataHolder.[[ArrayBufferData]] to
   // transferable.[[ArrayBufferData]].
-  uint8_t *bufferData = selfArrayBuffer->getDataBlock(runtime);
+  uint8_t *bufferData = selfArrayBuffer->getDataBlock();
 
   if (selfArrayBuffer->external()) {
     uint32_t idx = serialized.externalBuffers.size();

@@ -24,7 +24,7 @@ TEST(GCObjectIterationTest, ForAllObjsGetsAllObjects) {
   auto &gc = rt.getHeap();
   // For Hades, ensure that we iterate across multiple segments.
   constexpr size_t kLargeSize =
-#ifdef HERMESVM_GC_MALLOC
+#if HERMESVM_GCKIND == _HERMESVM_GCVALUE_MALLOC
       1024 * 1024
 #else
       heapAlignSize((GC::maxNormalAllocationSize() / 3) * 2)

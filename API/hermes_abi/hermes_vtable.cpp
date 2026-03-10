@@ -845,7 +845,7 @@ HermesABIUint8PtrOrError get_arraybuffer_data(
         "Cannot get data block of detached ArrayBuffer.";
     return abi::createUint8PtrOrError(HermesABIErrorCodeNativeException);
   }
-  return abi::createUint8PtrOrError(ab->getDataBlock(runtime));
+  return abi::createUint8PtrOrError(ab->getDataBlock());
 }
 
 HermesABISizeTOrError get_arraybuffer_size(
@@ -1418,6 +1418,9 @@ HermesABIBoolOrError drain_microtasks(HermesABIRuntime *abiRt, int) {
 
   // Clear strong references to objects retained by WeakRef accesses.
   runtime.clearKeptObjects();
+
+  // Run the callback for dead registered targets.
+  runtime.cleanUpFinalizationCallbacks();
 
   // drainJobs currently drains the entire queue, unless there is an exception,
   // so always return true.

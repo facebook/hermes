@@ -203,8 +203,9 @@ CallResult<HermesValue> symbolConstructor(void *, Runtime &runtime) {
   } lv;
   LocalsRAII lraii{runtime, &lv};
   if (args.getArg(0).isUndefined()) {
-    // If description is undefined, the descString will eventually be "".
-    lv.descString = runtime.getPredefinedString(Predefined::emptyString);
+    // If description is undefined, use the sentinel so the description
+    // getter can distinguish Symbol(undefined) from Symbol("").
+    lv.descString = runtime.strForSymbolNoDescription.get();
   } else {
     auto descStringRes = toString_RJS(runtime, args.getArgHandle(0));
     if (LLVM_UNLIKELY(descStringRes == ExecutionStatus::EXCEPTION)) {
@@ -259,7 +260,6 @@ CallResult<HermesValue> symbolKeyFor(void *, Runtime &runtime) {
 }
 
 /// ES10.0 19.4.3.2 get Symbol.prototype.description
-/// TODO(T79770380): make the Symbol(undefined) case spec-conformant.
 CallResult<HermesValue> symbolPrototypeDescriptionGetter(
     void *,
     Runtime &runtime) {
@@ -281,6 +281,9 @@ CallResult<HermesValue> symbolPrototypeDescriptionGetter(
 
   // 3. Return sym.[[Description]].
   StringPrimitive *desc = runtime.getStringPrimFromSymbolID(lv.sym.get());
+  if (desc == runtime.strForSymbolNoDescription.get()) {
+    return HermesValue::encodeUndefinedValue();
+  }
   return HermesValue::encodeStringValue(desc);
 }
 

@@ -413,6 +413,10 @@ STR(WeakSet, "WeakSet")
 STR(WeakRef, "WeakRef")
 STR(deref, "deref")
 
+STR(FinalizationRegistry, "FinalizationRegistry")
+STR(registerStr, "register")
+STR(unregister, "unregister")
+
 STR(Symbol, "Symbol")
 STR(predefinedFor, "for")
 STR(keyFor, "keyFor")
@@ -466,6 +470,7 @@ STR(applyArguments, "applyArguments")
 STR(exportAll, "exportAll")
 STR(exponentiationOperator, "exponentiationOperator")
 STR(initRegexNamedGroups, "initRegexNamedGroups")
+STR(setFunctionName, "setFunctionName")
 STR(getFunctionLocation, "getFunctionLocation")
 STR(isNative, "isNative")
 STR(lineNumber, "lineNumber")
@@ -477,6 +482,7 @@ STR(setPromiseRejectionTrackingHook, "setPromiseRejectionTrackingHook")
 STR(enablePromiseRejectionTracker, "enablePromiseRejectionTracker")
 STR(spawnAsync, "spawnAsync") /* NOLINT */
 STR(makeAsyncIterator, "makeAsyncIterator") /* NOLINT */
+STR(awaitAsyncGenerator, "awaitAsyncGenerator") /* NOLINT */
 
 STR(SHBuiltin, "$SHBuiltin")
 

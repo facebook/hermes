@@ -1441,7 +1441,8 @@ extern "C" void _sh_ljs_define_own_by_id(
       JSObject::tryGetOwnNamedDescriptorFast(obj, runtime, symID, desc);
   if (LLVM_LIKELY(hasOwnProp.hasValue() && hasOwnProp.getValue()) &&
       !desc.flags.accessor && desc.flags.writable &&
-      !desc.flags.internalSetter) {
+      !desc.flags.internalSetter && desc.flags.configurable &&
+      desc.flags.enumerable) {
     // cacheIdx == 0 indicates no caching so don't update the cache in
     // those cases.
     HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(runtime));

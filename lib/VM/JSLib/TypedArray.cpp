@@ -469,10 +469,7 @@ CallResult<HermesValue> mapFilterLoop(
   return HermesValue::encodeTrustedNumberValue(insert);
 }
 
-/// This is the sort model for use with TypedArray.prototype.sort.
-/// template param \p WithCompareFn should be true if the compare function is
-/// a valid callback to call, and false if it is null or undefined.
-template <bool WithCompareFn>
+/// Sort model for TypedArray.prototype.sort with a user-provided compareFn.
 class TypedArraySortModel : public SortModel {
  protected:
   /// Runtime to sort in.
@@ -482,7 +479,6 @@ class TypedArraySortModel : public SortModel {
   GCScope gcScope_;
 
   /// JS comparison function, return -1 for less, 0 for equal, 1 for greater.
-  /// If null, then use the built in < operator.
   Handle<Callable> compareFn_;
 
   /// Object to sort.
@@ -541,35 +537,10 @@ class TypedArraySortModel : public SortModel {
     {
       lv.aVal =
           JSObject::getOwnIndexed(createPseudoHandle(self_.get()), runtime_, a);
-      // To avoid the need to create a handle for bVal a NoAllocScope is created
-      // below, to ensure no memory allocation will happen.
       HermesValue bVal =
           JSObject::getOwnIndexed(createPseudoHandle(self_.get()), runtime_, b);
-
-      // N.B.: aVal needs to be initialized after bVal's initialization -- i.e.,
-      // after no more allocations are expected for a while.
       HermesValue aVal = lv.aVal.getHermesValue();
 
-      {
-        NoAllocScope noAllocs{runtime_};
-        if (!WithCompareFn) {
-          if (LLVM_UNLIKELY(aVal.isBigInt())) {
-            return aVal.getBigInt()->compare(bVal.getBigInt());
-          } else {
-            double a = aVal.getNumber();
-            double b = bVal.getNumber();
-            if (LLVM_UNLIKELY(a == 0) && LLVM_UNLIKELY(b == 0) &&
-                LLVM_UNLIKELY(std::signbit(a)) &&
-                LLVM_UNLIKELY(!std::signbit(b))) {
-              // -0 < +0, according to the spec.
-              return -1;
-            }
-            return (a < b) ? -1 : (a > b ? 1 : 0);
-          }
-          assert(
-              compareFn_ && "Cannot use this version if the compareFn is null");
-        }
-      }
       // ES7 22.2.3.26 2a.
       // Let v be toNumber_RJS(Call(comparefn, undefined, x, y)).
       callRes = Callable::executeCall2(
@@ -594,6 +565,54 @@ class TypedArraySortModel : public SortModel {
     return (res < 0) ? -1 : (res > 0 ? 1 : 0);
   }
 };
+
+namespace {
+
+/// ::qsort comparator for typed array elements.
+template <typename T>
+int qsortComparator(const void *a, const void *b) {
+  if constexpr (std::is_floating_point_v<T>) {
+    T va = *static_cast<const T *>(a);
+    T vb = *static_cast<const T *>(b);
+    // NaN sorts after everything.
+    bool aNaN = std::isnan(va);
+    bool bNaN = std::isnan(vb);
+    if (LLVM_UNLIKELY(aNaN)) {
+      if (LLVM_UNLIKELY(bNaN))
+        return 0;
+      return 1;
+    } else if (LLVM_UNLIKELY(bNaN)) {
+      return -1;
+    }
+    // -0 < +0.
+    if (LLVM_UNLIKELY(va == 0 && vb == 0))
+      return std::signbit(vb) - std::signbit(va);
+    return (va > vb) - (va < vb);
+  } else {
+    T va = *static_cast<const T *>(a);
+    T vb = *static_cast<const T *>(b);
+    return (va > vb) - (va < vb);
+  }
+}
+
+/// Sort typed array elements directly using ::qsort.
+void typedArraySortDirect(
+    uint8_t *data,
+    CellKind kind,
+    JSTypedArrayBase::size_type len) {
+  assert(data && "data must be non-null");
+  switch (kind) {
+#define TYPED_ARRAY(name, type)                              \
+  case CellKind::name##ArrayKind:                            \
+    ::qsort(data, len, sizeof(type), qsortComparator<type>); \
+    break;
+#include "hermes/VM/TypedArrays.def"
+    default:
+      llvm_unreachable("Unknown TypedArray kind");
+  }
+}
+
+} // namespace
 
 // ES7 22.2.3.23.1
 CallResult<HermesValue> typedArrayPrototypeSetObject(
@@ -670,8 +689,8 @@ CallResult<HermesValue> typedArrayPrototypeSetTypedArray(
   }
   // Since `src` is immutable, put the rest of the function into a continuation
   // to be called with a different `src` parameter.
-  if (self->getBuffer(runtime)->getDataBlock(runtime) !=
-      src->getBuffer(runtime)->getDataBlock(runtime)) {
+  if (self->getBuffer(runtime)->getDataBlock() !=
+      src->getBuffer(runtime)->getDataBlock()) {
     if (JSTypedArrayBase::setToCopyOfTypedArray(
             runtime, self, offset, src, 0, srcLength) ==
         ExecutionStatus::EXCEPTION) {
@@ -1692,17 +1711,14 @@ CallResult<HermesValue> typedArrayPrototypeSort(void *, Runtime &runtime) {
     return runtime.raiseTypeError("TypedArray sort argument must be callable");
   }
 
-  // Use our custom sort routine. We can't use std::sort because it performs
-  // optimizations that allow it to bypass calls to std::swap, but our swap
-  // function is special, since it needs to use the internal Object functions.
   if (compareFn) {
-    TypedArraySortModel<true> sm(runtime, self, compareFn);
+    // Fallback to SortModel when a compareFn is provided, since the
+    // callback can invoke arbitrary JS.
+    TypedArraySortModel sm(runtime, self, compareFn);
     if (LLVM_UNLIKELY(quickSort(&sm, 0, len) == ExecutionStatus::EXCEPTION))
       return ExecutionStatus::EXCEPTION;
-  } else {
-    TypedArraySortModel<false> sm(runtime, self, compareFn);
-    if (LLVM_UNLIKELY(quickSort(&sm, 0, len) == ExecutionStatus::EXCEPTION))
-      return ExecutionStatus::EXCEPTION;
+  } else if (len > 0) {
+    typedArraySortDirect(self->data(runtime), self->getKind(), len);
   }
   return self.getHermesValue();
 }

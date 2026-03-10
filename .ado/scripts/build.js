@@ -907,6 +907,11 @@ function getVCVarsAllBat() {
   const versionJson = JSON.parse(
     execSync(`"${vsWhere}" -format json -version 17`).toString(),
   );
+  if (versionJson.length === 0) {
+    throw new Error(
+      `No Visual Studio 2022 (version 17) installation found by vswhere: "${vsWhere}"`,
+    );
+  }
   if (versionJson.length > 1) {
     console.warn("More than one VS install detected, picking the first one");
   }

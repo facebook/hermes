@@ -7,12 +7,14 @@
 
 #include "VMRuntimeTestHelpers.h"
 #include "hermes/BCGen/HBC/Bytecode.h"
+#include "hermes/VM/DummyObject.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/StringPrimitive.h"
 
 #include "gtest/gtest.h"
 
 using namespace hermes::vm;
+using namespace hermes::vm::testhelpers;
 
 namespace {
 
@@ -152,6 +154,57 @@ TEST_F(HandleTest, ScopedPointerConstructorTest) {
       JSFunction::create(runtime, domain, runtime.makeNullHandle<JSObject>()));
   Handle<JSObject> obj = function;
   ASSERT_EQ(function.get(), obj.get());
+}
+
+TEST_F(HandleTest, PinnedValueHV32Test) {
+  struct : Locals {
+    PinnedValue<DummyObject> obj;
+    PinnedValue<SmallHermesValue> pshv;
+    PinnedValue<StringPrimitive> str;
+    PinnedValue<SymbolID> sym;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  lv.obj = testhelpers::DummyObject::create(runtime.getHeap(), runtime);
+  lv.pshv = SmallHermesValue::encodeObjectValue(*lv.obj, runtime);
+  runtime.collect("test");
+  {
+    auto shv = lv.pshv.getSmallHermesValue();
+    ASSERT_TRUE(shv.isObject());
+    auto *obj = static_cast<DummyObject *>(shv.getObject(runtime));
+    ASSERT_TRUE(obj->hvBool.getBool());
+  }
+
+  lv.obj = nullptr;
+  // Now lv.pshv is the only reference that holds the object alive.
+  runtime.collect("test");
+  {
+    auto shv = lv.pshv.getSmallHermesValue();
+    ASSERT_TRUE(shv.isObject());
+    auto *obj = static_cast<testhelpers::DummyObject *>(shv.getObject(runtime));
+    ASSERT_TRUE(obj->hvBool.getBool());
+  }
+
+  lv.str = StringPrimitive::createNoThrow(runtime, "I'm a string");
+  auto sym =
+      runtime.getIdentifierTable().createNotUniquedSymbol(runtime, lv.str);
+  ASSERT_FALSE(isException(sym));
+  lv.sym = *sym;
+  lv.pshv = SmallHermesValue::encodeSymbolValue(*lv.sym);
+  runtime.collect("test");
+  {
+    auto shv = lv.pshv.getSmallHermesValue();
+    ASSERT_TRUE(shv.isSymbol());
+    ASSERT_TRUE(shv.getSymbol().isValid());
+  }
+
+  lv.sym = SymbolID{};
+  runtime.collect("test");
+  {
+    auto shv = lv.pshv.getSmallHermesValue();
+    ASSERT_TRUE(shv.isSymbol());
+    ASSERT_TRUE(shv.getSymbol().isValid());
+  }
 }
 
 #if defined(HERMES_SLOW_DEBUG) && defined(ASSERT_DEATH)

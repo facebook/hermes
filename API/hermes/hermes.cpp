@@ -2072,6 +2072,7 @@ bool HermesRuntimeImpl::drainMicrotasks(int maxMicrotasksHint) {
   // \c drainJobs is currently an unbounded execution, hence no exceptions
   // implies drained until TODO(T89426441): \c maxMicrotasksHint is supported
   runtime_.clearKeptObjects();
+  runtime_.cleanUpFinalizationCallbacks();
   return true;
 }
 
@@ -2879,7 +2880,7 @@ uint8_t *HermesRuntimeImpl::data(const jsi::ArrayBuffer &arr) {
   auto ab = arrayBufferHandle(arr);
   if (LLVM_UNLIKELY(!ab->attached()))
     throw jsi::JSINativeException("ArrayBuffer is detached.");
-  return ab->getDataBlock(runtime_);
+  return ab->getDataBlock();
 }
 
 jsi::Value HermesRuntimeImpl::getValueAtIndex(const jsi::Array &arr, size_t i) {

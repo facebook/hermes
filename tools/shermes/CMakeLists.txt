@@ -15,7 +15,7 @@ add_library(shermes_console_a STATIC ConsoleBindings.cpp)
 target_link_libraries(shermes_console_a PRIVATE hermesvm_a)
 set(HERMES_ENABLE_EH OFF)
 
-set(SHERMES_CC "cc" CACHE STRING "C compiler to invoke")
+set(SHERMES_CC "${CMAKE_C_COMPILER}" CACHE STRING "C compiler to invoke")
 set(SHERMES_CC_SYSCFLAGS "" CACHE STRING "C compiler system flags")
 set(SHERMES_CC_SYSLDFLAGS "" CACHE STRING "C compiler system linker flags")
 # Use ';' as path separator on Windows because ':' conflicts with drive letters.
@@ -25,7 +25,7 @@ else()
   set(_shermes_path_sep ":")
 endif()
 set(SHERMES_CC_INCLUDE_PATH
-  "${CMAKE_BINARY_DIR}/lib/config${_shermes_path_sep}${PROJECT_SOURCE_DIR}/include" CACHE STRING
+  "${PROJECT_BINARY_DIR}/lib/config${_shermes_path_sep}${PROJECT_SOURCE_DIR}/include" CACHE STRING
   "Include path when invoking CC")
 set(SHERMES_CC_LIB_PATH "$<TARGET_FILE_DIR:hermesvm>${_shermes_path_sep}$<TARGET_FILE_DIR:jsi>${_shermes_path_sep}$<TARGET_FILE_DIR:shermes_console>" CACHE STRING
   "Library path when invoking CC")

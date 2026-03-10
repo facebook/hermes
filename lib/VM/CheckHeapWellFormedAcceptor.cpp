@@ -33,6 +33,9 @@ void CheckHeapWellFormedAcceptor::acceptNullable(PinnedHermesValue &hv) {
 #endif
   acceptHV(hv);
 }
+void CheckHeapWellFormedAcceptor::accept(PinnedSmallHermesValue &shv) {
+  acceptSHV(shv);
+}
 void CheckHeapWellFormedAcceptor::accept(const RootSymbolID &sym) {
   acceptSym(sym);
 }

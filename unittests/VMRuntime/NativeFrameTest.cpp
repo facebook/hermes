@@ -42,7 +42,7 @@ TEST_F(NativeFrameTest, OverflowTest) {
 #endif
 }
 
-#if HERMES_SLOW_DEBUG
+#ifdef HERMES_SLOW_DEBUG
 TEST(NativeFrameDeathTest, PoisonedStackTest) {
   auto fn = [] {
     auto rt = Runtime::create({});

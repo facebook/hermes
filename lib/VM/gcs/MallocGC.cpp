@@ -62,7 +62,7 @@ struct MallocGC::MarkingAcceptor final : public RootAcceptor,
         gc.validPointer(cell) &&
         "Marked a pointer that the GC didn't allocate");
     CellHeader *header = CellHeader::from(cell);
-#ifdef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES != 0
     /// Make the acceptor idempotent: allow it to be called multiple
     /// times on the same slot during a collection.  Do this by
     /// recognizing when the pointer is already a "new" pointer.
@@ -129,6 +129,9 @@ struct MallocGC::MarkingAcceptor final : public RootAcceptor,
   void acceptNullable(PinnedHermesValue &hv) override {
     acceptHV(hv);
   }
+  void accept(PinnedSmallHermesValue &shv) override {
+    acceptSHV(shv);
+  }
   void accept(const RootSymbolID &sym) override {
     acceptSym(sym);
   }
@@ -157,7 +160,7 @@ struct MallocGC::MarkingAcceptor final : public RootAcceptor,
     CellHeader *header = CellHeader::from(ptr);
 
     // Reset weak root if target GCCell is dead.
-#ifdef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES != 0
     ptr = header->isMarked() ? header->getForwardingPointer()->data() : nullptr;
 #else
     ptr = header->isMarked() ? ptr : nullptr;
@@ -172,7 +175,7 @@ struct MallocGC::MarkingAcceptor final : public RootAcceptor,
 
       // Reset weak root if target GCCell is dead.
       if (header->isMarked()) {
-#ifdef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES != 0
         wshv.setObject(pointerBase_, header->getForwardingPointer()->data());
 #endif
       } else {
@@ -352,7 +355,7 @@ void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
 
     // By the end of the marking loop, all pointers left in pointers_ are dead.
     for (CellHeader *header : pointers_) {
-#ifndef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES == 0
       // If handle sanitization isn't on, these pointers should all be dead.
       assert(!header->isMarked() && "Live pointer left in dead heap section");
 #endif
@@ -381,7 +384,7 @@ void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
     }
 
 #ifndef NDEBUG
-#ifdef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES != 0
     // If handle sanitization is on, pointers_ is unmodified from before the
     // collection, and the number of collected objects is the difference between
     // the pointers before, and the pointers after the collection.

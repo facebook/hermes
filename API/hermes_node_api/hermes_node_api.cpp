@@ -6254,7 +6254,7 @@ napi_status NAPI_CDECL napi_check_object_type_tag(
   }
 
   const uint8_t *source = reinterpret_cast<const uint8_t *>(typeTag);
-  const uint8_t *tagBufferData = tagBuffer->getDataBlock(env->runtime_);
+  const uint8_t *tagBufferData = tagBuffer->getDataBlock();
   *result = std::equal(
       source,
       source + sizeof(napi_type_tag),
@@ -6625,7 +6625,7 @@ napi_status NAPI_CDECL napi_create_arraybuffer(
   CHECK_STATUS(env->checkExecutionStatus(vm::JSArrayBuffer::createDataBlock(
       env->runtime_, buffer, byteLength, true)));
   if (data != nullptr) {
-    *data = buffer->getDataBlock(env->runtime_);
+    *data = buffer->getDataBlock();
   }
   return env->makeResultValue(buffer.getHermesValue(), result);
 }
@@ -6681,7 +6681,7 @@ napi_status NAPI_CDECL napi_get_arraybuffer_info(
 
   vm::JSArrayBuffer *buffer = vm::vmcast<vm::JSArrayBuffer>(*phv(arrayBuffer));
   if (data != nullptr) {
-    *data = buffer->attached() ? buffer->getDataBlock(env->runtime_) : nullptr;
+    *data = buffer->attached() ? buffer->getDataBlock() : nullptr;
   }
 
   if (byteLength != nullptr) {
@@ -6830,7 +6830,7 @@ napi_status NAPI_CDECL napi_get_typedarray_info(
 
   if (data != nullptr) {
     *data = array->attached(env->runtime_)
-        ? array->getBuffer(env->runtime_)->getDataBlock(env->runtime_) +
+        ? array->getBuffer(env->runtime_)->getDataBlock() +
             array->getByteOffset()
         : nullptr;
   }
@@ -6914,7 +6914,7 @@ napi_status NAPI_CDECL napi_get_dataview_info(
 
   if (data != nullptr) {
     *data = view->attached(env->runtime_)
-        ? view->getBuffer(env->runtime_)->getDataBlock(env->runtime_) +
+        ? view->getBuffer(env->runtime_)->getDataBlock() +
             view->byteOffset()
         : nullptr;
   }

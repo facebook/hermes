@@ -177,3 +177,35 @@ print(ab.detached);
 HermesInternal.detachArrayBuffer(ab);
 print(ab.detached);
 // CHECK-NEXT: true
+
+// ES2025 25.3.2.1 step 4: If IsDetachedBuffer(buffer) is true after
+// ToIndex(byteOffset), throw a TypeError.
+print("Check DataView constructor detach via byteOffset valueOf");
+// CHECK-LABEL: Check DataView constructor detach via byteOffset valueOf
+var buf = new ArrayBuffer(64);
+try {
+  new DataView(buf, {valueOf: function() {
+    HermesInternal.detachArrayBuffer(buf);
+    return 0;
+  }});
+  print("FAIL: no error");
+} catch (e) {
+  print(e.constructor.name);
+}
+// CHECK-NEXT: TypeError
+
+// ES2025 25.3.2.1 step 11: If IsDetachedBuffer(buffer) is true after
+// ToIndex(byteLength), throw a TypeError.
+print("Check DataView constructor detach via byteLength valueOf");
+// CHECK-LABEL: Check DataView constructor detach via byteLength valueOf
+var buf2 = new ArrayBuffer(64);
+try {
+  new DataView(buf2, 0, {valueOf: function() {
+    HermesInternal.detachArrayBuffer(buf2);
+    return 32;
+  }});
+  print("FAIL: no error");
+} catch (e) {
+  print(e.constructor.name);
+}
+// CHECK-NEXT: TypeError

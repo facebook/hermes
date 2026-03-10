@@ -151,12 +151,15 @@ PRIVATE_BUILTIN(exportAll)
 PRIVATE_BUILTIN(exponentiationOperator)
 PRIVATE_BUILTIN(initRegexNamedGroups)
 
+PRIVATE_BUILTIN(setFunctionName)
+
 PRIVATE_BUILTIN(functionPrototypeApply)
 PRIVATE_BUILTIN(functionPrototypeCall)
 
 JS_BUILTIN(spawnAsync)
 MARK_FIRST_JS_BUILTIN(spawnAsync)
 JS_BUILTIN(makeAsyncIterator)
+JS_BUILTIN(awaitAsyncGenerator)
 
 #undef NORMAL_OBJECT
 #undef NORMAL_METHOD

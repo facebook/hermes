@@ -506,9 +506,20 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
       // with each private name Decl.
       if (auto *PN = llvh::dyn_cast<ESTree::PrivateNameNode>(method->_key)) {
         auto *ID = llvh::cast<ESTree::IdentifierNode>(PN->_id);
+        auto baseName = Mod->getContext().getPrivateNameIdentifier(ID->_name);
+        Identifier privateNameHint;
+        if (method->_kind == kw_.identGet) {
+          privateNameHint = Mod->getContext().getIdentifier(
+              llvh::Twine("get ") + baseName.str());
+        } else if (method->_kind == kw_.identSet) {
+          privateNameHint = Mod->getContext().getIdentifier(
+              llvh::Twine("set ") + baseName.str());
+        } else {
+          privateNameHint = baseName;
+        }
         auto *funcValue = genFunctionExpression(
             llvh::cast<ESTree::FunctionExpressionNode>(method->_value),
-            Mod->getContext().getPrivateNameIdentifier(ID->_name),
+            privateNameHint,
             superClassNode,
             Function::DefinitionKind::ES6Method,
             homeObject,
@@ -556,9 +567,18 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
       if (method->_computed) {
         key = Builder.createToPropertyKeyInst(genExpression(method->_key));
       } else {
-        nameHint = Mod->getContext().getIdentifier(
-            propertyKeyAsString(buffer, method->_key));
-        key = Builder.getLiteralString(nameHint);
+        auto propStr = propertyKeyAsString(buffer, method->_key);
+        // Getters and setters need the "get "/"set " prefix in the name
+        // per ES6 SetFunctionName semantics.
+        if (method->_kind == kw_.identGet) {
+          nameHint = Mod->getContext().getIdentifier("get " + propStr.str());
+        } else if (method->_kind == kw_.identSet) {
+          nameHint = Mod->getContext().getIdentifier("set " + propStr.str());
+        } else {
+          nameHint = Mod->getContext().getIdentifier(propStr);
+        }
+        key =
+            Builder.getLiteralString(Mod->getContext().getIdentifier(propStr));
       }
       auto *funcValue = genFunctionExpression(
           llvh::cast<ESTree::FunctionExpressionNode>(method->_value),
@@ -567,6 +587,16 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
           Function::DefinitionKind::ES6Method,
           homeObject,
           method);
+      if (method->_computed) {
+        int prefix = 0;
+        if (method->_kind == kw_.identGet)
+          prefix = 1;
+        else if (method->_kind == kw_.identSet)
+          prefix = 2;
+        genBuiltinCall(
+            BuiltinMethod::HermesBuiltin_setFunctionName,
+            {funcValue, key, Builder.getLiteralNumber(prefix)});
+      }
       if (isStatic) {
         addMethod(createClass, method->_kind->str(), key, funcValue);
       } else {
@@ -987,11 +1017,30 @@ NormalFunction *ESTreeIRGen::genStaticElementsInitFunction(
           continue;
         Value *propKey;
         Identifier nameHint;
+        bool needsSetFunctionName = false;
         if (prop->_computed) {
           // use .at, since there should always be an entry for this node.
           Variable *fieldKeyVar = LC->classComputedFieldKeys.at(prop);
           auto *scope = emitResolveScopeInstIfNeeded(fieldKeyVar->getParent());
           propKey = Builder.createLoadFrameInst(scope, fieldKeyVar);
+          // Check if the value is an anonymous function/class that needs
+          // its name set from the computed key.
+          if (prop->_value) {
+            auto *valueNode = prop->_value;
+            if (auto *fe =
+                    llvh::dyn_cast<ESTree::FunctionExpressionNode>(valueNode)) {
+              needsSetFunctionName = !fe->_id;
+            } else if (llvh::isa<ESTree::ArrowFunctionExpressionNode>(
+                           valueNode)) {
+              needsSetFunctionName = true;
+            } else if (
+                auto *ce =
+                    llvh::dyn_cast<ESTree::ClassExpressionNode>(valueNode)) {
+              needsSetFunctionName = !ce->_id;
+            }
+          }
+          if (needsSetFunctionName)
+            propKey = Builder.createToPropertyKeyInst(propKey);
         } else {
           if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(prop->_key)) {
             nameHint = Identifier::getFromPointer(id->_name);
@@ -1001,6 +1050,11 @@ NormalFunction *ESTreeIRGen::genStaticElementsInitFunction(
         }
         Value *propValue = prop->_value ? genExpression(prop->_value, nameHint)
                                         : Builder.getLiteralUndefined();
+        if (needsSetFunctionName) {
+          genBuiltinCall(
+              BuiltinMethod::HermesBuiltin_setFunctionName,
+              {propValue, propKey, Builder.getLiteralNumber(0)});
+        }
         Builder.createDefineOwnPropertyInst(
             propValue, classVal, propKey, IRBuilder::PropEnumerable::Yes);
         continue;
@@ -1184,10 +1238,29 @@ NormalFunction *ESTreeIRGen::genLegacyInstanceElementsInit(
           continue;
         Value *propKey;
         Identifier nameHint;
+        bool needsSetFunctionName = false;
         if (prop->_computed) {
           Variable *fieldKeyVar = LC->classComputedFieldKeys.at(prop);
           auto *scope = emitResolveScopeInstIfNeeded(fieldKeyVar->getParent());
           propKey = Builder.createLoadFrameInst(scope, fieldKeyVar);
+          // Check if the value is an anonymous function/class that needs
+          // its name set from the computed key.
+          if (prop->_value) {
+            auto *valueNode = prop->_value;
+            if (auto *fe =
+                    llvh::dyn_cast<ESTree::FunctionExpressionNode>(valueNode)) {
+              needsSetFunctionName = !fe->_id;
+            } else if (llvh::isa<ESTree::ArrowFunctionExpressionNode>(
+                           valueNode)) {
+              needsSetFunctionName = true;
+            } else if (
+                auto *ce =
+                    llvh::dyn_cast<ESTree::ClassExpressionNode>(valueNode)) {
+              needsSetFunctionName = !ce->_id;
+            }
+          }
+          if (needsSetFunctionName)
+            propKey = Builder.createToPropertyKeyInst(propKey);
         } else {
           if (auto *ID = llvh::dyn_cast<ESTree::IdentifierNode>(prop->_key)) {
             nameHint = Identifier::getFromPointer(ID->_name);
@@ -1197,6 +1270,11 @@ NormalFunction *ESTreeIRGen::genLegacyInstanceElementsInit(
         }
         Value *propValue = prop->_value ? genExpression(prop->_value, nameHint)
                                         : Builder.getLiteralUndefined();
+        if (needsSetFunctionName) {
+          genBuiltinCall(
+              BuiltinMethod::HermesBuiltin_setFunctionName,
+              {propValue, propKey, Builder.getLiteralNumber(0)});
+        }
         Builder.createDefineOwnPropertyInst(
             propValue, thisParam, propKey, IRBuilder::PropEnumerable::Yes);
         continue;

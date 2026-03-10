@@ -103,6 +103,7 @@ BCProviderFromSrc::create(
       "The input buffer must be null terminated");
 
   CodeGenerationSettings codeGenOpts{};
+  codeGenOpts.test262 = compileFlags.test262;
 
   OptimizationSettings optSettings;
   // If the optional value is not set, the parser will automatically detect
@@ -136,6 +137,10 @@ BCProviderFromSrc::create(
   context->setEnableEval(true);
   context->setEnableES6BlockScoping(compileFlags.enableES6BlockScoping);
   context->setEnableAsyncGenerators(compileFlags.enableAsyncGenerators);
+  if (compileFlags.enableTS) {
+    context->setParseTS(true);
+    context->setTransformTS(true);
+  }
   context->setPreemptiveFunctionCompilationThreshold(
       compileFlags.preemptiveFunctionCompilationThreshold);
   context->setPreemptiveFileCompilationThreshold(

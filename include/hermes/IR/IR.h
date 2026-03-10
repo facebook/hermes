@@ -2031,6 +2031,13 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   /// The set of functions that this function has been inlined into.
   llvh::DenseSet<Function *> inlinedBy_;
 
+  /// Whether this inner generator function was created for an async function
+  /// (as opposed to a user generator or transformed async generator).
+  /// When true, the driver is spawnAsync which handles raw yields.
+  /// When false and isInnerGenerator(), the driver may be AsyncGenerator
+  /// which needs OverloadYield wrapping for internal awaits.
+  bool isFromAsyncFunction_ = false;
+
   /// List of environments made by this function. Out of IRGen, this list is
   /// filled only with `CreateScopeInst`s. However, after generators have been
   /// lowered, this may contain `Variable`s for environments that have been
@@ -2358,6 +2365,14 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
     auto defKind = getDefinitionKind();
     return defKind == DefinitionKind::GeneratorInner ||
         defKind == DefinitionKind::GeneratorInnerArrow;
+  }
+
+  /// \return true if this inner generator was created for an async function.
+  bool isFromAsyncFunction() const {
+    return isFromAsyncFunction_;
+  }
+  void setIsFromAsyncFunction(bool v) {
+    isFromAsyncFunction_ = v;
   }
 
   static bool classof(const Value *V) {

@@ -1,0 +1,68 @@
+# Hermes development/testing environment on Ubuntu 24.04 with Clang 17.
+#
+# WARNING: Claude Code with --dangerously-skip-permissions has full write
+# access to the bind-mounted source tree, including .git. It cannot push
+# (no git credentials are mounted), but it can damage local history with
+# destructive git commands. Use a separate clone of the repository for
+# container work -- not your main checkout and not a git worktree (which
+# shares .git with the main checkout):
+#
+#   git clone /path/to/hermes /path/to/hermes-container
+#   cd /path/to/hermes-container
+#
+# Build the image (from the repo root):
+#   podman build -t hermes-ubuntu-24.04 -f podman/Containerfile.ubuntu-24.04 .
+#
+# One-time setup: copy Claude Code credentials:
+#   mkdir -p ~/.claude-container
+#   cp ~/.claude/.credentials.json ~/.claude-container/
+#
+# Run interactively with source mounted (--userns=keep-id maps your
+# host UID into the container so you are non-root and file ownership
+# is correct on both sides):
+#   podman run -it --rm \
+#     --userns=keep-id \
+#     -v $(pwd):/hermes \
+#     -v ~/.claude-container:/home/user/.claude \
+#     -v hermes-dot-local:/home/user/.local \
+#     hermes-ubuntu-24.04
+#
+# Inside the container (claude auto-installs on first run):
+#   claude --dangerously-skip-permissions
+#
+# Or just build/test Hermes:
+#   cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+#   cmake --build build
+#   cmake --build build --target check-hermes
+
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        clang-17 \
+        cmake \
+        ninja-build \
+        build-essential \
+        libicu-dev \
+        libreadline-dev \
+        python3 \
+        git \
+        zip \
+        curl \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV CC=clang-17
+ENV CXX=clang++-17
+
+# Set HOME explicitly so --userns=keep-id doesn't default to WORKDIR.
+ENV HOME=/home/user
+RUN mkdir -p /home/user && chmod 777 /home/user
+
+COPY podman/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+WORKDIR /hermes
+ENTRYPOINT ["entrypoint.sh"]
+CMD ["bash"]

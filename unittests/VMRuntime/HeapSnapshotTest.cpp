@@ -471,7 +471,7 @@ TEST(HeapSnapshotTest, HeaderTest) {
 
   // Hades overrides snapshotAddGCNativeEdges()/snapshotAddGCNativeNodes(),
   // which adds 2 more nodes and edges, while MallocGC does not.
-#ifdef HERMESVM_GC_MALLOC
+#if HERMESVM_GCKIND == _HERMESVM_GCVALUE_MALLOC
   EXPECT_EQ(llvh::cast<JSONNumber>(snapshot->at("node_count"))->getValue(), 9);
   EXPECT_EQ(llvh::cast<JSONNumber>(snapshot->at("edge_count"))->getValue(), 4);
 #else
@@ -714,7 +714,8 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
               Edge{HeapSnapshot::EdgeType::Weak, "weak", secondDummy.id}}));
 }
 
-#if defined(HERMESVM_GC_HADES) && !defined(HERMESVM_SANITIZE_HANDLES)
+#if (HERMESVM_GCKIND == _HERMESVM_GCVALUE_HADES) && \
+    HERMESVM_SANITIZE_HANDLES == 0
 // This test relies on the implementation details of Hades GC.
 TEST(HeapSnapshotTest, SnapshotFromCallbackContextRunInMiddleYG) {
   // The GC Heap can have at most two segments.
@@ -1089,7 +1090,7 @@ TEST_F(HeapSnapshotRuntimeTest, PropertyUpdatesTest) {
 
 // When Handle-SAN is enabled, we put all numbers on the heap, which changes
 // what the snapshot ID is.
-#ifndef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES == 0
   EXPECT_EQ(
       nodesAndEdges.second[FIRST_NAMED_PROPERTY_EDGE],
       Edge(
@@ -1152,7 +1153,7 @@ TEST_F(HeapSnapshotRuntimeTest, ArrayElementsCaptureNumeric) {
           FIRST_NAMED_PROPERTY_EDGE + 6));
 // When Handle-SAN is enabled, we put all numbers on the heap, which changes
 // what the snapshot ID is.
-#ifndef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES == 0
   EXPECT_EQ(
       nodeAndEdges.second[FIRST_NAMED_PROPERTY_EDGE + 2],
       Edge(
@@ -1168,7 +1169,7 @@ TEST_F(HeapSnapshotRuntimeTest, ArrayElementsCaptureNumeric) {
           runtime.getHeap().getObjectID(firstElement.get())));
 // When Handle-SAN is enabled, we put all numbers on the heap, which changes
 // what the snapshot ID is.
-#ifndef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES == 0
   EXPECT_EQ(
       nodeAndEdges.second[FIRST_NAMED_PROPERTY_EDGE + 5],
       Edge(
@@ -1244,7 +1245,7 @@ TEST_F(HeapSnapshotRuntimeTest, ArrayElementsNoNumeric) {
 
 // When Handle-SAN is enabled, we put all numbers on the heap, which changes
 // what the snapshot ID is.
-#ifndef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES == 0
   EXPECT_EQ(
       nodeAndEdges.second[FIRST_NAMED_PROPERTY_EDGE + 2],
       Edge(
@@ -1261,7 +1262,7 @@ TEST_F(HeapSnapshotRuntimeTest, ArrayElementsNoNumeric) {
           runtime.getHeap().getObjectID(firstElement.get())));
 // When Handle-SAN is enabled, we put all numbers on the heap, which changes
 // what the snapshot ID is.
-#ifndef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES == 0
   EXPECT_EQ(
       nodeAndEdges.second[FIRST_NAMED_PROPERTY_EDGE + 5],
       Edge(

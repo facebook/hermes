@@ -70,7 +70,7 @@ public:
   // Allow use of this class as the value itself.
   operator unsigned() const { return getValue(); }
 
-#if LLVM_ENABLE_STATS
+#ifdef LLVM_ENABLE_STATS
    const Statistic &operator=(unsigned Val) {
     Value.store(Val, std::memory_order_relaxed);
     return init();

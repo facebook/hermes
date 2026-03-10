@@ -32,7 +32,7 @@ TEST(SymbolIDTest, UniquedTest) {
 using SymbolIDRuntimeTest = RuntimeTestFixture;
 
 // This test runs too slow when handlesan is ON.
-#ifndef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES == 0
 TEST_F(SymbolIDRuntimeTest, WriteBarrier) {
   // Hades adds a write barrier for symbols. Make sure it correctly captures
   // mutations.
@@ -201,7 +201,7 @@ TEST_F(SymbolIDRuntimeTest, WeakSmallHermesValue) {
 }
 
 // This test runs too slow when handlesan is ON.
-#ifndef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES == 0
 TEST_F(SymbolIDRuntimeTest, SymbolAllocDuringGC) {
   WeakRootSymbolID weakSym;
   runtime.addCustomWeakRootsFunction(

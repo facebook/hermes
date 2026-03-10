@@ -85,11 +85,11 @@ class JSTypedArrayBase : public JSObject {
     return buffer_.get(runtime);
   }
 
-  uint8_t *data(Runtime &runtime) {
-    return buffer_.getNonNull(runtime)->getDataBlock(runtime) + offset_;
+  uint8_t *data(PointerBase &base) {
+    return buffer_.getNonNull(base)->getDataBlock() + offset_;
   }
-  uint8_t *dataEnd(Runtime &runtime) {
-    return data(runtime) + getByteLength();
+  uint8_t *dataEnd(PointerBase &base) {
+    return data(base) + getByteLength();
   }
 
   // Return true if the specified cell is a TypedArray that does not require
@@ -114,8 +114,8 @@ class JSTypedArrayBase : public JSObject {
   polyReadNoAlloc(JSTypedArrayBase *self, Runtime &runtime, size_type index);
 
   /// \return Whether this JSTypedArrayBase is attached to some buffer.
-  bool attached(Runtime &runtime) const {
-    return buffer_ && buffer_.getNonNull(runtime)->attached();
+  bool attached(PointerBase &base) const {
+    return buffer_ && buffer_.getNonNull(base)->attached();
   }
 
   /// \return The offset from the beginning of the buffer this typed array
@@ -408,11 +408,11 @@ class JSTypedArray final : public JSTypedArrayBase {
       Runtime &runtime,
       Handle<JSObject> prototype);
 
-  T *begin(Runtime &runtime) {
-    return reinterpret_cast<T *>(data(runtime));
+  T *begin(PointerBase &base) {
+    return reinterpret_cast<T *>(data(base));
   }
-  T *end(Runtime &runtime) {
-    return begin(runtime) + length_;
+  T *end(PointerBase &base) {
+    return begin(base) + length_;
   }
 
   /// Monomorphic access to the \p i'th element of the buffer. This is
@@ -420,10 +420,10 @@ class JSTypedArray final : public JSTypedArrayBase {
   /// \pre
   ///   This cannot be called on a detached TypedArray.
   ///   i must be less than the length of the TypedArray.
-  T &monoAt(Runtime &runtime, size_type i) {
-    assert(attached(runtime) && "at() requires a JSArrayBuffer");
+  T &monoAt(PointerBase &base, size_type i) {
+    assert(attached(base) && "at() requires a JSArrayBuffer");
     assert(i < getLength() && "That index is out of bounds of this TypedArray");
-    return begin(runtime)[i];
+    return begin(base)[i];
   }
 
   static Handle<JSObject> getPrototype(const Runtime &runtime);

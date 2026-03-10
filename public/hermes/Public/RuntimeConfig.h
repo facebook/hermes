@@ -135,6 +135,9 @@ class PinnedHermesValue;
                                                                        \
   /* JIT memory limit, after which no more code will be JIT'ed. */     \
   F(constexpr, uint32_t, JITMemoryLimit, 32u << 20)                    \
+                                                                       \
+  /* Increase compliance with test262 (stricter checks at runtime). */ \
+  F(constexpr, bool, Test262, false)                                   \
   /* RUNTIME_FIELDS END */
 
 _HERMES_CTORCONFIG_STRUCT(RuntimeConfig, RUNTIME_FIELDS, {})

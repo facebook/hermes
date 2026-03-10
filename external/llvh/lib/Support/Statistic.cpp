@@ -232,7 +232,7 @@ void llvh::PrintStatisticsJSON(raw_ostream &OS) {
 }
 
 void llvh::PrintStatistics() {
-#if LLVM_ENABLE_STATS
+#ifdef LLVM_ENABLE_STATS
   sys::SmartScopedLock<true> Reader(*StatLock);
   StatisticInfo &Stats = *StatInfo;
 

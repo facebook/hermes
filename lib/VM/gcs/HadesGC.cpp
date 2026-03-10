@@ -546,6 +546,14 @@ class HadesGC::EvacAcceptor final : public RootAcceptor,
     }
   }
 
+  void accept(PinnedSmallHermesValue &shv) override {
+    if (shv.isPointer()) {
+      GCCell *ptr = shv.getPointer(pointerBase_);
+      GCCell *forwardedPtr = acceptRoot(ptr);
+      shv.setInGC(shv.updatePointer(forwardedPtr, pointerBase_), gc);
+    }
+  }
+
   void accept(GCHermesValueBase &hv) {
     if (hv.isPointer()) {
       GCCell *forwardedPtr =
@@ -798,6 +806,17 @@ class HERMES_ATTRIBUTE_INTERNAL_LINKAGE HadesGC::MarkAcceptor final
         acceptRoot(static_cast<GCCell *>(ptr));
     } else if (hv.isSymbol()) {
       acceptSym(hv.getSymbol());
+    }
+  }
+
+  void accept(PinnedSmallHermesValue &shv) override {
+    // PinnedSmallHermesValue is a root type and cannot live in the heap.
+    // Therefore there's no risk of a concurrent access.
+    if (shv.isPointer()) {
+      GCCell *ptr = shv.getPointer(pointerBase_);
+      acceptRoot(ptr);
+    } else if (shv.isSymbol()) {
+      acceptSym(shv.getSymbol());
     }
   }
 
@@ -1697,7 +1716,7 @@ void HadesGC::prepareCompactee(bool forceCompaction) {
   if (promoteYGToOG_)
     return;
 
-#ifdef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES != 0
   // Handle-SAN forces a compaction to move some OG objects.
   if (sanitizeRate_)
     forceCompaction = true;

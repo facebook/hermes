@@ -238,7 +238,8 @@ ExecutionStatus Interpreter::defineOwnByIdSlowPath(
       JSObject::tryGetOwnNamedDescriptorFast(obj, runtime, id, desc);
   if (LLVM_LIKELY(hasOwnProp.hasValue() && hasOwnProp.getValue()) &&
       !desc.flags.accessor && desc.flags.writable &&
-      !desc.flags.internalSetter) {
+      !desc.flags.internalSetter && desc.flags.configurable &&
+      desc.flags.enumerable) {
     // We can only cache if this is not a dictionary and we have an
     // enabled cache index.
     HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(runtime));

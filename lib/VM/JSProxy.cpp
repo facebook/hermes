@@ -592,16 +592,34 @@ CallResult<bool> JSProxy::getOwnProperty(
     }
   }
   // 17. If resultDesc.[[Configurable]] is false, then
-  //   a. If targetDesc is undefined or targetDesc.[[Configurable]] is true,
-  //   then
-  //     i. Throw a TypeError exception.
-  if (!resultDesc.configurable &&
-      (!*targetDescRes || targetDesc.flags.configurable)) {
-    return runtime.raiseTypeErrorForValue(
-        "getOwnPropertyDescriptor trap result is not configurable but "
-        "target property ",
-        nameValHandle,
-        " is configurable or non-existent");
+  if (!resultDesc.configurable) {
+    //   a. If targetDesc is undefined or targetDesc.[[Configurable]] is true,
+    //   then
+    //     i. Throw a TypeError exception.
+    if (!*targetDescRes || targetDesc.flags.configurable) {
+      return runtime.raiseTypeErrorForValue(
+          "getOwnPropertyDescriptor trap result is not configurable but "
+          "target property ",
+          nameValHandle,
+          " is configurable or non-existent");
+    }
+    //   b. If resultDesc has a [[Writable]] field and
+    //   resultDesc.[[Writable]] is false, then
+    if (resultDesc.setWritable && !resultDesc.writable) {
+      //     i. Assert: targetDesc has a [[Writable]] field.
+      assert(
+          *targetDescRes && !targetDesc.flags.accessor &&
+          "targetDesc must be a data descriptor with a [[Writable]] field");
+      //     ii. If targetDesc.[[Writable]] is true, throw a TypeError
+      //     exception.
+      if (targetDesc.flags.writable) {
+        return runtime.raiseTypeErrorForValue(
+            "getOwnPropertyDescriptor trap result is non-configurable and "
+            "non-writable but target property ",
+            nameValHandle,
+            " is writable");
+      }
+    }
   }
   // 18. Return resultDesc.
   desc.flags.enumerable = resultDesc.enumerable;
@@ -718,6 +736,16 @@ CallResult<bool> JSProxy::defineOwnProperty(
     if (settingConfigFalse && targetDesc.flags.configurable) {
       return runtime.raiseTypeError(
           "defineProperty trap attempted to define non-configurable property for configurable property in the target");
+    }
+    //   c. If IsDataDescriptor(targetDesc) is true,
+    //   targetDesc.[[Configurable]] is false, and targetDesc.[[Writable]] is
+    //   true, then
+    //     i. If Desc has a [[Writable]] field and Desc.[[Writable]] is false,
+    //     throw a TypeError exception.
+    if (!targetDesc.flags.accessor && !targetDesc.flags.configurable &&
+        targetDesc.flags.writable && dpFlags.setWritable && !dpFlags.writable) {
+      return runtime.raiseTypeError(
+          "defineProperty trap attempted to define non-writable property for writable property in the target");
     }
   }
   // 17. Return true.

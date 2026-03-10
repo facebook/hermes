@@ -99,6 +99,7 @@ struct Locals;
 template <CellKind C>
 class JSMapImpl;
 struct SerializationManagedValue;
+class JSFinalizationRegistry;
 
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
 class SamplingProfiler;
@@ -464,6 +465,13 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// ECMAScript executions completes." This method clears all kept WeakRefs and
   /// allows their targets to be eligible for garbage collection again.
   void clearKeptObjects();
+
+  /// Add \p registry to the list of finalizationRegistries_.
+  void addFinalizationRegistry(JSFinalizationRegistry *registry);
+
+  /// Call the cleanup callbacks of alive JSFinalizationRegistry, on each dead
+  /// registered target, w.r.t. ES16 9.12 CleanupFinalizationRegistry.
+  ExecutionStatus cleanUpFinalizationCallbacks();
 
   IdentifierTable &getIdentifierTable() {
     return identifierTable_;
@@ -873,6 +881,8 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   const bool optimizedEval : 1;
   /// Whether to emit async break check instructions in eval().
   const bool asyncBreakCheckInEval : 1;
+  /// Whether to increase compliance with test262.
+  const bool test262 : 1;
 
   const SynthTraceMode traceMode;
 
@@ -1321,6 +1331,12 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
 
   /// Optional record of the last few executed bytecodes in case of a crash.
   CrashTrace crashTrace_{};
+
+  /// A list of created JSFinalizationRegistry. It's weakly held because the
+  /// Runtime does not keep them alive. At each microtask checkpoint, all dead
+  /// elements are removed, the rest alive JSFinalizationRegistry are iterated
+  /// and its `cleanup()` method is called.
+  std::vector<WeakRoot<JSFinalizationRegistry>> finalizationRegistries_{};
 
   /// @name Private VM State
   /// @{
@@ -1925,7 +1941,7 @@ class ScopedNativeCallFrame {
         callee,
         newTarget);
     frame_.getThisArgRef() = thisArg;
-#if HERMES_SLOW_DEBUG
+#ifdef HERMES_SLOW_DEBUG
     // Poison the initial arguments to ensure the caller sets all of them before
     // a GC.
     assert(!overflowed_ && "Overflow should return early");
@@ -2405,7 +2421,7 @@ inline CrashManager &Runtime::getCrashManager() {
   return *crashMgr_;
 }
 
-#ifndef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES == 0
 inline void Runtime::potentiallyMoveHeap() {}
 #endif
 

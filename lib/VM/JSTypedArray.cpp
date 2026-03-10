@@ -241,8 +241,8 @@ ExecutionStatus JSTypedArrayBase::setToCopyOfTypedArray(
     return ExecutionStatus::RETURNED;
   }
   assert(
-      dst->getBuffer(runtime)->getDataBlock(runtime) !=
-          src->getBuffer(runtime)->getDataBlock(runtime) &&
+      dst->getBuffer(runtime)->getDataBlock() !=
+          src->getBuffer(runtime)->getDataBlock() &&
       "Must call setToCopyOfTypedArray with two TypedArrays with different "
       "backing ArrayBuffers");
   if (dst->getKind() == src->getKind()) {

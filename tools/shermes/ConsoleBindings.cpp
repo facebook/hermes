@@ -11,7 +11,42 @@
 
 #include <chrono>
 #include <cstdio>
+#include <cstring>
 #include <thread>
+#include <vector>
+
+namespace {
+
+/// A jsi::MutableBuffer backed by a std::vector<uint8_t>.
+class VectorMutableBuffer : public facebook::jsi::MutableBuffer {
+ public:
+  explicit VectorMutableBuffer(std::vector<uint8_t> data)
+      : data_(std::move(data)) {}
+
+  size_t size() const override {
+    return data_.size();
+  }
+  uint8_t *data() override {
+    return data_.data();
+  }
+
+ private:
+  std::vector<uint8_t> data_;
+};
+
+/// Throw a JS TypeError with the given message via JSI.
+[[noreturn]] static void throwTypeError(
+    facebook::jsi::Runtime &rt,
+    const char *msg) {
+  auto typeErrorCtor = rt.global().getPropertyAsFunction(rt, "TypeError");
+  auto errObj = typeErrorCtor
+                    .callAsConstructor(
+                        rt, facebook::jsi::String::createFromAscii(rt, msg))
+                    .asObject(rt);
+  throw facebook::jsi::JSError(rt, std::move(errObj));
+}
+
+} // namespace
 
 /// Object that contains console state that needs to be preserved between
 /// init_console_bindings and run_event_loop.
@@ -20,8 +55,17 @@ struct SHConsoleContext {
   /// ConsoleBindings.js.inc file.
   facebook::jsi::Object helpers;
 
-  SHConsoleContext(facebook::jsi::Object &&helpers)
-      : helpers(std::move(helpers)) {}
+  /// Script arguments passed after "--" on the command line.
+  int scriptArgc;
+  const char *const *scriptArgv;
+
+  SHConsoleContext(
+      facebook::jsi::Object &&helpers,
+      int scriptArgc,
+      const char *const *scriptArgv)
+      : helpers(std::move(helpers)),
+        scriptArgc(scriptArgc),
+        scriptArgv(scriptArgv) {}
 };
 
 /// Init harness symbols used in the test262 testsuite:
@@ -85,6 +129,141 @@ static void initTest262Bindings(facebook::hermes::HermesRuntime &hrt) {
   definePropertyFn.call(hrt, global, "console", descriptor);
 }
 
+/// Register the hermescli global object with loadFile, loadHBC, and
+/// getScriptArgs, gated on -Xhermes-internal-test-methods.
+static void initHermesCLIBindings(
+    facebook::hermes::HermesRuntime &hrt,
+    SHConsoleContext *ctx) {
+  using namespace facebook;
+
+  // Check if -Xhermes-internal-test-methods is active by probing for
+  // HermesInternal.detachArrayBuffer (only present with that flag).
+  auto hi = hrt.global().getProperty(hrt, "HermesInternal");
+  bool testMethods = hi.isObject() &&
+      hi.asObject(hrt).getProperty(hrt, "detachArrayBuffer").isObject();
+  if (!testMethods)
+    return;
+
+  jsi::Object hermescliObj{hrt};
+
+  // hermescli.loadFile(path) -> Uint8Array
+  hermescliObj.setProperty(
+      hrt,
+      "loadFile",
+      jsi::Function::createFromHostFunction(
+          hrt,
+          jsi::PropNameID::forAscii(hrt, "loadFile"),
+          1,
+          [](jsi::Runtime &rt,
+             const jsi::Value &,
+             const jsi::Value *args,
+             size_t count) -> jsi::Value {
+            if (count < 1 || !args[0].isString())
+              throwTypeError(rt, "loadFile requires a string path argument");
+
+            std::string path = args[0].getString(rt).utf8(rt);
+            FILE *f = std::fopen(path.c_str(), "rb");
+            if (!f) {
+              std::string msg = "Failed to open file: " + path;
+              throwTypeError(rt, msg.c_str());
+            }
+
+            std::fseek(f, 0, SEEK_END);
+            long len = std::ftell(f);
+            std::fseek(f, 0, SEEK_SET);
+
+            std::vector<uint8_t> data(len);
+            std::fread(data.data(), 1, len, f);
+            std::fclose(f);
+
+            // Create an ArrayBuffer with the file contents.
+            auto arrayBuf =
+                std::make_shared<VectorMutableBuffer>(std::move(data));
+            jsi::ArrayBuffer ab{rt, std::move(arrayBuf)};
+
+            // Call new Uint8Array(arrayBuffer) to return a Uint8Array.
+            auto uint8ArrayCtor =
+                rt.global().getPropertyAsFunction(rt, "Uint8Array");
+            return uint8ArrayCtor.callAsConstructor(rt, std::move(ab));
+          }));
+
+  // hermescli.loadHBC(buffer) -> result of evaluating the bytecode
+  hermescliObj.setProperty(
+      hrt,
+      "loadHBC",
+      jsi::Function::createFromHostFunction(
+          hrt,
+          jsi::PropNameID::forAscii(hrt, "loadHBC"),
+          1,
+          [](jsi::Runtime &rt,
+             const jsi::Value &,
+             const jsi::Value *args,
+             size_t count) -> jsi::Value {
+            if (count < 1 || !args[0].isObject())
+              throwTypeError(
+                  rt, "loadHBC requires a Uint8Array or ArrayBuffer argument");
+
+            jsi::Object obj = args[0].getObject(rt);
+            uint8_t *data = nullptr;
+            size_t len = 0;
+
+            if (obj.isArrayBuffer(rt)) {
+              // Direct ArrayBuffer.
+              jsi::ArrayBuffer ab = obj.getArrayBuffer(rt);
+              data = ab.data(rt);
+              len = ab.size(rt);
+            } else {
+              // Try TypedArray: access .buffer, .byteOffset, .byteLength.
+              auto bufProp = obj.getProperty(rt, "buffer");
+              if (!bufProp.isObject() ||
+                  !bufProp.asObject(rt).isArrayBuffer(rt))
+                throwTypeError(
+                    rt,
+                    "loadHBC requires a Uint8Array or ArrayBuffer argument");
+              jsi::ArrayBuffer ab = bufProp.asObject(rt).getArrayBuffer(rt);
+              auto byteOffset = obj.getProperty(rt, "byteOffset");
+              auto byteLength = obj.getProperty(rt, "byteLength");
+              size_t offset = byteOffset.isNumber()
+                  ? static_cast<size_t>(byteOffset.getNumber())
+                  : 0;
+              len = byteLength.isNumber()
+                  ? static_cast<size_t>(byteLength.getNumber())
+                  : ab.size(rt);
+              data = ab.data(rt) + offset;
+            }
+
+            // Copy the data and evaluate as bytecode/JS.
+            auto strBuf = std::make_shared<jsi::StringBuffer>(
+                std::string(reinterpret_cast<const char *>(data), len));
+            try {
+              return rt.evaluateJavaScript(strBuf, "loadHBC");
+            } catch (jsi::JSIException &) {
+              throwTypeError(rt, "Error deserializing bytecode");
+            }
+          }));
+
+  // hermescli.getScriptArgs() -> Array of strings
+  hermescliObj.setProperty(
+      hrt,
+      "getScriptArgs",
+      jsi::Function::createFromHostFunction(
+          hrt,
+          jsi::PropNameID::forAscii(hrt, "getScriptArgs"),
+          0,
+          [ctx](
+              jsi::Runtime &rt, const jsi::Value &, const jsi::Value *, size_t)
+              -> jsi::Value {
+            auto arr = jsi::Array(rt, ctx->scriptArgc);
+            for (int i = 0; i < ctx->scriptArgc; ++i) {
+              arr.setValueAtIndex(
+                  rt, i, jsi::String::createFromAscii(rt, ctx->scriptArgv[i]));
+            }
+            return arr;
+          }));
+
+  hrt.global().setProperty(hrt, "hermescli", std::move(hermescliObj));
+}
+
 /// The JS library that implements the event loop.
 static const char *s_jslib =
 #include "ConsoleBindings.js.inc"
@@ -93,7 +272,9 @@ static const char *s_jslib =
 /// \return a SHConsoleContext initialized with the console bindings.
 ///   Must be freed by free_console_context.
 extern "C" SHERMES_EXPORT SHConsoleContext *init_console_bindings(
-    SHRuntime *shr) {
+    SHRuntime *shr,
+    int scriptArgc,
+    const char *const *scriptArgv) {
   using namespace facebook;
   auto &hrt = *_sh_get_hermes_runtime(shr);
   initTest262Bindings(hrt);
@@ -102,7 +283,12 @@ extern "C" SHERMES_EXPORT SHConsoleContext *init_console_bindings(
       hrt.evaluateJavaScript(
              std::make_unique<jsi::StringBuffer>(s_jslib),
              "ConsoleBindings.js.inc")
-          .asObject(hrt));
+          .asObject(hrt),
+      scriptArgc,
+      scriptArgv);
+
+  initHermesCLIBindings(hrt, consoleContext.get());
+
   jsi::Object &helpers = consoleContext->helpers;
 
   jsi::Function runMacroTask = helpers.getPropertyAsFunction(hrt, "run");

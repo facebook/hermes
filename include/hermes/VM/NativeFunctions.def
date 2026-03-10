@@ -153,6 +153,7 @@ NATIVE_FUNCTION(hermesBuiltinInitRegexNamedGroups)
 NATIVE_FUNCTION(hermesBuiltinThrowTypeError)
 NATIVE_FUNCTION(hermesBuiltinThrowReferenceError)
 NATIVE_FUNCTION(hermesBuiltinGetTemplateObject)
+NATIVE_FUNCTION(hermesBuiltinSetFunctionName)
 
 NATIVE_FUNCTION(hermesInternalGetCallStack)
 NATIVE_FUNCTION(hermesInternalDetachArrayBuffer)
@@ -404,6 +405,9 @@ NATIVE_FUNCTION(weakSetPrototypeDelete)
 NATIVE_FUNCTION(weakSetPrototypeHas)
 NATIVE_FUNCTION(weakRefConstructor)
 NATIVE_FUNCTION(weakRefPrototypeDeref)
+NATIVE_FUNCTION(finalizationRegistryConstructor)
+NATIVE_FUNCTION(finalizationRegistryPrototypeRegister)
+NATIVE_FUNCTION(finalizationRegistryPrototypeUnregister)
 
 #define ALL_ERROR_TYPE(name) NATIVE_FUNCTION(name##Constructor)
 #include "hermes/VM/NativeErrorTypes.def"

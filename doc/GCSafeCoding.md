@@ -454,6 +454,32 @@ auto newObj = JSObject::create(runtime);  // GC safepoint
 lv.obj->doSomething();  // Safe: PinnedValue is a root
 ```
 
+### Holding PseudoHandles across GC safepoints
+
+`PseudoHandle<T>` is **not** a GC root — it holds an unrooted value just like a
+raw pointer. It is equally dangerous to use a `PseudoHandle` after a GC
+safepoint. This is easy to miss because `PseudoHandle` looks like a "safe" smart
+pointer type, but it is not rooted.
+
+Watch especially for **multi-step creation patterns** where two `::create()`
+calls are made in sequence:
+
+```cpp
+// WRONG — ctor PseudoHandle is stale after the second create():
+auto ctor = NativeConstructor::create(runtime, ...);
+auto proto = JSObject::create(runtime);  // GC safepoint — ctor is stale!
+lv.ctor = std::move(ctor);              // Too late — ctor is already stale!
+
+// CORRECT — root the PseudoHandle before the next allocation:
+lv.ctor = NativeConstructor::create(runtime, ...);  // Root immediately.
+lv.proto = JSObject::create(runtime);   // GC safepoint — lv.ctor is safe.
+```
+
+This bug often goes undetected because the stale value is still valid most of
+the time — the GC only moves objects during compaction, which is rare. Enable
+`HERMESVM_SANITIZE_HANDLES` (enabled by default in ASAN builds) to catch these
+bugs deterministically by moving the heap after every allocation.
+
 ### Returning a Handle from a destroyed GCScope or Locals
 
 ```cpp

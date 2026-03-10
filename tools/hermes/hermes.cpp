@@ -60,6 +60,10 @@ struct Flags : public cli::VMOnlyRuntimeFlags {
 
 Flags flags;
 
+/// Extra positional arguments after '--' that are passed to the script
+/// via hermescli.getScriptArgs().
+std::vector<std::string> scriptArgsFromCL;
+
 } // namespace
 
 /// Execute Hermes bytecode \p bytecode, respecting command line arguments.
@@ -131,6 +135,7 @@ static int executeHBCBytecodeFromCL(
           .withEnableHermesInternal(flags.EnableHermesInternal)
           .withEnableHermesInternalTestMethods(
               flags.EnableHermesInternalTestMethods)
+          .withTest262(cl::compilerRuntimeFlags.Test262)
           .build();
 
   options.basicBlockProfiling = cl::BasicBlockProfiling;
@@ -147,6 +152,9 @@ static int executeHBCBytecodeFromCL(
   options.sampleProfiling = flags.SampleProfiling;
   options.sampleProfilingFreq = flags.SampleProfilingFreq;
   options.heapTimeline = flags.HeapTimeline;
+
+  options.scriptArgs = scriptArgsFromCL;
+
 #ifdef HERMES_ENABLE_PERF_PROF
   std::string jitdumpFile;
   if (flags.PerfProf) {
@@ -240,8 +248,35 @@ int main(int argc, char **argv) {
   // Enable the microtask queue in the CLI by default.
   flags.MicrotaskQueue.setInitialValue(true);
 
-  llvh::cl::AddExtraVersionPrinter(driver::printHermesCompilerVMVersion);
-  llvh::cl::ParseCommandLineOptions(argc, argv, "Hermes driver\n");
+  // Extract script arguments after '--' before LLVM command line parsing,
+  // so they are not interpreted as input filenames. These are made available
+  // to JS via hermescli.getScriptArgs().
+  int clArgc = argc;
+  for (int i = 1; i < argc; ++i) {
+    if (strcmp(argv[i], "--") == 0) {
+      for (int j = i + 1; j < argc; ++j)
+        scriptArgsFromCL.emplace_back(argv[j]);
+      clArgc = i;
+      break;
+    }
+  }
+
+  driver::VMFeatures vmFeatures;
+#ifdef HERMES_ENABLE_DEBUGGER
+  vmFeatures.debugger = true;
+#endif
+#ifdef HERMESVM_CONTIGUOUS_HEAP
+  vmFeatures.contiguousHeap = true;
+#endif
+#ifdef HERMES_ENABLE_UNICODE_REGEXP_PROPERTY_ESCAPES
+  vmFeatures.unicodeRegExpPropertyEscapes = true;
+#endif
+  vmFeatures.jit = HERMESVM_JIT;
+
+  llvh::cl::AddExtraVersionPrinter([vmFeatures](llvh::raw_ostream &s) {
+    driver::printHermesCompilerVMVersion(s, &vmFeatures);
+  });
+  llvh::cl::ParseCommandLineOptions(clArgc, argv, "Hermes driver\n");
 
   if (cl::InputFilenames.size() == 0) {
     return repl(getReplRuntimeConfig());

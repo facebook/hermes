@@ -14,6 +14,7 @@
 #include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/JSArray.h"
+#include "hermes/VM/JSLib.h"
 #include "hermes/VM/PrimitiveBox.h"
 
 #include "llvh/ADT/SmallString.h"
@@ -693,6 +694,9 @@ void JSONStringifyer::operationQuote(StringView value) {
 ExecutionStatus JSONStringifyer::operationJA() {
   struct : public Locals {
     PinnedValue<JSObject> arrayObject;
+    // If arrayObject is a JSArray, this is populated.
+    PinnedValue<JSArray> jsArray;
+    PinnedValue<HiddenClass> initClazz;
   } lv;
   LocalsRAII lraii(runtime_, &lv);
 
@@ -718,8 +722,59 @@ ExecutionStatus JSONStringifyer::operationJA() {
     // If array is not empty, we need to lead with an indent.
     indent();
   }
+
+  // Try a fast path for simple JSArrays with contiguous indexed storage.
+  uint64_t index = 0;
+  if (vmisa<JSArray>(*lv.arrayObject) && *lenRes > 0 && *lenRes <= UINT32_MAX &&
+      !lv_.replacerFunction.get() &&
+      arrayFastPathCheck(
+          runtime_,
+          vmcast<JSArray>(*lv.arrayObject),
+          *runtime_.arrayClass,
+          static_cast<uint32_t>(*lenRes))) {
+    lv.initClazz = lv.arrayObject->getClass(runtime_);
+    lv.jsArray = vmcast<JSArray>(*lv.arrayObject);
+
+    for (; index < *lenRes; ++index) {
+      // If the array was modified during recursion (e.g., a toJSON callback
+      // shrinking it), fall back to the slow path for remaining elements.
+      if (LLVM_UNLIKELY(
+              lv.arrayObject->getClass(runtime_) != *lv.initClazz ||
+              index >= lv.jsArray->getEndIndex())) {
+        break;
+      }
+
+      if (index > 0) {
+        // JA.10.
+        output_.push_back(u',');
+        indent();
+      }
+      // JA.8.a - directly access indexed storage instead of property lookup.
+      auto elem = lv.jsArray->getIndexedStorageUnsafe(runtime_)->at(index);
+
+      // Element was deleted during iteration, output null per spec.
+      if (LLVM_UNLIKELY(elem.isEmpty())) {
+        appendToOutput(Predefined::getSymbolID(Predefined::null));
+        continue;
+      }
+      lv_.operationStrValue = elem.unboxToHV(runtime_);
+      // Flush just before the recursion in case any handles were created.
+      marker.flush();
+      auto status = operationStrValue(
+          marker, HermesValue::encodeTrustedNumberValue(index));
+      if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      if (LLVM_UNLIKELY(!status.getValue())) {
+        // operationStr returns undefined, we need to replace with null.
+        appendToOutput(Predefined::getSymbolID(Predefined::null));
+      }
+    }
+  }
+
   // JA.5, 6, 7, 8.
-  for (uint64_t index = 0; index < *lenRes; ++index) {
+  // Slow path: either fast path wasn't applicable, or it broke out mid-loop.
+  for (; index < *lenRes; ++index) {
     if (index > 0) {
       // JA.10.
       output_.push_back(u',');

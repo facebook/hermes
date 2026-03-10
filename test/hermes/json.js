@@ -63,6 +63,10 @@ parse("015");
 //CHECK-NEXT: SyntaxError: JSON Parse error: Unexpected character in number: 1
 parse("+5");
 //CHECK-NEXT: SyntaxError: JSON Parse error: Unexpected character: +
+parse("-");
+//CHECK-NEXT: SyntaxError: JSON Parse error: No digits after minus sign in JSON number
+parse("[-]");
+//CHECK-NEXT: SyntaxError: JSON Parse error: No digits after minus sign in JSON number
 parse("[5,]");
 //CHECK-NEXT: SyntaxError: JSON Parse error: Unexpected character: ]
 parse("[0x5]");
@@ -524,3 +528,21 @@ tryPrintParse("+52");
 // CHECK-NEXT: SyntaxError
 tryPrintParse("123.123.123.123");
 // CHECK-NEXT: SyntaxError
+
+// Verify that deeply nested objects can be parsed without crashing.
+// Previously, parsing deeply nested objects caused a GCScope handle assertion
+// failure because handles allocated in the inner parsing loop were not flushed.
+var deepObj = '{"a":'.repeat(1000) + '1' + '}'.repeat(1000);
+var parsedObj = JSON.parse(deepObj);
+var cur = parsedObj;
+for (var i = 0; i < 1000; ++i) cur = cur.a;
+print("deep object", cur);
+// CHECK-NEXT: deep object 1
+
+// Same test but with deeply nested arrays.
+var deepArr = '['.repeat(1000) + '1' + ']'.repeat(1000);
+var parsedArr = JSON.parse(deepArr);
+cur = parsedArr;
+for (var i = 0; i < 1000; ++i) cur = cur[0];
+print("deep array", cur);
+// CHECK-NEXT: deep array 1

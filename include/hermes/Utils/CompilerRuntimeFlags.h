@@ -54,6 +54,12 @@ struct CompilerRuntimeFlags {
       llvh::cl::init(false),
       llvh::cl::desc("Enable support for async generators"),
       llvh::cl::Hidden};
+
+  llvh::cl::opt<bool> Test262{
+      "test262",
+      llvh::cl::init(false),
+      llvh::cl::Hidden,
+      llvh::cl::desc("Increase compliance with test262")};
 };
 
 } // namespace hermes

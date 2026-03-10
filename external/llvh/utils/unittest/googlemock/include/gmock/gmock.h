@@ -36,6 +36,11 @@
 #ifndef GMOCK_INCLUDE_GMOCK_GMOCK_H_
 #define GMOCK_INCLUDE_GMOCK_GMOCK_H_
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wundef"
+#endif
+
 // This file implements the following syntax:
 //
 //   ON_CALL(mock_object.Method(...))
@@ -90,5 +95,9 @@ GTEST_API_ void InitGoogleMock(int* argc, char** argv);
 GTEST_API_ void InitGoogleMock(int* argc, wchar_t** argv);
 
 }  // namespace testing
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
 #endif  // GMOCK_INCLUDE_GMOCK_GMOCK_H_

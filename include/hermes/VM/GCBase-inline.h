@@ -129,7 +129,7 @@ inline std::pair<T1 *, T2 *> GCBase::make2YoungGenUnsafe(
   assert(
       !VTable::getVTable(T2::getCellKind())->finalize_ &&
       "must not have a finalizer");
-#ifdef HERMESVM_GC_RUNTIME
+#if HERMESVM_GCKIND == _HERMESVM_GCVALUE_RUNTIME
   T *ptr = runtimeGCDispatch([&](auto *gc) {
     return gc->template make2YoungGenUnsafeImpl<T1, T2>(
         size1, t1Args, size2, t2Args);
@@ -153,7 +153,7 @@ inline std::pair<T1 *, T2 *> GCBase::make2YoungGenUnsafe(
   return {t1, t2};
 }
 
-#ifdef HERMESVM_GC_RUNTIME
+#if HERMESVM_GCKIND == _HERMESVM_GCVALUE_RUNTIME
 constexpr uint32_t GCBase::maxNormalAllocationSizeImpl() {
   // Return the lesser of the two GC options' max allowed sizes.
   return std::min({

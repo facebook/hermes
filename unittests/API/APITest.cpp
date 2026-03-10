@@ -10,6 +10,7 @@
 #include <hermes/CompileJS.h>
 #include <hermes/Public/JSOutOfMemoryError.h>
 #include <hermes/VM/TimeLimitMonitor.h>
+#include <hermes/VM/sh_config.h>
 #include <hermes/hermes.h>
 #include <hermes_sandbox/HermesSandboxRuntime.h>
 #include <jsi/instrumentation.h>
@@ -470,7 +471,7 @@ TEST(HermesWatchTimeLimitTest, WatchTimeLimit) {
   }
 }
 
-#ifdef HERMESVM_GC_HADES
+#if HERMESVM_GCKIND == _HERMESVM_GCVALUE_HADES
 TEST_P(HermesRuntimeTest, GetHeapInfo) {
   auto &instrumentation = rt->instrumentation();
   // Make sure we do run some collections.
@@ -840,7 +841,7 @@ TEST_P(HermesRuntimeTest, DISABLED_ExternalMemoryTest) {
       // Check that we haven't accumulated too many CountNativeStates. MallocGC
       // does not deal with external memory correctly so it is excluded.
 
-#ifndef HERMESVM_GC_MALLOC
+#if HERMESVM_GCKIND != _HERMESVM_GCVALUE_MALLOC
       EXPECT_LT(numAllocs++, 50);
 #endif
     }

@@ -29,6 +29,32 @@ namespace vm {
 //===----------------------------------------------------------------------===//
 /// Array.
 
+static inline CallResult<uint64_t>
+lengthOfArrayLike(Runtime &runtime, Handle<JSObject> O, Handle<JSArray> jsArr) {
+  if (LLVM_LIKELY(jsArr)) {
+    // Fast path for getting the length.
+    return JSArray::getLength(jsArr.get(), runtime);
+  }
+  struct : Locals {
+    PinnedValue<> lenProp;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+  // Slow path
+  CallResult<PseudoHandle<>> propRes = JSObject::getNamed_RJS(
+      O, runtime, Predefined::getSymbolID(Predefined::length));
+  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  lv.lenProp = std::move(*propRes);
+  auto lenRes = toLength(runtime, lv.lenProp);
+  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  return lenRes->getNumber();
+}
+
 HermesValue createArrayConstructor(Runtime &runtime) {
   auto arrayPrototype = Handle<JSArray>::vmcast(&runtime.arrayPrototype);
 
@@ -634,42 +660,45 @@ CallResult<HermesValue> arrayPrototypeToLocaleString(void *, Runtime &runtime) {
   auto cycleScope = llvh::make_scope_exit(
       [&lv, &runtime] { runtime.removeVisitedObject(*lv.array); });
 
-  auto propRes = JSObject::getNamed_RJS(
-      lv.array, runtime, Predefined::getSymbolID(Predefined::length));
-  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+  // 2. Let len be ? LengthOfArrayLike(O).
+  auto lenRes = lengthOfArrayLike(
+      runtime,
+      lv.array,
+      vmisa<JSArray>(*lv.array) ? Handle<JSArray>::vmcast(&lv.array)
+                                : Runtime::makeNullHandle<JSArray>());
+  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  lv.lenProp = std::move(*propRes);
-  auto intRes = toUInt32_RJS(runtime, lv.lenProp);
-  if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
+  uint64_t len = *lenRes;
+  if (len == 0) {
+    return emptyString.getHermesValue();
   }
-  uint32_t len = intRes->getNumber();
+  // We use a JSArray to store intermediate strings, which is limited to
+  // uint32_t elements.
+  if (len > UINT32_MAX) {
+    return runtime.raiseRangeError("invalid array length");
+  }
+  uint32_t len32 = static_cast<uint32_t>(len);
 
   // TODO: Get a list-separator String for the host environment's locale.
   // Use a comma as a separator for now, as JSC does.
   const char16_t separator = u',';
 
   // Final size of the result string. Initialize to account for the separators.
-  SafeUInt32 size(len - 1);
-
-  if (len == 0) {
-    return emptyString.getHermesValue();
-  }
+  SafeUInt32 size(len32 - 1);
 
   // Array to store each of the strings of the elements.
-  auto arrRes = JSArray::create(runtime, len, len);
+  auto arrRes = JSArray::create(runtime, len32, len32);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   lv.strings = std::move(*arrRes);
 
   auto marker = gcScope.createMarker();
-  for (uint32_t i = 0; i < len; ++i) {
+  for (uint32_t i = 0; i < len32; ++i) {
+    auto propRes = getIndexed_RJS(runtime, lv.array, i);
     gcScope.flushToMarker(marker);
-    if (LLVM_UNLIKELY(
-            (propRes = getIndexed_RJS(runtime, lv.array, i)) ==
-            ExecutionStatus::EXCEPTION)) {
+    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     lv.E = std::move(*propRes);
@@ -748,39 +777,13 @@ CallResult<HermesValue> arrayPrototypeToLocaleString(void *, Runtime &runtime) {
   }
   lv.strElement = lv.strings->at(runtime, 0).getString(runtime);
   builder->appendStringPrim(lv.strElement);
-  for (uint32_t j = 1; j < len; ++j) {
+  for (uint32_t j = 1; j < len32; ++j) {
     // Every element after the first needs a separator before it.
     builder->appendCharacter(separator);
     lv.strElement = lv.strings->at(runtime, j).getString(runtime);
     builder->appendStringPrim(lv.strElement);
   }
   return HermesValue::encodeStringValue(*builder->getStringPrimitive());
-}
-
-static inline CallResult<uint64_t>
-lengthOfArrayLike(Runtime &runtime, Handle<JSObject> O, Handle<JSArray> jsArr) {
-  if (LLVM_LIKELY(jsArr)) {
-    // Fast path for getting the length.
-    return JSArray::getLength(jsArr.get(), runtime);
-  }
-  struct : Locals {
-    PinnedValue<> lenProp;
-  } lv;
-  LocalsRAII lraii{runtime, &lv};
-  // Slow path
-  CallResult<PseudoHandle<>> propRes = JSObject::getNamed_RJS(
-      O, runtime, Predefined::getSymbolID(Predefined::length));
-  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  lv.lenProp = std::move(*propRes);
-  auto lenRes = toLength(runtime, lv.lenProp);
-  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  return lenRes->getNumber();
 }
 
 // 23.1.3.1
@@ -1150,7 +1153,10 @@ CallResult<HermesValue> arrayPrototypeJoin(void *, Runtime &runtime) {
     // [0..fastPathEnd) will not be populated until we encounter an object
     // (since its toString has side effects).
 
-    auto arrRes = JSArray::StorageType::create(runtime, len, len);
+    if (LLVM_UNLIKELY(len > UINT32_MAX))
+      return runtime.raiseRangeError("Array is too large for join");
+    auto arrRes =
+        JSArray::StorageType::create(runtime, (uint32_t)len, (uint32_t)len);
     if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION))
       return ExecutionStatus::EXCEPTION;
     lv.strings.castAndSetHermesValue<JSArray::StorageType>(*arrRes);
@@ -1860,9 +1866,14 @@ CallResult<HermesValue> arrayPrototypeSort(void *, Runtime &runtime) {
   }
   uint64_t len = *intRes;
 
+  // No sort implementation can handle lengths exceeding UINT32_MAX: quickSort
+  // takes uint32_t, and even iterating over that many indices is impractical.
+  if (LLVM_UNLIKELY(len > UINT32_MAX))
+    return runtime.raiseRangeError("Array sort length exceeds uint32_t");
+
   // If we are not sorting a regular dense array, use a special routine which
-  // first copies all properties into an array.
-  // Proxies  and host objects however are excluded because they are weird.
+  // first copies all existing properties into an array and sorts that.
+  // Proxies and host objects however are excluded because they are weird.
   if (!lv.O->isProxyObject() && !lv.O->isHostObject() &&
       !lv.O->hasFastIndexProperties())
     return sortSparse(runtime, lv.O, compareFn, len);
@@ -1873,7 +1884,10 @@ CallResult<HermesValue> arrayPrototypeSort(void *, Runtime &runtime) {
   // Use our custom sort routine. We can't use std::sort because it performs
   // optimizations that allow it to bypass calls to std::swap, but our swap
   // function is special, since it needs to use the internal Object functions.
-  if (LLVM_UNLIKELY(quickSort(&sm, 0u, len) == ExecutionStatus::EXCEPTION))
+  assert(len <= UINT32_MAX && "sort length exceeds uint32_t");
+  if (LLVM_UNLIKELY(
+          quickSort(&sm, 0u, static_cast<uint32_t>(len)) ==
+          ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
 
   return lv.O.getHermesValue();
@@ -4559,7 +4573,7 @@ CallResult<HermesValue> arrayPrototypeToSpliced(void *, Runtime &runtime) {
   if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  double len = lenRes.getValue();
+  uint64_t len = lenRes.getValue();
 
   // 3. Let relativeIndex be ? ToIntegerOrInfinity(index).
   auto relativeStartRes = toIntegerOrInfinity(runtime, args.getArgHandle(0));
@@ -4574,7 +4588,7 @@ CallResult<HermesValue> arrayPrototypeToSpliced(void *, Runtime &runtime) {
   // 0).
   // 6. Else, let actualStart be min(relativeStart, len).
   double actualStart = relativeStart < 0 ? std::max(len + relativeStart, 0.0)
-                                         : std::min(relativeStart, len);
+                                         : std::min(relativeStart, (double)len);
 
   uint32_t argCount = args.getArgCount();
   uint64_t actualSkipCount;
@@ -4611,12 +4625,10 @@ CallResult<HermesValue> arrayPrototypeToSpliced(void *, Runtime &runtime) {
   }
 
   // 11. Let newLen be len + insertCount - actualSkipCount.
-  auto lenAfterInsert = len + insertCount - actualSkipCount;
+  uint64_t lenAfterInsert = len + insertCount - actualSkipCount;
 
-  // 12. If newLen > 253 - 1, throw a TypeError exception.
-  if (LLVM_UNLIKELY(
-          // lenAfterInsert < len ||
-          lenAfterInsert - actualSkipCount > (1LLU << 53) - 1)) {
+  // 12. If newLen > 2^53 - 1, throw a TypeError exception.
+  if (LLVM_UNLIKELY(lenAfterInsert > (1LLU << 53) - 1)) {
     return runtime.raiseTypeError(
         "Array.prototype.toSpliced result out of space");
   }
@@ -4757,12 +4769,7 @@ CallResult<HermesValue> arrayPrototypeWith(void *, Runtime &runtime) {
   while (k < len) {
     gcScope.flushToMarker(marker);
 
-    // 9a. Let Pk be the result of ? Get(O, ! ToString(k)).
-    auto PkRes = getIndexed_RJS(runtime, lv.O, k);
-    if (LLVM_UNLIKELY(PkRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-
+    // 9a. Let Pk be ! ToString(𝔽(k)).
     // 9b. If k is actualIndex, let fromValue be value.
     if (k == actualIndex) {
       lv.fromValue = args.getArgHandle(1);

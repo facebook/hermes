@@ -58,7 +58,7 @@ GCBase::GCBase(
       allocationLocationTracker_(this),
       samplingAllocationTracker_(this),
 #endif
-#ifdef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES != 0
       sanitizeRate_(gcConfig.getSanitizeConfig().getSanitizeRate()),
 #endif
       tripwireCallback_(gcConfig.getTripwireConfig().getCallback()),
@@ -80,7 +80,7 @@ GCBase::GCBase(
       gcConfig.getMaxHeapSize() >> 20,
       gcConfig.getTripwireConfig().getLimit() >> 20);
 #endif // HERMESVM_PLATFORM_LOGGING
-#ifdef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES != 0
   const std::minstd_rand::result_type seed =
       gcConfig.getSanitizeConfig().getRandomSeed() >= 0
       ? gcConfig.getSanitizeConfig().getRandomSeed()
@@ -167,6 +167,9 @@ struct SnapshotAcceptor : public RootAcceptorWithNames {
   }
   void acceptNullable(PinnedHermesValue &hv, const char *name) override {
     acceptHV(hv, name);
+  }
+  void accept(PinnedSmallHermesValue &shv, const char *name) override {
+    acceptSHV(shv, name);
   }
   void accept(const RootSymbolID &sym, const char *name) override {
     acceptSym(sym, name);
@@ -980,7 +983,7 @@ void GCBase::oomDetail(
       heapInfo.externalBytes);
 }
 
-#ifdef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES != 0
 bool GCBase::shouldSanitizeHandles() {
   static std::uniform_real_distribution<> dist(0.0, 1.0);
   return dist(randomEngine_) < sanitizeRate_;
@@ -1765,6 +1768,12 @@ void GCBase::sizeDiagnosticCensus(size_t allocatedBytes) {
           hv,
           diagnostic.stats.breakdown["HermesValue"],
           sizeof(PinnedHermesValue));
+    }
+    void accept(PinnedSmallHermesValue &shv) override {
+      acceptHV(
+          shv.toHV(pointerBase_),
+          diagnostic.stats.breakdown["SmallHermesValue"],
+          sizeof(PinnedSmallHermesValue));
     }
     void accept(GCHermesValueBase &hv) {
       acceptHV(

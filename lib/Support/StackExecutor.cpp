@@ -11,8 +11,12 @@
 #include "llvh/Support/Debug.h"
 #include "llvh/Support/raw_ostream.h"
 
+// Boost headers use #if on macros that may not be defined, triggering -Wundef.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wundef"
 #include <hoost/context/fiber.hpp>
 #include <hoost/context/protected_fixedsize_stack.hpp>
+#pragma GCC diagnostic pop
 
 #include <cassert>
 

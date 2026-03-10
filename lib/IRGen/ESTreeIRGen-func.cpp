@@ -613,6 +613,11 @@ Function *ESTreeIRGen::genGeneratorFunction(
           homeObject);
     }
 
+    // If the original AST node was async, this inner generator is driven by
+    // spawnAsync (which handles raw yields). Otherwise, if it's an async
+    // generator, the driver is AsyncGenerator which needs OverloadYield.
+    innerFn->setIsFromAsyncFunction(ESTree::isAsync(functionNode));
+
     // Generator functions do not create their own scope, so use the parent's
     // scope.
     GetParentScopeInst *parentScopeInst = Builder.createGetParentScopeInst(

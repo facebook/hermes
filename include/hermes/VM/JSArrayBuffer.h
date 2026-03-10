@@ -100,7 +100,7 @@ class JSArrayBuffer final : public JSObject {
   /// \return A pointer to the buffer owned by this object. This can be null
   ///   if the ArrayBuffer is empty.
   /// \pre attached() must be true
-  uint8_t *getDataBlock(Runtime &runtime) {
+  uint8_t *getDataBlock() {
     assert(attached() && "Cannot get a data block from a detached ArrayBuffer");
     return data_;
   }

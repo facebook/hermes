@@ -178,7 +178,7 @@ CallResult<HermesValue> hermesInternalGetInstrumentedStats(
   ADD_PROP(
       lv.resultHandle, "js_peakLiveAfterGC", info.generalStats.usedAfter.max());
 
-#ifdef HERMESVM_GC_HADES
+#if HERMESVM_GCKIND == _HERMESVM_GCVALUE_HADES
   lv.specificStatsHandle = JSObject::create(runtime);
   auto res = addToResultHandle(
       lv.resultHandle, "js_gcSpecific", lv.specificStatsHandle);

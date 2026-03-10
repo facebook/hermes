@@ -10,6 +10,7 @@
 
 #include "hermes/VM/CellKind.h"
 #include "hermes/VM/HermesValue.h"
+#include "hermes/VM/SmallHermesValue.h"
 #include "hermes/VM/SymbolID.h"
 
 #include <cassert>
@@ -65,6 +66,8 @@ HERMES_VM_GCOBJECT(JSSymbol);
 HERMES_VM_GCOBJECT(JSTypedArrayBase);
 HERMES_VM_GCOBJECT(JSWeakMapImplBase);
 HERMES_VM_GCOBJECT(JSWeakRef);
+HERMES_VM_GCOBJECT(FinalizationRecord);
+HERMES_VM_GCOBJECT(JSFinalizationRegistry);
 HERMES_VM_GCOBJECT(NativeJSFunction);
 HERMES_VM_GCOBJECT(NativeJSClass);
 HERMES_VM_GCOBJECT(NativeConstructor);
@@ -298,10 +301,17 @@ struct IsHermesValueConvertible {
        std::is_base_of<To, From>::value);
 };
 
-/// Specialize converting to a HermesValue. Anything is convertible to
-/// HermesValue.
+/// Specialize converting to a HermesValue. Anything other than SmallHermesValue
+/// is convertible to HermesValue.
 template <class From>
 struct IsHermesValueConvertible<From, HermesValue> : std::true_type {};
+
+/// Though SmallHermesValue could be convertible to Hermes in certain case
+/// (i.e., when HERMESVM_BOXED_DOUBLES is OFF), we forbid the conversion to
+/// avoid subtle bugs.
+template <>
+struct IsHermesValueConvertible<SmallHermesValue, HermesValue>
+    : std::false_type {};
 
 } // namespace vm
 } // namespace hermes

@@ -24,6 +24,10 @@ print(String(sym));
 print('description');
 // CHECK-LABEL: description
 print(Symbol().description);
+// CHECK-NEXT: undefined
+print(Symbol(undefined).description);
+// CHECK-NEXT: undefined
+print(Symbol('').description);
 // CHECK-EMPTY:
 print(Symbol('asdf').description);
 // CHECK-NEXT: asdf
@@ -36,10 +40,6 @@ catch (e) { print('caught', e.name); }
 // CHECK-NEXT: caught TypeError
 print(Symbol.iterator.description)  // well-known Symbols
 // CHECK-NEXT: Symbol.iterator
-
-// TODO(The below cases need to return `undefined` to be fully conformant.)
-// print(Symbol().description)
-// print(Symbol(undefined).description)
 
 print('toString');
 // CHECK-LABEL: toString

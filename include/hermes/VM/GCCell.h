@@ -124,7 +124,7 @@ class GCCell {
     assert(
         sz &&
         "GCCell with potentially zero size must call getAllocatedSizeSlow()");
-#ifdef HERMESVM_GC_HADES
+#if HERMESVM_GCKIND == _HERMESVM_GCVALUE_HADES
     assert(
         AlignedHeapSegment::getSegmentSize(this) ==
             FixedSizeHeapSegment::storageSize() &&

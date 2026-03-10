@@ -3,6 +3,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+hermes_enable_werror_undef()
+
 add_hermes_library(hermesOptimizer
   Optimizer/PassManager/PassManager.cpp
   Optimizer/PassManager/Pipeline.cpp
@@ -120,7 +122,22 @@ target_link_libraries(hermescompiler PUBLIC
   zip_obj
   )
 
+set(HERMESVM_PUBLIC_INCLUDE_DIRS
+  ${PROJECT_SOURCE_DIR}/public
+  ${HERMES_COMMON_DIR}/public
+  ${PROJECT_SOURCE_DIR}/API
+  ${PROJECT_SOURCE_DIR}/include
+  ${PROJECT_BINARY_DIR}/include
+  ${PROJECT_BINARY_DIR}/lib/config
+  ${PROJECT_SOURCE_DIR}/external
+  ${PROJECT_SOURCE_DIR}/external/llvh/include
+  ${PROJECT_SOURCE_DIR}/external/llvh/gen/include
+  ${PROJECT_BINARY_DIR}/external/llvh/include
+  ${HERMES_JSI_DIR}
+)
+
 add_library(hermesvm_a STATIC)
+target_include_directories(hermesvm_a PUBLIC ${HERMESVM_PUBLIC_INCLUDE_DIRS})
 target_link_libraries(hermesvm_a PUBLIC
   LLVHSupport_obj
   ${BOOST_CONTEXT_LIB}
@@ -151,6 +168,7 @@ target_link_libraries(hermesvm_a PUBLIC
   )
 
 add_library(hermesvmlean_a STATIC)
+target_include_directories(hermesvmlean_a PUBLIC ${HERMESVM_PUBLIC_INCLUDE_DIRS})
 target_link_libraries(hermesvmlean_a PUBLIC
   LLVHSupport_obj
   ${BOOST_CONTEXT_LIB}
@@ -244,8 +262,8 @@ endif()
 # Since we use private dependencies above, we need to enumerate all the headers
 # that should be available to consumers of hermesvm. Note that we only expose
 # the headers which produce visible symbols.
-target_include_directories(hermesvm PUBLIC ${PROJECT_SOURCE_DIR}/public ${HERMES_COMMON_DIR}/public ${PROJECT_SOURCE_DIR}/API ${HERMES_JSI_DIR})
-target_include_directories(hermesvmlean PUBLIC ${PROJECT_SOURCE_DIR}/public ${HERMES_COMMON_DIR}/public ${PROJECT_SOURCE_DIR}/API ${HERMES_JSI_DIR})
+target_include_directories(hermesvm PUBLIC ${HERMESVM_PUBLIC_INCLUDE_DIRS})
+target_include_directories(hermesvmlean PUBLIC ${HERMESVM_PUBLIC_INCLUDE_DIRS})
 
 # Private dependencies also mean that JSI will not get propagated to libraries
 # that depend on hermesvm. If JSI is built as a shared library, ensure it is

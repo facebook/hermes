@@ -13,10 +13,10 @@
 namespace hermes {
 namespace vm {
 
-#if defined(HERMESVM_GC_MALLOC)
+#if HERMESVM_GCKIND == _HERMESVM_GCVALUE_MALLOC
 class MallocGC;
 using GC = MallocGC;
-#elif defined(HERMESVM_GC_HADES)
+#elif HERMESVM_GCKIND == _HERMESVM_GCVALUE_HADES
 class HadesGC;
 using GC = HadesGC;
 #else

@@ -44,7 +44,6 @@
 #include "hermes/Utils/CompilerRuntimeFlags.h"
 #include "hermes/Utils/Dumper.h"
 #include "hermes/Utils/Options.h"
-#include "hermes/VM/JIT/Config.h"
 
 #include "llvh/Support/CommandLine.h"
 #include "llvh/Support/Debug.h"
@@ -530,6 +529,12 @@ static opt<bool> ParseTS(
     desc("Parse TypeScript"),
     init(false),
     cat(CompilerCategory));
+
+static opt<bool> TransformTS(
+    "transform-ts",
+    desc("Strip erasable TypeScript syntax (implies --parse-ts)"),
+    init(false),
+    cat(CompilerCategory));
 #endif
 
 static CLFlag StaticRequire(
@@ -612,13 +617,6 @@ static CLFlag StripFunctionNames(
     false,
     "Strip function names to reduce string table size",
     CompilerCategory);
-
-static opt<bool> Test262(
-    "test262",
-    init(false),
-    Hidden,
-    desc("Increase compliance with test262 by moving more checks to runtime"),
-    cat(CompilerCategory));
 
 static opt<bool> EnableFastNoncompliant(
     "Xenable-fast-noncompliant",
@@ -1055,6 +1053,11 @@ bool validateFlags() {
     err("error: CommonJS modules are not supported in typed mode");
   }
 
+#if HERMES_PARSE_TS
+  if (cl::TransformTS && cl::Typed)
+    err("error: --transform-ts is incompatible with typed mode");
+#endif
+
   return !errored;
 }
 
@@ -1107,7 +1110,7 @@ std::shared_ptr<Context> createContext(
     std::unique_ptr<Context::ResolutionTable> resolutionTable,
     std::vector<uint32_t> segments) {
   CodeGenerationSettings codeGenOpts;
-  codeGenOpts.test262 = cl::Test262;
+  codeGenOpts.test262 = cl::compilerRuntimeFlags.Test262;
   codeGenOpts.enableTDZ = !cl::EnableFastNoncompliant && cl::EnableTDZ;
   codeGenOpts.enableFastDestructure =
       cl::EnableFastNoncompliant || cl::EnableFastDestructure;
@@ -1229,6 +1232,10 @@ std::shared_ptr<Context> createContext(
 #if HERMES_PARSE_TS
   if (cl::ParseTS) {
     context->setParseTS(true);
+  }
+  if (cl::TransformTS) {
+    context->setParseTS(true);
+    context->setTransformTS(true);
   }
 #endif
 
@@ -2217,32 +2224,28 @@ CompileResult processSourceFiles(
 
 /// Print the Hermes version to the stream \p s, outputting the \p vmStr (which
 /// may be empty).
-/// \param features when true, print the list of enabled features.
+/// \param vmFeatures when non-null, print the list of enabled features.
 void printHermesVersion(
     llvh::raw_ostream &s,
     const char *vmStr = "",
-    bool features = true) {
+    const VMFeatures *vmFeatures = nullptr) {
   s << "Hermes JavaScript compiler" << vmStr << ".\n"
 #ifdef HERMES_RELEASE_VERSION
     << "  Hermes release version: " << HERMES_RELEASE_VERSION << "\n"
 #endif
     << "  HBC bytecode version: " << hermes::hbc::BYTECODE_VERSION << "\n"
     << "\n";
-  if (features) {
-    s << "  Features:\n"
-#ifdef HERMES_ENABLE_DEBUGGER
-      << "    Debugger\n"
-#endif
-#ifdef HERMESVM_CONTIGUOUS_HEAP
-      << "    Contiguous Heap\n"
-#endif
-#ifdef HERMES_ENABLE_UNICODE_REGEXP_PROPERTY_ESCAPES
-      << "    Unicode RegExp Property Escapes\n"
-#endif
-#if HERMESVM_JIT
-      << "    JIT\n"
-#endif
-      << "    Zip file input\n";
+  if (vmFeatures) {
+    s << "  Features:\n";
+    if (vmFeatures->debugger)
+      s << "    Debugger\n";
+    if (vmFeatures->contiguousHeap)
+      s << "    Contiguous Heap\n";
+    if (vmFeatures->unicodeRegExpPropertyEscapes)
+      s << "    Unicode RegExp Property Escapes\n";
+    if (vmFeatures->jit)
+      s << "    JIT\n";
+    s << "    Zip file input\n";
   }
 }
 
@@ -2251,8 +2254,10 @@ void printHermesVersion(
 namespace hermes {
 namespace driver {
 
-void printHermesCompilerVMVersion(llvh::raw_ostream &s) {
-  printHermesVersion(s, " and Virtual Machine");
+void printHermesCompilerVMVersion(
+    llvh::raw_ostream &s,
+    const VMFeatures *vmFeatures) {
+  printHermesVersion(s, " and Virtual Machine", vmFeatures);
 }
 void printHermesCompilerVersion(llvh::raw_ostream &s) {
   printHermesVersion(s);

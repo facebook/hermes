@@ -315,7 +315,7 @@ class HermesValue32 {
   /// \return true if the double can be encoded as a compressed HV64.
   static bool canInlineCompressibleOrNumberHV64(HermesValue hv) {
     assert(hv.isNumberOrCompressible() && "hv must be number or compressible");
-#ifdef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES != 0
     // If Handle-San is enabled, always box doubles on the heap. This ensures
     // that callers have to treat a HermesValue32 containing a number as a
     // pointer.
@@ -620,6 +620,25 @@ using GCSmallHermesValue = GCHermesValueImpl<SmallHermesValue>;
 /// GCSmallHermesValue stored in an object that supports large allocation.
 using GCSmallHermesValueInLargeObj =
     GCHermesValueInLargeObjImpl<SmallHermesValue>;
+
+/// A SmallHermesValue which is stored in non-moveable memory and is known to
+/// the garbage collector.
+class PinnedSmallHermesValue : public SmallHermesValue {
+ public:
+  constexpr PinnedSmallHermesValue()
+      : PinnedSmallHermesValue(encodeUndefinedValue()) {}
+  explicit constexpr PinnedSmallHermesValue(SmallHermesValue v)
+      : SmallHermesValue(v) {}
+  constexpr PinnedSmallHermesValue(const PinnedSmallHermesValue &) = default;
+  PinnedSmallHermesValue &operator=(const PinnedSmallHermesValue &phv) {
+    setNoBarrier(phv);
+    return *this;
+  }
+  PinnedSmallHermesValue &operator=(const SmallHermesValue &shv) {
+    setNoBarrier(shv);
+    return *this;
+  }
+} HERMES_ATTRIBUTE_WARN_UNUSED_VARIABLES;
 
 } // end namespace vm
 } // end namespace hermes

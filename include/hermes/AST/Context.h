@@ -266,6 +266,9 @@ class Context {
   /// Whether to parse TypeScript syntax.
   bool parseTS_{false};
 
+  /// Whether to strip erasable TypeScript syntax from the AST.
+  bool transformTS_{false};
+
   /// Whether to enable support for async generators
   bool enableAsyncGenerators_{false};
 
@@ -469,6 +472,13 @@ class Context {
   }
   bool getParseTS() const {
     return parseTS_;
+  }
+
+  void setTransformTS(bool transformTS) {
+    transformTS_ = transformTS;
+  }
+  bool getTransformTS() const {
+    return transformTS_;
   }
 
   void setEnableAsyncGenerators(bool enableAsyncGenerators) {

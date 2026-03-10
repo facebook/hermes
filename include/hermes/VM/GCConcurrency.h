@@ -8,6 +8,8 @@
 #ifndef HERMES_VM_GCCONCURRENCY_H
 #define HERMES_VM_GCCONCURRENCY_H
 
+#include "hermes/VM/sh_config.h"
+
 #include <atomic>
 #include <cassert>
 #include <condition_variable>
@@ -21,7 +23,8 @@ namespace vm {
 /// Hades will run with a single thread that interleaves work with the YG and
 /// OG. Has no effect on non-Hades GCs.
 static constexpr bool kConcurrentGC =
-#if defined(HERMESVM_ALLOW_CONCURRENT_GC) && defined(HERMESVM_GC_HADES)
+#if defined(HERMESVM_ALLOW_CONCURRENT_GC) && \
+    (HERMESVM_GCKIND == _HERMESVM_GCVALUE_HADES)
     // Only use Hades concurrently if on a 64-bit platform.
     sizeof(void *) == 8
 #else

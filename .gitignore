@@ -50,3 +50,5 @@ compile_commands.json
 # fork-sync working directory
 .sync/
 /.claude/settings.local.json
+
+/sync-pr-notes.md

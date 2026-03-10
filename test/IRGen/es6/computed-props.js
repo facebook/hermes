@@ -30,15 +30,21 @@
 // CHECK-NEXT:  %3 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:       StoreFrameInst %0: environment, %3: object, [%VS0.?obj]: object
 // CHECK-NEXT:       DefineOwnPropertyInst 3: number, %3: object, "x": string, true: boolean
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %0: environment, %VS0: any, %""(): functionCode
-// CHECK-NEXT:       DefineOwnGetterSetterInst %6: object, undefined: undefined, %3: object, "y": string, true: boolean
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %VS0: any, %" 1#"(): functionCode
-// CHECK-NEXT:       DefineOwnGetterSetterInst undefined: undefined, %8: object, %3: object, "y": string, true: boolean
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %0: environment, %VS0: any, %" 2#"(): functionCode
-// CHECK-NEXT:        DefineOwnPropertyInst %10: object, %3: object, "z": string, true: boolean
+// CHECK-NEXT:  %6 = ToPropertyKeyInst (:string|symbol) "y": string
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %""(): functionCode
+// CHECK-NEXT:  %8 = CallBuiltinInst (:any) [HermesBuiltin.setFunctionName]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %7: object, %6: string|symbol, 1: number
+// CHECK-NEXT:       DefineOwnGetterSetterInst %7: object, undefined: undefined, %3: object, %6: string|symbol, true: boolean
+// CHECK-NEXT:  %10 = ToPropertyKeyInst (:string|symbol) "y": string
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %VS0: any, %" 1#"(): functionCode
+// CHECK-NEXT:  %12 = CallBuiltinInst (:any) [HermesBuiltin.setFunctionName]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %11: object, %10: string|symbol, 2: number
+// CHECK-NEXT:        DefineOwnGetterSetterInst undefined: undefined, %11: object, %3: object, %10: string|symbol, true: boolean
+// CHECK-NEXT:  %14 = ToPropertyKeyInst (:string|symbol) "z": string
+// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %0: environment, %VS0: any, %" 2#"(): functionCode
+// CHECK-NEXT:  %16 = CallBuiltinInst (:any) [HermesBuiltin.setFunctionName]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %15: object, %14: string|symbol, 0: number
+// CHECK-NEXT:        DefineOwnPropertyInst %15: object, %3: object, %14: string|symbol, true: boolean
 // CHECK-NEXT:        StoreStackInst %3: object, %1: any
-// CHECK-NEXT:  %13 = LoadStackInst (:any) %1: any
-// CHECK-NEXT:        ReturnInst %13: any
+// CHECK-NEXT:  %19 = LoadStackInst (:any) %1: any
+// CHECK-NEXT:        ReturnInst %19: any
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS1 []
