@@ -72,7 +72,6 @@ void SamplingProfiler::markRoots(RootAcceptor &acceptor) {
 
 uint32_t SamplingProfiler::walkRuntimeStack(
     StackTrace &sampleStorage,
-    InLoom inLoom,
     MayAllocate mayAllocate) {
   unsigned numSkipped = 0;
 
@@ -103,20 +102,14 @@ uint32_t SamplingProfiler::walkRuntimeStack(
       frameStorage.jsFrame.module = module;
       // Don't execute a read or write barrier here because this is a signal
       // handler.
-      if (inLoom != InLoom::Yes)
-        registerDomain(module->getDomainForSamplingProfiler(runtime_));
+      registerDomain(module->getDomainForSamplingProfiler(runtime_));
     } else if (
         auto *nativeFunction =
             dyn_vmcast<NativeFunction>(frame.getCalleeClosureUnsafe())) {
       frameStorage.kind = vmisa<FinalizableNativeFunction>(nativeFunction)
           ? StackFrame::FrameKind::FinalizableNativeFunction
           : StackFrame::FrameKind::NativeFunction;
-      if (inLoom != InLoom::Yes) {
-        frameStorage.nativeFrame = registerNativeFunction(nativeFunction);
-      } else {
-        frameStorage.nativeFunctionPtrForLoom =
-            nativeFunction->getFunctionPtr();
-      }
+      frameStorage.nativeFrame = registerNativeFunction(nativeFunction);
     } else {
       // TODO: handle BoundFunction.
       capturedFrame = false;
@@ -290,7 +283,7 @@ void SamplingProfiler::recordPreSuspendStack(
   leafFrame.suspendFrame = suspendExtraInfo;
 
   // Leaf frame slot has been used, filling from index 1.
-  walkRuntimeStack(preSuspendStackStorage_, InLoom::No, MayAllocate::Yes);
+  walkRuntimeStack(preSuspendStackStorage_, MayAllocate::Yes);
 }
 
 bool operator==(

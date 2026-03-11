@@ -9,14 +9,6 @@
 
 #if defined(HERMESVM_SAMPLING_PROFILER_WINDOWS)
 
-#if defined(HERMES_FACEBOOK_BUILD) && defined(HERMESVM_ALLOW_LOOM)
-#define HERMESVM_ENABLE_LOOM
-#endif
-
-#if defined(HERMESVM_ENABLE_LOOM)
-#include <FBLoom/ExternalApi/ExternalApi.h>
-#endif
-
 #include "hermes/VM/Profiler/SamplingProfiler.h"
 
 #ifndef NOMINMAX
@@ -42,14 +34,6 @@ struct SamplingProfilerWindows : SamplingProfiler {
   SamplingProfilerWindows(Runtime &rt) : SamplingProfiler(rt) {
     currentThread_ = openCurrentThread();
 
-#if defined(HERMESVM_ENABLE_LOOM)
-    fbloom_profilo_api()->fbloom_register_enable_for_loom_callback(
-        FBLoomTracerType::JAVASCRIPT, []() { return enable(); });
-    fbloom_profilo_api()->fbloom_register_disable_for_loom_callback(
-        FBLoomTracerType::JAVASCRIPT, disable);
-    loomDataPushEnabled_ = true;
-#endif // defined(HERMESVM_ENABLE_LOOM)
-
     // Note that we cannot register this in the base class constructor, because
     // all fields must be initialized before we register with the profiling
     // thread.
@@ -63,77 +47,6 @@ struct SamplingProfilerWindows : SamplingProfiler {
 
     CloseHandle(currentThread_);
   }
-
-#if defined(HERMESVM_ENABLE_LOOM)
-  bool shouldPushDataToLoom() const {
-    auto now = std::chrono::system_clock::now();
-    constexpr auto kLoomDelay = std::chrono::milliseconds(50);
-    // The default sample stack interval in timerLoop() is between 5-15ms
-    // which is too often for loom.
-    return loomDataPushEnabled_ && (now - previousPushTs > kLoomDelay);
-  }
-
-  void collectStackForLoomCommon(
-      const StackFrame &frame,
-      int64_t *frames,
-      uint32_t index) {
-    constexpr uint64_t kNativeFrameMask = ((uint64_t)1 << 63);
-    switch (frame.kind) {
-      case StackFrame::FrameKind::JSFunction: {
-        auto *bcProvider = frame.jsFrame.module->getBytecode();
-        uint32_t virtualOffset =
-            bcProvider->getVirtualOffsetForFunction(frame.jsFrame.functionId) +
-            frame.jsFrame.offset;
-        uint32_t segmentID = bcProvider->getSegmentID();
-        uint64_t frameAddress = ((uint64_t)segmentID << 32) + virtualOffset;
-        assert(
-            (frameAddress & kNativeFrameMask) == 0 &&
-            "Module id should take less than 32 bits");
-        frames[(index)] = static_cast<int64_t>(frameAddress);
-        break;
-      }
-
-      case StackFrame::FrameKind::NativeFunction:
-      case StackFrame::FrameKind::FinalizableNativeFunction: {
-        NativeFunctionPtr nativeFrame = getNativeFunctionPtr(frame);
-        frames[(index)] = ((uint64_t)nativeFrame | kNativeFrameMask);
-        break;
-      }
-      case StackFrame::FrameKind::SuspendFrame:
-        break;
-      default:
-        llvm_unreachable("Loom: unknown frame kind");
-    }
-  }
-
-  void pushLastSampledStackToLoom() {
-    constexpr uint16_t maxDepth = 512;
-    int64_t frames[maxDepth];
-    uint16_t depth = 0;
-    // Each element in sampledStacks_ is one call stack, access the last one
-    // to get the latest stack trace.
-    auto sample = sampledStacks_.back();
-    for (auto iter = sample.stack.rbegin(); iter != sample.stack.rend();
-         ++iter) {
-      const StackFrame &frame = *iter;
-      collectStackForLoomCommon(frame, frames, depth);
-      depth++;
-      if (depth > maxDepth) {
-        return;
-      }
-    }
-    fbloom_profilo_api()->fbloom_write_stack_to_loom(
-        FBLoomTracerType::JAVASCRIPT, frames, depth);
-    previousPushTs = std::chrono::system_clock::now();
-    clear();
-  }
-
-  /// Previous timestamp when a push to loom occurred. The Loom API does not
-  /// rate limit its callers, and thus care must be taken to not overload it.
-  std::chrono::time_point<std::chrono::system_clock> previousPushTs;
-
-  bool loomDataPushEnabled_{false};
-#endif // defined(HERMESVM_ENABLE_LOOM)
 
   /// Thread that this profiler instance represents. This can be updated
   /// by later calls to SetRuntimeThread.
@@ -171,14 +84,7 @@ void Sampler::platformRegisterRuntime(SamplingProfiler *profiler) {}
 
 void Sampler::platformUnregisterRuntime(SamplingProfiler *profiler) {}
 
-void Sampler::platformPostSampleStack(SamplingProfiler *localProfiler) {
-#if defined(HERMESVM_ENABLE_LOOM)
-  auto *windowsProfiler = static_cast<SamplingProfilerWindows *>(localProfiler);
-  if (windowsProfiler->shouldPushDataToLoom()) {
-    windowsProfiler->pushLastSampledStackToLoom();
-  }
-#endif // defined(HERMESVM_ENABLE_LOOM)
-}
+void Sampler::platformPostSampleStack(SamplingProfiler *localProfiler) {}
 
 bool Sampler::platformSuspendVMAndWalkStack(SamplingProfiler *profiler) {
   auto *winProfiler = static_cast<SamplingProfilerWindows *>(profiler);

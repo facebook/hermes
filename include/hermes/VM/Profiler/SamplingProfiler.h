@@ -51,8 +51,6 @@ class SamplingProfiler {
     // IP offset within the function.
     uint32_t offset;
   };
-  /// Captured NativeFunction frame information for symbolication.
-  using LoomNativeFrameInfo = NativeFunctionPtr;
   /// Captured NativeFunction frame information for symbolication that hasn't
   /// been registered with the sampling profiler yet, and therefore can be moved
   /// by the GC.
@@ -98,8 +96,6 @@ class SamplingProfiler {
     union {
       /// Pure JS function frame info.
       JSFunctionFrameInfo jsFrame;
-      /// Native function frame info storage used for loom profiling.
-      LoomNativeFrameInfo nativeFunctionPtrForLoom;
       /// Native function frame info storage used for "regular" profiling.
       NativeFunctionFrameInfo nativeFrame;
       /// Suspend frame info.
@@ -224,21 +220,15 @@ class SamplingProfiler {
       NativeFunction *nativeFunction);
 
  protected:
-  enum class InLoom { No, Yes };
-
   /// Walk runtime stack frames and store in \p sampleStorage.
   /// When this function is being invoked from signal handler, it should obey
   /// all rules of signal handler(no lock, no memory allocation etc...)
   /// \param sampleStorage references the buffer where stack frames will be
   /// stored.
-  /// \param inLoom specifies this function is being invoked in a Loom callback.
   /// \param mayAllocate specifies whether this function may allocate memory.
   /// \return the number of frames that aren't stored in \p sampleStorage
   /// due to insufficient space.
-  uint32_t walkRuntimeStack(
-      StackTrace &sampleStorage,
-      InLoom inLoom,
-      MayAllocate mayAllocate);
+  uint32_t walkRuntimeStack(StackTrace &sampleStorage, MayAllocate mayAllocate);
 
  private:
   /// Record JS stack at time of suspension, caller must hold

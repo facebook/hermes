@@ -143,8 +143,7 @@ void Sampler::walkRuntimeStack(
       !curThreadRuntime.getHeap().inGC() &&
       "sampling profiler should be suspended before GC");
   (void)curThreadRuntime;
-  numSkippedFrames_ = profiler->walkRuntimeStack(
-      sampleStorage_, SamplingProfiler::InLoom::No, mayAllocate);
+  numSkippedFrames_ = profiler->walkRuntimeStack(sampleStorage_, mayAllocate);
 }
 
 void Sampler::timerLoop(double meanHzFreq) {
