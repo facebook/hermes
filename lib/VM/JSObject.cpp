@@ -35,12 +35,11 @@ const ObjectVTable JSObject::vt{
         nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION
         ,
-        VTable::HeapSnapshotMetadata{
-            HeapSnapshot::NodeType::Object,
-            JSObject::_snapshotNameImpl,
-            JSObject::_snapshotAddEdgesImpl,
-            nullptr,
-            JSObject::_snapshotAddLocationsImpl}
+        VTable::HeapSnapshotMetadata {
+          HeapSnapshot::NodeType::Object, JSObject::_snapshotNameImpl,
+              JSObject::_snapshotAddEdgesImpl, nullptr,
+              JSObject::_snapshotAddLocationsImpl
+        }
 #endif
         ),
     JSObject::_getOwnIndexedRangeImpl,
@@ -1472,9 +1471,8 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
       // the key to be passed in as a primitive string value rather than a
       // symbol, if it actually did come from a string.
       Handle<> nameValHandle = name.isUniqued()
-          ? runtime.makeHandle(
-                HermesValue::encodeStringValue(
-                    runtime.getStringPrimFromSymbolID(name)))
+          ? runtime.makeHandle(HermesValue::encodeStringValue(
+                runtime.getStringPrimFromSymbolID(name)))
           : runtime.makeHandle(name);
       CallResult<bool> descDefinedRes = getOwnComputedPrimitiveDescriptor(
           receiverHandle,
@@ -2059,9 +2057,8 @@ CallResult<bool> JSObject::defineOwnPropertyInternal(
       return JSProxy::defineOwnProperty(
           selfHandle,
           runtime,
-          name.isUniqued() ? runtime.makeHandle(
-                                 HermesValue::encodeStringValue(
-                                     runtime.getStringPrimFromSymbolID(name)))
+          name.isUniqued() ? runtime.makeHandle(HermesValue::encodeStringValue(
+                                 runtime.getStringPrimFromSymbolID(name)))
                            : runtime.makeHandle(name),
           dpFlags,
           valueOrAccessor,
@@ -2573,6 +2570,10 @@ CallResult<bool> JSObject::preventExtensions(
 }
 
 ExecutionStatus JSObject::seal(Handle<JSObject> selfHandle, Runtime &runtime) {
+  if (selfHandle->isLazy()) {
+    initializeLazyObject(runtime, selfHandle);
+  }
+
   CallResult<bool> statusRes = JSObject::preventExtensions(
       selfHandle, runtime, PropOpFlags().plusThrowOnError());
   if (LLVM_UNLIKELY(statusRes == ExecutionStatus::EXCEPTION)) {
@@ -2597,6 +2598,10 @@ ExecutionStatus JSObject::seal(Handle<JSObject> selfHandle, Runtime &runtime) {
 ExecutionStatus JSObject::freeze(
     Handle<JSObject> selfHandle,
     Runtime &runtime) {
+  if (selfHandle->isLazy()) {
+    initializeLazyObject(runtime, selfHandle);
+  }
+
   CallResult<bool> statusRes = JSObject::preventExtensions(
       selfHandle, runtime, PropOpFlags().plusThrowOnError());
   if (LLVM_UNLIKELY(statusRes == ExecutionStatus::EXCEPTION)) {
