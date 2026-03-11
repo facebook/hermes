@@ -4586,6 +4586,7 @@
     "test262/test/built-ins/parseFloat/S15.1.2.3_A6.js",
     "test262/test/built-ins/TypedArray/prototype/copyWithin/coerced-values-end-detached-prototype.js",
     "test262/test/built-ins/String/prototype/repeat/repeat-string-n-times.js",
+    "test262/test/staging/sm/Proxy/ownkeys-linear.js",
     "test262/test/built-ins/RegExp/property-escapes/generated/"
   ],
   "unsupported_features": [
