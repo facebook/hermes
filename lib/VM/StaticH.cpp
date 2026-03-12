@@ -802,7 +802,7 @@ static inline void putById_RJS(
         LLVM_LIKELY(addCacheEntry.resultClazz) &&
         LLVM_LIKELY(
             addCacheEntry.getParentEpoch() == runtime.getParentCacheEpoch()) &&
-        LLVM_LIKELY(addCacheEntry.parent == obj->getParentGCPtr())) {
+        LLVM_LIKELY(addCacheEntry.parent == obj->getParentGCPtr(runtime))) {
       HiddenClass *resultClazz =
           addCacheEntry.resultClazz.getNonNull(runtime, runtime.getHeap());
       JSObject::addNewOwnPropertyInSlot(
@@ -1052,7 +1052,7 @@ static inline HermesValue getByIdWithReceiver_RJS(
         assert(!obj->getFlags().proxyObject);
         assert(!obj->getFlags().hostObject);
         assert(!obj->getFlags().lazyObject);
-        const GCPointer<JSObject> &parentGCPtr = obj->getParentGCPtr();
+        const GCPointer<JSObject> &parentGCPtr = obj->getParentGCPtr(runtime);
         if (LLVM_LIKELY(parentGCPtr)) {
           JSObject *parent = parentGCPtr.getNonNull(runtime);
           if (LLVM_LIKELY(cacheEntry->clazz == parent->getClassGCPtr())) {

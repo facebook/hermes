@@ -1906,7 +1906,7 @@ tailCall:
       assert(!obj->getFlags().proxyObject);                                   \
       assert(!obj->getFlags().hostObject);                                    \
       assert(!obj->getFlags().lazyObject);                                    \
-      const GCPointer<JSObject> &parentGCPtr = obj->getParentGCPtr();         \
+      const GCPointer<JSObject> &parentGCPtr = obj->getParentGCPtr(runtime);  \
       if (LLVM_LIKELY(parentGCPtr)) {                                         \
         JSObject *parent = parentGCPtr.getNonNull(runtime);                   \
         if (LLVM_LIKELY(cacheEntry->clazz == parent->getClassGCPtr())) {      \
@@ -2076,7 +2076,7 @@ tailCall:
             LLVM_LIKELY(
                 addCacheEntry.getParentEpoch() ==
                 runtime.getParentCacheEpoch()) &&
-            LLVM_LIKELY(addCacheEntry.parent == obj->getParentGCPtr())) {
+            LLVM_LIKELY(addCacheEntry.parent == obj->getParentGCPtr(runtime))) {
           HiddenClass *resultClazz =
               addCacheEntry.resultClazz.getNonNull(runtime, runtime.getHeap());
           ++NumPutByIdTransitionHits;

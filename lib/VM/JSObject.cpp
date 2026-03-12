@@ -2992,7 +2992,7 @@ void JSObject::tryCacheAddProperty(
       CompressedPointer::encodeNonNull(startClazz, runtime);
   addCacheEntry.resultClazz =
       CompressedPointer::encodeNonNull(resultClazz, runtime);
-  addCacheEntry.parent = self->getParentGCPtr();
+  addCacheEntry.parent = self->getParentGCPtr(runtime);
 
   // Mark everything along the prototype chain as a cached parent.
   for (JSObject *cur = self->getParent(runtime); cur != nullptr;
