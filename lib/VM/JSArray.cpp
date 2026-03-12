@@ -13,6 +13,7 @@
 #include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/PropertyAccessor.h"
+#include "hermes/VM/Runtime-inline.h"
 
 namespace hermes {
 namespace vm {
@@ -408,7 +409,7 @@ CallResult<PseudoHandle<Arguments>> Arguments::create(
   } lv;
   LocalsRAII lraii{runtime, &lv};
   auto clazz = runtime.getHiddenClassForPrototype(
-      runtime.objectPrototypeRawPtr, numOverlapSlots<Arguments>());
+      runtime.objectPrototypeRawPtr, runtime.classArguments);
   auto obj = runtime.makeAFixed<Arguments>(
       runtime, Handle<JSObject>::vmcast(&runtime.objectPrototype), clazz);
   lv.self = JSObjectInit::initToPointer(runtime, obj);
@@ -523,10 +524,9 @@ void JSArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 
 Handle<HiddenClass> JSArray::createClass(
     Runtime &runtime,
-    Handle<JSObject> prototypeHandle) {
-  Handle<HiddenClass> classHandle = runtime.getHiddenClassForPrototype(
-      *prototypeHandle, numOverlapSlots<JSArray>());
-
+    Handle<JSObject> prototypeHandle,
+    Handle<HiddenClass> rootClazz) {
+  assert(rootClazz && "must have a starting point");
   PropertyFlags pf{};
   pf.enumerable = 0;
   pf.writable = 1;
@@ -534,19 +534,19 @@ Handle<HiddenClass> JSArray::createClass(
   pf.internalSetter = 1;
 
   auto added = HiddenClass::addProperty(
-      classHandle, runtime, Predefined::getSymbolID(Predefined::length), pf);
+      rootClazz, runtime, Predefined::getSymbolID(Predefined::length), pf);
   assert(
       added != ExecutionStatus::EXCEPTION &&
       "Adding the first properties shouldn't cause overflow");
   assert(
       added->second == lengthPropIndex() && "JSArray.length has invalid index");
-  classHandle = added->first;
+  rootClazz = added->first;
 
   assert(
-      classHandle->getNumProperties() == jsArrayPropertyCount() &&
+      rootClazz->getNumProperties() == jsArrayPropertyCount() &&
       "JSArray class defined with incorrect number of properties");
 
-  return classHandle;
+  return rootClazz;
 }
 
 CallResult<PseudoHandle<JSArray>> JSArray::createNoAllocPropStorage(
@@ -647,14 +647,24 @@ CallResult<PseudoHandle<JSArray>> JSArray::createAndAllocPropStorage(
   return PseudoHandle<JSArray>::create(*lv.arr);
 }
 
+CallResult<PseudoHandle<JSArray>> JSArray::create(
+    Runtime &runtime,
+    Handle<JSObject> prototypeHandle,
+    size_type capacity,
+    size_type length) {
+  return createNoAllocPropStorage(
+      runtime,
+      prototypeHandle,
+      runtime.getHiddenClassForPrototype(
+          *prototypeHandle, runtime.classJSArray),
+      capacity,
+      length);
+}
+
 CallResult<PseudoHandle<JSArray>>
 JSArray::create(Runtime &runtime, size_type capacity, size_type length) {
   return JSArray::createNoAllocPropStorage(
-      runtime,
-      Handle<JSObject>::vmcast(&runtime.arrayPrototype),
-      Handle<HiddenClass>::vmcast(&runtime.arrayClass),
-      capacity,
-      length);
+      runtime, runtime.arrayPrototype, runtime.classJSArray, capacity, length);
 }
 
 CallResult<bool> JSArray::setLength(
@@ -854,8 +864,8 @@ PseudoHandle<JSArrayIterator> JSArrayIterator::create(
     Handle<JSObject> array,
     IterationKind iterationKind) {
   auto proto = Handle<JSObject>::vmcast(&runtime.arrayIteratorPrototype);
-  auto clazz = runtime.getHiddenClassForPrototype(
-      *proto, numOverlapSlots<JSArrayIterator>());
+  auto clazz =
+      runtime.getHiddenClassForPrototype(*proto, runtime.classJSArrayIterator);
   auto *obj = runtime.makeAFixed<JSArrayIterator>(
       runtime, proto, clazz, array, iterationKind);
   return JSObjectInit::initToPseudoHandle(runtime, obj);

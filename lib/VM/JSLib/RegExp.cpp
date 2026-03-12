@@ -766,8 +766,8 @@ ExecutionStatus directRegExpExec(
 
   auto arrRes = JSArray::createAndAllocPropStorage(
       runtime,
-      Handle<JSObject>::vmcast(&runtime.arrayPrototype),
-      Handle<HiddenClass>::vmcast(&runtime.regExpMatchClass),
+      runtime.arrayPrototype,
+      runtime.regExpMatchClass,
       match.size(),
       match.size());
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {

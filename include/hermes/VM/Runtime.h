@@ -607,10 +607,18 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   void clearThrownValue();
 
   /// Return a hidden class corresponding to the specified prototype object
-  /// and number of reserved slots. For now we only use the latter.
+  /// and CellKind.
+  /// \param root the root HiddenClass to use when making a new class,
+  ///   must be non-null.
   inline Handle<HiddenClass> getHiddenClassForPrototype(
       JSObject *proto,
-      unsigned reservedSlots);
+      Handle<HiddenClass> root);
+
+  /// Return a hidden class corresponding to the specified prototype object
+  /// for a lazy object.
+  /// Lazy objects have a different HiddenClass hierarchy in order to avoid
+  /// collisions with real objects.
+  inline Handle<HiddenClass> getLazyHiddenClassForPrototype(JSObject *proto);
 
   /// Return the global object.
   Handle<JSObject> getGlobal();
@@ -1140,6 +1148,9 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// character.
   void initCharacterStrings();
 
+  /// Initialize the root HiddenClasses for all the GCCells.
+  void initRootHiddenClasses();
+
   /// \param methodIndex is the index of the method in the table that lists
   ///   all the builtin methods, which is what we are iterating over.
   /// \param objectName is the id for the name of the object in the list of the
@@ -1328,13 +1339,6 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// Used to guard against stack overflow. Either uses real stack checking or
   /// call depth counter checking.
   StackOverflowGuard overflowGuard_;
-
-  /// rootClazzes_[i] is a PinnedHermesValue pointing to a hidden class with
-  /// its i first slots pre-reserved.
-  std::array<
-      PinnedHermesValue,
-      InternalProperty::NumAnonymousInternalProperties + 1>
-      rootClazzes_;
 
   /// Caches for property lookups in non-JS code.
   WritePropertyCacheEntry fixedWritePropCache_[(size_t)PropCacheID::_COUNT];

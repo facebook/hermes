@@ -324,9 +324,11 @@ class JSArray final : public ArrayImpl {
 
   /// Construct an instance of the hidden class describing the layout of JSArray
   /// instances.
+  /// \param rootClazz the starting HiddenClass for the JSArray.
   static Handle<HiddenClass> createClass(
       Runtime &runtime,
-      Handle<JSObject> prototypeHandle);
+      Handle<JSObject> prototypeHandle,
+      Handle<HiddenClass> rootClazz);
 
   static constexpr CellKind getCellKind() {
     return CellKind::JSArrayKind;
@@ -376,16 +378,7 @@ class JSArray final : public ArrayImpl {
       Runtime &runtime,
       Handle<JSObject> prototypeHandle,
       size_type capacity,
-      size_type length) {
-    return createNoAllocPropStorage(
-        runtime,
-        prototypeHandle,
-        *prototypeHandle == *runtime.arrayPrototype
-            ? runtime.arrayClass
-            : createClass(runtime, prototypeHandle),
-        capacity,
-        length);
-  }
+      size_type length);
   static CallResult<PseudoHandle<JSArray>> create(
       Runtime &runtime,
       Handle<JSObject> prototypeHandle) {

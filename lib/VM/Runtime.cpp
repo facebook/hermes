@@ -412,49 +412,7 @@ Runtime::Runtime(
   returnThisCodeBlock_ =
       specialCodeBlockRuntimeModule_->getCodeBlockMayAllocate(1);
 
-  // Initialize the root hidden class and its variants.
-  {
-    MutableHandle<HiddenClass> clazz(*this, HiddenClass::createRoot(*this));
-    rootClazzes_[0] = clazz.getHermesValue();
-    for (unsigned i = 1; i <= InternalProperty::NumAnonymousInternalProperties;
-         ++i) {
-      auto addResult = HiddenClass::reserveSlot(clazz, *this);
-      assert(
-          addResult != ExecutionStatus::EXCEPTION &&
-          "Could not possibly grow larger than the limit");
-      clazz = *addResult->first;
-      rootClazzes_[i] = clazz.getHermesValue();
-    }
-
-    // Create a separate hierarchy of hidden classes for lazy objects, Proxy and
-    // HostObject, for lazy objects so that they never
-    // compare equal to ordinary objects.
-    clazz = HiddenClass::createRoot(*this);
-
-    // For lazy objects, they should just use this empty HiddenClass until they
-    // are actually populated.
-    lazyObjectClass = clazz;
-
-    constexpr unsigned maxNumOverlapSlots = std::max(
-        {JSObject::numOverlapSlots<JSProxy>(),
-         JSObject::numOverlapSlots<JSCallableProxy>(),
-         JSObject::numOverlapSlots<HostObject>()});
-    for (unsigned i = 0;; ++i) {
-      if (i == JSObject::numOverlapSlots<JSProxy>())
-        proxyClass = clazz;
-      if (i == JSObject::numOverlapSlots<JSCallableProxy>())
-        callableProxyClass = clazz;
-      if (i == JSObject::numOverlapSlots<HostObject>())
-        hostObjectClass = clazz;
-      if (i == maxNumOverlapSlots)
-        break;
-      auto addResult = HiddenClass::reserveSlot(clazz, *this);
-      assert(
-          addResult != ExecutionStatus::EXCEPTION &&
-          "Could not possibly grow larger than the limit");
-      clazz = *addResult->first;
-    }
-  }
+  initRootHiddenClasses();
 
   objectPrototype =
       JSObject::create(*this, Runtime::makeNullHandle<JSObject>());
@@ -623,8 +581,6 @@ void Runtime::markRoots(RootAcceptorWithNames &acceptor, bool markLongLived) {
   {
     MarkRootsPhaseTimer timer(*this, RootAcceptor::Section::RuntimeFields);
     acceptor.beginRootSection(RootAcceptor::Section::RuntimeFields);
-    for (auto &clazz : rootClazzes_)
-      acceptor.accept(clazz, "rootClass");
 #define SHRUNTIME_HV_FIELD(name) acceptor.acceptNullable(*toPHV(&name));
 #include "hermes/VM/SHRuntimeHermesValueFields.def"
 #define RUNTIME_HV_FIELD(name, type) acceptor.acceptNullablePV(name);
@@ -1701,6 +1657,41 @@ void Runtime::initCharacterStrings() {
     gc.flushToMarker(marker);
     charStrings_.push_back(allocateCharacterString(ch).getHermesValue());
   }
+}
+
+/// Initialize the root HiddenClasses for all the GCCells.
+void Runtime::initRootHiddenClasses() {
+  struct : public Locals {
+    PinnedValue<HiddenClass> clazz;
+  } lv;
+  LocalsRAII lraii{*this, &lv};
+
+  auto createRoot = [this, &lv](
+                        CellKind kind, PinnedValue<HiddenClass> *result) {
+    size_t baseNumSlots = JSObject::numOverlapSlotsForCellKind(kind);
+    // Create a root HiddenClass
+    lv.clazz = HiddenClass::createRoot(*this);
+    // Get to the base number of slots.
+    for (size_t i = 0; i < baseNumSlots; ++i) {
+      GCScopeMarkerRAII marker{*this};
+      auto addResult = HiddenClass::reserveSlot(lv.clazz, *this);
+      assert(
+          addResult != ExecutionStatus::EXCEPTION &&
+          "Could not possibly grow larger than the limit");
+      lv.clazz = *addResult->first;
+    }
+
+    *result = lv.clazz;
+  };
+
+#define CELL_JSOBJECT_NAME(name, vmClassName) \
+  createRoot(CellKind::name##Kind, &class##name);
+#include "hermes/VM/CellKinds.def"
+
+  // For lazy objects, they should just use this empty HiddenClass until they
+  // are actually populated.
+  lv.clazz = HiddenClass::createRoot(*this);
+  lazyObjectClass_ = lv.clazz;
 }
 
 Handle<StringPrimitive> Runtime::allocateCharacterString(char16_t ch) {

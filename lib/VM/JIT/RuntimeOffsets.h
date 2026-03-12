@@ -81,9 +81,6 @@ struct RuntimeOffsets {
   static constexpr uint32_t gcCellMagicValue = GCCell::kMagic;
 #endif
 
-  static constexpr uint32_t runtimeRootClazzes =
-      offsetof(Runtime, rootClazzes_);
-
   using IdentifierTableLookupEntryType = IdentifierTable::LookupEntry;
   using IdentifierTableLookupVectorType =
       decltype(IdentifierTable::lookupVector_);

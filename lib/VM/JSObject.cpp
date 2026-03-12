@@ -10,14 +10,34 @@
 #include "SHUnitExt.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/Callable.h"
+#include "hermes/VM/DecoratedObject.h"
+#include "hermes/VM/Domain.h"
+#include "hermes/VM/FastArray.h"
 #include "hermes/VM/HostModel.h"
 #include "hermes/VM/InternalProperty.h"
 #include "hermes/VM/JSArray.h"
+#include "hermes/VM/JSCallSite.h"
+#include "hermes/VM/JSCallableProxy.h"
+#include "hermes/VM/JSDataView.h"
+#include "hermes/VM/JSDate.h"
+#include "hermes/VM/JSError.h"
+#include "hermes/VM/JSFinalizationRegistry.h"
+#include "hermes/VM/JSGeneratorObject.h"
+#include "hermes/VM/JSLib.h"
+#include "hermes/VM/JSLib/JSLibStorage.h"
+#include "hermes/VM/JSMapImpl.h"
 #include "hermes/VM/JSObject-inline.h"
 #include "hermes/VM/JSProxy.h"
+#include "hermes/VM/JSRegExp.h"
+#include "hermes/VM/JSRegExpStringIterator.h"
+#include "hermes/VM/JSTypedArray.h"
+#include "hermes/VM/JSWeakMapImpl.h"
+#include "hermes/VM/JSWeakRef.h"
 #include "hermes/VM/NativeState.h"
 #include "hermes/VM/Operations.h"
+#include "hermes/VM/PrimitiveBox.h"
 #include "hermes/VM/PropertyAccessor.h"
+#include "hermes/VM/SingleObject.h"
 #include "hermes/VM/StaticHUtils.h"
 
 #include "llvh/ADT/DenseSet.h"
@@ -78,94 +98,95 @@ void JSObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   }
 }
 
-PseudoHandle<JSObject> JSObject::create(
-    Runtime &runtime,
-    Handle<JSObject> parentHandle) {
-  auto *cell = runtime.makeAFixed<JSObject>(
-      runtime,
-      parentHandle,
-      runtime.getHiddenClassForPrototype(
-          *parentHandle, numOverlapSlots<JSObject>()),
-      GCPointerBase::NoBarriers());
-  return JSObjectInit::initToPseudoHandle(runtime, cell);
+size_t JSObject::numOverlapSlotsForCellKind(CellKind k) {
+  switch (k) {
+#define CELL_JSOBJECT_NAME(name, vmClassName) \
+  case CellKind::name##Kind:                  \
+    return JSObject::numOverlapSlots<vmClassName>();
+#include "hermes/VM/CellKinds.def"
+    default:
+      hermes_fatal("CellKind does not have a known JS class");
+      return 0;
+  }
 }
 
 PseudoHandle<JSObject> JSObject::create(
     Runtime &runtime,
-    unsigned propertyCount) {
-  unsigned numIndirectSlots = propertyCount <= DIRECT_PROPERTY_SLOTS
-      ? 0
-      : propertyCount - DIRECT_PROPERTY_SLOTS;
-  if (numIndirectSlots == 0) {
-    // No indirect storage needed, so just pass through to create.
-    return create(runtime);
-  }
-
-  auto propStorageSize =
-      heapAlignSize(PropStorage::allocationSize(numIndirectSlots));
-  if (LLVM_UNLIKELY(propertyCount > maxYoungGenAllocationPropCount())) {
-    // The object and property storage together are too big to fit in the young
-    // gen together, so allocate them separately.
-    auto self = create(runtime);
-    return runtime.ignoreAllocationFailure(
-        JSObject::allocatePropStorage(std::move(self), runtime, propertyCount));
-  }
-
-  static_assert(
-      heapAlignSize(
-          PropStorage::allocationSize(
-              maxYoungGenAllocationPropCount() - DIRECT_PROPERTY_SLOTS) +
-              heapAlignSize(cellSize<JSObject>()) <=
-          GC::maxYoungGenAllocationSize()),
-      "maxYoungGenAllocationPropCount too large");
-
-  // Otherwise, allocate both parts together.
-  // This ensures both the object and the property storage are in the young gen.
-
-  auto parent = Handle<JSObject>::vmcast(&runtime.objectPrototype);
-  auto clazz =
-      runtime.getHiddenClassForPrototype(*parent, numOverlapSlots<JSObject>());
-
-  auto [obj, storage] = runtime.make2YoungGenUnsafe<JSObject, PropStorage>(
-      cellSize<JSObject>(),
-      std::tuple<
-          Runtime &,
-          Handle<JSObject>,
-          Handle<HiddenClass>,
-          GCPointerBase::NoBarriers>(
-          runtime, parent, clazz, GCPointerBase::NoBarriers()),
-      propStorageSize,
-      std::tuple{});
-
-  NoAllocScope noAlloc{runtime};
-
-  PropStorage::resizeWithinCapacity(storage, runtime, numIndirectSlots);
-  obj->propStorage_.set(runtime, storage, runtime.getHeap());
-
-  return JSObjectInit::initToPseudoHandle(runtime, obj);
+    Handle<JSObject> parentHandle) {
+  return create(
+      runtime,
+      parentHandle,
+      runtime.getHiddenClassForPrototype(*parentHandle, runtime.classJSObject));
 }
 
 PseudoHandle<JSObject> JSObject::create(
     Runtime &runtime,
     Handle<JSObject> parentHandle,
-    Handle<HiddenClass> clazz) {
-  auto obj = JSObject::create(runtime, clazz->getNumProperties());
-  obj->updateClass(runtime, *clazz);
-  // If the hidden class has index like property, we need to clear the fast path
-  // flag.
-  if (LLVM_UNLIKELY(obj->getClass(runtime)->getHasIndexLikeProperties()))
-    obj->flags_.fastIndexProperties = false;
-  obj->parent_.set(runtime, parentHandle.get(), runtime.getHeap());
-  return obj;
+    Handle<HiddenClass> clazz,
+    unsigned propertyCount) {
+  unsigned numIndirectSlots = propertyCount <= DIRECT_PROPERTY_SLOTS
+      ? 0
+      : propertyCount - DIRECT_PROPERTY_SLOTS;
+  auto propStorageSize =
+      heapAlignSize(PropStorage::allocationSize(numIndirectSlots));
+
+  PseudoHandle<JSObject> result;
+  if (numIndirectSlots == 0) {
+    // No indirect storage needed, so just create with no slots.
+    auto *cell = runtime.makeAFixed<JSObject>(
+        runtime, parentHandle, clazz, GCPointerBase::NoBarriers());
+    result = JSObjectInit::initToPseudoHandle(runtime, cell);
+  } else if (LLVM_UNLIKELY(propertyCount > maxYoungGenAllocationPropCount())) {
+    // The object and property storage together are too big to fit in the young
+    // gen together, so allocate them separately.
+    auto *cell = runtime.makeAFixed<JSObject>(
+        runtime, parentHandle, clazz, GCPointerBase::NoBarriers());
+    PseudoHandle<JSObject> self =
+        JSObjectInit::initToPseudoHandle(runtime, cell);
+    result = runtime.ignoreAllocationFailure(
+        JSObject::allocatePropStorage(std::move(self), runtime, propertyCount));
+  } else {
+    static_assert(
+        heapAlignSize(
+            PropStorage::allocationSize(
+                maxYoungGenAllocationPropCount() - DIRECT_PROPERTY_SLOTS) +
+                heapAlignSize(cellSize<JSObject>()) <=
+            GC::maxYoungGenAllocationSize()),
+        "maxYoungGenAllocationPropCount too large");
+
+    // Otherwise, allocate both parts together.
+    // This ensures both the object and the property storage are in the young
+    // gen.
+
+    auto [obj, storage] = runtime.make2YoungGenUnsafe<JSObject, PropStorage>(
+        cellSize<JSObject>(),
+        std::tuple<
+            Runtime &,
+            Handle<JSObject>,
+            Handle<HiddenClass>,
+            GCPointerBase::NoBarriers>(
+            runtime, parentHandle, clazz, GCPointerBase::NoBarriers()),
+        propStorageSize,
+        std::tuple{});
+
+    NoAllocScope noAlloc{runtime};
+
+    PropStorage::resizeWithinCapacity(storage, runtime, numIndirectSlots);
+    obj->propStorage_.set(runtime, storage, runtime.getHeap());
+
+    result = JSObjectInit::initToPseudoHandle(runtime, obj);
+  }
+
+  if (LLVM_UNLIKELY(result->getClass(runtime)->getHasIndexLikeProperties()))
+    result->flags_.fastIndexProperties = false;
+
+  return result;
 }
 
 void JSObject::initializeLazyObject(
     Runtime &runtime,
     Handle<JSObject> lazyObject) {
   assert(lazyObject->flags_.lazyObject && "object must be lazy");
-  assert(
-      lazyObject->getClass(runtime) == *runtime.lazyObjectClass &&
-      "lazy object must have lazy class");
   // object is now assumed to be a regular object.
   lazyObject->flags_.lazyObject = 0;
 

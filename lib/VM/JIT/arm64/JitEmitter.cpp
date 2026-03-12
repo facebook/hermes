@@ -863,11 +863,7 @@ void emit_jsobject_init(
   const a64::GpX &xTemp = xTempOrPropStorageOpt;
 
   if (!xClazzOpt.isValid()) {
-    // Load the hidden class compressed pointer into xClazz.
-    static_assert(
-        JSObject::numOverlapSlots<JSObject>() == 0,
-        "Cannot use 0 property root class.");
-    a.ldr(xTemp, a64::Mem(xRuntime, RuntimeOffsets::runtimeRootClazzes));
+    a.ldr(xTemp, a64::Mem(xRuntime, offsetof(Runtime, classJSObject)));
     emit_sh_ljs_get_pointer(a, xTemp, xTemp);
     emit_sh_cp_encode_non_null(a, xTemp);
   }

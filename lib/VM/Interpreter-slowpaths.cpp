@@ -1864,8 +1864,8 @@ CallResult<HiddenClass *> Interpreter::getHiddenClassForBuffer(
             return runtimeModule->getSymbolIDMustExist(id);
           });
     } else {
-      auto *rootClazz = *runtime.getHiddenClassForPrototype(
-          *runtime.objectPrototype, JSObject::numOverlapSlots<JSObject>());
+      auto *rootClazz =
+          *runtime.getHiddenClassForPrototype(*parent, runtime.classJSObject);
 
       // Ensure that the hidden class does not start out with any properties, so
       // we just need to check the shape table entry.
@@ -1918,6 +1918,7 @@ CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
   // Note that the built-in constructor is empty, so we don't actually need to
   // call it.
   lv.obj = JSObject::create(runtime, parent, lv.clazz).get();
+  assert(lv.obj->getParent(runtime) == *parent);
   auto numLiterals = lv.clazz->getNumProperties();
 
   // Set up the visitor to populate property values in the object.

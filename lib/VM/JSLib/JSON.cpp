@@ -19,8 +19,7 @@ namespace hermes {
 namespace vm {
 
 void createJSONObject(Runtime &runtime, MutableHandle<JSObject> result) {
-  auto objRes = JSJSON::create(
-      runtime, Handle<JSObject>::vmcast(&runtime.objectPrototype));
+  auto objRes = JSJSON::create(runtime);
   assert(
       objRes != ExecutionStatus::EXCEPTION && "unable to define JSON object");
 

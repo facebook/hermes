@@ -133,9 +133,9 @@ void Callable::defineLazyProperties(Handle<Callable> fn, Runtime &runtime) {
 
     // Set the actual non-lazy hidden class.
     Handle<HiddenClass> newClass = runtime.getHiddenClassForPrototype(
-        *inferredParent(
-            runtime, (FuncKind)codeBlock->getHeaderFlags().getKind()),
-        numOverlapSlots<JSFunction>());
+        jsFun->getParent(runtime),
+        vmisa<JSClass>(*jsFun) ? runtime.classJSClass
+                               : runtime.classJSFunction);
     jsFun->updateClassNoAllocPropStorageUnsafe(runtime, *newClass);
 
     // Create empty object for prototype.
@@ -167,8 +167,9 @@ void Callable::defineLazyProperties(Handle<Callable> fn, Runtime &runtime) {
   } else if (auto nativeFun = Handle<NativeJSFunction>::dyn_vmcast(fn)) {
     // Set the actual non-lazy hidden class.
     Handle<HiddenClass> newClass = runtime.getHiddenClassForPrototype(
-        *inferredParent(runtime, (FuncKind)nativeFun->getFunctionInfo()->kind),
-        numOverlapSlots<NativeJSFunction>());
+        nativeFun->getParent(runtime),
+        vmisa<NativeJSClass>(*nativeFun) ? runtime.classNativeJSClass
+                                         : runtime.classNativeJSFunction);
     nativeFun->updateClassNoAllocPropStorageUnsafe(runtime, *newClass);
 
     auto prototypeParent = Callable::isGeneratorFunction(*nativeFun)
@@ -683,7 +684,7 @@ CallResult<HermesValue> BoundFunction::create(
       runtime,
       lv.proto,
       runtime.getHiddenClassForPrototype(
-          runtime.functionPrototypeRawPtr, numOverlapSlots<BoundFunction>()),
+          runtime.functionPrototypeRawPtr, runtime.classBoundFunction),
       target,
       lv.arrStorage);
   lv.self = JSObjectInit::initToPointer(runtime, cell);
@@ -988,7 +989,7 @@ Handle<NativeJSFunction> NativeJSFunction::create(
   auto *cell = runtime.makeAFixed<NativeJSFunction>(
       runtime,
       parentHandle,
-      runtime.lazyObjectClass,
+      runtime.getLazyHiddenClassForPrototype(*parentHandle),
       parentEnvHandle,
       functionPtr,
       funcInfo,
@@ -1095,7 +1096,7 @@ Handle<NativeJSClass> NativeJSClass::create(
   auto *cell = runtime.makeAFixed<NativeJSClass>(
       runtime,
       parentHandle,
-      runtime.lazyObjectClass,
+      runtime.getLazyHiddenClassForPrototype(*parentHandle),
       parentEnvHandle,
       functionPtr,
       funcInfo,
@@ -1154,23 +1155,18 @@ std::string NativeFunction::_snapshotNameImpl(GCCell *cell, GC &gc) {
 Handle<NativeFunction> NativeFunction::create(
     Runtime &runtime,
     Handle<JSObject> parentHandle,
+    Handle<HiddenClass> clazz,
     Handle<Environment> parentEnvHandle,
     void *context,
     NativeFunctionPtr functionPtr,
     SymbolID name,
     unsigned paramCount,
-    Handle<JSObject> prototypeObjectHandle,
-    unsigned additionalSlotCount) {
-  size_t reservedSlots =
-      numOverlapSlots<NativeFunction>() + additionalSlotCount;
+    Handle<JSObject> prototypeObjectHandle) {
   auto *cell = runtime.makeAFixed<NativeFunction>(
-      runtime,
-      parentHandle,
-      runtime.getHiddenClassForPrototype(*parentHandle, reservedSlots),
-      parentEnvHandle,
-      context,
-      functionPtr);
+      runtime, parentHandle, clazz, parentEnvHandle, context, functionPtr);
   auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
+
+  size_t reservedSlots = clazz->getNumProperties();
 
   // Allocate a propStorage if the number of additional slots requires it.
   runtime.ignoreAllocationFailure(
@@ -1392,7 +1388,7 @@ PseudoHandle<JSFunction> JSFunction::create(
       runtime,
       domain,
       parentHandle,
-      runtime.lazyObjectClass,
+      runtime.getLazyHiddenClassForPrototype(*parentHandle),
       envHandle,
       codeBlock);
   auto self = JSObjectInit::initToPseudoHandle(runtime, cell);
@@ -1546,7 +1542,7 @@ PseudoHandle<JSClass> JSClass::create(
       runtime,
       domain,
       parentHandle,
-      runtime.lazyObjectClass,
+      runtime.getLazyHiddenClassForPrototype(*parentHandle),
       envHandle,
       codeBlock);
   auto self = JSObjectInit::initToPseudoHandle(runtime, cell);

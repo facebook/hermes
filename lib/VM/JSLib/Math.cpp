@@ -378,8 +378,7 @@ HermesValue createMathObject(Runtime &runtime) {
   } lv;
   LocalsRAII lraii{runtime, &lv};
 
-  auto objRes = JSMath::create(
-      runtime, Handle<JSObject>::vmcast(&runtime.objectPrototype));
+  auto objRes = JSMath::create(runtime);
   assert(objRes != ExecutionStatus::EXCEPTION && "unable to define Math");
   lv.math.castAndSetHermesValue<JSMath>(*objRes);
 

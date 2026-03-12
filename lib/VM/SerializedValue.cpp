@@ -1370,10 +1370,10 @@ CallResult<PseudoHandle<JSTypedArrayBase>> deserializeTypedArray(
   // [[ByteLength]] internal slot value is serialized.[[ByteLength]], whose
   // [[ByteOffset]] internal slot value is serialized.[[ByteOffset]], and whose
   // [[ArrayLength]] internal slot value is serialized.[[ArrayLength]].
-#define TYPED_ARRAY(name, type)                                      \
-  if (typeTag == SerializedValue::Type::name##Array) {               \
-    lv.self = JSTypedArray<type, CellKind::name##ArrayKind>::create( \
-        runtime, runtime.name##ArrayPrototype);                      \
+#define TYPED_ARRAY(name, type)                                             \
+  if (typeTag == SerializedValue::Type::name##Array) {                      \
+    lv.self = JSTypedArray<type, CellKind::name##ArrayKind>::create(        \
+        runtime, runtime.name##ArrayPrototype, runtime.class##name##Array); \
   }
 #include "hermes/VM/TypedArrays.def"
   uint8_t width = lv.self->getByteWidth();

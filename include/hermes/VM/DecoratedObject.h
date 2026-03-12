@@ -42,8 +42,8 @@ class DecoratedObject : public JSObject {
   static PseudoHandle<DecoratedObject> create(
       Runtime &runtime,
       Handle<JSObject> parentHandle,
-      std::unique_ptr<Decoration> decoration,
-      unsigned int additionalSlotCount = 0);
+      Handle<HiddenClass> clazz,
+      std::unique_ptr<Decoration> decoration);
 
   /// Access the decoration.
   Decoration *getDecoration() {

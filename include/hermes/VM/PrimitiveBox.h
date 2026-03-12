@@ -33,6 +33,11 @@ class JSString final : public JSObject {
     return cell->getKind() == CellKind::JSStringKind;
   }
 
+  /// Create a JSString using the standard String prototype.
+  static CallResult<Handle<JSString>> create(
+      Runtime &runtime,
+      Handle<StringPrimitive> value);
+
   static CallResult<Handle<JSString>> create(
       Runtime &runtime,
       Handle<StringPrimitive> value,
@@ -40,12 +45,9 @@ class JSString final : public JSObject {
 
   static CallResult<Handle<JSString>> create(
       Runtime &runtime,
-      Handle<JSObject> prototype) {
-    return create(
-        runtime,
-        runtime.getPredefinedStringHandle(Predefined::emptyString),
-        prototype);
-  }
+      Handle<StringPrimitive> value,
+      Handle<JSObject> prototype,
+      Handle<HiddenClass> clazz);
 
   /// Set the [[PrimitiveValue]] internal property from a string.
   static void setPrimitiveString(
@@ -239,14 +241,17 @@ class JSNumber final : public JSObject {
     return cell->getKind() == CellKind::JSNumberKind;
   }
 
+  /// Create a JSNumber using the standard Number prototype.
+  static PseudoHandle<JSNumber> create(Runtime &runtime, double value);
+
   static PseudoHandle<JSNumber>
   create(Runtime &runtime, double value, Handle<JSObject> prototype);
 
   static PseudoHandle<JSNumber> create(
       Runtime &runtime,
-      Handle<JSObject> prototype) {
-    return create(runtime, 0.0, prototype);
-  }
+      double value,
+      Handle<JSObject> prototype,
+      Handle<HiddenClass> clazz);
 
   JSNumber(
       Runtime &runtime,
@@ -279,14 +284,17 @@ class JSBoolean final : public JSObject {
     return cell->getKind() == CellKind::JSBooleanKind;
   }
 
+  /// Create a JSBoolean using the standard Boolean prototype.
+  static PseudoHandle<JSBoolean> create(Runtime &runtime, bool value);
+
   static PseudoHandle<JSBoolean>
   create(Runtime &runtime, bool value, Handle<JSObject> prototype);
 
   static PseudoHandle<JSBoolean> create(
       Runtime &runtime,
-      Handle<JSObject> prototype) {
-    return create(runtime, false, prototype);
-  }
+      bool value,
+      Handle<JSObject> prototype,
+      Handle<HiddenClass> clazz);
 
   JSBoolean(
       Runtime &runtime,
@@ -326,9 +334,9 @@ class JSSymbol final : public JSObject {
 
   static PseudoHandle<JSSymbol> create(
       Runtime &runtime,
-      Handle<JSObject> prototype) {
-    return create(runtime, SymbolID{}, prototype);
-  }
+      SymbolID value,
+      Handle<JSObject> prototype,
+      Handle<HiddenClass> clazz);
 
   /// Return the [[PrimitiveValue]] internal property as a SymbolID.
   PseudoHandle<SymbolID> getPrimitiveSymbol() const {

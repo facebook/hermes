@@ -381,7 +381,7 @@ class JSObject : public GCCell {
   /// Attempts to allocate a JSObject with the standard Object prototype.
   /// If allocation fails, the GC declares an OOM.
   static PseudoHandle<JSObject> create(Runtime &runtime) {
-    return create(runtime, Handle<JSObject>::vmcast(&runtime.objectPrototype));
+    return create(runtime, runtime.objectPrototype, runtime.classJSObject);
   }
 
   /// Attempts to allocate a JSObject with the standard Object prototype and
@@ -390,6 +390,8 @@ class JSObject : public GCCell {
   /// \param propertyCount number of property storage slots preallocated.
   static PseudoHandle<JSObject> create(
       Runtime &runtime,
+      Handle<JSObject> parentHandle,
+      Handle<HiddenClass> clazz,
       unsigned propertyCount);
 
   /// Allocates a JSObject with the given hidden class and prototype.
@@ -397,7 +399,9 @@ class JSObject : public GCCell {
   static PseudoHandle<JSObject> create(
       Runtime &runtime,
       Handle<JSObject> parentHandle,
-      Handle<HiddenClass> clazz);
+      Handle<HiddenClass> clazz) {
+    return create(runtime, parentHandle, clazz, clazz->getNumProperties());
+  }
 
   ~JSObject() = default;
 
@@ -1602,6 +1606,10 @@ class JSObject : public GCCell {
     auto excess = (aligned - directPropsOffset()) / sizeof(GCSmallHermesValue);
     return std::min<size_t>(excess, DIRECT_PROPERTY_SLOTS);
   }
+
+  /// Dynamically dispatches to the correct numOverlapSlots<> template.
+  /// \return the number of overlap slots for the given cell kind \p k.
+  static size_t numOverlapSlotsForCellKind(CellKind k);
 };
 
 /// Convenience class for accessing the direct property slots of a JSObject.

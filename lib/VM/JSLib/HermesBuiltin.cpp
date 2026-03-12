@@ -1026,13 +1026,10 @@ void createHermesBuiltins(Runtime &runtime) {
                                 uint8_t count = 0) {
     auto methodRes = NativeFunction::create(
         runtime,
-        Handle<JSObject>::vmcast(&runtime.functionPrototype),
-        Runtime::makeNullHandle<Environment>(),
         nullptr /* context */,
         func,
         Predefined::getSymbolID(symID),
-        count,
-        Runtime::makeNullHandle<JSObject>());
+        count);
     lv.method = std::move(*methodRes);
     runtime.registerBuiltin(builtinIndex, *lv.method);
   };

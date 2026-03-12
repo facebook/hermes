@@ -9,6 +9,7 @@
 #define HERMES_VM_RUNTIME_INLINE_H
 
 #include "hermes/FrontEndDefs/Builtins.h"
+#include "hermes/VM/HiddenClass.h"
 #include "hermes/VM/Runtime.h"
 
 namespace hermes {
@@ -34,12 +35,14 @@ inline void Runtime::enqueueJob(Callable *job) {
 
 inline Handle<HiddenClass> Runtime::getHiddenClassForPrototype(
     JSObject *proto,
-    unsigned reservedSlots) {
-  assert(
-      reservedSlots <= InternalProperty::NumAnonymousInternalProperties &&
-      "out of bounds");
-  PinnedHermesValue *clazz = &rootClazzes_[reservedSlots];
-  assert(!clazz->isUndefined() && "must initialize root classes before use");
+    Handle<HiddenClass> root) {
+  assert(root && "root must be non-null");
+  return root;
+}
+
+inline Handle<HiddenClass> Runtime::getLazyHiddenClassForPrototype(
+    JSObject *proto) {
+  const PinnedValue<HiddenClass> *clazz = &lazyObjectClass_;
   return Handle<HiddenClass>::vmcast(clazz);
 }
 

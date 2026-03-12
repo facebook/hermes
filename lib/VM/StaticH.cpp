@@ -1777,8 +1777,7 @@ static SHLegacyValue createObjectFromBuffer(
           runtime,
           keyBuffer,
           shapeInfo->num_props,
-          *runtime.getHiddenClassForPrototype(
-              *parent, JSObject::numOverlapSlots<JSObject>()),
+          *runtime.getHiddenClassForPrototype(*parent, runtime.classJSObject),
           [unit](StringID id) {
             return SymbolID::unsafeCreate(unit->symbols[id]);
           });

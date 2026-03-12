@@ -530,7 +530,8 @@ CallResult<HermesValue> arrayConstructor(void *, Runtime &runtime) {
           (args.getNewTarget().getRaw() ==
            runtime.arrayConstructor.getHermesValue().getRaw()))) {
     CallResult<PseudoHandle<JSArray>> selfRes =
-        JSArray::create(runtime, runtime.arrayPrototype);
+        JSArray::createNoAllocPropStorage(
+            runtime, runtime.arrayPrototype, runtime.classJSArray);
     if (LLVM_UNLIKELY(selfRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1424,7 +1425,7 @@ CallResult<HermesValue> arrayPrototypePush(void *, Runtime &runtime) {
     uint32_t len = JSArray::getLength(arr, runtime);
 
     if (LLVM_LIKELY(len < UINT32_MAX - argCount) &&
-        arrayFastPathCheck(runtime, arr, *runtime.arrayClass, len)) {
+        arrayFastPathCheck(runtime, arr, *runtime.classJSArray, len)) {
       return arrayPrototypePushFastPath(
           runtime, args.vmcastThis<JSArray>(), len, args);
     }
@@ -2602,8 +2603,8 @@ CallResult<HermesValue> arrayPrototypeSplice(void *, Runtime &runtime) {
 
   // If we can use the fast path, do so.
   if (LLVM_LIKELY(*lv.OArray) &&
-      LLVM_LIKELY(
-          arrayFastPathCheck(runtime, *lv.OArray, *runtime.arrayClass, len)) &&
+      LLVM_LIKELY(arrayFastPathCheck(
+          runtime, *lv.OArray, *runtime.classJSArray, len)) &&
       LLVM_LIKELY(len - actualDeleteCount < UINT32_MAX - itemCount)) {
     // These can be cast to uint32_t because we know that O is a JSArray.
     assert(actualStart <= len && "actualStart out of range");
@@ -3016,7 +3017,7 @@ CallResult<HermesValue> arrayPrototypePop(void *, Runtime &runtime) {
     JSArray *arr = vmcast<JSArray>(args.getThisArg());
     len = JSArray::getLength(arr, runtime);
 
-    if (arrayFastPathCheck(runtime, arr, *runtime.arrayClass, len)) {
+    if (arrayFastPathCheck(runtime, arr, *runtime.classJSArray, len)) {
       return arrayPrototypePopFastPath(
           runtime, args.vmcastThis<JSArray>(), len);
     }
