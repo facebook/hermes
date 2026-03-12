@@ -2283,22 +2283,24 @@ CallResult<HermesValue> objectFromPropertyDescriptor(
 
   if (!dpFlags.isAccessor()) {
     // Data Descriptor
-    auto result = JSObject::defineOwnProperty(
-        obj,
-        runtime,
-        Predefined::getSymbolID(Predefined::value),
-        dpf,
-        valueOrAccessor,
-        PropOpFlags().plusThrowOnError());
-    assert(
-        result != ExecutionStatus::EXCEPTION &&
-        "defineOwnProperty() failed on a new object");
-    if (result == ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
+    if (dpFlags.setValue) {
+      auto result = JSObject::defineOwnProperty(
+          obj,
+          runtime,
+          Predefined::getSymbolID(Predefined::value),
+          dpf,
+          valueOrAccessor,
+          PropOpFlags().plusThrowOnError());
+      assert(
+          result != ExecutionStatus::EXCEPTION &&
+          "defineOwnProperty() failed on a new object");
+      if (result == ExecutionStatus::EXCEPTION) {
+        return ExecutionStatus::EXCEPTION;
+      }
     }
 
     if (dpFlags.setWritable) {
-      result = JSObject::defineOwnProperty(
+      auto result = JSObject::defineOwnProperty(
           obj,
           runtime,
           Predefined::getSymbolID(Predefined::writable),
