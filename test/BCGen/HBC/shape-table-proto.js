@@ -5,11 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermesc -dump-bytecode %s | %FileCheckOrRegen --match-full-lines %s
+// RUN: %hermes -target=HBC -dump-bytecode %s | %FileCheckOrRegen --match-full-lines %s
 
-// Show that the shape table is used correctly for NewObjectWithParent.
-var a = {__proto__: Math};
-var b = {__proto__: JSON};
+// Ensure the shape table has two separate entries.
+var a = {x: 1, __proto__: null};
+var b = {x: 1, __proto__: Math};
 
 // Auto-generated content below. Please do not modify manually.
 
@@ -22,8 +22,8 @@ var b = {__proto__: JSON};
 // CHECK-NEXT:  String Kind Entry count: 2
 // CHECK-NEXT:  RegExp count: 0
 // CHECK-NEXT:  StringSwitchImm count: 0
-// CHECK-NEXT:  Key buffer size (bytes): 0
-// CHECK-NEXT:  Value buffer size (bytes): 0
+// CHECK-NEXT:  Key buffer size (bytes): 3
+// CHECK-NEXT:  Value buffer size (bytes): 5
 // CHECK-NEXT:  Shape table count: 2
 // CHECK-NEXT:  Segment ID: 0
 // CHECK-NEXT:  CommonJS module count: 0
@@ -36,30 +36,38 @@ var b = {__proto__: JSON};
 // CHECK:Global String Table:
 // CHECK-NEXT:s0[ASCII, 0..5]: global
 // CHECK-NEXT:i1[ASCII, 4..4] #00018270: a
-// CHECK-NEXT:i2[ASCII, 6..9] #971CE5C7: JSON
-// CHECK-NEXT:i3[ASCII, 10..13] #1C182460: Math
-// CHECK-NEXT:i4[ASCII, 14..14] #00018E43: b
+// CHECK-NEXT:i2[ASCII, 6..9] #1C182460: Math
+// CHECK-NEXT:i3[ASCII, 10..10] #00018E43: b
+// CHECK-NEXT:i4[ASCII, 11..11] #0001E7F9: x
+
+// CHECK:Literal Value Buffer:
+// CHECK-NEXT:[int 1]
+
+// CHECK:Object Key Buffer:
+// CHECK-NEXT:[String 4]
 
 // CHECK:Object Shape Table:
-// CHECK-NEXT:0[0, 0]
-// CHECK-NEXT:1[0, 0]
+// CHECK-NEXT:0[0, 1]
+// CHECK-NEXT:1[0, 1]
 
-// CHECK:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
+// CHECK:Function<global>(1 params, 14 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "a"
 // CHECK-NEXT:    DeclareGlobalVar  "b"
 // CHECK-NEXT:    GetGlobalObject   r2
-// CHECK-NEXT:    TryGetById        r1, r2, 0, "Math"
-// CHECK-NEXT:    NewObjectWithParent r1, r1, 0
+// CHECK-NEXT:    LoadConstNull     r0
+// CHECK-NEXT:    NewObjectWithBufferAndParent r1, r0, 0, 0
 // CHECK-NEXT:    PutByIdLoose      r2, r1, 0, "a"
-// CHECK-NEXT:    TryGetById        r1, r2, 1, "JSON"
-// CHECK-NEXT:    NewObjectWithParent r1, r1, 1
+// CHECK-NEXT:    NewObjectWithBuffer r1, 1, 0
+// CHECK-NEXT:    TryGetById        r4, r2, 0, "Math"
+// CHECK-NEXT:    Mov               r5, r1
+// CHECK-NEXT:    CallBuiltin       r3, "HermesBuiltin.silentSetPrototypeOf", 3
 // CHECK-NEXT:    PutByIdLoose      r2, r1, 1, "b"
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Debug filename table:
-// CHECK-NEXT:  0: {{.*}}new-object-with-parent-shape-table.js
+// CHECK-NEXT:  0: {{.*}}shape-table-proto.js
 
 // CHECK:Debug file table:
 // CHECK-NEXT:  source table offset 0x0000: filename id 0
@@ -68,8 +76,8 @@ var b = {__proto__: JSON};
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 11 col 1
 // CHECK-NEXT:    bc 0: line 11 col 1
 // CHECK-NEXT:    bc 5: line 11 col 1
-// CHECK-NEXT:    bc 12: line 11 col 21
 // CHECK-NEXT:    bc 25: line 11 col 7
-// CHECK-NEXT:    bc 31: line 12 col 21
-// CHECK-NEXT:    bc 44: line 12 col 7
+// CHECK-NEXT:    bc 37: line 12 col 27
+// CHECK-NEXT:    bc 46: line 12 col 16
+// CHECK-NEXT:    bc 50: line 12 col 7
 // CHECK-NEXT:  0x0017  end of debug source table
