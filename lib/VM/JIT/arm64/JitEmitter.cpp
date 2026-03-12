@@ -3008,6 +3008,16 @@ void Emitter::newObjectWithParent(
       a64::Mem(xTemp1, shapeTableIndex * sizeof(WeakRoot<HiddenClass>)));
   // If the HC isn't cached, slow path.
   a.cbz(xClazz, slowPathLab);
+  // If the parent isn't correct, slow path.
+  auto &xClazzDecoded =
+      emit_sh_cp_decode_non_null_preserve_input(a, xTemp1, xClazz);
+  emit_load_cp(
+      a,
+      xTemp1,
+      a64::Mem(xClazzDecoded, RuntimeOffsets::hiddenClassObjectParent));
+  emit_sh_cp_decode(a, xTemp1);
+  a.cmp(xTemp1, xParent);
+  a.b_ne(slowPathLab);
 
   allocInYoung(
       CellKind::JSObjectKind,
@@ -3211,8 +3221,7 @@ void Emitter::newObjectWithBuffer(
   }
 
   // Get the parent.
-  a.ldr(xTmp, a64::Mem(xRuntime, offsetof(Runtime, objectPrototype)));
-  emit_sh_ljs_get_pointer(a, xTmp, xTmp);
+  a.ldr(xTmp, a64::Mem(xRuntime, offsetof(Runtime, objectPrototypeRawPtr)));
   emit_sh_cp_encode_non_null(a, xTmp);
 
   // Initialize the JSObject to have the correct parent/HC.
@@ -4630,7 +4639,10 @@ void Emitter::loadParentNoTraps(FR frRes, FR frObj) {
   a64::GpX xRes = hwRes.a64GpX();
   emit_sh_ljs_get_pointer(a, xTmp, hwObj.a64GpX());
   // xTmp contains the unencoded pointer value.
-  emit_load_cp(a, xTmp, a64::Mem(xTmp, offsetof(SHJSObject, parent)));
+  emit_load_cp(a, xTmp, a64::Mem(xTmp, offsetof(SHJSObject, clazz)));
+  emit_sh_cp_decode_non_null(a, xTmp);
+  emit_load_cp(
+      a, xTmp, a64::Mem(xTmp, RuntimeOffsets::hiddenClassObjectParent));
   emit_sh_cp_decode(a, xTmp);
   // Check whether it is nullptr and set flags.
   // TODO: Combine this null check with the one in emit_load_and_sh_cp_decode.
@@ -4652,7 +4664,10 @@ void Emitter::typedLoadParent(FR frRes, FR frObj) {
   HWReg hwRes = getOrAllocFRInGpX(frRes, false);
   a64::GpX xRes = hwRes.a64GpX();
   emit_sh_ljs_get_pointer(a, xRes, hwObj.a64GpX());
-  emit_load_cp(a, xRes, a64::Mem(xRes, offsetof(SHJSObject, parent)));
+  emit_load_cp(a, xRes, a64::Mem(xRes, offsetof(SHJSObject, clazz)));
+  emit_sh_cp_decode_non_null(a, xRes);
+  emit_load_cp(
+      a, xRes, a64::Mem(xRes, RuntimeOffsets::hiddenClassObjectParent));
   emit_sh_cp_decode_non_null(a, xRes);
   emit_sh_ljs_object(a, xRes);
 
@@ -5193,7 +5208,10 @@ class HERMES_ATTRIBUTE_INTERNAL_LINKAGE Emitter::GetByIdImpl {
     a.b_ne(failSpecLab);
 
     // Get the parent.
-    emit_load_cp(a, xTemp1, a64::Mem(xTemp1, offsetof(SHJSObject, parent)));
+    emit_load_cp(a, xTemp1, a64::Mem(xTemp1, offsetof(SHJSObject, clazz)));
+    emit_sh_cp_decode_non_null(a, xTemp1);
+    emit_load_cp(
+        a, xTemp1, a64::Mem(xTemp1, RuntimeOffsets::hiddenClassObjectParent));
     // If no parent, fail.
     a.cbz(xTemp1, failSpecLab);
     emit_sh_cp_decode_non_null(a, xTemp1);

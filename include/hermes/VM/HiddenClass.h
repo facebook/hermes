@@ -11,10 +11,11 @@
 #include "hermes/Support/OptValue.h"
 #include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/DictPropertyMap.h"
-#include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/JIT/Config.h"
 #include "hermes/VM/PropertyDescriptor.h"
 #include "hermes/VM/WeakValueMap.h"
+#include "hermes/VM/WeakValueObjectMap.h"
+#include "hermes/VM/sh_mirror.h"
 
 #include <functional>
 #include "llvh/ADT/ArrayRef.h"
@@ -59,6 +60,12 @@ struct ClassFlags {
   /// for a typed object, which means it doesn't have any transitions and the
   /// property map must never be null.
   uint8_t typed : 1;
+
+  /// The number of times the parent of the object has been changed.
+  /// If this counter maxes out, the HiddenClass changes to dictionary mode to
+  /// avoid an infinite chain.
+  static constexpr size_t kParentChangeCounterSize = 2;
+  uint8_t parentChangeCounter : kParentChangeCounterSize;
 
   ClassFlags() {
     ::memset(this, 0, sizeof(*this));
@@ -284,9 +291,16 @@ class HiddenClass final : public GCCell {
   /// parent.
   GCPointer<HiddenClass> parent_;
 
+  /// The JSObject which is the parent of the object.
+  GCPointer<JSObject> objectParent_{nullptr};
+
   /// Cache that contains for-in property names for objects of this class.
   /// Never used in dictionary mode.
   GCPointer<ArrayStorageSmall> forInCache_{};
+
+  /// This hash table encodes the transitions from this class to child classes
+  /// keyed on the property being added (or updated) and its flags.
+  GCPointer<WeakValueObjectMap<HiddenClass>> parentTransitionMap_;
 
   /// The symbol that was added when transitioning to this hidden class.
   const GCSymbolID symbolID_;
@@ -322,20 +336,14 @@ class HiddenClass final : public GCCell {
 
   static const VTable vt;
 
-  HiddenClass(
+  inline HiddenClass(
       Runtime &runtime,
       ClassFlags flags,
       Handle<HiddenClass> parent,
+      Handle<JSObject> objectParent,
       SymbolID symbolID,
       PropertyFlags propertyFlags,
-      unsigned numProperties)
-      : parent_(runtime, *parent, runtime.getHeap()),
-        symbolID_(symbolID),
-        propertyFlags_(propertyFlags),
-        numProperties_(numProperties),
-        flags_(flags) {
-    assert(propertyFlags.isValid() && "propertyFlags must be valid");
-  }
+      unsigned numProperties);
 
   static constexpr CellKind getCellKind() {
     return CellKind::HiddenClassKind;
@@ -351,14 +359,19 @@ class HiddenClass final : public GCCell {
 
   /// Create a "root" hidden class - one that doesn't define any properties, but
   /// is a starting point for a hierarchy.
-  static HiddenClass *createRoot(Runtime &runtime);
+  static HiddenClass *createRoot(
+      Runtime &runtime,
+      Handle<JSObject> objectParent);
 
   /// Create a "root" hidden class for a typed object - one that doesn't define
   /// any properties yet but reserves space for a property map.
   /// \param capacity the number of properties in the typed object,
   ///  used to reserve space in the property map.
   /// \pre capacity < maxNumProperties().
-  static HiddenClass *createForTypedObject(Runtime &runtime, uint32_t capacity);
+  static HiddenClass *createForTypedObject(
+      Runtime &runtime,
+      Handle<JSObject> objectParent,
+      uint32_t capacity);
 
   /// \return true if this hidden class is guaranteed to be a leaf.
   /// It can return false negatives, so it should only be used for stats
@@ -375,6 +388,14 @@ class HiddenClass final : public GCCell {
     lazyJITId_ = id;
   }
 #endif
+
+  /// \return the object's parent. May be nullptr.
+  const GCPointer<JSObject> &getObjectParentGCPtr() const {
+    return objectParent_;
+  }
+
+  /// \return the object's parent. May be nullptr.
+  inline JSObject *getObjectParent(PointerBase &pb) const;
 
   /// \return the number of own properties described by this hidden class.
   /// This corresponds to the size of the property map, if it is initialized.
@@ -544,6 +565,22 @@ class HiddenClass final : public GCCell {
     return newSlot;
   }
 
+  /// Update the object's parent and return the resulting class.
+  /// If the parent has changed more than parentChangeCounter can handle,
+  /// the resulting HiddenClass will be in dictionary mode.
+  /// \param newParent may be null if the parent is being deleted.
+  static inline HiddenClass *updateObjectParent(
+      Handle<HiddenClass> selfHandle,
+      Runtime &runtime,
+      PseudoHandle<JSObject> newParent);
+
+  /// The slow path for updating the object parent.
+  /// Only called if the parent actually needs to be updated.
+  static HiddenClass *updateObjectParentSlowPath(
+      Handle<HiddenClass> selfHandle,
+      Runtime &runtime,
+      PseudoHandle<JSObject> newParent);
+
   /// Mark all properties as non-configurable.
   /// \return the resulting class
   static Handle<HiddenClass> makeAllNonConfigurable(
@@ -592,12 +629,17 @@ class HiddenClass final : public GCCell {
   /// \return true if all properties are non-writable and non-configurable
   static bool areAllReadOnly(Handle<HiddenClass> selfHandle, Runtime &runtime);
 
+  /// Verify that the mirror struct SHHiddenClass has the correct layout.
+  /// This function is never called - it only exists to contain static asserts.
+  static void staticAsserts();
+
  private:
   /// Allocate a new hidden class instance with the supplied parameters.
   static HiddenClass *create(
       Runtime &runtime,
       ClassFlags flags,
       Handle<HiddenClass> parent,
+      Handle<JSObject> objectParent,
       SymbolID symbolID,
       PropertyFlags propertyFlags,
       unsigned numProperties);
@@ -749,6 +791,45 @@ inline OptValue<HiddenClass::PropertyPos> HiddenClass::findProperty(
     desc = DictPropertyMap::getDescriptorPair(propMap, *found)->second;
     return *found;
   }
+}
+
+inline void HiddenClass::staticAsserts() {
+  static_assert(sizeof(detail::Transition) == sizeof(SHTransition));
+  static_assert(sizeof(detail::TransitionMap) == sizeof(SHTransitionMap));
+
+  static_assert(sizeof(HiddenClass) == sizeof(SHHiddenClass));
+  static_assert(
+      offsetof(HiddenClass, propertyMap_) ==
+      offsetof(SHHiddenClass, propertyMap));
+  static_assert(
+      offsetof(HiddenClass, parent_) == offsetof(SHHiddenClass, parent));
+  static_assert(
+      offsetof(HiddenClass, objectParent_) ==
+      offsetof(SHHiddenClass, objectParent));
+  static_assert(
+      offsetof(HiddenClass, forInCache_) ==
+      offsetof(SHHiddenClass, forInCache));
+  static_assert(
+      offsetof(HiddenClass, parentTransitionMap_) ==
+      offsetof(SHHiddenClass, parentTransitionMap));
+  static_assert(
+      offsetof(HiddenClass, symbolID_) == offsetof(SHHiddenClass, symbolID));
+  static_assert(
+      offsetof(HiddenClass, propertyFlags_) ==
+      offsetof(SHHiddenClass, propertyFlags));
+  static_assert(
+      offsetof(HiddenClass, numProperties_) ==
+      offsetof(SHHiddenClass, numProperties));
+#if HERMESVM_JIT
+  static_assert(
+      offsetof(HiddenClass, lazyJITId_) == offsetof(SHHiddenClass, lazyJITId));
+#endif
+  static_assert(
+      offsetof(HiddenClass, flags_) == offsetof(SHHiddenClass, flags));
+  static_assert(
+      offsetof(HiddenClass, transitionMap_) ==
+      offsetof(SHHiddenClass, transitionMap));
+  llvm_unreachable("staticAsserts must never be called.");
 }
 
 } // namespace vm

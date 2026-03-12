@@ -7,6 +7,7 @@
 
 #include "hermes/VM/HiddenClass.h"
 
+#include "hermes/VM/HiddenClass-inline.h"
 #include "hermes/VM/HostModel.h"
 #include "hermes/VM/JSCallableProxy.h"
 #include "hermes/VM/JSProxy.h"
@@ -51,12 +52,13 @@ TEST_F(HiddenClassTest, SmokeTest) {
   MutableHandle<HiddenClass> y{runtime};
   MutableHandle<HiddenClass> z{runtime};
 
-  auto rootHnd =
-      runtime.makeHandle<HiddenClass>(HiddenClass::createRoot(runtime));
+  auto rootHnd = runtime.makeHandle<HiddenClass>(
+      HiddenClass::createRoot(runtime, Runtime::makeNullHandle<JSObject>()));
 
   ASSERT_EQ(0u, rootHnd->getNumProperties());
   ASSERT_FALSE(rootHnd->isDictionary());
   ASSERT_TRUE(rootHnd->isKnownLeaf());
+  ASSERT_FALSE(rootHnd->getObjectParentGCPtr());
 
   // x = {}
   x = *rootHnd;
@@ -264,8 +266,8 @@ TEST_F(HiddenClassTest, AccessorsTest) {
   MutableHandle<HiddenClass> x{runtime};
   MutableHandle<HiddenClass> y{runtime};
 
-  auto rootCls =
-      runtime.makeHandle<HiddenClass>(HiddenClass::createRoot(runtime));
+  auto rootCls = runtime.makeHandle<HiddenClass>(
+      HiddenClass::createRoot(runtime, Runtime::makeNullHandle<JSObject>()));
 
   ASSERT_FALSE(rootCls->getMayHaveAccessor());
 
@@ -347,7 +349,9 @@ TEST_F(HiddenClassTest, UpdatePropertyFlagsWithoutTransitionsTest) {
       runtime, createUTF16Ref(u"d"));
 
   // Add y.a, y.b, y.c
-  MutableHandle<HiddenClass> y{runtime, HiddenClass::createRoot(runtime)};
+  MutableHandle<HiddenClass> y{
+      runtime,
+      HiddenClass::createRoot(runtime, Runtime::makeNullHandle<JSObject>())};
   {
     // y.a
     auto addRes = HiddenClass::addProperty(
@@ -472,7 +476,9 @@ TEST_F(HiddenClassTest, UpdatePropertyFlagsWithoutTransitionsTest) {
 }
 
 TEST_F(HiddenClassTest, ForEachProperty) {
-  MutableHandle<HiddenClass> clazz{runtime, HiddenClass::createRoot(runtime)};
+  MutableHandle<HiddenClass> clazz{
+      runtime,
+      HiddenClass::createRoot(runtime, Runtime::makeNullHandle<JSObject>())};
 
   auto aHnd = *runtime.getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"a"));
@@ -530,7 +536,8 @@ TEST_F(HiddenClassTest, TypedObjectTest) {
   Handle<SymbolID> aHnd = *runtime.getIdentifierTable().getSymbolHandle(
       runtime, createASCIIRef("a"));
 
-  lv.hc = vmcast<HiddenClass>(HiddenClass::createForTypedObject(runtime, 2));
+  lv.hc = vmcast<HiddenClass>(HiddenClass::createForTypedObject(
+      runtime, Runtime::makeNullHandle<JSObject>(), 2));
   // Shouldn't do anything, the rest of the test should run.
   lv.hc->clearPropertyMap(runtime.getHeap());
 
@@ -576,6 +583,35 @@ TEST_F(HiddenClassTest, TypedObjectTest) {
         createPseudoHandle(*lv.hc), runtime, *aHnd, desc);
     EXPECT_TRUE(pos.hasValue());
   }
+}
+
+TEST_F(HiddenClassTest, ObjectParentTest) {
+  struct : public Locals {
+    PinnedValue<HiddenClass> clazz;
+    PinnedValue<JSObject> obj1;
+    PinnedValue<JSObject> tmp;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  lv.clazz =
+      HiddenClass::createRoot(runtime, Runtime::makeNullHandle<JSObject>());
+  EXPECT_TRUE(lv.clazz->getObjectParent(runtime) == nullptr);
+
+  lv.clazz = HiddenClass::updateObjectParent(
+      lv.clazz, runtime, createPseudoHandle(*lv.obj1));
+  EXPECT_TRUE(lv.clazz->getObjectParent(runtime) == *lv.obj1);
+
+  lv.clazz = HiddenClass::updateObjectParent(
+      lv.clazz, runtime, createPseudoHandle<JSObject>(nullptr));
+  EXPECT_TRUE(lv.clazz->getObjectParent(runtime) == nullptr);
+
+  for (size_t i = 0; i < 10; ++i) {
+    lv.tmp = JSObject::create(runtime);
+    lv.clazz = HiddenClass::updateObjectParent(
+        lv.clazz, runtime, createPseudoHandle(*lv.tmp));
+  }
+
+  EXPECT_TRUE(lv.clazz->isDictionary());
 }
 
 } // namespace

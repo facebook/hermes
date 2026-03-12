@@ -610,6 +610,9 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// and CellKind.
   /// \param root the root HiddenClass to use when making a new class,
   ///   must be non-null.
+  /// IMPORTANT: This returns a Handle that is stored in a Runtime PHV field,
+  /// so DO NOT hold the result of this function call through another
+  /// getHiddenClassForPrototype call.
   inline Handle<HiddenClass> getHiddenClassForPrototype(
       JSObject *proto,
       Handle<HiddenClass> root);
@@ -618,6 +621,9 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// for a lazy object.
   /// Lazy objects have a different HiddenClass hierarchy in order to avoid
   /// collisions with real objects.
+  /// IMPORTANT: This returns a Handle that is stored in a Runtime PHV field,
+  /// so DO NOT hold the result of this function call through another
+  /// getHiddenClassForPrototype call.
   inline Handle<HiddenClass> getLazyHiddenClassForPrototype(JSObject *proto);
 
   /// Return the global object.

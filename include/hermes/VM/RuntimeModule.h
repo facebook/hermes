@@ -415,10 +415,12 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
 #endif
 
   /// Find the cached hidden class for an object literal, if one exists.
+  /// \param parent is the parent object that we expect to find.
   /// \param shapeTableIndex is the ID of an object literal shape.
   /// \return the cached hidden class.
   HiddenClass *findCachedLiteralHiddenClass(
       Runtime &runtime,
+      JSObject *parent,
       uint32_t shapeTableIndex) const;
 
   /// Set the cached hidden class for a given shape.

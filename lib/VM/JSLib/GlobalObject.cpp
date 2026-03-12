@@ -319,7 +319,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   auto createRootHiddenClassWithParent =
       [&runtime, &lv](CellKind kind, Handle<JSObject> parent) -> HiddenClass * {
     size_t baseNumSlots = JSObject::numOverlapSlotsForCellKind(kind);
-    lv.tempClazzCreateRoot = HiddenClass::createRoot(runtime);
+    lv.tempClazzCreateRoot = HiddenClass::createRoot(runtime, parent);
     // Add the base number of slots.
     for (size_t i = 0; i < baseNumSlots; ++i) {
       GCScopeMarkerRAII marker{runtime};
@@ -330,8 +330,15 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
           "Could not possibly grow larger than the limit");
       lv.tempClazzCreateRoot = *addResult->first;
     }
+    lv.tempClazzCreateRoot =
+        runtime.getHiddenClassForPrototype(*parent, lv.tempClazzCreateRoot);
     return *lv.tempClazzCreateRoot;
   };
+
+  /// Make a root HiddenClass and store it in the Runtime.
+#define CREATE_CLASS_FOR_PARENT(kind, parentField) \
+  runtime.class##kind =                            \
+      createRootHiddenClassWithParent(CellKind::kind##Kind, parentField);
 
   // 15.1.1.1 NaN.
   lv.value = HermesValue::encodeNaNValue();
@@ -366,6 +373,8 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
 
   // "Forward declaration" of Object.prototype is in the Runtime constructor,
   // before the global object is allocated.
+
+  CREATE_CLASS_FOR_PARENT(JSObject, runtime.objectPrototype)
 
   // "Forward declaration" of Error.prototype. Its properties will be populated
   // later.
@@ -405,6 +414,16 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
           Predefined::getSymbolID(Predefined::length),
           configurableOnlyPDF,
           Runtime::getZeroValue()));
+
+  CREATE_CLASS_FOR_PARENT(BoundFunction, runtime.functionPrototype)
+  CREATE_CLASS_FOR_PARENT(NativeFunction, runtime.functionPrototype)
+  CREATE_CLASS_FOR_PARENT(FinalizableNativeFunction, runtime.functionPrototype)
+  CREATE_CLASS_FOR_PARENT(NativeConstructor, runtime.functionPrototype)
+  CREATE_CLASS_FOR_PARENT(JSCallableProxy, runtime.functionPrototype)
+  CREATE_CLASS_FOR_PARENT(NativeJSClass, runtime.functionPrototype)
+  CREATE_CLASS_FOR_PARENT(JSClass, runtime.functionPrototype)
+  CREATE_CLASS_FOR_PARENT(JSFunction, runtime.functionPrototype)
+  CREATE_CLASS_FOR_PARENT(NativeJSFunction, runtime.functionPrototype)
 
   // Initialize reserved HiddenClasses for 1 additional slot where necessary.
   {
@@ -459,19 +478,17 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   // populated later.
   lv.tempClazzForPrototype = createRootHiddenClassWithParent(
       CellKind::JSArrayKind, runtime.objectPrototype);
+  runtime.classJSArray = JSArray::createClass(
+      runtime, runtime.objectPrototype, lv.tempClazzForPrototype);
   runtime.arrayPrototype = runtime.ignoreAllocationFailure(
       JSArray::createNoAllocPropStorage(
-          runtime,
-          runtime.objectPrototype,
-          JSArray::createClass(
-              runtime, runtime.objectPrototype, lv.tempClazzForPrototype),
-          0,
-          0));
-  runtime.classJSArray = JSArray::createClass(
-      runtime, runtime.arrayPrototype, runtime.classJSArray);
+          runtime, runtime.objectPrototype, runtime.classJSArray, 0, 0));
+  assert(runtime.arrayPrototype.get()->getClassGCPtr());
   assert(
-      Handle<JSObject>::vmcast(&runtime.arrayPrototype)->getParent(runtime) ==
+      runtime.arrayPrototype->getParent(runtime) ==
       runtime.objectPrototype.get());
+  runtime.classJSArray = JSArray::createClass(
+      runtime, runtime.arrayPrototype, lv.tempClazzForPrototype);
 
   // TODO: Give FastArray its own prototype so methods like push will work.
   runtime.fastArrayPrototype = *runtime.objectPrototype;
@@ -554,6 +571,46 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   // "Forward declaration" of %AsyncFunction.prototype%
   runtime.asyncFunctionPrototype =
       JSObject::create(runtime, runtime.functionPrototype);
+
+  // Populate the root classes for each JSObject.
+
+  CREATE_CLASS_FOR_PARENT(DecoratedObject, runtime.objectPrototype)
+  CREATE_CLASS_FOR_PARENT(HostObject, runtime.objectPrototype)
+  CREATE_CLASS_FOR_PARENT(JSError, runtime.ErrorPrototype)
+  CREATE_CLASS_FOR_PARENT(JSCallSite, runtime.callSitePrototype)
+  CREATE_CLASS_FOR_PARENT(Arguments, runtime.objectPrototype)
+  CREATE_CLASS_FOR_PARENT(JSArrayBuffer, runtime.arrayBufferPrototype)
+  CREATE_CLASS_FOR_PARENT(JSDataView, runtime.dataViewPrototype)
+#define TYPED_ARRAY(name, type) \
+  CREATE_CLASS_FOR_PARENT(name##Array, runtime.name##ArrayPrototype)
+#include "hermes/VM/TypedArrays.def"
+  CREATE_CLASS_FOR_PARENT(JSArrayIterator, runtime.arrayIteratorPrototype)
+  CREATE_CLASS_FOR_PARENT(JSSet, runtime.setPrototype)
+  CREATE_CLASS_FOR_PARENT(JSMap, runtime.mapPrototype)
+  CREATE_CLASS_FOR_PARENT(JSSetIterator, runtime.setIteratorPrototype)
+  CREATE_CLASS_FOR_PARENT(JSMapIterator, runtime.mapIteratorPrototype)
+  CREATE_CLASS_FOR_PARENT(JSWeakMap, runtime.weakMapPrototype)
+  CREATE_CLASS_FOR_PARENT(JSWeakSet, runtime.weakSetPrototype)
+  CREATE_CLASS_FOR_PARENT(JSWeakRef, runtime.weakRefPrototype)
+  CREATE_CLASS_FOR_PARENT(JSBoolean, runtime.booleanPrototype)
+  CREATE_CLASS_FOR_PARENT(JSString, runtime.stringPrototype)
+  CREATE_CLASS_FOR_PARENT(JSNumber, runtime.numberPrototype)
+  CREATE_CLASS_FOR_PARENT(JSSymbol, runtime.symbolPrototype)
+  CREATE_CLASS_FOR_PARENT(JSStringIterator, runtime.stringIteratorPrototype)
+  CREATE_CLASS_FOR_PARENT(JSJSON, runtime.objectPrototype)
+  CREATE_CLASS_FOR_PARENT(JSMath, runtime.objectPrototype)
+  CREATE_CLASS_FOR_PARENT(JSDate, runtime.datePrototype)
+  CREATE_CLASS_FOR_PARENT(JSRegExp, runtime.regExpPrototype)
+  CREATE_CLASS_FOR_PARENT(
+      JSRegExpStringIterator, runtime.regExpStringIteratorPrototype)
+  CREATE_CLASS_FOR_PARENT(RequireContext, runtime.objectPrototype)
+  CREATE_CLASS_FOR_PARENT(JSGeneratorObject, runtime.generatorPrototype)
+  CREATE_CLASS_FOR_PARENT(JSProxy, runtime.objectPrototype)
+  CREATE_CLASS_FOR_PARENT(JSFinalizationRegistry, runtime.objectPrototype)
+  CREATE_CLASS_FOR_PARENT(JSBigInt, runtime.bigintPrototype)
+  CREATE_CLASS_FOR_PARENT(FastArray, runtime.fastArrayPrototype)
+
+#undef CREATE_CLASS_FOR_PARENT
 
   // Declare the fast array class.
   runtime.classFastArray = createRootHiddenClassWithParent(

@@ -27,7 +27,6 @@ extern "C" {
 #endif
 
 typedef struct SHUnitExt SHUnitExt;
-typedef uint32_t SHSymbolID;
 typedef struct SHUnit SHUnit;
 
 /// Encodes the set of keys to be used to construct an object literal.
@@ -1596,10 +1595,15 @@ static inline SHLegacyValue _sh_ljs_load_parent_no_traps(
     SHRuntime *shr,
     SHLegacyValue object) {
   SHJSObject *objectPtr = (SHJSObject *)_sh_ljs_get_pointer(object);
+  SHCompressedPointer clazzCompressed = {.raw = objectPtr->clazz};
+  SHHiddenClass *clazz =
+      (SHHiddenClass *)_sh_cp_decode_non_null(shr, clazzCompressed);
   assert(!objectPtr->flags.proxyObject && "proxy is not supported");
-  if (objectPtr->parent) {
-    SHCompressedPointer parent = {.raw = objectPtr->parent};
-    return _sh_ljs_object(_sh_cp_decode_non_null(shr, parent));
+  if (clazz->objectParent) {
+    SHCompressedPointer parent = {.raw = clazz->objectParent};
+    SHJSObject *parentPtr = (SHJSObject *)_sh_cp_decode_non_null(shr, parent);
+    assert(clazz->objectParent == objectPtr->parent && "get failed");
+    return _sh_ljs_object(parentPtr);
   }
   return _sh_ljs_null();
 }
@@ -1607,9 +1611,16 @@ static inline SHLegacyValue _sh_ljs_load_parent_no_traps(
 static inline SHLegacyValue _sh_typed_load_parent(
     SHRuntime *shr,
     const SHLegacyValue *object) {
-  SHCompressedPointer parent = {
-      .raw = ((SHJSObject *)_sh_ljs_get_pointer(*object))->parent};
-  return _sh_ljs_object(_sh_cp_decode_non_null(shr, parent));
+  SHCompressedPointer clazzCompressed = {
+      .raw = ((SHJSObject *)_sh_ljs_get_pointer(*object))->clazz};
+  SHHiddenClass *clazz =
+      (SHHiddenClass *)_sh_cp_decode_non_null(shr, clazzCompressed);
+  SHCompressedPointer parentCompressed = {.raw = clazz->objectParent};
+  assert(
+      clazz->objectParent ==
+          ((SHJSObject *)_sh_ljs_get_pointer(*object))->parent &&
+      "get failed");
+  return _sh_ljs_object(_sh_cp_decode(shr, parentCompressed));
 }
 
 /// If the double value is within representable integer range, convert it,

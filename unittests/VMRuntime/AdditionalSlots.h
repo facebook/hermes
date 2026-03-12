@@ -18,7 +18,9 @@ namespace vm {
 template <typename T>
 size_t numAdditionalSlotsForTest() {
   // Allocate the maximum possible number of anonymous property slots, this
-  // ensures that we use both direct and indirect storage.
+  // ensures that we use both direct and indirect storage when possible.
+  // For NativeFunctions, there may not be enough internal anonymous properties
+  // to do this.
   static_assert(
       InternalProperty::NumAnonymousInternalProperties >
           JSObject::DIRECT_PROPERTY_SLOTS,
@@ -27,7 +29,7 @@ size_t numAdditionalSlotsForTest() {
       InternalProperty::NumAnonymousInternalProperties -
       JSObject::numOverlapSlots<T>();
   static_assert(
-      numAdditionalSlots > 1, "At least 2 properties needed for this test");
+      numAdditionalSlots > 0, "At least 1 property needed for this test");
   return numAdditionalSlots;
 }
 

@@ -308,6 +308,9 @@ class JSObject : public GCCell {
             runtime.getHeap(),
             needsBarriers),
         propStorage_(nullptr) {
+    assert(
+        parent == clazz->getObjectParentGCPtr().get(runtime) &&
+        "creation failed");
     // Direct property slots are initialized by initDirectPropStorage.
   }
 
@@ -324,6 +327,9 @@ class JSObject : public GCCell {
             runtime.getHeap(),
             needsBarriers),
         propStorage_(nullptr) {
+    assert(
+        *parent == clazz->getObjectParentGCPtr().get(runtime) &&
+        "creation failed");
     // Direct property slots are initialized by initDirectPropStorage.
   }
 
@@ -332,6 +338,9 @@ class JSObject : public GCCell {
   /// (defaulting to NoBarriers).
   JSObject(Runtime &runtime, JSObject *parent, HiddenClass *clazz)
       : JSObject(runtime, parent, clazz, GCPointerBase::NoBarriers()) {
+    assert(
+        parent == clazz->getObjectParentGCPtr().get(runtime) &&
+        "creation failed");
     // Direct property slots are initialized by initDirectPropStorage.
   }
 
@@ -467,7 +476,11 @@ class JSObject : public GCCell {
   const GCPointer<JSObject> &getParentGCPtr(PointerBase &runtime) const {
     assert(
         !flags_.proxyObject && "getParent cannot be used with proxy objects");
-    return parent_;
+    assert(
+        parent_.get(runtime) ==
+            getClass(runtime)->getObjectParentGCPtr().get(runtime) &&
+        "get failed");
+    return getClass(runtime)->getObjectParentGCPtr();
   }
 
   /// \return the hidden class of this object.

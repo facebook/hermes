@@ -132,6 +132,7 @@ void Callable::defineLazyProperties(Handle<Callable> fn, Runtime &runtime) {
     const CodeBlock *codeBlock = jsFun->getCodeBlock();
 
     // Set the actual non-lazy hidden class.
+    // Preserve the object's parent and CellKind.
     Handle<HiddenClass> newClass = runtime.getHiddenClassForPrototype(
         jsFun->getParent(runtime),
         vmisa<JSClass>(*jsFun) ? runtime.classJSClass
@@ -683,8 +684,7 @@ CallResult<HermesValue> BoundFunction::create(
   auto *cell = runtime.makeAFixed<BoundFunction>(
       runtime,
       lv.proto,
-      runtime.getHiddenClassForPrototype(
-          runtime.functionPrototypeRawPtr, runtime.classBoundFunction),
+      runtime.getHiddenClassForPrototype(*lv.proto, runtime.classBoundFunction),
       target,
       lv.arrStorage);
   lv.self = JSObjectInit::initToPointer(runtime, cell);

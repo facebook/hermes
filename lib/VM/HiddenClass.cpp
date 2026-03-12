@@ -11,8 +11,10 @@
 #include "hermes/Support/Statistic.h"
 #include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/GCPointer-inline.h"
+#include "hermes/VM/HiddenClass-inline.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSObject.h"
+#include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/StringView.h"
 
@@ -26,6 +28,10 @@ HERMES_SLOW_STATISTIC(
 HERMES_SLOW_STATISTIC(
     NumHCMapSteal,
     "NumHCMapSteal: Number of map steals from parent HiddenClass.");
+HERMES_SLOW_STATISTIC(
+    NumHCObjectParentChanges,
+    "NumHCObjectParentChanges: Number of HiddenClass ObjectParent change slow "
+    "path calls.");
 
 namespace hermes {
 namespace vm {
@@ -121,10 +127,12 @@ const VTable HiddenClass::vt{
 void HiddenClassBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const HiddenClass *>(cell);
   mb.setVTable(&HiddenClass::vt);
+  mb.addField("objectParent", &self->objectParent_);
   mb.addField("symbol", &self->symbolID_);
   mb.addField("parent", &self->parent_);
   mb.addField("propertyMap", &self->propertyMap_);
   mb.addField("forInCache", &self->forInCache_);
+  mb.addField("parentTransitionMap", &self->parentTransitionMap_);
 }
 
 void HiddenClass::_finalizeImpl(GCCell *cell, GC &gc) {
@@ -167,11 +175,14 @@ void HiddenClass::_snapshotAddNodesImpl(
 }
 #endif
 
-HiddenClass *HiddenClass::createRoot(Runtime &runtime) {
+HiddenClass *HiddenClass::createRoot(
+    Runtime &runtime,
+    Handle<JSObject> objectParent) {
   return create(
       runtime,
       ClassFlags{},
       Runtime::makeNullHandle<HiddenClass>(),
+      objectParent,
       SymbolID{},
       PropertyFlags{},
       0);
@@ -179,6 +190,7 @@ HiddenClass *HiddenClass::createRoot(Runtime &runtime) {
 
 HiddenClass *HiddenClass::createForTypedObject(
     Runtime &runtime,
+    Handle<JSObject> objectParent,
     uint32_t capacity) {
   assert(capacity <= maxNumProperties() && "too many properties");
 
@@ -197,6 +209,7 @@ HiddenClass *HiddenClass::createForTypedObject(
       runtime,
       flags,
       Runtime::makeNullHandle<HiddenClass>(),
+      objectParent,
       SymbolID{},
       PropertyFlags{},
       0);
@@ -212,6 +225,7 @@ HiddenClass *HiddenClass::create(
     Runtime &runtime,
     ClassFlags flags,
     Handle<HiddenClass> parent,
+    Handle<JSObject> objectParent,
     SymbolID symbolID,
     PropertyFlags propertyFlags,
     unsigned numProperties) {
@@ -220,7 +234,13 @@ HiddenClass *HiddenClass::create(
       "non-empty non-dictionary orphan");
   auto *obj =
       runtime.makeAFixed<HiddenClass, HasFinalizer::Yes, LongLived::Yes>(
-          runtime, flags, parent, symbolID, propertyFlags, numProperties);
+          runtime,
+          flags,
+          parent,
+          objectParent,
+          symbolID,
+          propertyFlags,
+          numProperties);
   return obj;
 }
 
@@ -231,6 +251,11 @@ Handle<HiddenClass> HiddenClass::copyToNewDictionary(
   assert(
       !selfHandle->isDictionaryNoCache() && "class already in no-cache mode");
 
+  struct : public Locals {
+    PinnedValue<JSObject> objectParent;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
   auto newFlags = selfHandle->flags_;
   newFlags.dictionaryMode = true;
   // If the requested, transition to no-cache mode.
@@ -239,10 +264,12 @@ Handle<HiddenClass> HiddenClass::copyToNewDictionary(
   }
 
   /// Allocate a new class without a parent.
+  lv.objectParent = selfHandle->objectParent_.get(runtime);
   auto newClassHandle = runtime.makeHandle<HiddenClass>(HiddenClass::create(
       runtime,
       newFlags,
       Runtime::makeNullHandle<HiddenClass>(),
+      lv.objectParent,
       SymbolID{},
       PropertyFlags{},
       selfHandle->numProperties_));
@@ -472,11 +499,18 @@ CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::addProperty(
           .hasValue();
   auto newFlags = computeFlags(selfHandle->flags_, propertyFlags, isIndexLike);
 
+  struct : public Locals {
+    PinnedValue<JSObject> objectParent;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
   // Allocate the child.
+  lv.objectParent = selfHandle->objectParent_.get(runtime);
   auto childHandle = runtime.makeHandle<HiddenClass>(HiddenClass::create(
       runtime,
       newFlags,
       selfHandle,
+      lv.objectParent,
       name,
       propertyFlags,
       selfHandle->numProperties_ + 1));
@@ -595,15 +629,22 @@ Handle<HiddenClass> HiddenClass::updateProperty(
     return runtime.makeHandle(existingChild);
   }
 
+  struct : public Locals {
+    PinnedValue<JSObject> objectParent;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
   // We are updating the existing property and adding a transition to a new
   // hidden class.
   descPair->second.flags = newFlags;
 
   // Allocate the child.
+  lv.objectParent = selfHandle->objectParent_.get(runtime);
   auto childHandle = runtime.makeHandle<HiddenClass>(HiddenClass::create(
       runtime,
       computeFlags(selfHandle->flags_, newFlags, false),
       selfHandle,
+      lv.objectParent,
       name,
       transitionFlags,
       selfHandle->numProperties_));
@@ -661,6 +702,107 @@ SlotIndex HiddenClass::addNewTypedPublicProperty(
       selfHandle, runtime, name, NamedPropertyDescriptor(propFlags, newSlot));
 
   return newSlot;
+}
+
+HiddenClass *HiddenClass::updateObjectParentSlowPath(
+    Handle<HiddenClass> selfHandle,
+    Runtime &runtime,
+    PseudoHandle<JSObject> newParentPH) {
+  ++NumHCObjectParentChanges;
+  assert(
+      newParentPH.get() != selfHandle->objectParent_.get(runtime) &&
+      "don't call slow path if the parent isn't changing");
+
+  // In dictionary mode, update the objectParent directly without making a new
+  // HiddenClass.
+  if (LLVM_UNLIKELY(selfHandle->isDictionary())) {
+    selfHandle->objectParent_.set(
+        runtime, newParentPH.get(), runtime.getHeap());
+    return *selfHandle;
+  }
+
+  struct : public Locals {
+    PinnedValue<WeakValueObjectMap<HiddenClass>> parentTransitionMap;
+    PinnedValue<HiddenClass> child;
+    PinnedValue<JSObject> newParent;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  lv.newParent = std::move(newParentPH);
+
+  // Check if incrementing parentChangeCounter would exceed the maximum.
+  constexpr uint8_t maxCounter =
+      (1 << ClassFlags::kParentChangeCounterSize) - 1;
+  if (LLVM_UNLIKELY(selfHandle->flags_.parentChangeCounter >= maxCounter)) {
+    // Convert to dictionary mode and update the objectParent directly.
+    Handle<HiddenClass> dictionaryHandle =
+        copyToNewDictionary(selfHandle, runtime);
+    dictionaryHandle->objectParent_.set(
+        runtime, *lv.newParent, runtime.getHeap());
+    return *dictionaryHandle;
+  }
+
+  // Check for existing transition in parentTransitionMap_
+  if (selfHandle->parentTransitionMap_) {
+    lv.parentTransitionMap =
+        selfHandle->parentTransitionMap_.getNonNull(runtime);
+    HiddenClass *existingChild = lv.parentTransitionMap->lookup(
+        runtime,
+        *lv.newParent ? *lv.newParent : *runtime.nullParentTransitionObject);
+    // Found the existing HiddenClass, return it directly.
+    if (existingChild)
+      return vmcast<HiddenClass>(existingChild);
+  }
+
+  // Create new flags with incremented parentChangeCounter
+  ClassFlags newClassFlags = selfHandle->flags_;
+  ++newClassFlags.parentChangeCounter;
+
+  // Create a new HiddenClass with the new objectParent.
+  lv.child = HiddenClass::create(
+      runtime,
+      newClassFlags,
+      selfHandle,
+      lv.newParent,
+      SymbolID::empty(),
+      PropertyFlags{},
+      selfHandle->numProperties_);
+
+  if (LLVM_UNLIKELY(!selfHandle->parentTransitionMap_)) {
+    // parentTransitionMap_ needs to be allocated.
+    auto *map = WeakValueObjectMap<HiddenClass>::create(runtime);
+    selfHandle->parentTransitionMap_.set(runtime, map, runtime.getHeap());
+    lv.parentTransitionMap =
+        selfHandle->parentTransitionMap_.getNonNull(runtime);
+  }
+
+  // Store the transition in the map.
+  bool inserted = WeakValueObjectMap<HiddenClass>::insertNew(
+      lv.parentTransitionMap,
+      runtime,
+      *lv.newParent ? *lv.newParent : *runtime.nullParentTransitionObject,
+      *lv.child);
+  if (LLVM_UNLIKELY(!inserted)) {
+    // If we failed to insert, it can't be because the key already exists (we
+    // already checked that above). So we must not have enough space in the
+    // array. Clear out the transition table and start over - that's the only
+    // thing to do. This isn't really an OOM so we have no reason to fatal.
+    lv.parentTransitionMap = WeakValueObjectMap<HiddenClass>::create(runtime);
+    selfHandle->parentTransitionMap_.set(
+        runtime, *lv.parentTransitionMap, runtime.getHeap());
+    inserted = WeakValueObjectMap<HiddenClass>::insertNew(
+        lv.parentTransitionMap,
+        runtime,
+        *lv.newParent ? *lv.newParent : *runtime.nullParentTransitionObject,
+        *lv.child);
+    if (LLVM_UNLIKELY(!inserted)) {
+      // Failed to insert even after reallocating a fresh map, there's nothing
+      // else productive we can do.
+      runtime.getHeap().oom(OOMError::MaxHeapReached);
+    }
+  }
+
+  return *lv.child;
 }
 
 Handle<HiddenClass> HiddenClass::makeAllNonConfigurable(
@@ -897,6 +1039,9 @@ void HiddenClass::initializeMissingPropertyMap(
     NoAllocScope _(runtime);
     for (auto *cur = *selfHandle; cur->numProperties_ > 0;
          cur = cur->parent_.getNonNull(runtime)) {
+      // Only visit the HiddenClasses which involve properties.
+      if (LLVM_UNLIKELY(cur->symbolID_.isInvalid()))
+        continue;
       auto tmpFlags = cur->propertyFlags_;
       tmpFlags.flagsTransition = 0;
       entries.emplace_back(cur->symbolID_, tmpFlags);
@@ -959,6 +1104,12 @@ void HiddenClass::stealPropertyMapFromParent(
       self->parent_.getNonNull(runtime)->propertyMap_,
       runtime.getHeap());
   self->parent_.getNonNull(runtime)->propertyMap_.setNull(runtime.getHeap());
+
+  if (LLVM_UNLIKELY(self->symbolID_.isInvalid())) {
+    // No changes to make to the property map, because only the object's parent
+    // was updated.
+    return;
+  }
 
   // Does our class add a new property?
   if (LLVM_LIKELY(!self->propertyFlags_.flagsTransition)) {

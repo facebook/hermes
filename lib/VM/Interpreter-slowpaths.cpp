@@ -975,12 +975,14 @@ CallResult<HermesValue> Interpreter::createThisImpl(
   }
 
   RuntimeModule *runtimeModule = curCodeBlock->getRuntimeModule();
-  if (auto *cachedClazz =
-          runtimeModule->findCachedLiteralHiddenClass(runtime, shapeTableIdx)) {
+  if (auto *cachedClazz = runtimeModule->findCachedLiteralHiddenClass(
+          runtime, *lv.newTargetPrototype, shapeTableIdx)) {
     lv.clazz = cachedClazz;
   } else {
     lv.clazz = *runtime.getHiddenClassForPrototype(
         *lv.newTargetPrototype, runtime.classJSObject);
+    runtimeModule->setCachedLiteralHiddenClass(
+        runtime, shapeTableIdx, *lv.clazz);
   }
 
   // Avoid passing just the prototype to avoid a lookup and a HiddenClass
@@ -1850,8 +1852,9 @@ CallResult<HiddenClass *> Interpreter::getHiddenClassForBuffer(
   LocalsRAII lraii(runtime, &lv);
 
   if (auto *cachedClazz = runtimeModule->findCachedLiteralHiddenClass(
-          runtime, shapeTableIndex)) {
+          runtime, *parent, shapeTableIndex)) {
     lv.clazz = cachedClazz;
+    assert(lv.clazz->getObjectParent(runtime) == *parent && "wrong parent");
   } else {
     const auto *shapeInfo =
         &runtimeModule->getBytecode()->getObjectShapeTable()[shapeTableIndex];
@@ -1867,8 +1870,8 @@ CallResult<HiddenClass *> Interpreter::getHiddenClassForBuffer(
     if (isTypedAllocKind(allocKind)) {
       bool propertiesEnumerable =
           allocKind != ObjectAllocKind::TypedNonEnumerable;
-      lv.clazz =
-          HiddenClass::createForTypedObject(runtime, shapeInfo->numProps);
+      lv.clazz = HiddenClass::createForTypedObject(
+          runtime, parent, shapeInfo->numProps);
       addTypedBufferPropertiesToHiddenClass(
           runtime,
           keyBuffer,

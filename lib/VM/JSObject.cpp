@@ -301,8 +301,24 @@ CallResult<bool> JSObject::setParent(
     runtime.incParentCacheEpoch();
   }
 
+  struct : public Locals {
+    PinnedValue<HiddenClass> clazz;
+    PinnedValue<JSObject> self;
+    PinnedValue<JSObject> parent;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  lv.self = self;
+  lv.clazz = lv.self->getClass(runtime);
+  lv.parent = parent;
+
   // 9.
-  self->parent_.set(runtime, parent, runtime.getHeap());
+  lv.self->parent_.set(runtime, *lv.parent, runtime.getHeap());
+
+  lv.clazz = HiddenClass::updateObjectParent(
+      lv.clazz, runtime, createPseudoHandle(*lv.parent));
+  lv.self->updateClass(runtime, *lv.clazz);
+
   // 10.
   return true;
 }
@@ -1040,6 +1056,7 @@ JSObject *JSObject::getNamedDescriptorUnsafe(
         runtime, selfHandle->parent_.getNonNull(runtime)};
 
     do {
+      GCScopeMarkerRAII marker{runtime};
       // Check the most common case first, at the cost of some code duplication.
       if (LLVM_LIKELY(
               !mutableSelfHandle->flags_.lazyObject &&
@@ -2624,12 +2641,12 @@ void JSObject::_snapshotAddEdgesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap) {
 
   // Add the prototype as a property edge, so it's easy for JS developers to
   // walk the prototype chain on their own.
-  if (self->parent_) {
+  if (self->getParentGCPtr(gc.getPointerBase())) {
     snap.addNamedEdge(
         HeapSnapshot::EdgeType::Property,
         // __proto__ chosen for similarity to V8.
         "__proto__",
-        gc.getObjectID(self->parent_));
+        gc.getObjectID(self->getParent(gc.getPointerBase())));
   }
 
   HiddenClass::forEachPropertyNoAlloc(

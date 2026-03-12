@@ -325,7 +325,7 @@ class JSArray final : public ArrayImpl {
   /// Construct an instance of the hidden class describing the layout of JSArray
   /// instances.
   /// \param rootClazz the starting HiddenClass for the JSArray.
-  static Handle<HiddenClass> createClass(
+  static HiddenClass *createClass(
       Runtime &runtime,
       Handle<JSObject> prototypeHandle,
       Handle<HiddenClass> rootClazz);

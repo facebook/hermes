@@ -149,7 +149,6 @@ class WeakValueObjectMapImpl : public GCCell {
   /// Return true if the table should shrink.
   bool shouldShrink(size_type capacity, size_type size) const {
     // Shrink when size is 1/8 of capacity, but don't shrink below minimum.
-    static constexpr size_type kMinCapacity = 8;
     return capacity_ > kMinCapacity && size_ <= capacity_ / 8;
   }
 

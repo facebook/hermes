@@ -26,6 +26,7 @@ namespace vm {
 /// Object.
 
 HermesValue createObjectConstructor(Runtime &runtime) {
+  assert(runtime.objectPrototype.get() != nullptr);
   auto objectPrototype = Handle<JSObject>::vmcast(&runtime.objectPrototype);
 
   struct : public Locals {

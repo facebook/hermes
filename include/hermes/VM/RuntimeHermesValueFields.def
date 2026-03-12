@@ -79,6 +79,8 @@ RUNTIME_HV_FIELD(throwTypeErrorAccessor, PropertyAccessor)
 RUNTIME_HV_FIELD(regExpMatchClass, HiddenClass)
 RUNTIME_HV_FIELD(lazyObjectClass_, HiddenClass)
 
+RUNTIME_HV_FIELD(classJSObjectNullParent, HiddenClass)
+
 #define CELL_JSOBJECT_NAME(name, vmClassName) \
     RUNTIME_HV_FIELD(class##name, HiddenClass)
 #include "hermes/VM/CellKinds.def"
@@ -110,6 +112,10 @@ RUNTIME_HV_FIELD(functionPrototypeSymbolHasInstance, NativeFunction)
 // we record specialCodeBlockDomain_ and create runtimemodule later need to
 // revisit this in stage 2
 RUNTIME_HV_FIELD(specialCodeBlockDomain_, Domain)
+
+// A dummy object used as the key for the "null" parent transition in
+// HiddenClass.
+RUNTIME_HV_FIELD(nullParentTransitionObject, JSObject)
 
 RUNTIME_HV_FIELD(thrownValue_, HermesValue)
 RUNTIME_HV_FIELD(keptObjects_, JSMapImpl<CellKind::JSSetKind>)

@@ -10,6 +10,7 @@
 #include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/FastArray.h"
+#include "hermes/VM/HiddenClass-inline.h"
 #include "hermes/VM/Interpreter.h"
 #include "hermes/VM/JIT/Config.h"
 #include "hermes/VM/JSArray.h"
@@ -1717,7 +1718,9 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_parent(
   HiddenClass *clazz;
   auto *cacheEntry = reinterpret_cast<WeakRoot<HiddenClass> *>(
       &unit->object_literal_class_cache[shapeTableIndex]);
-  if (*cacheEntry) {
+  if (*cacheEntry &&
+      cacheEntry->getNonNull(runtime, runtime.getHeap())
+              ->getObjectParent(runtime) == *parentHandle) {
     // There is a already a cached entry for this shape, we can just use that.
     clazz = cacheEntry->getNonNull(runtime, runtime.getHeap());
   } else {
@@ -1751,7 +1754,9 @@ static SHLegacyValue createObjectFromBuffer(
   HiddenClass *clazz = nullptr;
   auto *cacheEntry = reinterpret_cast<WeakRoot<HiddenClass> *>(
       &unit->object_literal_class_cache[shapeTableIndex]);
-  if (*cacheEntry) {
+  if (*cacheEntry &&
+      cacheEntry->getNonNull(runtime, runtime.getHeap())
+              ->getObjectParent(runtime) == *parent) {
     // There is a already a cached entry for this shape, we can just use that.
     clazz = cacheEntry->getNonNull(runtime, runtime.getHeap());
   } else {
@@ -1785,8 +1790,8 @@ static SHLegacyValue createObjectFromBuffer(
     if (isTypedAllocKind(AllocKind)) {
       bool propertiesEnumerable =
           AllocKind != ObjectAllocKind::TypedNonEnumerable;
-      lv.clazz =
-          HiddenClass::createForTypedObject(runtime, shapeInfo->num_props);
+      lv.clazz = HiddenClass::createForTypedObject(
+          runtime, parent, shapeInfo->num_props);
       addTypedBufferPropertiesToHiddenClass(
           runtime,
           keyBuffer,
