@@ -3738,7 +3738,7 @@ const getTransforms = (
       const [key, computed] = ((): [TSESTree.PropertyName, boolean] => {
         if (node.key.type === 'Identifier' && node.key.name.startsWith('@@')) {
           const name = node.key.name.slice(2);
-          if (wellKnownSymbols.has(name)) {
+          if (node.method === true && wellKnownSymbols.has(name)) {
             return [
               {
                 type: 'MemberExpression',
