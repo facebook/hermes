@@ -72,6 +72,11 @@ ValueKind UnaryOperatorInst::parseOperator(llvh::StringRef op) {
 }
 
 SideEffect UnaryOperatorInst::getSideEffectImpl() const {
+  if (getKind() == ValueKind::UnaryMinusInstKind &&
+      getSingleOperand()->getType().canBeBigInt()) {
+    return SideEffect{}.setThrow();
+  }
+
   if (getSingleOperand()->getType().isPrimitive()) {
     return SideEffect{}.setIdempotent();
   }
