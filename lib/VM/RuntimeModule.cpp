@@ -395,6 +395,8 @@ void RuntimeModule::setCachedLiteralHiddenClass(
     Runtime &runtime,
     unsigned shapeTableIndex,
     HiddenClass *clazz) {
+  if (shapeTableIndex == hbc::SHAPE_TABLE_CACHING_DISABLED)
+    return;
   assert(
       !findCachedLiteralHiddenClass(runtime, shapeTableIndex) &&
       "Why are we caching an item already cached?");

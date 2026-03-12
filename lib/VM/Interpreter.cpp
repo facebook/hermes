@@ -2871,6 +2871,7 @@ tailCall:
                 &O2REG(CreateThisForSuper),
                 &O3REG(CreateThisForSuper),
                 ip->iCreateThisForSuper.op4,
+                ip->iCreateThisForSuper.op5,
                 curCodeBlock));
         if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
           goto exception;
@@ -2888,6 +2889,7 @@ tailCall:
                 &O2REG(CreateThisForNew),
                 &O2REG(CreateThisForNew),
                 ip->iCreateThisForNew.op3,
+                ip->iCreateThisForNew.op4,
                 curCodeBlock));
         if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
           goto exception;

@@ -24,7 +24,7 @@ function foo() {
 // CHECK-NEXT:  StringSwitchImm count: 0
 // CHECK-NEXT:  Key buffer size (bytes): 0
 // CHECK-NEXT:  Value buffer size (bytes): 0
-// CHECK-NEXT:  Shape table count: 0
+// CHECK-NEXT:  Shape table count: 1
 // CHECK-NEXT:  Segment ID: 0
 // CHECK-NEXT:  CommonJS module count: 0
 // CHECK-NEXT:  CommonJS module count (static): 0
@@ -36,6 +36,9 @@ function foo() {
 // CHECK:Global String Table:
 // CHECK-NEXT:s0[ASCII, 0..5]: global
 // CHECK-NEXT:i1[ASCII, 6..8] #9290584E: foo
+
+// CHECK:Object Shape Table:
+// CHECK-NEXT:0[0, 0]
 
 // CHECK:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000

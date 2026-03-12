@@ -422,6 +422,7 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
       uint32_t shapeTableIndex) const;
 
   /// Set the cached hidden class for a given shape.
+  /// If shapeTableIndex == SHAPE_TABLE_CACHING_DISABLED, do nothing.
   /// \param shapeTableIndex is the ID of an object literal shape.
   /// \param clazz the hidden class to cache.
   void setCachedLiteralHiddenClass(

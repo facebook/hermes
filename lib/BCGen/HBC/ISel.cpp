@@ -2152,16 +2152,25 @@ void HBCISel::generateLIRReifyArgumentsStrictInst(
 void HBCISel::generateCreateThisInst(CreateThisInst *Inst, BasicBlock *next) {
   auto output = encodeValue(Inst);
   auto closure = encodeValue(Inst->getClosure());
+  LiteralBufferBuilder::LiteralOffset literalOffset =
+      BCFGen_->getBytecodeModuleGenerator().serializedLiteralOffsetFor(Inst);
+  uint32_t shapeTableIdx = literalOffset.shapeTableIdx <= UINT16_MAX
+      ? literalOffset.shapeTableIdx
+      : hbc::SHAPE_TABLE_CACHING_DISABLED;
   if (Inst->getNewTarget() == Inst->getClosure()) {
     BCFGen_->emitCreateThisForNew(
-        output, closure, acquirePropertyReadCacheIndex(prototypeIdent_));
+        output,
+        closure,
+        acquirePropertyReadCacheIndex(prototypeIdent_),
+        shapeTableIdx);
   } else {
     auto newTarget = encodeValue(Inst->getNewTarget());
     BCFGen_->emitCreateThisForSuper(
         output,
         closure,
         newTarget,
-        acquirePropertyReadCacheIndex(prototypeIdent_));
+        acquirePropertyReadCacheIndex(prototypeIdent_),
+        shapeTableIdx);
   }
 }
 void HBCISel::generateGetConstructedObjectInst(

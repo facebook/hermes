@@ -148,7 +148,12 @@ class Builder {
         shouldVisitFunction_(shouldVisitFunction),
         optimize_(optimize),
         literalGenerator_(getIdentifier, getString),
-        bcProvider_(bcProvider) {}
+        bcProvider_(bcProvider) {
+    static_assert(
+        hbc::SHAPE_TABLE_CACHING_DISABLED == 0,
+        "first shape table entry has no caching");
+    objShapeTable_.push_back({0, 0});
+  }
 
   /// Do everything: collect the literals, optionally deduplicate them.
   Result generate();
@@ -170,6 +175,7 @@ class Builder {
   void serializeLiteralFor(LIRAllocObjectFromBufferInst *AOFB);
   void serializeLiteralFor(LIRAllocTypedObjectFromBufferInst *AOFB);
   void serializeLiteralFor(LIRAllocTypedNonEnumObjectFromBufferInst *AOFB);
+  void serializeLiteralFor(CreateThisInst *createThis);
 
   /// Serialize the the input literals \p elements into the UniquedStringVector
   /// \p dest.
@@ -211,6 +217,7 @@ class Builder {
 
   // This contains all the unique shapes of all the object literals in the
   // module.
+  // The first entry is a dummy entry because we don't use it for caching.
   std::vector<ShapeTableEntry> objShapeTable_{};
 
   /// This maps a <keyBufferOffset, numProps, allocKind, parent> key to an
@@ -233,6 +240,9 @@ class Builder {
   /// * LIRAllocTypedNonEnumObjectFromBufferInst
   std::vector<std::pair<const Instruction *, std::pair<size_t, size_t>>>
       objInst_{};
+
+  /// List of CreateThis instructions.
+  std::vector<CreateThisInst *> createThisInst_{};
 };
 
 void Builder::reseedFromBaseBytecode() {
@@ -343,6 +353,17 @@ void Builder::reseedFromBaseBytecode() {
   for (size_t i = 0, e = objShapeTable_.size(); i < e; ++i) {
     auto numProps = objShapeTable_[i].numProps;
     auto keyBufferOffset = objShapeTable_[i].keyBufferOffset;
+    if (numProps == 0) {
+      // Account for empty shape table entries (used for caching by, e.g.,
+      // CreateThis).
+      keyOffsetToShapeIdx_.insert(
+          {{keyBufferOffset,
+            numProps,
+            ValueKind::CreateThisInstKind,
+            builder.getEmptySentinel()},
+           (uint32_t)i});
+      continue;
+    }
     auto sizeInBytes = SerializedLiteralParser::parseKeyBuffer(
         keyBuf.slice(keyBufferOffset), numProps, emptyVisitor);
     keyStrTable.push_back({keyBufferOffset, (uint32_t)sizeInBytes, false});
@@ -450,6 +471,13 @@ LiteralBufferBuilder::Result Builder::generate() {
         LiteralOffset{shapeID, valView[valIndexInSet].getOffset()};
   }
 
+  for (size_t i = 0, e = createThisInst_.size(); i != e; ++i) {
+    const auto *inst = createThisInst_[i];
+    uint32_t shapeID = objShapeTable_.size();
+    objShapeTable_.push_back({0, 0});
+    literalOffsetMap[inst] = LiteralOffset{shapeID, UINT32_MAX};
+  }
+
   return {
       std::move(valueStorage_).acquireStringTableAndStorage().second,
       std::move(keyStorage_).acquireStringTableAndStorage().second,
@@ -477,6 +505,8 @@ void Builder::traverse() {
             auto *AOFB =
                 llvh::dyn_cast<LIRAllocTypedNonEnumObjectFromBufferInst>(&I)) {
           serializeLiteralFor(AOFB);
+        } else if (auto *createThis = llvh::dyn_cast<CreateThisInst>(&I)) {
+          serializeLiteralFor(createThis);
         }
       }
     }
@@ -505,6 +535,10 @@ void Builder::serializeLiteralFor(AllocArrayInst *AAI) {
 
   arraysInst_.push_back({AAI, values_.size()});
   serializeInto(values_, elements, false);
+}
+
+void Builder::serializeLiteralFor(CreateThisInst *inst) {
+  createThisInst_.push_back(inst);
 }
 
 void Builder::serializeLiteralFor(LIRAllocObjectFromBufferInst *AOFB) {

@@ -869,6 +869,7 @@ CallResult<HermesValue> Interpreter::createThisImpl(
     PinnedHermesValue *callee,
     PinnedHermesValue *newTarget,
     uint8_t cacheIdx,
+    uint32_t shapeTableIdx,
     CodeBlock *curCodeBlock) {
   if (LLVM_UNLIKELY(!callee->isObject())) {
     // Add a leading space because the value will come first when we use
@@ -936,6 +937,8 @@ CallResult<HermesValue> Interpreter::createThisImpl(
     PinnedValue<Callable> newTarget;
     // This is the .prototype of new.target
     PinnedValue<JSObject> newTargetPrototype;
+    // HiddenClass for the new object.
+    PinnedValue<HiddenClass> clazz;
   } lv;
   LocalsRAII lraii(runtime, &lv);
   lv.newTarget = correctNewTarget;
@@ -971,7 +974,19 @@ CallResult<HermesValue> Interpreter::createThisImpl(
     }
   }
 
-  return JSObject::create(runtime, lv.newTargetPrototype).getHermesValue();
+  RuntimeModule *runtimeModule = curCodeBlock->getRuntimeModule();
+  if (auto *cachedClazz =
+          runtimeModule->findCachedLiteralHiddenClass(runtime, shapeTableIdx)) {
+    lv.clazz = cachedClazz;
+  } else {
+    lv.clazz = *runtime.getHiddenClassForPrototype(
+        *lv.newTargetPrototype, runtime.classJSObject);
+  }
+
+  // Avoid passing just the prototype to avoid a lookup and a HiddenClass
+  // transition. We use the cache to prepopulate the clazz.
+  return JSObject::create(runtime, lv.newTargetPrototype, lv.clazz)
+      .getHermesValue();
 }
 
 ExecutionStatus Interpreter::implCallBuiltin(
