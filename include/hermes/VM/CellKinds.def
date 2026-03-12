@@ -62,6 +62,7 @@ CELL_KIND(BoxedDouble)
 CELL_KIND(NativeState)
 CELL_KIND(BigIntPrimitive)
 CELL_KIND(FinalizationRecord)
+CELL_KIND(WeakValueObjectMap)
 
 // DummyObject/LargeDummyObject used only in tests.
 CELL_KIND(DummyObject)
