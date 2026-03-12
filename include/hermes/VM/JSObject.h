@@ -279,9 +279,6 @@ class JSObject : public GCCell {
   /// Flags affecting the entire object.
   SHObjectFlags flags_{};
 
-  /// The prototype of this object.
-  GCPointer<JSObject> parent_;
-
   /// The dynamically derived "class" of the object, describing its fields in
   /// order.
   /// Modification of this field *MUST* be done via setClass within JSObject
@@ -301,8 +298,7 @@ class JSObject : public GCCell {
       JSObject *parent,
       HiddenClass *clazz,
       NeedsBarriers needsBarriers)
-      : parent_(runtime, parent, runtime.getHeap(), needsBarriers),
-        clazzDoNotAccessDirectly_(
+      : clazzDoNotAccessDirectly_(
             runtime,
             clazz,
             runtime.getHeap(),
@@ -320,8 +316,7 @@ class JSObject : public GCCell {
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
       NeedsBarriers needsBarriers)
-      : parent_(runtime, *parent, runtime.getHeap(), needsBarriers),
-        clazzDoNotAccessDirectly_(
+      : clazzDoNotAccessDirectly_(
             runtime,
             *clazz,
             runtime.getHeap(),
@@ -476,10 +471,6 @@ class JSObject : public GCCell {
   const GCPointer<JSObject> &getParentGCPtr(PointerBase &runtime) const {
     assert(
         !flags_.proxyObject && "getParent cannot be used with proxy objects");
-    assert(
-        parent_.get(runtime) ==
-            getClass(runtime)->getObjectParentGCPtr().get(runtime) &&
-        "get failed");
     return getClass(runtime)->getObjectParentGCPtr();
   }
 
@@ -1841,8 +1832,14 @@ inline T *JSObject::initDirectPropStorage(Runtime &runtime, T *self) {
           nullptr);
       [[fallthrough]];
     case 5:
+      new (&self->directProps()[5]) GCSmallHermesValue(
+          SmallHermesValue::encodeRawZeroValueUnsafe(),
+          runtime.getHeap(),
+          nullptr);
+      [[fallthrough]];
+    case 6:
       static_assert(
-          DIRECT_PROPERTY_SLOTS == 5,
+          DIRECT_PROPERTY_SLOTS == 6,
           "Must update this switch if we add or remove direct properties");
       break;
   }
@@ -2077,7 +2074,7 @@ inline OptValue<bool> JSObject::tryGetOwnNamedDescriptorFast(
 
 inline OptValue<SmallHermesValue>
 JSObject::tryGetNamedNoAlloc(JSObject *self, PointerBase &base, SymbolID name) {
-  for (JSObject *curr = self; curr; curr = curr->parent_.get(base)) {
+  for (JSObject *curr = self; curr; curr = curr->getParent(base)) {
     if (LLVM_UNLIKELY(curr->isProxyObject()) ||
         LLVM_UNLIKELY(curr->isHostObject())) {
       // Fail if there is a proxy or host object in the chain,

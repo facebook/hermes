@@ -833,7 +833,6 @@ void emit_stringprim_get_length_and_flags(
 
 /// Emit code to initialize the fields on a JSObject.
 /// \param xObj contains a pointer to the object to initialise.
-/// \param xParent contains a compressed pointer to the parent object.
 /// \param xTempOrPropStorageOpt is a temporary register. It may contain
 ///   a pointer to the PropStorage. If \p HasPropStorage is true, it's
 ///   used to initialize the PropStorage, otherwise it's used as a temporary
@@ -844,7 +843,6 @@ void emit_stringprim_get_length_and_flags(
 void emit_jsobject_init(
     a64::Assembler &a,
     const a64::GpX &xObj,
-    const a64::GpX &xParent,
     const a64::GpX &xTempOrPropStorageOpt,
     bool hasPropStorage,
     const a64::GpX &xClazzOpt = a64::GpX{}) {
@@ -874,15 +872,7 @@ void emit_jsobject_init(
   // obj->parent = xParent
   // obj->clazz = xClazz (may be the same as xTemp).
   assert(xClazz.isValid());
-  static_assert(
-      offsetof(SHJSObject, clazz) - offsetof(SHJSObject, parent) ==
-          sizeof(CompressedPointer),
-      "clazz and parent must be adjacent to use stp");
-  if constexpr (sizeof(CompressedPointer) == 4)
-    a.stp(
-        xParent.w(), xClazz.w(), a64::Mem(xObj, offsetof(SHJSObject, parent)));
-  else
-    a.stp(xParent, xClazz, a64::Mem(xObj, offsetof(SHJSObject, parent)));
+  emit_store_cp(a, xClazz, a64::Mem(xObj, offsetof(SHJSObject, clazz)));
 
   // If !hasPropStorage, obj->propStorage = nullptr.
 
@@ -2934,13 +2924,7 @@ void Emitter::newObject(FR frRes) {
       xTemp2,
       slowPathLab);
 
-  // Get the parent.
-  a.ldr(xTemp1, a64::Mem(xRuntime, offsetof(Runtime, objectPrototype)));
-  emit_sh_ljs_get_pointer(a, xTemp1, xTemp1);
-  emit_sh_cp_encode_non_null(a, xTemp1);
-
-  emit_jsobject_init(
-      a, xRes, /* xParent */ xTemp1, /* xTempOrPropStorageOpt */ xTemp2, false);
+  emit_jsobject_init(a, xRes, /* xTempOrPropStorageOpt */ xTemp2, false);
 
   // Add the object tag to the result.
   emit_sh_ljs_object(a, xRes);
@@ -3053,7 +3037,7 @@ void Emitter::newObjectWithParent(
   a.bind(parentDoneLab);
 
   // Initialize the object.
-  emit_jsobject_init(a, xNewObjPtr, xParent, xTemp1, false, xClazz);
+  emit_jsobject_init(a, xNewObjPtr, xTemp1, false, xClazz);
 
   auto hwRes = getOrAllocFRInGpX(frRes, false, HWReg::gpX(0));
   frUpdatedWithHW(frRes, hwRes, FRType::Pointer);
@@ -3220,15 +3204,10 @@ void Emitter::newObjectWithBuffer(
         slowPathLab);
   }
 
-  // Get the parent.
-  a.ldr(xTmp, a64::Mem(xRuntime, offsetof(Runtime, objectPrototypeRawPtr)));
-  emit_sh_cp_encode_non_null(a, xTmp);
-
   // Initialize the JSObject to have the correct parent/HC.
   emit_jsobject_init(
       a,
       xObj,
-      /* xParent */ xTmp,
       /* xTempOrPropStorageOpt */ xTmp2,
       numIndirectSlots > 0,
       /* xClazz */ xClazz);

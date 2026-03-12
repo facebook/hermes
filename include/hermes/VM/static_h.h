@@ -1602,7 +1602,6 @@ static inline SHLegacyValue _sh_ljs_load_parent_no_traps(
   if (clazz->objectParent) {
     SHCompressedPointer parent = {.raw = clazz->objectParent};
     SHJSObject *parentPtr = (SHJSObject *)_sh_cp_decode_non_null(shr, parent);
-    assert(clazz->objectParent == objectPtr->parent && "get failed");
     return _sh_ljs_object(parentPtr);
   }
   return _sh_ljs_null();
@@ -1616,10 +1615,6 @@ static inline SHLegacyValue _sh_typed_load_parent(
   SHHiddenClass *clazz =
       (SHHiddenClass *)_sh_cp_decode_non_null(shr, clazzCompressed);
   SHCompressedPointer parentCompressed = {.raw = clazz->objectParent};
-  assert(
-      clazz->objectParent ==
-          ((SHJSObject *)_sh_ljs_get_pointer(*object))->parent &&
-      "get failed");
   return _sh_ljs_object(_sh_cp_decode(shr, parentCompressed));
 }
 

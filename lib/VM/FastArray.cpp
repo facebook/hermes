@@ -54,7 +54,9 @@ const ObjectVTable FastArray::vt{
 void FastArray::staticAsserts() {
   // Add the size of the length property when comparing sizes.
   static_assert(
-      sizeof(FastArray) + sizeof(GCSmallHermesValue) == sizeof(SHFastArray));
+      llvh::alignTo<sizeof(GCSmallHermesValue)>(sizeof(FastArray)) +
+          sizeof(GCSmallHermesValue) ==
+      sizeof(SHFastArray));
   static_assert(
       offsetof(FastArray, indexedStorage_) ==
       offsetof(SHFastArray, indexedStorage));

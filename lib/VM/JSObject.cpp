@@ -80,7 +80,6 @@ void JSObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const JSObject *>(cell);
   mb.setVTable(&JSObject::vt);
   mb.setJitCall(&JSObject::_jitCallImpl);
-  mb.addField("parent", &self->parent_);
   mb.addField("class", &self->clazzDoNotAccessDirectly_);
   mb.addField("propStorage", &self->propStorage_);
 
@@ -252,7 +251,7 @@ CallResult<bool> JSObject::setParent(
   }
   // ES9 9.1.2
   // 4.
-  if (self->parent_.get(runtime) == parent)
+  if (self->getParent(runtime) == parent)
     return true;
   // ES2022 10.4.7 Immutable Prototype Exotic Objects
   // The [[SetPrototypeOf]] for %Object.prototype% is supposed to be
@@ -279,7 +278,7 @@ CallResult<bool> JSObject::setParent(
     }
   }
   // 6-8. Check for a prototype cycle.
-  for (JSObject *cur = parent; cur; cur = cur->parent_.get(runtime)) {
+  for (JSObject *cur = parent; cur; cur = cur->getParent(runtime)) {
     if (cur == self) {
       if (opFlags.getThrowOnError()) {
         return runtime.raiseTypeError("Prototype cycle detected");
@@ -313,8 +312,6 @@ CallResult<bool> JSObject::setParent(
   lv.parent = parent;
 
   // 9.
-  lv.self->parent_.set(runtime, *lv.parent, runtime.getHeap());
-
   lv.clazz = HiddenClass::updateObjectParent(
       lv.clazz, runtime, createPseudoHandle(*lv.parent));
   lv.self->updateClass(runtime, *lv.clazz);
@@ -1051,9 +1048,8 @@ JSObject *JSObject::getNamedDescriptorUnsafe(
     return *selfHandle;
   }
 
-  if (selfHandle->parent_) {
-    MutableHandle<JSObject> mutableSelfHandle{
-        runtime, selfHandle->parent_.getNonNull(runtime)};
+  if (auto *parentRawPtr = selfHandle->getParent(runtime)) {
+    MutableHandle<JSObject> mutableSelfHandle{runtime, parentRawPtr};
 
     do {
       GCScopeMarkerRAII marker{runtime};
@@ -1085,7 +1081,7 @@ JSObject *JSObject::getNamedDescriptorUnsafe(
         desc.slot = name.unsafeGetRaw();
         return *mutableSelfHandle;
       }
-    } while ((mutableSelfHandle = mutableSelfHandle->parent_.get(runtime)));
+    } while ((mutableSelfHandle = mutableSelfHandle->getParent(runtime)));
   }
 
   return nullptr;
