@@ -16,15 +16,29 @@
 #define CELL_JS_NAME(name, jsClassName)
 #endif
 
+#ifndef CELL_JSOBJECT_NAME
+#define CELL_JSOBJECT_NAME(name, vmClassName)
+#endif
+
 #ifndef CELL_RANGE
 #define CELL_RANGE(rangeName, first, last)
 #endif
 
 // Helper macro for defining a CellKind which 1:1 corresponds with a JS Class.
 // Defines both the kind and the JS Class name.
+// Also defines CELL_JSOBJECT_NAME, allowing us to perform operations only on
+// CellKinds that have corresponding VM C++ classes.
 #define CELL_CLASS(name, jsClassName) \
   CELL_KIND(name)                     \
-  CELL_JS_NAME(name, jsClassName)
+  CELL_JS_NAME(name, jsClassName)     \
+  CELL_JSOBJECT_NAME(name, name)
+
+// Helper macro for defining a CellKind which 1:1 corresponds with a VM Class.
+// Defines both the kind and the CELL_JSOBJECT_NAME, allowing us to perform codegen
+// only on CellKinds that have corresponding VM C++ classes.
+#define CELL_KIND_JSOBJECT(name)       \
+  CELL_KIND(name)                \
+  CELL_JSOBJECT_NAME(name, name)
 
 CELL_KIND(Uninitialized)
 CELL_KIND(FillerCell)
@@ -55,7 +69,7 @@ CELL_KIND(LargeDummyObject)
 
 CELL_CLASS(JSObject, "Object")
 CELL_CLASS(DecoratedObject, "DecoratedObject")
-CELL_KIND(HostObject)
+CELL_KIND_JSOBJECT(HostObject)
 
 CELL_CLASS(JSError, "Error")
 CELL_CLASS(JSCallSite, "CallSite")
@@ -99,19 +113,19 @@ CELL_CLASS(FastArray, "FastArray")
 
 // Unknown if these callables make `this`. This is also where we put
 // callables that are not allowed to be called as a constructor.
-CELL_KIND(BoundFunction)
+CELL_KIND_JSOBJECT(BoundFunction)
 // *NativeFunction begin*
-CELL_KIND(NativeFunction)
+CELL_KIND_JSOBJECT(NativeFunction)
 // Makes own `this`.
-CELL_KIND(NativeConstructor)
-CELL_KIND(FinalizableNativeFunction)
+CELL_KIND_JSOBJECT(NativeConstructor)
+CELL_KIND_JSOBJECT(FinalizableNativeFunction)
 // *NativeFunction end*, including JSCallableProxy
 CELL_CLASS(JSCallableProxy, "CallableProxy")
-CELL_KIND(NativeJSClass)
-CELL_KIND(JSClass)
+CELL_KIND_JSOBJECT(NativeJSClass)
+CELL_KIND_JSOBJECT(JSClass)
 // Expects a made `this` parameter.
 CELL_CLASS(JSFunction, "Function")
-CELL_KIND(NativeJSFunction)
+CELL_KIND_JSOBJECT(NativeJSFunction)
 
 // Update AllCells, below, if new CellKinds are added.
 // (AllCells is useful for checking that a CellKind is valid.)
@@ -144,6 +158,8 @@ CELL_RANGE(
     ExternalASCIIStringPrimitive)
 
 #undef CELL_KIND
+#undef CELL_KIND_JSOBJECT
 #undef CELL_JS_NAME
+#undef CELL_JSOBJECT_NAME
 #undef CELL_RANGE
 #undef CELL_CLASS
