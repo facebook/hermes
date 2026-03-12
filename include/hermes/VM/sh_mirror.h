@@ -133,6 +133,7 @@ typedef struct SHBoxedDouble {
 typedef struct SHHiddenClassTransition {
   uint32_t symbolID;
   uint16_t propertyFlags;
+  uint16_t classFlags;
 } SHTransition;
 
 /// Struct mirroring the layout of detail::TransitionMap.

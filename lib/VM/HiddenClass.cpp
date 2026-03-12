@@ -850,10 +850,12 @@ Handle<HiddenClass> HiddenClass::makeAllReadOnly(
   // Check whether we have already cached the final state of freezing this
   // class.
   if (LLVM_LIKELY(!selfHandle->isDictionary())) {
+    ClassFlags flags = selfHandle->flags_;
     if (auto *hc = selfHandle->transitionMap_.lookup(
             runtime,
             Transition(
-                getSymbolID(Predefined::InternalPropertyFreezeTransition)))) {
+                getSymbolID(Predefined::InternalPropertyFreezeTransition),
+                flags))) {
       return runtime.makeHandle(hc);
     }
   }
@@ -899,9 +901,11 @@ Handle<HiddenClass> HiddenClass::makeAllReadOnly(
 
   // Cache the transition to the final read-only class.
   if (!selfHandle->isDictionary()) {
+    ClassFlags flags = selfHandle->flags_;
     selfHandle->transitionMap_.insertNew(
         runtime,
-        Transition(getSymbolID(Predefined::InternalPropertyFreezeTransition)),
+        Transition(
+            getSymbolID(Predefined::InternalPropertyFreezeTransition), flags),
         curHandle);
   }
 

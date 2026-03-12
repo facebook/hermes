@@ -28,47 +28,64 @@ using PropStorage = ArrayStorageSmall;
 
 /// Flags associated with a hidden class.
 struct ClassFlags {
-  /// This class is in dictionary mode, meaning that adding and removing fields
-  /// doesn't cause transitions but simply updates the property map.  (We may
-  /// still change hidden classes; see dictionaryNoCacheMode, below).
-  uint8_t dictionaryMode : 1;
-
-  /// If dictionaryMode is set, this indicates whether the hidden class can
-  /// be used as the key in property caches.  If we delete properties, or update
-  /// properties, we create a new hidden class for the owning object
-  /// (to invalidate any property caches referencing the old hidden
-  /// class).  We may decide to limit the number of hidden classes
-  /// created this way (currently we allow just one).  To do this, we
-  /// set this property of the hidden class property, so that the new
-  /// hidden class is never added to an property cache.
-  uint8_t dictionaryNoCacheMode : 1;
-
-  /// Set when we have index-like named properties (e.g. "0", "1", etc) defined
-  /// using defineOwnProperty. Array accesses will have to check the named
-  /// properties first. The absence of this flag is important as it indicates
-  /// that named properties whose name is an integer index don't need to be
-  /// searched for - they don't exist.
-  uint8_t hasIndexLikeProperties : 1;
-
-  /// There may be a accessor property somewhere in the entire chain of leading
-  /// up to this HiddenClass. Set when a property is an accessor, and can never
-  /// be unset. That means this is a pessimistic flag: if a getter/setter
-  /// property is set and then deleted, this will still be set to true.
-  uint8_t mayHaveAccessor : 1;
-
-  /// This is not in dictionary mode, but it is a class allocated
-  /// for a typed object, which means it doesn't have any transitions and the
-  /// property map must never be null.
-  uint8_t typed : 1;
-
-  /// The number of times the parent of the object has been changed.
-  /// If this counter maxes out, the HiddenClass changes to dictionary mode to
-  /// avoid an infinite chain.
+  /// Size of parentChangeCounter below in the bitfield.
   static constexpr size_t kParentChangeCounterSize = 2;
-  uint8_t parentChangeCounter : kParentChangeCounterSize;
+
+  union {
+    struct {
+      /// This class is in dictionary mode, meaning that adding and removing
+      /// fields doesn't cause transitions but simply updates the property map.
+      /// (We may still change hidden classes; see dictionaryNoCacheMode,
+      /// below).
+      uint16_t dictionaryMode : 1;
+
+      /// If dictionaryMode is set, this indicates whether the hidden class can
+      /// be used as the key in property caches.  If we delete properties, or
+      /// update properties, we create a new hidden class for the owning object
+      /// (to invalidate any property caches referencing the old hidden
+      /// class).  We may decide to limit the number of hidden classes
+      /// created this way (currently we allow just one).  To do this, we
+      /// set this property of the hidden class property, so that the new
+      /// hidden class is never added to an property cache.
+      uint16_t dictionaryNoCacheMode : 1;
+
+      /// Set when we have index-like named properties (e.g. "0", "1", etc)
+      /// defined using defineOwnProperty. Array accesses will have to check the
+      /// named properties first. The absence of this flag is important as it
+      /// indicates that named properties whose name is an integer index don't
+      /// need to be searched for - they don't exist.
+      uint16_t hasIndexLikeProperties : 1;
+
+      /// There may be a accessor property somewhere in the entire chain of
+      /// leading up to this HiddenClass. Set when a property is an accessor,
+      /// and can never be unset. That means this is a pessimistic flag: if a
+      /// getter/setter property is set and then deleted, this will still be set
+      /// to true.
+      uint16_t mayHaveAccessor : 1;
+
+      /// This is not in dictionary mode, but it is a class allocated
+      /// for a typed object, which means it doesn't have any transitions and
+      /// the property map must never be null.
+      uint16_t typed : 1;
+
+      /// The number of times the parent of the object has been changed.
+      /// If this counter maxes out, the HiddenClass changes to dictionary mode
+      /// to avoid an infinite chain.
+      uint16_t parentChangeCounter : kParentChangeCounterSize;
+    };
+
+    uint16_t _flags;
+  };
 
   ClassFlags() {
-    ::memset(this, 0, sizeof(*this));
+    _flags = 0;
+  }
+
+  bool operator==(ClassFlags f) const {
+    return _flags == f._flags;
+  }
+  bool operator!=(ClassFlags f) const {
+    return _flags != f._flags;
   }
 };
 
@@ -146,17 +163,21 @@ namespace detail {
 /// a llvh::DenseMapInfo<> trait for it.
 class Transition {
  public:
+  /// The name for the property being modified.
+  /// Empty and Deleted are reserved for use by the DenseMapInfo.
   SymbolID symbolID;
   PropertyFlags propertyFlags;
+  ClassFlags classFlags;
 
   /// An explicit constructor for creating DenseMap sentinel values.
-  explicit Transition(SymbolID symbolID)
-      : symbolID(symbolID), propertyFlags() {}
+  explicit Transition(SymbolID symbolID, ClassFlags classFlags)
+      : symbolID(symbolID), propertyFlags(), classFlags(classFlags) {}
   Transition(SymbolID symbolID, PropertyFlags flags)
       : symbolID(symbolID), propertyFlags(flags) {}
 
   bool operator==(const Transition &a) const {
-    return symbolID == a.symbolID && propertyFlags == a.propertyFlags;
+    return symbolID == a.symbolID && propertyFlags == a.propertyFlags &&
+        classFlags == a.classFlags;
   }
 };
 
@@ -263,7 +284,7 @@ class TransitionMap {
     return u.large_;
   }
 
-  Transition smallKey_{SymbolID::empty()};
+  Transition smallKey_{SymbolID::empty(), ClassFlags{}};
   union U {
     U() : smallValue_((WeakRefSlot *)nullptr) {}
     WeakRef<HiddenClass> smallValue_;
@@ -401,6 +422,10 @@ class HiddenClass final : public GCCell {
   /// This corresponds to the size of the property map, if it is initialized.
   unsigned getNumProperties() const {
     return numProperties_;
+  }
+
+  ClassFlags getFlags() const {
+    return flags_;
   }
 
   /// \return true if this class is in "dictionary mode" - i.e. changes to it
@@ -843,11 +868,11 @@ using namespace hermes::vm;
 template <>
 struct DenseMapInfo<HiddenClass::Transition> {
   static inline HiddenClass::Transition getEmptyKey() {
-    return HiddenClass::Transition(SymbolID::empty());
+    return HiddenClass::Transition(SymbolID::empty(), ClassFlags{});
   }
 
   static inline HiddenClass::Transition getTombstoneKey() {
-    return HiddenClass::Transition(SymbolID::deleted());
+    return HiddenClass::Transition(SymbolID::deleted(), ClassFlags{});
   }
 
   static inline unsigned getHashValue(HiddenClass::Transition transition) {
