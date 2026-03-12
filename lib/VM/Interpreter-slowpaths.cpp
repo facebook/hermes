@@ -1894,6 +1894,30 @@ CallResult<HiddenClass *> Interpreter::getHiddenClassForBuffer(
   return *lv.clazz;
 }
 
+PseudoHandle<> Interpreter::createObjectWithParent(
+    Runtime &runtime,
+    CodeBlock *curCodeBlock,
+    Handle<JSObject> parent,
+    unsigned shapeTableIndex) {
+  struct : public Locals {
+    PinnedValue<HiddenClass> clazz;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  CallResult<HiddenClass *> clazzRes = getHiddenClassForBuffer(
+      runtime, curCodeBlock, parent, shapeTableIndex, ObjectAllocKind::Untyped);
+  assert(
+      clazzRes != ExecutionStatus::EXCEPTION &&
+      "no properties, so this can't throw");
+  lv.clazz = *clazzRes;
+
+  // Create a new object using the built-in constructor or cached hidden class.
+  // Note that the built-in constructor is empty, so we don't actually need to
+  // call it.
+  return createPseudoHandle(
+      JSObject::create(runtime, parent, lv.clazz).getHermesValue());
+}
+
 CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
     Runtime &runtime,
     CodeBlock *curCodeBlock,

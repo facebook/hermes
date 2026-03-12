@@ -1703,16 +1703,40 @@ extern "C" SHLegacyValue _sh_ljs_new_object(SHRuntime *shr) {
 LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_ljs_new_object_with_parent(
     SHRuntime *shr,
-    const SHLegacyValue *parent) {
+    SHUnit *unit,
+    const SHLegacyValue *parent,
+    uint32_t shapeTableIndex) {
+  auto &runtime = getRuntime(shr);
+  auto *parentPHV = toPHV(parent);
+  Handle<JSObject> parentHandle = parentPHV->isObject()
+      ? Handle<JSObject>::vmcast(parentPHV)
+      : parentPHV->isNull()
+      ? Runtime::makeNullHandle<JSObject>()
+      : Handle<JSObject>::vmcast(&runtime.objectPrototype);
+
+  HiddenClass *clazz;
+  auto *cacheEntry = reinterpret_cast<WeakRoot<HiddenClass> *>(
+      &unit->object_literal_class_cache[shapeTableIndex]);
+  if (*cacheEntry) {
+    // There is a already a cached entry for this shape, we can just use that.
+    clazz = cacheEntry->getNonNull(runtime, runtime.getHeap());
+  } else {
+    clazz = *runtime.getHiddenClassForPrototype(
+        *parentHandle, runtime.classJSObject);
+    cacheEntry->set(runtime, clazz);
+  }
+
+  struct : public Locals {
+    PinnedValue<HiddenClass> clazz;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  lv.clazz = clazz;
+
   PseudoHandle<JSObject> result;
   {
-    NoHandleScope noHandle{getRuntime(shr)};
-    result = JSObject::create(
-        getRuntime(shr),
-        toPHV(parent)->isObject() ? Handle<JSObject>::vmcast(toPHV(parent))
-            : toPHV(parent)->isNull()
-            ? Runtime::makeNullHandle<JSObject>()
-            : Handle<JSObject>::vmcast(&getRuntime(shr).objectPrototype));
+    NoHandleScope noHandle{runtime};
+    result = JSObject::create(runtime, parentHandle, lv.clazz);
   }
   return result.getHermesValue();
 }

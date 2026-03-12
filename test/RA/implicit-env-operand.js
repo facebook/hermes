@@ -152,7 +152,7 @@
 // CHECK-NEXT:  {r2}      %2 = CreateScopeInst (:environment) %VS0: any, {r2} %1: environment
 // CHECK-NEXT:  {r1}      %3 = GetNewTargetInst (:object) %new.target: object
 // CHECK-NEXT:  {r1}      %4 = LoadPropertyInst (:any) {r1} %3: object, "prototype": string
-// CHECK-NEXT:  {r1}      %5 = AllocObjectLiteralInst (:object) {r1} %4: any
+// CHECK-NEXT:  {r1}      %5 = LIRAllocObjectFromBufferInst (:object) {r1} %4: any
 // CHECK-NEXT:  {r0}      %6 = StoreFrameInst {r2} %2: environment, {r1} %5: object, [%VS0.this]: object
 // CHECK-NEXT:  {r1}      %7 = LoadFrameInst (:object) {r2} %2: environment, [%VS0.this]: object
 // CHECK-NEXT:  {r0}      %8 = ReturnInst {r1} %7: object

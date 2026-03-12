@@ -146,7 +146,7 @@
 // CHECK-NEXT:  StringSwitchImm count: 0
 // CHECK-NEXT:  Key buffer size (bytes): 0
 // CHECK-NEXT:  Value buffer size (bytes): 0
-// CHECK-NEXT:  Shape table count: 0
+// CHECK-NEXT:  Shape table count: 1
 // CHECK-NEXT:  Segment ID: 0
 // CHECK-NEXT:  CommonJS module count: 0
 // CHECK-NEXT:  CommonJS module count (static): 0
@@ -420,6 +420,9 @@
 // CHECK-NEXT:i261[ASCII, 1151..1155] #F27082CD: #f257
 // CHECK-NEXT:i262[ASCII, 1156..1160] #A689F65B: print
 // CHECK-NEXT:i263[ASCII, 1161..1169] #807C5F3D: prototype
+
+// CHECK:Object Shape Table:
+// CHECK-NEXT:0[0, 0]
 
 // CHECK:Function<global>(1 params, 14 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000
@@ -960,7 +963,7 @@
 // CHECK-NEXT:    GetParentEnvironment r3, 0
 // CHECK-NEXT:    GetNewTarget      r2
 // CHECK-NEXT:    GetById           r2, r2, 0, "prototype"
-// CHECK-NEXT:    NewObjectWithParent r2, r2
+// CHECK-NEXT:    NewObjectWithParent r2, r2, 0
 // CHECK-NEXT:    LoadFromEnvironment r4, r3, 0
 // CHECK-NEXT:    PrivateIsIn       r1, r4, r2, r0
 // CHECK-NEXT:    JmpTrueLong       L1, r1

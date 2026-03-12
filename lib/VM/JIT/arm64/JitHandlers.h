@@ -65,6 +65,11 @@ SHLegacyValue _interpreter_create_object_from_buffer_with_parent(
     SHLegacyValue *parent,
     uint32_t shapeTableIndex,
     uint32_t valBufferOffset);
+SHLegacyValue _interpreter_create_object_with_parent(
+    Runtime &runtime,
+    CodeBlock *codeBlock,
+    PinnedHermesValue *parent,
+    uint32_t shapeTableIndex);
 
 /// Wrapper around Interpreter::createObjectFromBuffer.
 SHLegacyValue _interpreter_create_typed_object_from_buffer(

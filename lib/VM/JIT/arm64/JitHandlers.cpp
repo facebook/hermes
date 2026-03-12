@@ -181,6 +181,33 @@ SHLegacyValue _interpreter_create_typed_non_enum_object_from_buffer(
   return res->getHermesValue();
 }
 
+SHLegacyValue _interpreter_create_object_with_parent(
+    Runtime &runtime,
+    CodeBlock *codeBlock,
+    PinnedHermesValue *parent,
+    uint32_t shapeTableIndex) {
+  auto *parentPHV = toPHV(parent);
+  Handle<JSObject> parentHandle = parentPHV->isObject()
+      ? Handle<JSObject>::vmcast(parentPHV)
+      : parentPHV->isNull()
+      ? Runtime::makeNullHandle<JSObject>()
+      : Handle<JSObject>::vmcast(&runtime.objectPrototype);
+  struct : public Locals {
+    PinnedValue<HiddenClass> clazz;
+    PinnedValue<JSObject> res;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  lv.clazz = runtime.ignoreAllocationFailure(
+      Interpreter::getHiddenClassForBuffer(
+          runtime,
+          codeBlock,
+          parentHandle,
+          shapeTableIndex,
+          ObjectAllocKind::Untyped));
+  return JSObject::create(runtime, parentHandle, lv.clazz).getHermesValue();
+}
+
 /// Wrapper around Interpreter::createArrayFromBuffer.
 SHLegacyValue _interpreter_create_array_from_buffer(
     SHRuntime *shr,

@@ -1229,8 +1229,11 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_typeof(SHRuntime *shr, SHLegacyValue *v);
 SHERMES_EXPORT bool _sh_ljs_typeof_is(SHLegacyValue val, uint16_t types);
 
 SHERMES_EXPORT SHLegacyValue _sh_ljs_new_object(SHRuntime *shr);
-SHERMES_EXPORT SHLegacyValue
-_sh_ljs_new_object_with_parent(SHRuntime *shr, const SHLegacyValue *parent);
+SHERMES_EXPORT SHLegacyValue _sh_ljs_new_object_with_parent(
+    SHRuntime *shr,
+    SHUnit *unit,
+    const SHLegacyValue *parent,
+    uint32_t shapeTableIndex);
 
 /// \p shapeTableIndex the entry index in the literal shape table.
 /// \p valBufferOffset the beginning offset in the literal value buffer.
