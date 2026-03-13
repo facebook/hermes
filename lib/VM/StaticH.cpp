@@ -725,7 +725,7 @@ extern "C" void _sh_ljs_declare_global_var(SHRuntime *shr, SHSymbolID name) {
     if (res != ExecutionStatus::EXCEPTION)
       return;
     assert(
-        !runtime.getGlobal()->isProxyObject() &&
+        !runtime.getGlobal()->isProxyObject(runtime) &&
         "global can't be a proxy object");
     // If the property already exists, this should be a noop.
     // Instead of incurring the cost to check every time, do it
@@ -1050,9 +1050,9 @@ static inline HermesValue getByIdWithReceiver_RJS(
       if (LLVM_LIKELY(cacheEntry->negMatchClazz == clazzPtr)) {
         // Proxy, HostObject and lazy objects have special hidden classes, so
         // they should never match the cached class.
-        assert(!obj->getFlags().proxyObject);
-        assert(!obj->getFlags().hostObject);
-        assert(!obj->getFlags().lazyObject);
+        assert(!obj->isProxyObject(runtime));
+        assert(!obj->isHostObject(runtime));
+        assert(!obj->isLazy(runtime));
         const GCPointer<JSObject> &parentGCPtr = obj->getParentGCPtr(runtime);
         if (LLVM_LIKELY(parentGCPtr)) {
           JSObject *parent = parentGCPtr.getNonNull(runtime);
@@ -1090,7 +1090,7 @@ static inline HermesValue getByIdWithReceiver_RJS(
       }
 
       assert(
-          !obj->isProxyObject() &&
+          !obj->isProxyObject(runtime) &&
           "tryGetOwnNamedDescriptorFast returned true on Proxy");
       return JSObject::getNamedSlotValueUnsafe(obj, runtime, desc)
           .unboxToHV(runtime);
@@ -2598,6 +2598,13 @@ _sh_string_concat(SHRuntime *shr, uint32_t argCount, ...) {
     _sh_throw_current(shr);
   }
   return *result;
+}
+
+extern "C" bool _sh_ljs_is_proxy(SHRuntime *shr, SHLegacyValue object) {
+  Runtime &runtime = getRuntime(shr);
+  HermesValue val = *toPHV(&object);
+  JSObject *obj = vmcast<JSObject>(val);
+  return obj->isProxyObject(runtime);
 }
 
 LLVM_ATTRIBUTE_NOINLINE

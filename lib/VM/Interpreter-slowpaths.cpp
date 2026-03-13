@@ -1047,7 +1047,7 @@ ExecutionStatus Interpreter::declareGlobalVarImpl(
       PropOpFlags().plusThrowOnError());
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     assert(
-        !runtime.getGlobal()->isProxyObject() &&
+        !runtime.getGlobal()->isProxyObject(runtime) &&
         "global can't be a proxy object");
     // If the property already exists, this should be a noop.
     // Instead of incurring the cost to check every time, do it
@@ -1486,7 +1486,7 @@ ExecutionStatus doGetByIdSlowPath_RJS(
     }
 
     assert(
-        !obj->isProxyObject() &&
+        !obj->isProxyObject(runtime) &&
         "tryGetOwnNamedDescriptorFast returned true on Proxy");
     O1REG(GetById) = JSObject::getNamedSlotValueUnsafe(obj, runtime, desc)
                          .unboxToHV(runtime);

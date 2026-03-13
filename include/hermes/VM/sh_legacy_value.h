@@ -463,18 +463,6 @@ typedef union {
     /// do a simple bit check.
     uint32_t fastIndexProperties : 1;
 
-    /// This flag indicates this is a special object whose properties are
-    /// managed by C++ code, and not via the standard property storage
-    /// mechanisms.
-    uint32_t hostObject : 1;
-
-    /// this is lazily created object that must be initialized before it can be
-    /// used. Note that lazy objects must have no properties defined on them,
-    uint32_t lazyObject : 1;
-
-    /// This flag indicates this is a proxy exotic Object
-    uint32_t proxyObject : 1;
-
     /// This flag is set when any other objects which contain this object in
     /// their parent chain are cached in the AddPropertyCache, or if this object
     /// was found in the prototype chain of an array.
@@ -488,7 +476,7 @@ typedef union {
     /// A non-zero object id value, assigned lazily. It is 0 before it is
     /// assigned. If an object started out as lazy, the objectID is the lazy
     /// object index used to identify when it gets initialized.
-    uint32_t objectID : 23;
+    uint32_t objectID : 26;
   };
   uint32_t bits;
 } SHObjectFlags;

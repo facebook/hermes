@@ -300,6 +300,11 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   clearConfigurableDPF.setConfigurable = 1;
   clearConfigurableDPF.configurable = 0;
 
+  ClassFlags hostObjectFlags{};
+  hostObjectFlags.hostObject = 1;
+  ClassFlags proxyFlags{};
+  proxyFlags.proxyObject = 1;
+
   // Define a function on the global object with name \p name.
   // Allocates a NativeObject and puts it in the global object.
   auto defineGlobalFunc =
@@ -317,9 +322,12 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   /// Create a root HiddenClass for the given CellKind.
   /// Has the base number of reserved slots for \p kind.
   auto createRootHiddenClassWithParent =
-      [&runtime, &lv](CellKind kind, Handle<JSObject> parent) -> HiddenClass * {
+      [&runtime, &lv](
+          CellKind kind,
+          Handle<JSObject> parent,
+          ClassFlags flags = {}) -> HiddenClass * {
     size_t baseNumSlots = JSObject::numOverlapSlotsForCellKind(kind);
-    lv.tempClazzCreateRoot = HiddenClass::createRoot(runtime, parent);
+    lv.tempClazzCreateRoot = HiddenClass::createRoot(runtime, parent, flags);
     // Add the base number of slots.
     for (size_t i = 0; i < baseNumSlots; ++i) {
       GCScopeMarkerRAII marker{runtime};
@@ -339,6 +347,9 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
 #define CREATE_CLASS_FOR_PARENT(kind, parentField) \
   runtime.class##kind =                            \
       createRootHiddenClassWithParent(CellKind::kind##Kind, parentField);
+#define CREATE_CLASS_FOR_PARENT_FLAGS(kind, parentField, flags) \
+  runtime.class##kind = createRootHiddenClassWithParent(        \
+      CellKind::kind##Kind, parentField, flags);
 
   // 15.1.1.1 NaN.
   lv.value = HermesValue::encodeNaNValue();
@@ -419,7 +430,8 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   CREATE_CLASS_FOR_PARENT(NativeFunction, runtime.functionPrototype)
   CREATE_CLASS_FOR_PARENT(FinalizableNativeFunction, runtime.functionPrototype)
   CREATE_CLASS_FOR_PARENT(NativeConstructor, runtime.functionPrototype)
-  CREATE_CLASS_FOR_PARENT(JSCallableProxy, runtime.functionPrototype)
+  CREATE_CLASS_FOR_PARENT_FLAGS(
+      JSCallableProxy, runtime.functionPrototype, proxyFlags)
   CREATE_CLASS_FOR_PARENT(NativeJSClass, runtime.functionPrototype)
   CREATE_CLASS_FOR_PARENT(JSClass, runtime.functionPrototype)
   CREATE_CLASS_FOR_PARENT(JSFunction, runtime.functionPrototype)
@@ -575,7 +587,8 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   // Populate the root classes for each JSObject.
 
   CREATE_CLASS_FOR_PARENT(DecoratedObject, runtime.objectPrototype)
-  CREATE_CLASS_FOR_PARENT(HostObject, runtime.objectPrototype)
+  CREATE_CLASS_FOR_PARENT_FLAGS(
+      HostObject, runtime.objectPrototype, hostObjectFlags)
   CREATE_CLASS_FOR_PARENT(JSError, runtime.ErrorPrototype)
   CREATE_CLASS_FOR_PARENT(JSCallSite, runtime.callSitePrototype)
   CREATE_CLASS_FOR_PARENT(Arguments, runtime.objectPrototype)
@@ -605,16 +618,17 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
       JSRegExpStringIterator, runtime.regExpStringIteratorPrototype)
   CREATE_CLASS_FOR_PARENT(RequireContext, runtime.objectPrototype)
   CREATE_CLASS_FOR_PARENT(JSGeneratorObject, runtime.generatorPrototype)
-  CREATE_CLASS_FOR_PARENT(JSProxy, runtime.objectPrototype)
+  CREATE_CLASS_FOR_PARENT_FLAGS(JSProxy, runtime.objectPrototype, proxyFlags)
   CREATE_CLASS_FOR_PARENT(JSFinalizationRegistry, runtime.objectPrototype)
   CREATE_CLASS_FOR_PARENT(JSBigInt, runtime.bigintPrototype)
   CREATE_CLASS_FOR_PARENT(FastArray, runtime.fastArrayPrototype)
 
 #undef CREATE_CLASS_FOR_PARENT
+#undef CREATE_CLASS_FOR_PARENT_FLAGS
 
   // Declare the fast array class.
   runtime.classFastArray = createRootHiddenClassWithParent(
-      CellKind::FastArrayKind, runtime.fastArrayPrototype);
+      CellKind::FastArrayKind, runtime.fastArrayPrototype, ClassFlags{});
   runtime.classFastArray = FastArray::createClass(
       runtime, runtime.fastArrayPrototype, runtime.classFastArray);
 

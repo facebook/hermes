@@ -1589,6 +1589,9 @@ static inline SHLegacyValue _sh_fastarray_length(
 #endif
 }
 
+/// \return true if the given JSObject is a proxy.
+SHERMES_EXPORT bool _sh_ljs_is_proxy(SHRuntime *shr, SHLegacyValue object);
+
 /// \return the parent of the legacy, ordinary object \p object. It must not be
 /// a proxy.
 static inline SHLegacyValue _sh_ljs_load_parent_no_traps(
@@ -1598,7 +1601,7 @@ static inline SHLegacyValue _sh_ljs_load_parent_no_traps(
   SHCompressedPointer clazzCompressed = {.raw = objectPtr->clazz};
   SHHiddenClass *clazz =
       (SHHiddenClass *)_sh_cp_decode_non_null(shr, clazzCompressed);
-  assert(!objectPtr->flags.proxyObject && "proxy is not supported");
+  assert(!_sh_ljs_is_proxy(shr, object) && "proxy is not supported");
   if (clazz->objectParent) {
     SHCompressedPointer parent = {.raw = clazz->objectParent};
     SHJSObject *parentPtr = (SHJSObject *)_sh_cp_decode_non_null(shr, parent);

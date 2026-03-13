@@ -68,13 +68,26 @@ struct ClassFlags {
       /// the property map must never be null.
       uint16_t typed : 1;
 
+      /// This flag indicates this is a special object whose properties are
+      /// managed by C++ code, and not via the standard property storage
+      /// mechanisms.
+      uint16_t hostObject : 1;
+
+      /// This is lazily created object that must be initialized before it can
+      /// be used. Note that lazy objects must have no properties defined on
+      /// them.
+      uint16_t lazyObject : 1;
+
+      /// This flag indicates this is a proxy exotic Object
+      uint16_t proxyObject : 1;
+
       /// The number of times the parent of the object has been changed.
       /// If this counter maxes out, the HiddenClass changes to dictionary mode
       /// to avoid an infinite chain.
       uint16_t parentChangeCounter : kParentChangeCounterSize;
 
       /// Unused bits, tracked explicitly for convenience.
-      uint16_t unusedPadding : 9;
+      uint16_t unusedPadding : 6;
     };
 
     uint16_t _flags;
@@ -383,9 +396,8 @@ class HiddenClass final : public GCCell {
 
   /// Create a "root" hidden class - one that doesn't define any properties, but
   /// is a starting point for a hierarchy.
-  static HiddenClass *createRoot(
-      Runtime &runtime,
-      Handle<JSObject> objectParent);
+  static HiddenClass *
+  createRoot(Runtime &runtime, Handle<JSObject> objectParent, ClassFlags flags);
 
   /// Create a "root" hidden class for a typed object - one that doesn't define
   /// any properties yet but reserves space for a property map.
@@ -435,6 +447,21 @@ class HiddenClass final : public GCCell {
   /// don't (normally) result in creation of new classes.
   bool isDictionary() const {
     return flags_.dictionaryMode;
+  }
+
+  /// \return true if the class is for a lazy object.
+  bool isLazyObject() const {
+    return flags_.lazyObject;
+  }
+
+  /// \return true if the class is for a HostObject.
+  bool isHostObject() const {
+    return flags_.hostObject;
+  }
+
+  /// \return true if the class is for a JS Proxy.
+  bool isProxyObject() const {
+    return flags_.proxyObject;
   }
 
   /// \return true if this class is in "non-cacheable dictionary mode"

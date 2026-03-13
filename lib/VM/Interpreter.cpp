@@ -1853,7 +1853,8 @@ tailCall:
 
       CASE(LoadParentNoTraps) {
         assert(
-            !vmcast<JSObject>(O2REG(LoadParentNoTraps))->isProxyObject() &&
+            !vmcast<JSObject>(O2REG(LoadParentNoTraps))
+                 ->isProxyObject(runtime) &&
             "proxy is not supported");
         auto *parent =
             vmcast<JSObject>(O2REG(LoadParentNoTraps))->getParent(runtime);
@@ -1903,9 +1904,9 @@ tailCall:
     if (LLVM_LIKELY(cacheEntry->negMatchClazz == clazzPtr)) {                 \
       /* Proxy, HostObject and lazy objects have special hidden classes, so   \
        * they should never match the cached class. */                         \
-      assert(!obj->getFlags().proxyObject);                                   \
-      assert(!obj->getFlags().hostObject);                                    \
-      assert(!obj->getFlags().lazyObject);                                    \
+      assert(!obj->isProxyObject(runtime));                                   \
+      assert(!obj->isHostObject(runtime));                                    \
+      assert(!obj->isLazy(runtime));                                          \
       const GCPointer<JSObject> &parentGCPtr = obj->getParentGCPtr(runtime);  \
       if (LLVM_LIKELY(parentGCPtr)) {                                         \
         JSObject *parent = parentGCPtr.getNonNull(runtime);                   \

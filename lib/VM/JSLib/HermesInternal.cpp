@@ -423,7 +423,7 @@ CallResult<HermesValue> hermesInternalTTRCReached(void *, Runtime &runtime) {
 CallResult<HermesValue> hermesInternalIsProxy(void *, Runtime &runtime) {
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<JSObject> obj = args.dyncastArg<JSObject>(0);
-  return HermesValue::encodeBoolValue(obj && obj->isProxyObject());
+  return HermesValue::encodeBoolValue(obj && obj->isProxyObject(runtime));
 }
 
 CallResult<HermesValue> hermesInternalHasPromise(void *, Runtime &runtime) {
@@ -606,7 +606,7 @@ CallResult<HermesValue> hermesInternalGetFunctionLocation(
     assert(res != ExecutionStatus::EXCEPTION && "Failed to set fileName");
     (void)res;
   }
-  JSObject::preventExtensions(*lv.resultHandle);
+  JSObject::preventExtensionsNonProxy(lv.resultHandle, runtime);
   return lv.resultHandle.getHermesValue();
 }
 
@@ -842,7 +842,7 @@ HermesValue createHermesInternalObject(
 
   // All functions are known to be safe can be defined above this flag check.
   if (!flags.enableHermesInternal) {
-    JSObject::preventExtensions(*lv.intern);
+    JSObject::preventExtensionsNonProxy(lv.intern, runtime);
     return lv.intern.getHermesValue();
   }
 
@@ -886,7 +886,7 @@ HermesValue createHermesInternalObject(
     defineInternMethodAndSymbol("getCallStack", hermesInternalGetCallStack, 0);
   }
 
-  JSObject::preventExtensions(*lv.intern);
+  JSObject::preventExtensionsNonProxy(lv.intern, runtime);
 
   return lv.intern.getHermesValue();
 }

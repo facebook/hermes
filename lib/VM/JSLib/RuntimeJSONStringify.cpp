@@ -843,7 +843,7 @@ ExecutionStatus JSONStringifyer::operationJO() {
     lv.operationJOK = lv_.propertyList.get();
   } else {
     // JO.6.
-    if (LLVM_LIKELY(!lv.objHandle->isProxyObject())) {
+    if (LLVM_LIKELY(!lv.objHandle->isProxyObject(runtime_))) {
       HiddenClass *clazz = lv.objHandle->getClass(runtime_);
       // Check if object has any indexed properties via the virtual table
       // (e.g., TypedArrays store indices separately from HiddenClass).

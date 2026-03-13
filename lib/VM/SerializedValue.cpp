@@ -1458,7 +1458,7 @@ ExecutionStatus serializeImpl(
   /// Use Handle::vmcast here to assert that the value must be an JS object at
   /// this point.
   auto selfObjHandle = Handle<JSObject>::vmcast(value);
-  if (selfObjHandle->isHostObject()) {
+  if (selfObjHandle->isHostObject(runtime)) {
     return runtime.raiseError("Host Objects are not serializable");
   }
 

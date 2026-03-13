@@ -177,10 +177,11 @@ void HiddenClass::_snapshotAddNodesImpl(
 
 HiddenClass *HiddenClass::createRoot(
     Runtime &runtime,
-    Handle<JSObject> objectParent) {
+    Handle<JSObject> objectParent,
+    ClassFlags flags) {
   return create(
       runtime,
-      ClassFlags{},
+      flags,
       Runtime::makeNullHandle<HiddenClass>(),
       objectParent,
       SymbolID{},

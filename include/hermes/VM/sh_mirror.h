@@ -156,7 +156,7 @@ typedef struct SHHiddenClass {
 #if HERMESVM_JIT
   uint16_t lazyJITId;
 #endif
-  uint8_t flags;
+  uint16_t flags;
   SHTransitionMap transitionMap;
 } SHHiddenClass;
 

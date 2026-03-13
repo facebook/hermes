@@ -428,18 +428,18 @@ class JSObject : public GCCell {
   }
 
   /// true if this a lazy object that must be initialized prior to use.
-  bool isLazy() const {
-    return flags_.lazyObject;
+  bool isLazy(PointerBase &pb) const {
+    return getClass(pb)->isLazyObject();
   }
 
   /// \return true if this is a HostObject.
-  bool isHostObject() const {
-    return flags_.hostObject;
+  bool isHostObject(PointerBase &pb) const {
+    return getClass(pb)->isHostObject();
   }
 
   /// \return true if this is a proxy exotic object.
-  bool isProxyObject() const {
-    return flags_.proxyObject;
+  bool isProxyObject(PointerBase &pb) const {
+    return getClass(pb)->isProxyObject();
   }
 
   /// Record that this object is being used in a form of caching optimisation
@@ -470,7 +470,8 @@ class JSObject : public GCCell {
   /// \return the `__proto__` internal property, which may be nullptr.
   const GCPointer<JSObject> &getParentGCPtr(PointerBase &runtime) const {
     assert(
-        !flags_.proxyObject && "getParent cannot be used with proxy objects");
+        !isProxyObject(runtime) &&
+        "getParent cannot be used with proxy objects");
     return getClass(runtime)->getObjectParentGCPtr();
   }
 
@@ -629,7 +630,7 @@ class JSObject : public GCCell {
       NamedPropertyDescriptor desc) {
     assert(
         desc.flags.privateName ||
-        !self->flags_.proxyObject && !desc.flags.proxyObject &&
+        !self->isProxyObject(runtime) && !desc.flags.proxyObject &&
             "getNamedSlotValueUnsafe called on a Proxy");
     assert(
         desc.flags.privateName ||
@@ -1206,7 +1207,7 @@ class JSObject : public GCCell {
   /// ES5.1 15.2.3.10.
   /// Set [[Extensible]] slot on an ordinary object to false, preventing adding
   /// more properties.
-  static void preventExtensions(JSObject *self);
+  static void preventExtensionsNonProxy(Handle<JSObject> self, PointerBase &pb);
   /// ES9 [[PreventExtensons]] internal method.  This works on Proxy
   /// objects and ordinary objects. If opFlags.getThrowOnError() is
   /// true, then this will throw an appropriate TypeError if the
@@ -2075,8 +2076,8 @@ inline OptValue<bool> JSObject::tryGetOwnNamedDescriptorFast(
 inline OptValue<SmallHermesValue>
 JSObject::tryGetNamedNoAlloc(JSObject *self, PointerBase &base, SymbolID name) {
   for (JSObject *curr = self; curr; curr = curr->getParent(base)) {
-    if (LLVM_UNLIKELY(curr->isProxyObject()) ||
-        LLVM_UNLIKELY(curr->isHostObject())) {
+    if (LLVM_UNLIKELY(curr->isProxyObject(base)) ||
+        LLVM_UNLIKELY(curr->isHostObject(base))) {
       // Fail if there is a proxy or host object in the chain,
       // because walking the prototype chain without allocating can't be done.
       return llvh::None;
@@ -2185,14 +2186,15 @@ inline OptValue<HiddenClass::PropertyPos> JSObject::findProperty(
   auto ret = HiddenClass::findProperty(
       createPseudoHandle(selfHandle->getClass(runtime)), runtime, name, desc);
   assert(
-      (desc.flags.privateName || !(selfHandle->flags_.proxyObject && ret)) &&
+      (desc.flags.privateName ||
+       !(selfHandle->isProxyObject(runtime) && ret)) &&
       "Proxy objects should never have own non-private properties");
   return ret;
 }
 
 inline bool JSObject::shouldCacheForIn(Runtime &runtime) const {
   return !getClass(runtime)->isDictionary() && !flags_.indexedStorage &&
-      !flags_.hostObject && !flags_.proxyObject;
+      !isHostObject(runtime) && !isProxyObject(runtime);
 }
 
 /// Attempt to get the value of an indexed property from an object cheaply,

@@ -241,7 +241,7 @@ CallResult<std::vector<std::u16string>> normalizeLocales(
     return ExecutionStatus::EXCEPTION;
   }
 
-  bool isProxy = lv.localeObj->isProxyObject();
+  bool isProxy = lv.localeObj->isProxyObject(runtime);
   if (LLVM_UNLIKELY(
           createListFromArrayLike_RJS(
               lv.localeObj,

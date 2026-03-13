@@ -52,8 +52,8 @@ TEST_F(HiddenClassTest, SmokeTest) {
   MutableHandle<HiddenClass> y{runtime};
   MutableHandle<HiddenClass> z{runtime};
 
-  auto rootHnd = runtime.makeHandle<HiddenClass>(
-      HiddenClass::createRoot(runtime, Runtime::makeNullHandle<JSObject>()));
+  auto rootHnd = runtime.makeHandle<HiddenClass>(HiddenClass::createRoot(
+      runtime, Runtime::makeNullHandle<JSObject>(), ClassFlags{}));
 
   ASSERT_EQ(0u, rootHnd->getNumProperties());
   ASSERT_FALSE(rootHnd->isDictionary());
@@ -266,8 +266,8 @@ TEST_F(HiddenClassTest, AccessorsTest) {
   MutableHandle<HiddenClass> x{runtime};
   MutableHandle<HiddenClass> y{runtime};
 
-  auto rootCls = runtime.makeHandle<HiddenClass>(
-      HiddenClass::createRoot(runtime, Runtime::makeNullHandle<JSObject>()));
+  auto rootCls = runtime.makeHandle<HiddenClass>(HiddenClass::createRoot(
+      runtime, Runtime::makeNullHandle<JSObject>(), ClassFlags{}));
 
   ASSERT_FALSE(rootCls->getMayHaveAccessor());
 
@@ -351,7 +351,8 @@ TEST_F(HiddenClassTest, UpdatePropertyFlagsWithoutTransitionsTest) {
   // Add y.a, y.b, y.c
   MutableHandle<HiddenClass> y{
       runtime,
-      HiddenClass::createRoot(runtime, Runtime::makeNullHandle<JSObject>())};
+      HiddenClass::createRoot(
+          runtime, Runtime::makeNullHandle<JSObject>(), ClassFlags{})};
   {
     // y.a
     auto addRes = HiddenClass::addProperty(
@@ -478,7 +479,8 @@ TEST_F(HiddenClassTest, UpdatePropertyFlagsWithoutTransitionsTest) {
 TEST_F(HiddenClassTest, ForEachProperty) {
   MutableHandle<HiddenClass> clazz{
       runtime,
-      HiddenClass::createRoot(runtime, Runtime::makeNullHandle<JSObject>())};
+      HiddenClass::createRoot(
+          runtime, Runtime::makeNullHandle<JSObject>(), ClassFlags{})};
 
   auto aHnd = *runtime.getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"a"));
@@ -593,8 +595,8 @@ TEST_F(HiddenClassTest, ObjectParentTest) {
   } lv;
   LocalsRAII lraii{runtime, &lv};
 
-  lv.clazz =
-      HiddenClass::createRoot(runtime, Runtime::makeNullHandle<JSObject>());
+  lv.clazz = HiddenClass::createRoot(
+      runtime, Runtime::makeNullHandle<JSObject>(), ClassFlags{});
   EXPECT_TRUE(lv.clazz->getObjectParent(runtime) == nullptr);
 
   lv.clazz = HiddenClass::updateObjectParent(

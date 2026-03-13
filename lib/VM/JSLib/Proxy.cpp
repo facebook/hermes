@@ -129,7 +129,7 @@ CallResult<HermesValue> proxyRevocationSteps(void *, Runtime &runtime) {
   setRevocableProxySlot(revoker, runtime, SmallHermesValue::encodeNullValue());
   // 4. Assert: p is a Proxy object.
   JSObject *proxy = vmcast<JSObject>(proxyVal.getObject(runtime));
-  assert(proxy->isProxyObject() && "[[RevocableProxy]] is not a Proxy");
+  assert(proxy->isProxyObject(runtime) && "[[RevocableProxy]] is not a Proxy");
 
   struct : public Locals {
     PinnedValue<JSObject> proxyHandle;
