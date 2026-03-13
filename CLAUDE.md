@@ -222,3 +222,7 @@ Community contributions go in `extensions/contrib/`. These are:
 - May be promoted to core if widely adopted
 
 See `API/hermes/extensions/contrib/README.md` for contributor guidelines.
+
+## Benchmarks
+
+See `benchmarks/hermes-windows/README.md` for full documentation on running benchmarks, available categories, standalone benchmark files, and before/after comparison workflow.

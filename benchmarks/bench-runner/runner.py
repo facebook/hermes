@@ -124,8 +124,9 @@ class HermesRunner(JSBytecodeRunner):
             "-gc-sanitize-handles=0",
             "-b",
         ]
-        if gcMinHeap:
-            execCmdArgs += ["-gc-min-heap=" + collectorHeapSize(gcMinHeap)]
+        # -gc-min-heap is not supported by the Windows fork of hermes.
+        # if gcMinHeap:
+        #     execCmdArgs += ["-gc-min-heap=" + collectorHeapSize(gcMinHeap)]
         if gcInitHeap:
             execCmdArgs += ["-gc-init-heap=" + collectorHeapSize(gcInitHeap)]
         if gcMaxHeap:
