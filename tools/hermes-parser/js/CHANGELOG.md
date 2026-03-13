@@ -1,3 +1,14 @@
+## 0.34.0
+
+### `hermes-parser`
+- Parse decorators
+- Parse `import ... with` instead of `import ... assert`
+- Add `async hook` and `async component` syntax support
+
+### `flow-api-translator`
+- Always produce named parameters when translating `FunctionDeclaration` to `DeclareFunction`
+- Support `@@dispose`/`@@asyncDispose` and fix `@@iterator`/`@@asyncIterator` in object/interface types
+
 ## 0.33.3
 
 ### `hermes-parser`
