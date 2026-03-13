@@ -766,6 +766,13 @@ const getTransforms = (
     }
   };
 
+  const wellKnownSymbols = new Set([
+    'iterator',
+    'asyncIterator',
+    'dispose',
+    'asyncDispose',
+  ]);
+
   const transform = {
     AnyTypeAnnotation(
       _node: FlowESTree.AnyTypeAnnotation,
@@ -944,7 +951,7 @@ const getTransforms = (
                 const _key = member.key;
                 if (_key.type === 'Identifier' && _key.name.startsWith('@@')) {
                   const name = _key.name.slice(2);
-                  if (['iterator', 'asyncIterator'].includes(name)) {
+                  if (wellKnownSymbols.has(name)) {
                     return [
                       {
                         type: 'MemberExpression',
@@ -3728,25 +3735,57 @@ const getTransforms = (
     ObjectTypeProperty(
       node: FlowESTree.ObjectTypeProperty,
     ): TSESTree.TSPropertySignature | TSESTree.TSMethodSignature {
-      const key =
-        node.key.type === 'Identifier'
-          ? transform.Identifier(node.key)
-          : node.key.literalType === 'string'
-            ? transform.StringLiteral(node.key)
-            : null;
+      const [key, computed] = ((): [TSESTree.PropertyName, boolean] => {
+        if (node.key.type === 'Identifier' && node.key.name.startsWith('@@')) {
+          const name = node.key.name.slice(2);
+          if (node.method === true && wellKnownSymbols.has(name)) {
+            return [
+              {
+                type: 'MemberExpression',
+                computed: false,
+                object: {
+                  type: 'Identifier',
+                  name: 'Symbol',
+                  optional: false,
+                  loc: DUMMY_LOC,
+                },
+                optional: false,
+                property: {
+                  type: 'Identifier',
+                  name,
+                  optional: false,
+                  loc: DUMMY_LOC,
+                },
+                loc: DUMMY_LOC,
+              },
+              true,
+            ];
+          }
+        }
 
-      if (key == null) {
-        throw unexpectedTranslationError(node, 'Unsupported key type');
-      }
+        const key =
+          node.key.type === 'Identifier'
+            ? transform.Identifier(node.key)
+            : node.key.literalType === 'string'
+              ? transform.StringLiteral(node.key)
+              : null;
+
+        if (key == null) {
+          throw unexpectedTranslationError(node, 'Unsupported key type');
+        }
+
+        return [key, false];
+      })();
 
       if (node.method === true) {
         // flow has just one node for all object properties and relies upon the method flag
         // TS has separate nodes for methods and properties
         const func = transform.FunctionTypeAnnotation(node.value);
+        // $FlowFixMe[incompatible-type] `computed` is set dynamically
         return {
           type: 'TSMethodSignature',
           loc: DUMMY_LOC,
-          computed: false,
+          computed,
           key,
           kind: node.kind === 'init' ? 'method' : node.kind,
           optional: node.optional,
@@ -3761,10 +3800,11 @@ const getTransforms = (
         // flow treats getters/setters as true property signatures (method === false)
         // TS treats them as method signatures
         const func = transform.FunctionTypeAnnotation(node.value);
+        // $FlowFixMe[incompatible-type] `computed` is set dynamically
         return {
           type: 'TSMethodSignature',
           loc: DUMMY_LOC,
-          computed: false,
+          computed,
           key,
           kind: node.kind,
           optional: false,
@@ -3777,10 +3817,11 @@ const getTransforms = (
         };
       }
 
+      // $FlowFixMe[incompatible-type] `computed` is set dynamically
       return {
         type: 'TSPropertySignature',
         loc: DUMMY_LOC,
-        computed: false,
+        computed,
         key,
         optional: node.optional,
         readonly: node.variance?.kind === 'plus',
