@@ -72,6 +72,9 @@ struct ClassFlags {
       /// If this counter maxes out, the HiddenClass changes to dictionary mode
       /// to avoid an infinite chain.
       uint16_t parentChangeCounter : kParentChangeCounterSize;
+
+      /// Unused bits, tracked explicitly for convenience.
+      uint16_t unusedPadding : 9;
     };
 
     uint16_t _flags;
@@ -821,6 +824,7 @@ inline OptValue<HiddenClass::PropertyPos> HiddenClass::findProperty(
 inline void HiddenClass::staticAsserts() {
   static_assert(sizeof(detail::Transition) == sizeof(SHTransition));
   static_assert(sizeof(detail::TransitionMap) == sizeof(SHTransitionMap));
+  static_assert(sizeof(ClassFlags) == 2);
 
   static_assert(sizeof(HiddenClass) == sizeof(SHHiddenClass));
   static_assert(

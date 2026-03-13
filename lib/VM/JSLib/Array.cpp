@@ -391,6 +391,22 @@ static constexpr void setArrayFastPathObjectFlags(SHObjectFlags &res) {
   res.objectID = 0;
 }
 
+/// Populate \p flags with the flags to be used to check for fast path for array
+/// methods.
+/// Ensures that there's a fast indexed storage with no non-default behaviors
+/// applied to it, along with an objectID of 0 (for easy comparison).
+static constexpr void setArrayFastPathClassFlags(ClassFlags &res) {
+  // This code should set every field in SHObjectFlags to make sure we don't
+  // miss one, which is checked by the assert in arrayFastPathCheck.
+  res.dictionaryMode = 0;
+  res.dictionaryNoCacheMode = 0;
+  res.typed = 0;
+  res.hasIndexLikeProperties = 0;
+  res.mayHaveAccessor = 0;
+  res.parentChangeCounter = 0;
+  res.unusedPadding = 0;
+}
+
 /// Check that the prototype chain of arrays starting at Array.prototype does
 /// not contain any index-like properties. If it does not, update the epoch in
 /// the runtime so that calling this function can be skipped when the epoch
@@ -481,6 +497,39 @@ bool arrayFastPathCheck(
 
   // Optionally check that 'length' hasn't been reconfigured.
   if (arrayClass && arr->getClass(runtime) != arrayClass)
+    return false;
+
+  // To use the fast path, the object has to be an array with fast index
+  // properties (no index-like properties that we can't read quickly).
+  // Make our own SHObjectFlags here to compare against quickly, to avoid having
+  // to use lots of accessors on JSObject.
+  ClassFlags arrayFastPathClassFlags{};
+  setArrayFastPathClassFlags(arrayFastPathClassFlags);
+
+#ifndef NDEBUG
+  // Test that all the flags are handled in setArrayFastPathObjectFlags
+  // by starting with all the bits reversed and calling the function,
+  // and making sure the result is the same.
+  ClassFlags classFlagsForAssert{};
+  std::memset(&classFlagsForAssert, 0xff, sizeof(ClassFlags));
+  setArrayFastPathClassFlags(classFlagsForAssert);
+  assert(
+      std::memcmp(
+          &classFlagsForAssert, &arrayFastPathClassFlags, sizeof(ClassFlags)) ==
+          0 &&
+      "setArrayFastPathClassFlags is missing a flag");
+#endif
+
+  ClassFlags arrClassFlags = arr->getClass(runtime)->getFlags();
+  // Clear the flags we don't care about checking.
+  arrClassFlags.parentChangeCounter = 0;
+  arrClassFlags.typed = 0;
+
+  static_assert(
+      sizeof(ClassFlags) == sizeof(uint16_t), "SHObjectFlags must be uint16_t");
+  if (LLVM_UNLIKELY(
+          std::memcmp(
+              &arrayFastPathClassFlags, &arrClassFlags, sizeof(uint16_t)) != 0))
     return false;
 
   // Fast path assumes that the array storage goes from 0 to len.
