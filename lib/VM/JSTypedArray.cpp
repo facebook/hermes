@@ -24,8 +24,8 @@ JSTypedArrayBase::JSTypedArrayBase(
       buffer_(nullptr),
       length_(0),
       offset_(0) {
-  flags_.indexedStorage = true;
-  flags_.fastIndexProperties = true;
+  assert(hasIndexedStorage(runtime) && "must have indexed storage");
+  assert(hasFastIndexProperties(runtime) && "must have fast index properties");
 }
 
 void TypedArrayBaseBuildMeta(const GCCell *cell, Metadata::Builder &mb) {

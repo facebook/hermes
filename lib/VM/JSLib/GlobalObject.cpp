@@ -307,6 +307,9 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   ClassFlags fastArrayFlags{};
   fastArrayFlags.noExtend = 1;
   fastArrayFlags.sealed = 1;
+  fastArrayFlags.indexedStorage = 1;
+  ClassFlags indexedStorageFlags{};
+  indexedStorageFlags.indexedStorage = 1;
 
   // Define a function on the global object with name \p name.
   // Allocates a NativeObject and puts it in the global object.
@@ -452,7 +455,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   // "Forward declaration" of String.prototype. Its properties will be
   // populated later.
   lv.tempClazzForPrototype = createRootHiddenClassWithParent(
-      CellKind::JSStringKind, runtime.objectPrototype);
+      CellKind::JSStringKind, runtime.objectPrototype, indexedStorageFlags);
   runtime.stringPrototype = runtime.ignoreAllocationFailure(
       JSString::create(
           runtime,
@@ -492,7 +495,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   // "Forward declaration" of Array.prototype. Its properties will be
   // populated later.
   lv.tempClazzForPrototype = createRootHiddenClassWithParent(
-      CellKind::JSArrayKind, runtime.objectPrototype);
+      CellKind::JSArrayKind, runtime.objectPrototype, indexedStorageFlags);
   runtime.classJSArray = JSArray::createClass(
       runtime, runtime.objectPrototype, lv.tempClazzForPrototype);
   runtime.arrayPrototype = runtime.ignoreAllocationFailure(
@@ -594,11 +597,13 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
       HostObject, runtime.objectPrototype, hostObjectFlags)
   CREATE_CLASS_FOR_PARENT(JSError, runtime.ErrorPrototype)
   CREATE_CLASS_FOR_PARENT(JSCallSite, runtime.callSitePrototype)
-  CREATE_CLASS_FOR_PARENT(Arguments, runtime.objectPrototype)
+  CREATE_CLASS_FOR_PARENT_FLAGS(
+      Arguments, runtime.objectPrototype, indexedStorageFlags)
   CREATE_CLASS_FOR_PARENT(JSArrayBuffer, runtime.arrayBufferPrototype)
   CREATE_CLASS_FOR_PARENT(JSDataView, runtime.dataViewPrototype)
-#define TYPED_ARRAY(name, type) \
-  CREATE_CLASS_FOR_PARENT(name##Array, runtime.name##ArrayPrototype)
+#define TYPED_ARRAY(name, type)  \
+  CREATE_CLASS_FOR_PARENT_FLAGS( \
+      name##Array, runtime.name##ArrayPrototype, indexedStorageFlags)
 #include "hermes/VM/TypedArrays.def"
   CREATE_CLASS_FOR_PARENT(JSArrayIterator, runtime.arrayIteratorPrototype)
   CREATE_CLASS_FOR_PARENT(JSSet, runtime.setPrototype)
@@ -609,7 +614,8 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   CREATE_CLASS_FOR_PARENT(JSWeakSet, runtime.weakSetPrototype)
   CREATE_CLASS_FOR_PARENT(JSWeakRef, runtime.weakRefPrototype)
   CREATE_CLASS_FOR_PARENT(JSBoolean, runtime.booleanPrototype)
-  CREATE_CLASS_FOR_PARENT(JSString, runtime.stringPrototype)
+  CREATE_CLASS_FOR_PARENT_FLAGS(
+      JSString, runtime.stringPrototype, indexedStorageFlags)
   CREATE_CLASS_FOR_PARENT(JSNumber, runtime.numberPrototype)
   CREATE_CLASS_FOR_PARENT(JSSymbol, runtime.symbolPrototype)
   CREATE_CLASS_FOR_PARENT(JSStringIterator, runtime.stringIteratorPrototype)
@@ -632,7 +638,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
 
   // Declare the fast array class.
   runtime.classFastArray = createRootHiddenClassWithParent(
-      CellKind::FastArrayKind, runtime.fastArrayPrototype, ClassFlags{});
+      CellKind::FastArrayKind, runtime.fastArrayPrototype, indexedStorageFlags);
   runtime.classFastArray = FastArray::createClass(
       runtime, runtime.fastArrayPrototype, runtime.classFastArray);
 

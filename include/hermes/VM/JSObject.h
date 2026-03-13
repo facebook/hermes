@@ -458,8 +458,9 @@ class JSObject : public GCCell {
 
   /// \return true if this object has fast indexed storage, meaning no property
   ///   checks need to be made when reading an indexed value.
-  bool hasFastIndexProperties() const {
-    return flags_.fastIndexProperties;
+  bool hasFastIndexProperties(PointerBase &pb) const {
+    auto *clazz = getClass(pb);
+    return clazz->hasIndexedStorage() && !clazz->getHasIndexLikeProperties();
   }
 
   /// \return the `__proto__` internal property, which may be nullptr.
@@ -1240,6 +1241,12 @@ class JSObject : public GCCell {
   /// [[Extensible]] is false.
   static bool isFrozen(PseudoHandle<JSObject> self, Runtime &runtime);
 
+  /// \return true if the object has indexed storage (based on the HiddenClass
+  /// flag).
+  bool hasIndexedStorage(PointerBase &pb) const {
+    return getClass(pb)->hasIndexedStorage();
+  }
+
   /// Update the property flags in the list \p props on \p selfHandle,
   /// with provided \p flagsToClear and \p flagsToSet, and if it is not
   /// provided, update all properties.
@@ -1976,7 +1983,7 @@ inline CallResult<PseudoHandle<>> JSObject::getComputedSlotValue(
     ComputedPropertyDescriptor desc) {
   if (LLVM_LIKELY(desc.flags.indexed)) {
     assert(
-        self->flags_.indexedStorage &&
+        self->getClass(runtime)->hasIndexedStorage() &&
         "indexed flag set but no indexed storage");
     return createPseudoHandle(
         getOwnIndexed(std::move(self), runtime, desc.slot));
@@ -2002,7 +2009,7 @@ inline HermesValue JSObject::getComputedSlotValueUnsafe(
     ComputedPropertyDescriptor desc) {
   if (LLVM_LIKELY(desc.flags.indexed)) {
     assert(
-        self->flags_.indexedStorage &&
+        self->getClass(runtime)->hasIndexedStorage() &&
         "indexed flag set but no indexed storage");
     return getOwnIndexed(std::move(self), runtime, desc.slot);
   }
@@ -2019,7 +2026,7 @@ inline CallResult<bool> JSObject::setComputedSlotValue(
     Handle<> value) {
   if (LLVM_LIKELY(desc.flags.indexed)) {
     assert(
-        selfHandle->flags_.indexedStorage &&
+        selfHandle->getClass(runtime)->hasIndexedStorage() &&
         "indexed flag set but no indexed storage");
     return setOwnIndexed(selfHandle, runtime, desc.slot, value);
   }
@@ -2046,7 +2053,7 @@ inline ExecutionStatus JSObject::setComputedSlotValueUnsafe(
     Handle<> value) {
   if (LLVM_LIKELY(desc.flags.indexed)) {
     assert(
-        selfHandle->flags_.indexedStorage &&
+        selfHandle->getClass(runtime)->hasIndexedStorage() &&
         "indexed flag set but no indexed storage");
     return setOwnIndexed(selfHandle, runtime, desc.slot, value).getStatus();
   }
@@ -2193,8 +2200,9 @@ inline OptValue<HiddenClass::PropertyPos> JSObject::findProperty(
 }
 
 inline bool JSObject::shouldCacheForIn(Runtime &runtime) const {
-  return !getClass(runtime)->isDictionary() && !flags_.indexedStorage &&
-      !isHostObject(runtime) && !isProxyObject(runtime);
+  return !getClass(runtime)->isDictionary() &&
+      !getClass(runtime)->hasIndexedStorage() && !isHostObject(runtime) &&
+      !isProxyObject(runtime);
 }
 
 /// Attempt to get the value of an indexed property from an object cheaply,

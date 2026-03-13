@@ -376,19 +376,6 @@ HermesValue createArrayConstructor(Runtime &runtime) {
 /// methods.
 /// Ensures that there's a fast indexed storage with no non-default behaviors
 /// applied to it, along with an objectID of 0 (for easy comparison).
-static constexpr void setArrayFastPathObjectFlags(SHObjectFlags &res) {
-  // This code should set every field in SHObjectFlags to make sure we don't
-  // miss one, which is checked by the assert in arrayFastPathCheck.
-  res.indexedStorage = 1;
-  res.fastIndexProperties = 1;
-  res.isCachedUsingEpoch = 0;
-  res.objectID = 0;
-}
-
-/// Populate \p flags with the flags to be used to check for fast path for array
-/// methods.
-/// Ensures that there's a fast indexed storage with no non-default behaviors
-/// applied to it, along with an objectID of 0 (for easy comparison).
 static constexpr void setArrayFastPathClassFlags(ClassFlags &res) {
   // This code should set every field in SHObjectFlags to make sure we don't
   // miss one, which is checked by the assert in arrayFastPathCheck.
@@ -396,6 +383,7 @@ static constexpr void setArrayFastPathClassFlags(ClassFlags &res) {
   res.dictionaryNoCacheMode = 0;
   res.typed = 0;
   res.hasIndexLikeProperties = 0;
+  res.indexedStorage = 1;
   res.mayHaveAccessor = 0;
   res.typed = 0;
   res.noExtend = 0;
@@ -444,7 +432,7 @@ static bool checkAndCacheProtoForFastPath(Runtime &runtime) {
     // Unlike the immediate parent, we do not expect any parent further up the
     // chain to have indexed storage. Disqualify anything with indexed storage,
     // since actually checking the "indexed range" is costly.
-    if (LLVM_UNLIKELY(curParent->getFlags().indexedStorage))
+    if (LLVM_UNLIKELY(curParent->hasIndexedStorage(runtime)))
       return false;
 
     curParent->setCachedUsingEpoch();
@@ -462,39 +450,6 @@ bool arrayFastPathCheck(
     uint32_t len) {
   NoAllocScope noAlloc{runtime};
   assert(arr && "arr must be non-null");
-
-  // To use the fast path, the object has to be an array with fast index
-  // properties (no index-like properties that we can't read quickly).
-  // Make our own SHObjectFlags here to compare against quickly, to avoid having
-  // to use lots of accessors on JSObject.
-  SHObjectFlags arrayFastPathObjectFlags{};
-  setArrayFastPathObjectFlags(arrayFastPathObjectFlags);
-
-#ifndef NDEBUG
-  // Test that all the flags are handled in setArrayFastPathObjectFlags
-  // by starting with all the bits reversed and calling the function,
-  // and making sure the result is the same.
-  SHObjectFlags flagsForAssert{};
-  std::memset(&flagsForAssert, 0xff, sizeof(SHObjectFlags));
-  setArrayFastPathObjectFlags(flagsForAssert);
-  assert(
-      std::memcmp(
-          &flagsForAssert, &arrayFastPathObjectFlags, sizeof(SHObjectFlags)) ==
-          0 &&
-      "setArrayFastPathObjectFlags is missing a flag");
-#endif
-
-  SHObjectFlags arrFlags = arr->getFlags();
-  // Ensure the objectIDs are the same for comparison purposes.
-  arrFlags.objectID = 0;
-
-  static_assert(
-      sizeof(SHObjectFlags) == sizeof(uint32_t),
-      "SHObjectFlags must be uint32_t");
-  if (LLVM_UNLIKELY(
-          std::memcmp(&arrayFastPathObjectFlags, &arrFlags, sizeof(uint32_t)) !=
-          0))
-    return false;
 
   // Optionally check that 'length' hasn't been reconfigured.
   if (arrayClass && arr->getClass(runtime) != arrayClass)
@@ -1926,7 +1881,7 @@ CallResult<HermesValue> arrayPrototypeSort(void *, Runtime &runtime) {
   // first copies all existing properties into an array and sorts that.
   // Proxies and host objects however are excluded because they are weird.
   if (!lv.O->isProxyObject(runtime) && !lv.O->isHostObject(runtime) &&
-      !lv.O->hasFastIndexProperties())
+      !lv.O->hasFastIndexProperties(runtime))
     return sortSparse(runtime, lv.O, compareFn, len);
 
   // This is the "fast" path. We are sorting an array with indexed storage.
@@ -2447,7 +2402,9 @@ static CallResult<HermesValue> arrayPrototypeSpliceFastPath(
     uint32_t actualDeleteCount,
     uint32_t itemCount,
     NativeArgs args) {
-  assert(O->hasFastIndexProperties() && "O must have fast index properties");
+  assert(
+      O->hasFastIndexProperties(runtime) &&
+      "O must have fast index properties");
   assert(!O->isProxyObject(runtime) && "O must not be proxy");
   assert(O->getBeginIndex() == 0 && "incorrect begin index");
   assert(O->getEndIndex() == len && "incorrect end index");

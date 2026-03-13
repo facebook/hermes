@@ -899,7 +899,7 @@ ExecutionStatus serializeArrayProperties(
 
     // Let inputValue be ? value.[[Get]](key, value).
     // Fast-path: Access the index element directly.
-    if (LLVM_LIKELY(selfArray->hasFastIndexProperties())) {
+    if (LLVM_LIKELY(selfArray->hasFastIndexProperties(runtime))) {
       SmallHermesValue shv = selfArray->at(runtime, arrayIndex);
       assert(!shv.isEmpty() && "Accessed empty value while serializing Array");
       lv.tmp = shv.unboxToHV(runtime);

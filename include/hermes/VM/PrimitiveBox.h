@@ -69,8 +69,9 @@ class JSString final : public JSObject {
       Handle<HiddenClass> clazz)
       : JSObject(runtime, *parent, *clazz),
         primitiveValue_(runtime, *value, runtime.getHeap()) {
-    flags_.indexedStorage = true;
-    flags_.fastIndexProperties = true;
+    assert(hasIndexedStorage(runtime) && "must have indexed storage");
+    assert(
+        hasFastIndexProperties(runtime) && "must have fast index properties");
   }
 
  protected:

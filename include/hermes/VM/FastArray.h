@@ -153,8 +153,9 @@ class FastArray : public JSObject {
       Handle<HiddenClass> clazz,
       NeedsBarriers needsBarriers)
       : JSObject(runtime, *parent, *clazz, needsBarriers) {
-    flags_.indexedStorage = true;
-    flags_.fastIndexProperties = true;
+    assert(hasIndexedStorage(runtime) && "must have indexed storage");
+    assert(
+        hasFastIndexProperties(runtime) && "must have fast index properties");
   }
 
  private:

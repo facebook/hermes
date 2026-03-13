@@ -94,13 +94,18 @@ struct ClassFlags {
       /// This flag indicates this is a proxy exotic Object
       uint16_t proxyObject : 1;
 
+      /// This object has indexed storage. This flag will not change at runtime,
+      /// it is set at construction and its value never changes. It is not a
+      /// state.
+      uint16_t indexedStorage : 1;
+
       /// The number of times the parent of the object has been changed.
       /// If this counter maxes out, the HiddenClass changes to dictionary mode
       /// to avoid an infinite chain.
       uint16_t parentChangeCounter : kParentChangeCounterSize;
 
       /// Unused bits, tracked explicitly for convenience.
-      uint16_t unusedPadding : 3;
+      uint16_t unusedPadding : 2;
     };
 
     uint16_t _flags;
@@ -490,6 +495,11 @@ class HiddenClass final : public GCCell {
   /// \return true if the class is for a JS Proxy.
   bool isProxyObject() const {
     return flags_.proxyObject;
+  }
+
+  /// \return true if the class is frozen.
+  bool hasIndexedStorage() const {
+    return flags_.indexedStorage;
   }
 
   /// \return true if this class is in "non-cacheable dictionary mode"
@@ -922,6 +932,9 @@ inline OptValue<HiddenClass::PropertyPos> HiddenClass::findProperty(
 }
 
 inline void HiddenClass::staticAsserts() {
+  static_assert(sizeof(PropertyFlags) == 2);
+  static_assert(sizeof(ClassFlags) == 2);
+  static_assert(sizeof(detail::Transition) == sizeof(SHTransition));
   static_assert(sizeof(detail::Transition) == sizeof(SHTransition));
   static_assert(sizeof(detail::TransitionMap) == sizeof(SHTransitionMap));
   static_assert(sizeof(ClassFlags) == 2);
