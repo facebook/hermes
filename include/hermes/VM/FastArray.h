@@ -155,8 +155,6 @@ class FastArray : public JSObject {
       : JSObject(runtime, *parent, *clazz, needsBarriers) {
     flags_.indexedStorage = true;
     flags_.fastIndexProperties = true;
-    flags_.noExtend = true;
-    flags_.sealed = true;
   }
 
  private:

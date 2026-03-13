@@ -99,7 +99,9 @@ class ArrayImpl : public JSObject {
       SmallHermesValue value) {
     // The array must be extendable (and by implication is not frozen or sealed)
     // because we don't know whether the element being set is empty or not.
-    assert(!self->flags_.noExtend && "this array cannot be extended");
+    assert(
+        self->getClass(runtime)->isExtensible() &&
+        "this array cannot be extended");
 
     assert(
         index >= self->beginIndex_ && index < self->getEndIndex() &&

@@ -1864,7 +1864,7 @@ static SHLegacyValue createObjectFromBuffer(
 
   if (isTypedAllocKind(AllocKind)) {
     // Freeze the object from the perspective of untyped code.
-    lv.obj->markAsTyped();
+    lv.obj->markAsTyped(runtime);
   }
 
   return lv.obj.getHermesValue();

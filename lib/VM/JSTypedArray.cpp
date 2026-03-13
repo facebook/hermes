@@ -65,9 +65,9 @@ OptValue<PropertyFlags> JSTypedArrayBase::_getOwnIndexedPropertyFlagsImpl(
   indexedElementFlags.writable = 1;
   indexedElementFlags.configurable = 1;
 
-  if (LLVM_UNLIKELY(self->flags_.sealed)) {
+  if (LLVM_UNLIKELY(self->getClass(runtime)->isSealed())) {
     indexedElementFlags.configurable = 0;
-    if (LLVM_UNLIKELY(self->flags_.frozen))
+    if (LLVM_UNLIKELY(self->getClass(runtime)->isFrozen()))
       indexedElementFlags.writable = 0;
   }
 

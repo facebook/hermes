@@ -270,7 +270,7 @@ CallResult<bool> JSObject::setParent(
         "Cannot set prototype of immutable prototype object");
   }
   // 5.
-  if (!self->isExtensible()) {
+  if (!self->isExtensible(runtime)) {
     if (opFlags.getThrowOnError()) {
       return runtime.raiseTypeError("Object is not extensible.");
     } else {
@@ -1910,7 +1910,7 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
   }
 
   /// Can we add more properties?
-  if (LLVM_UNLIKELY(!receiverHandle->isExtensible())) {
+  if (LLVM_UNLIKELY(!receiverHandle->isExtensible(runtime))) {
     if (opFlags.getThrowOnError()) {
       return runtime.raiseTypeError(
           "cannot add a new property"); // TODO: better message.
@@ -2398,7 +2398,7 @@ CallResult<bool> JSObject::defineOwnComputedPrimitive(
   }
 
   /// Can we add new properties?
-  if (!selfHandle->isExtensible()) {
+  if (!selfHandle->isExtensible(runtime)) {
     if (opFlags.getThrowOnError()) {
       return runtime.raiseTypeError(
           "cannot add a new property"); // TODO: better message.
@@ -2759,11 +2759,17 @@ HermesValue JSObject::_jitCallImpl(Runtime *runtime, JSObject *self) {
 
 void JSObject::preventExtensionsNonProxy(
     Handle<JSObject> self,
-    PointerBase &pb) {
+    Runtime &runtime) {
   assert(
-      !self->isProxyObject(pb) &&
+      !self->isProxyObject(runtime) &&
       "[[Extensible]] slot cannot be set directly on Proxy objects");
-  self->flags_.noExtend = true;
+  struct : public Locals {
+    PinnedValue<HiddenClass> clazz;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+  lv.clazz = self->getClass(runtime);
+  HiddenClass *newClazz = HiddenClass::markNoExtend(lv.clazz, runtime);
+  self->updateClass(runtime, newClazz);
 }
 
 CallResult<bool> JSObject::preventExtensions(
@@ -2778,23 +2784,30 @@ CallResult<bool> JSObject::preventExtensions(
 }
 
 ExecutionStatus JSObject::seal(Handle<JSObject> selfHandle, Runtime &runtime) {
-  CallResult<bool> statusRes = JSObject::preventExtensions(
-      selfHandle, runtime, PropOpFlags().plusThrowOnError());
-  if (LLVM_UNLIKELY(statusRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
+  if (LLVM_UNLIKELY(selfHandle->isProxyObject(runtime))) {
+    CallResult<bool> statusRes = JSProxy::preventExtensions(
+        selfHandle, runtime, PropOpFlags().plusThrowOnError());
+    if (LLVM_UNLIKELY(statusRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    assert(
+        *statusRes &&
+        "seal preventExtensions with ThrowOnError returned false");
   }
-  assert(
-      *statusRes && "seal preventExtensions with ThrowOnError returned false");
+
+  struct : public Locals {
+    PinnedValue<HiddenClass> clazz;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  lv.clazz = selfHandle->getClass(runtime);
 
   // Already sealed?
-  if (selfHandle->flags_.sealed)
+  if (lv.clazz->isSealed())
     return ExecutionStatus::RETURNED;
 
-  auto newClazz = HiddenClass::makeAllNonConfigurable(
-      runtime.makeHandle(selfHandle->getClassGCPtr()), runtime);
-  selfHandle->updateClass(runtime, *newClazz);
-
-  selfHandle->flags_.sealed = true;
+  lv.clazz = HiddenClass::seal(lv.clazz, runtime);
+  selfHandle->updateClass(runtime, *lv.clazz);
 
   return ExecutionStatus::RETURNED;
 }
@@ -2802,25 +2815,28 @@ ExecutionStatus JSObject::seal(Handle<JSObject> selfHandle, Runtime &runtime) {
 ExecutionStatus JSObject::freeze(
     Handle<JSObject> selfHandle,
     Runtime &runtime) {
-  CallResult<bool> statusRes = JSObject::preventExtensions(
-      selfHandle, runtime, PropOpFlags().plusThrowOnError());
-  if (LLVM_UNLIKELY(statusRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
+  if (LLVM_UNLIKELY(selfHandle->isProxyObject(runtime))) {
+    CallResult<bool> statusRes = JSProxy::preventExtensions(
+        selfHandle, runtime, PropOpFlags().plusThrowOnError());
+    if (LLVM_UNLIKELY(statusRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    assert(*statusRes && "preventExtensions with ThrowOnError returned false");
   }
-  assert(
-      *statusRes &&
-      "freeze preventExtensions with ThrowOnError returned false");
+
+  struct : public Locals {
+    PinnedValue<HiddenClass> clazz;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  lv.clazz = selfHandle->getClass(runtime);
 
   // Already frozen?
-  if (selfHandle->flags_.frozen)
+  if (lv.clazz->isFrozen())
     return ExecutionStatus::RETURNED;
 
-  auto newClazz = HiddenClass::makeAllReadOnly(
-      runtime.makeHandle(selfHandle->getClassGCPtr()), runtime);
-  selfHandle->updateClass(runtime, *newClazz);
-
-  selfHandle->flags_.frozen = true;
-  selfHandle->flags_.sealed = true;
+  lv.clazz = HiddenClass::freeze(lv.clazz, runtime);
+  selfHandle->updateClass(runtime, *lv.clazz);
 
   return ExecutionStatus::RETURNED;
 }
@@ -2846,57 +2862,65 @@ CallResult<bool> JSObject::isExtensible(
   if (LLVM_UNLIKELY(self->isProxyObject(runtime))) {
     return JSProxy::isExtensible(runtime.makeHandle(std::move(self)), runtime);
   }
-  return self->isExtensible();
+  return self->isExtensible(runtime);
 }
 
 bool JSObject::isSealed(PseudoHandle<JSObject> self, Runtime &runtime) {
-  if (self->flags_.sealed)
+  if (self->getClass(runtime)->isSealed())
     return true;
-  if (!self->flags_.noExtend)
+  if (self->getClass(runtime)->isExtensible())
     return false;
 
-  auto selfHandle = runtime.makeHandle(std::move(self));
+  struct : public Locals {
+    PinnedValue<JSObject> self;
+    PinnedValue<HiddenClass> clazz;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
 
-  if (!HiddenClass::areAllNonConfigurable(
-          runtime.makeHandle(selfHandle->getClassGCPtr()), runtime)) {
+  lv.self = std::move(self);
+  lv.clazz = lv.self->getClass(runtime);
+
+  if (!HiddenClass::areAllNonConfigurable(lv.clazz, runtime)) {
     return false;
   }
 
   if (!checkAllOwnIndexed(
-          *selfHandle,
+          *lv.self,
           runtime,
           ObjectVTable::CheckAllOwnIndexedMode::NonConfigurable)) {
     return false;
   }
 
-  // Now that we know we are sealed, set the flag.
-  selfHandle->flags_.sealed = true;
+  lv.clazz = HiddenClass::markAsSealed(lv.clazz, runtime);
+  lv.self->updateClass(runtime, *lv.clazz);
+
   return true;
 }
 
 bool JSObject::isFrozen(PseudoHandle<JSObject> self, Runtime &runtime) {
-  if (self->flags_.frozen)
+  if (self->getClass(runtime)->isFrozen())
     return true;
-  if (!self->flags_.noExtend)
+  if (self->getClass(runtime)->isExtensible())
     return false;
 
-  auto selfHandle = runtime.makeHandle(std::move(self));
+  struct : public Locals {
+    PinnedValue<JSObject> self;
+    PinnedValue<HiddenClass> clazz;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
 
-  if (!HiddenClass::areAllReadOnly(
-          runtime.makeHandle(selfHandle->getClassGCPtr()), runtime)) {
+  lv.self = std::move(self);
+  lv.clazz = lv.self->getClass(runtime);
+
+  if (!HiddenClass::areAllReadOnly(lv.clazz, runtime)) {
     return false;
   }
 
   if (!checkAllOwnIndexed(
-          *selfHandle,
-          runtime,
-          ObjectVTable::CheckAllOwnIndexedMode::ReadOnly)) {
+          *lv.self, runtime, ObjectVTable::CheckAllOwnIndexedMode::ReadOnly)) {
     return false;
   }
 
-  // Now that we know we are sealed, set the flag.
-  selfHandle->flags_.frozen = true;
-  selfHandle->flags_.sealed = true;
   return true;
 }
 
@@ -2911,7 +2935,7 @@ CallResult<bool> JSObject::addOwnProperty(
     SHUnit *unit,
     WritePropertyCacheEntry *cacheEntry) {
   /// Can we add more properties?
-  if (!selfHandle->isExtensible() && !opFlags.getInternalForce()) {
+  if (!selfHandle->isExtensible(runtime) && !opFlags.getInternalForce()) {
     if (opFlags.getThrowOnError()) {
       return runtime.raiseTypeError(
           TwineChar16("Cannot add new property '") +

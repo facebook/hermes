@@ -379,9 +379,6 @@ HermesValue createArrayConstructor(Runtime &runtime) {
 static constexpr void setArrayFastPathObjectFlags(SHObjectFlags &res) {
   // This code should set every field in SHObjectFlags to make sure we don't
   // miss one, which is checked by the assert in arrayFastPathCheck.
-  res.noExtend = 0;
-  res.sealed = 0;
-  res.frozen = 0;
   res.indexedStorage = 1;
   res.fastIndexProperties = 1;
   res.isCachedUsingEpoch = 0;
@@ -401,6 +398,9 @@ static constexpr void setArrayFastPathClassFlags(ClassFlags &res) {
   res.hasIndexLikeProperties = 0;
   res.mayHaveAccessor = 0;
   res.typed = 0;
+  res.noExtend = 0;
+  res.sealed = 0;
+  res.frozen = 0;
   res.hostObject = 0;
   res.lazyObject = 0;
   res.proxyObject = 0;

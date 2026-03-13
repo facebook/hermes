@@ -2004,7 +2004,7 @@ CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
 
   if (isTypedAllocKind(allocKind)) {
     // Freeze the object from the perspective of untyped code.
-    lv.obj->markAsTyped();
+    lv.obj->markAsTyped(runtime);
   }
 
   return createPseudoHandle(lv.obj.getHermesValue());

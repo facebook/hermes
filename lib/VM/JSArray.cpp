@@ -94,9 +94,9 @@ OptValue<PropertyFlags> ArrayImpl::_getOwnIndexedPropertyFlagsImpl(
     indexedElementFlags.writable = 1;
     indexedElementFlags.configurable = 1;
 
-    if (LLVM_UNLIKELY(self->flags_.sealed)) {
+    if (LLVM_UNLIKELY(self->getClass(runtime)->isSealed())) {
       indexedElementFlags.configurable = 0;
-      if (LLVM_UNLIKELY(self->flags_.frozen))
+      if (LLVM_UNLIKELY(self->getClass(runtime)->isFrozen()))
         indexedElementFlags.writable = 0;
     }
 
@@ -191,7 +191,7 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
   auto *self = vmcast<ArrayImpl>(selfHandle.get());
   auto beginIndex = self->beginIndex_;
 
-  if (LLVM_UNLIKELY(self->flags_.frozen))
+  if (LLVM_UNLIKELY(self->getClass(runtime)->isFrozen()))
     return false;
 
   // Check whether the index is within the storage.
@@ -331,7 +331,7 @@ bool ArrayImpl::_deleteOwnIndexedImpl(
   if (index < self->elemCount_) {
     auto *indexedStorage = self->getIndexedStorageUnsafe(runtime);
     // Cannot delete indexed elements if we are sealed.
-    if (LLVM_UNLIKELY(self->flags_.sealed)) {
+    if (LLVM_UNLIKELY(self->getClass(runtime)->isSealed())) {
       SmallHermesValue elem = indexedStorage->at(index);
       if (!elem.isEmpty())
         return false;
@@ -746,7 +746,7 @@ CallResult<bool> JSArray::setLength(
   uint32_t adjustedLength = newLength;
 
   // If we are sealed, we can't shrink past non-empty properties.
-  if (LLVM_UNLIKELY(selfHandle->flags_.sealed)) {
+  if (LLVM_UNLIKELY(selfHandle->getClass(runtime)->isSealed())) {
     // We must scan backwards looking for a non-empty property. We only have
     // to scan in the intersection between the range of present values and
     // the range between the current length and the new length.

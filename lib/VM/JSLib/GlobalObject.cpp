@@ -304,6 +304,9 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   hostObjectFlags.hostObject = 1;
   ClassFlags proxyFlags{};
   proxyFlags.proxyObject = 1;
+  ClassFlags fastArrayFlags{};
+  fastArrayFlags.noExtend = 1;
+  fastArrayFlags.sealed = 1;
 
   // Define a function on the global object with name \p name.
   // Allocates a NativeObject and puts it in the global object.
@@ -621,7 +624,8 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   CREATE_CLASS_FOR_PARENT_FLAGS(JSProxy, runtime.objectPrototype, proxyFlags)
   CREATE_CLASS_FOR_PARENT(JSFinalizationRegistry, runtime.objectPrototype)
   CREATE_CLASS_FOR_PARENT(JSBigInt, runtime.bigintPrototype)
-  CREATE_CLASS_FOR_PARENT(FastArray, runtime.fastArrayPrototype)
+  CREATE_CLASS_FOR_PARENT_FLAGS(
+      FastArray, runtime.fastArrayPrototype, fastArrayFlags)
 
 #undef CREATE_CLASS_FOR_PARENT
 #undef CREATE_CLASS_FOR_PARENT_FLAGS

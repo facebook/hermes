@@ -137,7 +137,12 @@ void Callable::defineLazyProperties(Handle<Callable> fn, Runtime &runtime) {
         jsFun->getParent(runtime),
         vmisa<JSClass>(*jsFun) ? runtime.classJSClass
                                : runtime.classJSFunction);
-    jsFun->updateClassNoAllocPropStorageUnsafe(runtime, *newClass);
+    // Need to preserve the ClassFlags of the lazy object.
+    ClassFlags flags = fn->getClass(runtime)->getFlags();
+    flags.lazyObject = 0;
+    HiddenClass *newClassWithFlags =
+        HiddenClass::updateClassFlags(newClass, runtime, flags);
+    jsFun->updateClassNoAllocPropStorageUnsafe(runtime, newClassWithFlags);
 
     // Create empty object for prototype.
     auto prototypeParent = Callable::isGeneratorFunction(*jsFun)
@@ -171,7 +176,12 @@ void Callable::defineLazyProperties(Handle<Callable> fn, Runtime &runtime) {
         nativeFun->getParent(runtime),
         vmisa<NativeJSClass>(*nativeFun) ? runtime.classNativeJSClass
                                          : runtime.classNativeJSFunction);
-    nativeFun->updateClassNoAllocPropStorageUnsafe(runtime, *newClass);
+    // Need to preserve the ClassFlags of the lazy object.
+    ClassFlags flags = fn->getClass(runtime)->getFlags();
+    flags.lazyObject = 0;
+    HiddenClass *newClassWithFlags =
+        HiddenClass::updateClassFlags(newClass, runtime, flags);
+    nativeFun->updateClassNoAllocPropStorageUnsafe(runtime, newClassWithFlags);
 
     auto prototypeParent = Callable::isGeneratorFunction(*nativeFun)
         ? Handle<JSObject>::vmcast(&runtime.generatorPrototype)

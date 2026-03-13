@@ -705,6 +705,67 @@ SlotIndex HiddenClass::addNewTypedPublicProperty(
   return newSlot;
 }
 
+HiddenClass *HiddenClass::updateClassFlags(
+    Handle<HiddenClass> selfHandle,
+    Runtime &runtime,
+    ClassFlags newFlags) {
+  if (selfHandle->flags_ == newFlags) {
+    // Nothing to do, return immediately.
+    return *selfHandle;
+  }
+
+  // In dictionary mode we simply update our map (which must exist).
+  if (LLVM_UNLIKELY(selfHandle->isDictionary())) {
+    assert(
+        selfHandle->propertyMap_ &&
+        "propertyMap must exist in dictionary mode");
+    selfHandle->flags_ = newFlags;
+    // If it's still cacheable, make it non-cacheable.
+    if (!selfHandle->isDictionaryNoCache()) {
+      selfHandle = copyToNewDictionary(selfHandle, runtime, /*noCache*/ true);
+    }
+    return *selfHandle;
+  }
+
+  // Check whether we have already cached the final state.
+  assert(!selfHandle->isDictionary());
+  if (auto *hc = selfHandle->transitionMap_.lookup(
+          runtime,
+          Transition(
+              getSymbolID(Predefined::InternalPropertyFlagsTransition),
+              newFlags))) {
+    return hc;
+  }
+
+  // Otherwise, update ClassFlags by making a new HiddenClass.
+
+  struct : public Locals {
+    PinnedValue<JSObject> objectParent;
+    PinnedValue<HiddenClass> newClazz;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  lv.objectParent = selfHandle->getObjectParent(runtime);
+
+  lv.newClazz = HiddenClass::create(
+      runtime,
+      newFlags,
+      selfHandle,
+      lv.objectParent,
+      SymbolID::empty(),
+      PropertyFlags{},
+      selfHandle->numProperties_);
+
+  // Cache the transition to the final class.
+  selfHandle->transitionMap_.insertNew(
+      runtime,
+      Transition(
+          getSymbolID(Predefined::InternalPropertyFlagsTransition), newFlags),
+      lv.newClazz);
+
+  return *lv.newClazz;
+}
+
 HiddenClass *HiddenClass::updateObjectParentSlowPath(
     Handle<HiddenClass> selfHandle,
     Runtime &runtime,
@@ -806,7 +867,7 @@ HiddenClass *HiddenClass::updateObjectParentSlowPath(
   return *lv.child;
 }
 
-Handle<HiddenClass> HiddenClass::makeAllNonConfigurable(
+HiddenClass *HiddenClass::seal(
     Handle<HiddenClass> selfHandle,
     Runtime &runtime) {
   if (!selfHandle->propertyMap_)
@@ -816,48 +877,63 @@ Handle<HiddenClass> HiddenClass::makeAllNonConfigurable(
       dbgs() << "Class:" << selfHandle->getDebugAllocationId()
              << " making all non-configurable\n");
 
+  struct : public Locals {
+    PinnedValue<HiddenClass> cur;
+    PinnedValue<DictPropertyMap> map;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
   // Keep a handle to our initial map. The order of properties in it will
   // remain the same as long as we are only doing property updates.
-  auto mapHandle = runtime.makeHandle(selfHandle->propertyMap_);
+  lv.map = selfHandle->propertyMap_.getNonNull(runtime);
 
-  MutableHandle<HiddenClass> curHandle{runtime, *selfHandle};
+  lv.cur = *selfHandle;
 
   // TODO: this can be made much more efficient at the expense of moving some
   // logic from updateOwnProperty() here.
   DictPropertyMap::forEachProperty(
-      mapHandle,
+      lv.map,
       runtime,
-      [&runtime, &curHandle](SymbolID id, NamedPropertyDescriptor desc) {
+      [&runtime, &lv](SymbolID id, NamedPropertyDescriptor desc) {
         if (!desc.flags.configurable)
           return;
         PropertyFlags newFlags = desc.flags;
         newFlags.configurable = 0;
 
         assert(
-            curHandle->propertyMap_ &&
+            lv.cur->propertyMap_ &&
             "propertyMap must exist after updateOwnProperty()");
 
-        auto found = DictPropertyMap::find(
-            curHandle->propertyMap_.getNonNull(runtime), id);
+        auto found =
+            DictPropertyMap::find(lv.cur->propertyMap_.getNonNull(runtime), id);
         assert(found && "property not found during enumeration");
-        curHandle = *updateProperty(curHandle, runtime, *found, newFlags);
+        lv.cur = *updateProperty(lv.cur, runtime, *found, newFlags);
       });
-  return std::move(curHandle);
+
+  ClassFlags sealedFlags = lv.cur->flags_;
+  sealedFlags.noExtend = 1;
+  sealedFlags.sealed = 1;
+  lv.cur = HiddenClass::updateClassFlags(lv.cur, runtime, sealedFlags);
+
+  return *lv.cur;
 }
 
-Handle<HiddenClass> HiddenClass::makeAllReadOnly(
+HiddenClass *HiddenClass::freeze(
     Handle<HiddenClass> selfHandle,
     Runtime &runtime) {
   // Check whether we have already cached the final state of freezing this
   // class.
   if (LLVM_LIKELY(!selfHandle->isDictionary())) {
     ClassFlags flags = selfHandle->flags_;
+    flags.noExtend = 1;
+    flags.sealed = 1;
+    flags.frozen = 1;
     if (auto *hc = selfHandle->transitionMap_.lookup(
             runtime,
             Transition(
                 getSymbolID(Predefined::InternalPropertyFreezeTransition),
                 flags))) {
-      return runtime.makeHandle(hc);
+      return hc;
     }
   }
 
@@ -872,14 +948,19 @@ Handle<HiddenClass> HiddenClass::makeAllReadOnly(
   // remain the same as long as we are only doing property updates.
   auto mapHandle = runtime.makeHandle(selfHandle->propertyMap_);
 
-  MutableHandle<HiddenClass> curHandle{runtime, *selfHandle};
+  struct : public Locals {
+    PinnedValue<HiddenClass> cur;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  lv.cur = *selfHandle;
 
   // TODO: this can be made much more efficient at the expense of moving some
   // logic from updateOwnProperty() here.
   DictPropertyMap::forEachProperty(
       mapHandle,
       runtime,
-      [&runtime, &curHandle](SymbolID id, NamedPropertyDescriptor desc) {
+      [&runtime, &lv](SymbolID id, NamedPropertyDescriptor desc) {
         PropertyFlags newFlags = desc.flags;
         if (!newFlags.accessor) {
           newFlags.writable = 0;
@@ -891,26 +972,32 @@ Handle<HiddenClass> HiddenClass::makeAllReadOnly(
           return;
 
         assert(
-            curHandle->propertyMap_ &&
+            lv.cur->propertyMap_ &&
             "propertyMap must exist after updateOwnProperty()");
 
         auto found =
-            DictPropertyMap::find(curHandle->propertyMap_.get(runtime), id);
+            DictPropertyMap::find(lv.cur->propertyMap_.get(runtime), id);
         assert(found && "property not found during enumeration");
-        curHandle = *updateProperty(curHandle, runtime, *found, newFlags);
+        lv.cur = *updateProperty(lv.cur, runtime, *found, newFlags);
       });
 
-  // Cache the transition to the final read-only class.
-  if (!selfHandle->isDictionary()) {
-    ClassFlags flags = selfHandle->flags_;
+  ClassFlags frozenFlags = lv.cur->flags_;
+  frozenFlags.sealed = 1;
+  frozenFlags.noExtend = 1;
+  frozenFlags.frozen = 1;
+  lv.cur = HiddenClass::updateClassFlags(lv.cur, runtime, frozenFlags);
+
+  if (LLVM_LIKELY(!selfHandle->isDictionary())) {
+    // Cache the transition to the final class.
     selfHandle->transitionMap_.insertNew(
         runtime,
         Transition(
-            getSymbolID(Predefined::InternalPropertyFreezeTransition), flags),
-        curHandle);
+            getSymbolID(Predefined::InternalPropertyFreezeTransition),
+            frozenFlags),
+        lv.cur);
   }
 
-  return std::move(curHandle);
+  return *lv.cur;
 }
 
 Handle<HiddenClass> HiddenClass::updatePropertyFlagsWithoutTransitions(

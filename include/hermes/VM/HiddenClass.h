@@ -68,6 +68,19 @@ struct ClassFlags {
       /// the property map must never be null.
       uint16_t typed : 1;
 
+      /// New properties cannot be added.
+      uint16_t noExtend : 1;
+
+      /// \c Object.seal() has been invoked on this object, marking all
+      /// properties as non-configurable. When \c Sealed is set, \c NoExtend is
+      /// always set too.
+      uint16_t sealed : 1;
+
+      /// \c Object.freeze() has been invoked on this object, marking all
+      /// properties as non-configurable and non-writable. When \c Frozen is
+      /// set, \c Sealed and must \c NoExtend are always set too.
+      uint16_t frozen : 1;
+
       /// This flag indicates this is a special object whose properties are
       /// managed by C++ code, and not via the standard property storage
       /// mechanisms.
@@ -87,7 +100,7 @@ struct ClassFlags {
       uint16_t parentChangeCounter : kParentChangeCounterSize;
 
       /// Unused bits, tracked explicitly for convenience.
-      uint16_t unusedPadding : 6;
+      uint16_t unusedPadding : 3;
     };
 
     uint16_t _flags;
@@ -449,6 +462,21 @@ class HiddenClass final : public GCCell {
     return flags_.dictionaryMode;
   }
 
+  /// \return true if the class is noExtend.
+  bool isExtensible() const {
+    return !flags_.noExtend;
+  }
+
+  /// \return true if the class is sealed.
+  bool isSealed() const {
+    return flags_.sealed;
+  }
+
+  /// \return true if the class is frozen.
+  bool isFrozen() const {
+    return flags_.frozen;
+  }
+
   /// \return true if the class is for a lazy object.
   bool isLazyObject() const {
     return flags_.lazyObject;
@@ -485,6 +513,15 @@ class HiddenClass final : public GCCell {
 
   bool isTyped() const {
     return flags_.typed;
+  }
+
+  /// Mark a typed HiddenClass as frozen/sealed/noExtend.
+  /// \pre The class must be typed (unshared orphan).
+  void markTypedAsFrozen() {
+    assert(flags_.typed && "must be typed");
+    flags_.noExtend = 1;
+    flags_.sealed = 1;
+    flags_.frozen = 1;
   }
 
   /// \return The for-in cache if one has been set, otherwise nullptr.
@@ -636,17 +673,53 @@ class HiddenClass final : public GCCell {
       Runtime &runtime,
       PseudoHandle<JSObject> newParent);
 
+  /// Update the ClassFlags and return the new HiddenClass.
+  /// Updates the transition table to cache the new HiddenClass.
+  static HiddenClass *updateClassFlags(
+      Handle<HiddenClass> selfHandle,
+      Runtime &runtime,
+      ClassFlags newFlags);
+
   /// Mark all properties as non-configurable.
   /// \return the resulting class
-  static Handle<HiddenClass> makeAllNonConfigurable(
+  static HiddenClass *seal(Handle<HiddenClass> selfHandle, Runtime &runtime);
+
+  /// Mark the HiddenClass as being sealed.
+  /// \return the resulting class
+  static HiddenClass *markAsSealed(
       Handle<HiddenClass> selfHandle,
-      Runtime &runtime);
+      Runtime &runtime) {
+    ClassFlags sealedFlags = selfHandle->flags_;
+    sealedFlags.noExtend = 1;
+    sealedFlags.sealed = 1;
+    return HiddenClass::updateClassFlags(selfHandle, runtime, sealedFlags);
+  }
 
   /// Mark all properties as non-writable and non-configurable.
   /// \return the resulting class
-  static Handle<HiddenClass> makeAllReadOnly(
+  static HiddenClass *freeze(Handle<HiddenClass> selfHandle, Runtime &runtime);
+
+  /// Mark the HiddenClass as being sealed.
+  /// \return the resulting class
+  static HiddenClass *markAsFrozen(
       Handle<HiddenClass> selfHandle,
-      Runtime &runtime);
+      Runtime &runtime) {
+    ClassFlags sealedFlags = selfHandle->flags_;
+    sealedFlags.noExtend = 1;
+    sealedFlags.frozen = 1;
+    sealedFlags.sealed = 1;
+    return HiddenClass::updateClassFlags(selfHandle, runtime, sealedFlags);
+  }
+
+  /// Mark the HiddenClass as being sealed.
+  /// \return the resulting class
+  static HiddenClass *markNoExtend(
+      Handle<HiddenClass> selfHandle,
+      Runtime &runtime) {
+    ClassFlags noExtendFlags = selfHandle->flags_;
+    noExtendFlags.noExtend = 1;
+    return HiddenClass::updateClassFlags(selfHandle, runtime, noExtendFlags);
+  }
 
   /// Update the flags for the properties in the list \p props with \p
   /// flagsToClear and \p flagsToSet. If in dictionary mode, the properties are
