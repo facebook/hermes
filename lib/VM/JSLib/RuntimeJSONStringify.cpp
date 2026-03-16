@@ -729,8 +729,8 @@ ExecutionStatus JSONStringifyer::operationJA() {
       !lv_.replacerFunction.get() &&
       arrayFastPathCheck(
           runtime_,
-          vmcast<JSArray>(*lv.arrayObject),
-          *runtime_.classJSArray,
+          Handle<JSArray>::vmcast(&lv.arrayObject),
+          runtime_.classJSArray,
           static_cast<uint32_t>(*lenRes))) {
     lv.initClazz = lv.arrayObject->getClass(runtime_);
     lv.jsArray = vmcast<JSArray>(*lv.arrayObject);

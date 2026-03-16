@@ -445,8 +445,12 @@ class JSObject : public GCCell {
   /// Record that this object is being used in a form of caching optimisation
   /// such that any change to its hidden class or parent must update the epoch
   /// in the runtime.
-  void setCachedUsingEpoch() {
-    flags_.isCachedUsingEpoch = true;
+  static void setCachedUsingEpoch(Handle<JSObject> self, Runtime &runtime);
+
+  /// \return true if this object's HiddenClass is marked as being cached using
+  /// the epoch mechanism.
+  bool isCachedUsingEpoch(PointerBase &pb) const {
+    return getClass(pb)->getIsCachedUsingEpoch();
   }
 
   /// Returns whether the object has any of properties set in \p flags.
@@ -1436,14 +1440,33 @@ class JSObject : public GCCell {
   /// \param clazz the new class, must not be null.
   void updateClass(Runtime &runtime, HiddenClass *clazz) {
     assert(clazz && "clazz cannot be null");
+
     clazzDoNotAccessDirectly_.setNonNull(runtime, clazz, runtime.getHeap());
 
     // Changing the HiddenClass may result in adding a setter/readonly property
     // in the parent chain that would prevent adding the property to the cached
     // HiddenClass.
     // We must break the cache, so increment the epoch.
-    if (LLVM_UNLIKELY(flags_.isCachedUsingEpoch))
+    if (LLVM_UNLIKELY(isCachedUsingEpoch(runtime)))
       runtime.incParentCacheEpoch();
+  }
+
+  /// Update the hidden class of this object to \p clazz,
+  /// but ignore the parent cache epoch.
+  /// SAFETY: this function must only be used when we know that the
+  /// class change doesn't introduce any setter/readonly properties that require
+  /// incrementing the epoch, for example just setting the isCachedUsingEpoch
+  /// flag on the HiddenClass.
+  /// This does not allocate indirect property storage, it is an internal API.
+  ///
+  /// \param clazz the new class, must not be null.
+  void updateClassIgnoringEpochUnsafe(Runtime &runtime, HiddenClass *clazz) {
+    assert(clazz && "clazz cannot be null");
+    assert(
+        clazz->getNumProperties() ==
+            clazzDoNotAccessDirectly_.getNonNull(runtime)->getNumProperties() &&
+        "Do not change the number of properties without incrementing the epoch");
+    clazzDoNotAccessDirectly_.setNonNull(runtime, clazz, runtime.getHeap());
   }
 
   /// Allocate storage for a new slot after the slot index itself has been

@@ -99,13 +99,20 @@ struct ClassFlags {
       /// state.
       uint16_t indexedStorage : 1;
 
+      /// This flag is set when any object using this HiddenClass (or any object
+      /// in its parent chain) is cached in the AddPropertyCache.
+      /// If the flag is set, then changing the parent or HiddenClass of objects
+      /// with this class in their parent chain will increment the
+      /// parentCacheEpoch in Runtime.
+      uint16_t isCachedUsingEpoch : 1;
+
       /// The number of times the parent of the object has been changed.
       /// If this counter maxes out, the HiddenClass changes to dictionary mode
       /// to avoid an infinite chain.
       uint16_t parentChangeCounter : kParentChangeCounterSize;
 
       /// Unused bits, tracked explicitly for convenience.
-      uint16_t unusedPadding : 2;
+      uint16_t unusedPadding : 1;
     };
 
     uint16_t _flags;
@@ -532,6 +539,23 @@ class HiddenClass final : public GCCell {
     flags_.noExtend = 1;
     flags_.sealed = 1;
     flags_.frozen = 1;
+  }
+
+  /// \return true if this HiddenClass is used by objects cached using the
+  /// parent cache epoch mechanism.
+  bool getIsCachedUsingEpoch() const {
+    return flags_.isCachedUsingEpoch;
+  }
+
+  /// Mark this HiddenClass as being used by objects cached using the parent
+  /// cache epoch mechanism.
+  /// \return the resulting class
+  static HiddenClass *markAsCachedUsingEpoch(
+      Handle<HiddenClass> selfHandle,
+      Runtime &runtime) {
+    ClassFlags newFlags = selfHandle->flags_;
+    newFlags.isCachedUsingEpoch = 1;
+    return HiddenClass::updateClassFlags(selfHandle, runtime, newFlags);
   }
 
   /// \return The for-in cache if one has been set, otherwise nullptr.

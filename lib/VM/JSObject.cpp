@@ -293,7 +293,7 @@ CallResult<bool> JSObject::setParent(
   // parent chain that would prevent adding the property to the cached
   // HiddenClass.
   // We must break the cache, so increment the epoch.
-  if (LLVM_UNLIKELY(self->flags_.isCachedUsingEpoch)) {
+  if (LLVM_UNLIKELY(self->isCachedUsingEpoch(runtime))) {
     runtime.incParentCacheEpoch();
   }
 
@@ -2921,6 +2921,21 @@ bool JSObject::isFrozen(PseudoHandle<JSObject> self, Runtime &runtime) {
   return true;
 }
 
+void JSObject::setCachedUsingEpoch(Handle<JSObject> self, Runtime &runtime) {
+  struct : public Locals {
+    PinnedValue<HiddenClass> clazz;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  lv.clazz = self->getClass(runtime);
+  HiddenClass *newClazz =
+      HiddenClass::markAsCachedUsingEpoch(lv.clazz, runtime);
+  // Ensure that the epoch doesn't get incremented during this operation
+  // We're just flipping the flag on the HiddenClass, so it's safe to bypass the
+  // increment in this case.
+  self->updateClassIgnoringEpochUnsafe(runtime, newClazz);
+}
+
 CallResult<bool> JSObject::addOwnProperty(
     Handle<JSObject> selfHandle,
     Runtime &runtime,
@@ -2995,52 +3010,60 @@ void JSObject::tryCacheAddProperty(
       HiddenClass::kDictionaryThreshold < WritePropertyCacheEntry::kMaxSlot);
   assert(slot <= WritePropertyCacheEntry::kMaxSlot);
 
-  NoAllocScope noAlloc{runtime};
+  {
+    NoAllocScope noAlloc{runtime};
 
-  // If any parents are dictionaries, they won't have their HiddenClass change
-  // when properties are modified. Parent cache epoch is incremented when the
-  // HiddenClass changes, so we can't cache this add.
-  // Perform this check up here to avoid allocating an unused add cache entry if
-  // the check fails.
-  for (JSObject *cur = self->getParent(runtime); cur != nullptr;
-       cur = cur->getParent(runtime)) {
-    if (cur->getClass(runtime)->isDictionary())
-      return;
-  }
-
-  uint32_t parentCacheEpoch = runtime.getParentCacheEpoch();
-  uint32_t addCacheIndex = writeCacheEntry->getAddCacheIndex();
-  if (addCacheIndex == 0) {
-    // Need to allocate a new AddPropertyCacheEntry in the RuntimeModule.
-    if (auto optIdx = runtimeModule ? runtimeModule->allocateAddCacheEntry()
-                                    : sh_unit_allocate_add_cache_entry(unit)) {
-      addCacheIndex = *optIdx;
-      writeCacheEntry->setAddCacheIndex(addCacheIndex);
-    } else {
-      // Might fail if we're out of bits to use for the index.
-      return;
+    // If any parents are dictionaries, they won't have their HiddenClass change
+    // when properties are modified. Parent cache epoch is incremented when the
+    // HiddenClass changes, so we can't cache this add.
+    // Perform this check up here to avoid allocating an unused add cache entry
+    // if the check fails.
+    for (JSObject *cur = self->getParent(runtime); cur != nullptr;
+         cur = cur->getParent(runtime)) {
+      if (cur->getClass(runtime)->isDictionary())
+        return;
     }
+
+    uint32_t parentCacheEpoch = runtime.getParentCacheEpoch();
+    uint32_t addCacheIndex = writeCacheEntry->getAddCacheIndex();
+    if (addCacheIndex == 0) {
+      // Need to allocate a new AddPropertyCacheEntry in the RuntimeModule.
+      if (auto optIdx = runtimeModule
+              ? runtimeModule->allocateAddCacheEntry()
+              : sh_unit_allocate_add_cache_entry(unit)) {
+        addCacheIndex = *optIdx;
+        writeCacheEntry->setAddCacheIndex(addCacheIndex);
+      } else {
+        // Might fail if we're out of bits to use for the index.
+        return;
+      }
+    }
+
+    assert(
+        writeCacheEntry->getAddCacheIndex() == addCacheIndex &&
+        addCacheIndex != 0);
+
+    // Populate AddPropertyCacheEntry.
+    AddPropertyCacheEntry &addCacheEntry = runtimeModule
+        ? runtimeModule->getAddCacheEntry(addCacheIndex)
+        : sh_unit_get_add_cache_entry(unit, addCacheIndex);
+    addCacheEntry.setParentEpochAndSlot(parentCacheEpoch, slot);
+    addCacheEntry.startClazz =
+        CompressedPointer::encodeNonNull(startClazz, runtime);
+    addCacheEntry.resultClazz =
+        CompressedPointer::encodeNonNull(resultClazz, runtime);
+    addCacheEntry.parent = self->getParentGCPtr(runtime);
   }
 
-  assert(
-      writeCacheEntry->getAddCacheIndex() == addCacheIndex &&
-      addCacheIndex != 0);
-
-  // Populate AddPropertyCacheEntry.
-  AddPropertyCacheEntry &addCacheEntry = runtimeModule
-      ? runtimeModule->getAddCacheEntry(addCacheIndex)
-      : sh_unit_get_add_cache_entry(unit, addCacheIndex);
-  addCacheEntry.setParentEpochAndSlot(parentCacheEpoch, slot);
-  addCacheEntry.startClazz =
-      CompressedPointer::encodeNonNull(startClazz, runtime);
-  addCacheEntry.resultClazz =
-      CompressedPointer::encodeNonNull(resultClazz, runtime);
-  addCacheEntry.parent = self->getParentGCPtr(runtime);
+  struct : public Locals {
+    PinnedValue<JSObject> cur;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
 
   // Mark everything along the prototype chain as a cached parent.
-  for (JSObject *cur = self->getParent(runtime); cur != nullptr;
-       cur = cur->getParent(runtime)) {
-    cur->flags_.isCachedUsingEpoch = 1;
+  for (lv.cur = self->getParent(runtime); lv.cur.get() != nullptr;
+       lv.cur = lv.cur->getParent(runtime)) {
+    JSObject::setCachedUsingEpoch(lv.cur, runtime);
   }
 }
 
