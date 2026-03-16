@@ -175,6 +175,13 @@ def create_parser():
         help="Timeout for compiling and running each test.",
     )
     parser.add_argument(
+        "--show-slowest-tests",
+        dest="show_slowest_tests",
+        default=0,
+        type=int,
+        help="Print the N slowest tests at the end of the run. 0 disables (default).",
+    )
+    parser.add_argument(
         "paths", type=str, nargs="+", help="Paths to testsuite, can be dir or file"
     )
 
@@ -268,6 +275,20 @@ def print_failed_tests(tests: dict) -> None:
     print_test_list(TestResultCode.TEST_FAILED, "Other test failure:")
 
 
+def print_slowest_tests(results: List[TestCaseResult], n: int = 30) -> None:
+    """Print the top N slowest tests by subprocess wall-clock time."""
+    if not results:
+        return
+    slowest = sorted(results, key=lambda r: r.duration, reverse=True)[:n]
+    if slowest[0].duration == 0.0:
+        return
+    print(f"\nSlowest {min(n, len(slowest))} tests:")
+    print("-----------------------------------")
+    for r in slowest:
+        print(f"{r.duration:>7.2f}s  {r.test_name}")
+    print("-----------------------------------")
+
+
 def print_skipped_passed_tests(tests: Dict[str, str]) -> None:
     print("\nPassed tests in skiplist:")
     print("-----------------------------------")
@@ -311,6 +332,7 @@ async def run(
     timeout: int,
     verbose: bool,
     hermes_rt: bool = False,
+    show_slowest_tests: int = 0,
 ) -> int:
     """
     Run all tests with async subprocess and wait for results in completion order
@@ -415,12 +437,19 @@ async def run(
     failed_cases = defaultdict(list)
     # Similar to skipped_tests, but only store those passed.
     skipped_passed = {}
+    all_results: List[TestCaseResult] = []
     for task in asyncio.as_completed([wrap_task(fut) for fut in tasks]):
         result = await task
         stats[result.code] += 1
         pd.update(result)
         if result.code.is_failure:
             failed_cases[result.code].append(result.test_name)
+        # Collect non-skipped results for slowest-tests report.
+        if result.code not in (
+            TestResultCode.TEST_SKIPPED,
+            TestResultCode.TEST_PERMANENTLY_SKIPPED,
+        ):
+            all_results.append(result)
         # Some tests might be skipped due to unsupported features, we should consider
         # them as "passed" as well since they will be skipped anyway.
         if (
@@ -436,6 +465,8 @@ async def run(
 
     # Print result
     print_stats(stats)
+    if show_slowest_tests > 0:
+        print_slowest_tests(all_results, min(show_slowest_tests, len(all_results)))
     print_failed_tests(failed_cases)
     # The "intl_tests" list is simply a folder and we don't want to unfold
     # it. All intl tests that we can't pass are included in "skip_list". So
@@ -528,6 +559,7 @@ async def main() -> int:
         args.timeout,
         args.verbose,
         args.hermes_rt,
+        args.show_slowest_tests,
     )
 
     # Explicitly clean up the temporary directory if we created one.

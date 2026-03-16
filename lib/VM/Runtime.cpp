@@ -374,6 +374,11 @@ Runtime::Runtime(
   // Allocate the "reserved" registers in the root frame.
   allocStack(StackFrameLayout::CalleeExtraRegistersAtStart);
 
+  // Zero-initialize all SHRuntime roots before any allocation can trigger a GC
+  // that would scan them.
+#define SHRUNTIME_HV_FIELD(name) name = _sh_ljs_raw_zero_value_unsafe();
+#include "hermes/VM/SHRuntimeHermesValueFields.def"
+
   // Initialize Predefined Strings.
   // This function does not do any allocations.
   initPredefinedStrings();

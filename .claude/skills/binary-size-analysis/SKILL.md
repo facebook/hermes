@@ -25,11 +25,19 @@ tables of significant increases and decreases.
 
 ## Pre-Run Prompt
 
-Before starting, ask the user whether to enable **parent-commit verification**
-(enabled by default). This verification builds each BUILD commit's parent to
-confirm no skipped commit changed the binary size. It catches miscategorized SKIP
-commits but roughly doubles the build time. If the user declines, skip all
-verification substeps in Step 2.
+Before starting, inform the user how size is measured and ask about verification:
+
+1. **Explain the measurement method**: Tell the user that sizes are measured by
+   summing ALLOC section sizes (via `readelf -SW` on Linux or `otool -l` on
+   macOS), not by measuring the file size with `stat`. This excludes alignment
+   padding and non-shipping sections (symbol tables, string tables, code
+   signatures), matching what actually ships on-device after `strip`.
+
+2. **Ask about parent-commit verification**: This verification is enabled by
+   default. It builds each BUILD commit's parent to confirm no skipped commit
+   changed the binary size. It catches miscategorized SKIP commits but roughly
+   doubles the build time. If the user declines, skip all verification substeps
+   in Step 2.
 
 ## Required User Input
 
@@ -58,7 +66,7 @@ replace it with the user-provided value (e.g., -DHERMESVM_ALLOW_JIT=0).
 
 ## Procedure
 
-### Step 0: Verify Git Repository
+### Step 0: Verify Git Repository and Tools
 
 This skill requires a GitHub checkout of the static_h repo (commit hashes are git
 hashes). Before proceeding, verify the working directory is a valid git repo:
@@ -71,6 +79,17 @@ If this fails (e.g., the repo is a Sapling/Mercurial checkout or not a repo at
 all), stop and inform the user that this skill only works in a git checkout of
 the Hermes repository.
 
+**Bloaty setup**: This skill uses [bloaty](https://github.com/google/bloaty) for
+detailed per-section diffs on large size increases. Download and build it:
+
+```bash
+git clone https://github.com/google/bloaty.git ~/bloaty
+cd ~/bloaty && cmake -B build -GNinja && cmake --build build
+```
+
+If the download or build fails (e.g., no network access, missing dependencies),
+ask the user to provide the path to a pre-built `bloaty` binary.
+
 ### Step 1: Categorize Commits
 
 Generate the list of commits in the range and categorize each as BUILD or SKIP.
@@ -82,9 +101,9 @@ contribute to the hermesvm binary. The relevant source directories are:
 - `API/hermes/`
 - `public/hermes/`
 - `include/hermes/`
-- `external/llvh/`, `external/dtoa/`, `external/zip/`, `external/boost/`,
-  `external/fast_float/`, `external/dragonbox/`
-- `CMakeLists.txt`, `cmake/`, `lib/config/`
+- `external/`
+- `CMakeLists.txt` (exact match, not filtered by `.txt` suffix), `cmake/`,
+  `lib/config/`
 
 Files that never affect the binary: `test/`, `unittests/`, `.github/`, docs
 (`.md`, `.txt`, `.rst`), `tools/`, npm packages (`hermes-parser`,
@@ -97,11 +116,11 @@ Use this Python script to categorize:
 import subprocess, sys
 
 RELEVANT_PREFIXES = [
-    "lib/", "API/hermes/", "public/hermes/", "include/hermes/",
-    "external/llvh/", "external/dtoa/", "external/zip/",
-    "external/boost/", "external/fast_float/", "external/dragonbox/",
-    "CMakeLists.txt", "cmake/", "lib/config/",
+    "lib/", "API/hermes/", "API/jsi/", "public/hermes/", "include/hermes/",
+    "external/", "cmake/", "lib/config/",
 ]
+# Files that match exactly (not as prefixes) and should always be BUILD.
+RELEVANT_EXACT = ["CMakeLists.txt"]
 ALWAYS_SKIP_SUFFIXES = [".md", ".txt", ".rst"]
 
 base_commit = sys.argv[1]
@@ -123,9 +142,12 @@ for line in result.stdout.strip().split("\n"):
     files = files_result.stdout.strip().split("\n") if files_result.stdout.strip() else []
     has_relevant = False
     for f in files:
+        if f in RELEVANT_EXACT:
+            has_relevant = True
+            break
         if any(f.endswith(s) for s in ALWAYS_SKIP_SUFFIXES):
             continue
-        if any(f.startswith(p) or f == p for p in RELEVANT_PREFIXES):
+        if any(f.startswith(p) for p in RELEVANT_PREFIXES):
             has_relevant = True
             break
     category = "BUILD" if has_relevant else "SKIP"
@@ -141,6 +163,78 @@ new/removed source files are detected. Without reconfiguration, incremental
 builds miss new files (especially JS polyfills in `lib/InternalJavaScript/`),
 causing deltas to be misattributed to later commits.
 
+**Size measurement**: Use the sum of ALLOC section sizes, not `stat` on the
+library file. This is important for two reasons:
+
+1. **Excludes alignment padding**: The linker aligns loadable segments to page
+   boundaries (64KB on Linux, 16KB on macOS). A 1-byte code change can shift a
+   segment boundary and cause up to one page of padding change in the file size,
+   creating false deltas.
+2. **Matches production**: ALLOC sections are exactly the sections that remain
+   after `strip` and ship on-device. Non-ALLOC sections (`.symtab`, `.strtab`,
+   `.shstrtab`, `.comment`, `.gnu.build.attributes`) are stripped in production.
+
+Use the following Python helper to measure size on both platforms:
+
+```python
+import platform, re, subprocess
+
+def get_section_size(library_path):
+    """Sum section sizes that ship in production, excluding symbol/string
+    tables and inter-segment alignment padding.
+
+    - Linux (ELF): sums all sections with the ALLOC flag via readelf.
+      This excludes .symtab, .strtab, .shstrtab, .comment, and
+      .gnu.build.attributes which are stripped in production.
+    - macOS (Mach-O): sums all individual section sizes via otool.
+      Sections are listed under __TEXT, __DATA, __DATA_CONST, etc.
+      The __LINKEDIT segment (which contains symbol tables, string
+      tables, code signatures) has no sub-sections so it is naturally
+      excluded.
+    """
+    if platform.system() == "Darwin":
+        return _get_section_size_macho(library_path)
+    else:
+        return _get_section_size_elf(library_path)
+
+def _get_section_size_elf(library_path):
+    output = subprocess.check_output(
+        ["readelf", "-SW", library_path], text=True
+    )
+    total = 0
+    for line in output.split('\n'):
+        # Match section lines: [Nr] Name Type Addr Off Size ES Flg ...
+        m = re.match(
+            r'\s*\[\s*\d+\]\s+\S+\s+\S+\s+[0-9a-f]+\s+[0-9a-f]+\s+'
+            r'([0-9a-f]+)\s+[0-9a-f]+\s+(.*)', line
+        )
+        if m and 'A' in m.group(2):
+            total += int(m.group(1), 16)
+    return total
+
+def _get_section_size_macho(library_path):
+    output = subprocess.check_output(
+        ["otool", "-l", library_path], text=True
+    )
+    total = 0
+    in_section = False
+    for line in output.split('\n'):
+        # Each section entry in otool -l contains both "sectname" and
+        # "segname" lines, followed by "size 0x...".  Only reset on
+        # "cmd " (a new load command), NOT on "segname" — otherwise
+        # the segname line inside each section entry clears the flag
+        # before the size line is reached.
+        if 'sectname' in line:
+            in_section = True
+        elif 'cmd ' in line:
+            in_section = False
+        elif in_section:
+            m = re.match(r'\s+size\s+(0x[0-9a-f]+)', line)
+            if m:
+                total += int(m.group(1), 16)
+    return total
+```
+
 Initialize the markdown results file immediately, then iterate through BUILD
 commits only:
 
@@ -153,20 +247,38 @@ commits only:
       - `git checkout <hash>~1 --force --quiet`
       - `cmake -B <build_dir> <CMAKE_ARGS>`
       - `cd <build_dir> && ninja hermesvm`
-      - Record the parent's size
-      - Compare to the previous BUILD commit's size. If they differ, a SKIP
-        commit between the previous BUILD and this one changed the binary.
+      - Record the parent's ALLOC size
+      - Compare to the previous BUILD commit's ALLOC size. If they differ, a
+        SKIP commit between the previous BUILD and this one changed the binary.
         Log a **VERIFICATION FAILURE** with the two sizes and the commit range
         that needs re-examination. Stop the analysis and report the failure so
         Step 1's categorization can be fixed.
       - `git checkout <hash> --force --quiet` (return to the BUILD commit)
    c. `cmake -B <build_dir> <CMAKE_ARGS>`
    d. `cd <build_dir> && ninja hermesvm`
-   e. Record `stat -f "%z"` (macOS) or `stat -c "%s"` (Linux) of
-      `<build_dir>/lib/libhermesvm.dylib` (or `.so` on Linux)
+   e. Record ALLOC section size sum using `get_section_size()` on
+      `<build_dir>/lib/libhermesvm.so` (Linux) or `libhermesvm.dylib` (macOS)
    f. Compute delta from previous BUILD commit's size
    g. **Write the row to the markdown file immediately** before proceeding
-   h. If build fails, record BUILD_FAIL and continue
+   h. **Bloaty diff** (if delta >= 3000 bytes): Run `bloaty` to get a per-section
+      breakdown of the size increase. This helps identify whether the growth is
+      in code (`.text`), data (`.rodata`), or elsewhere.
+      - The previous BUILD commit's binary must be saved before building the
+        current commit. Copy it at the start of each iteration (before step a):
+        `cp <build_dir>/lib/libhermesvm.so /tmp/libhermesvm_prev.so`
+        Note: when verification is enabled, the parent binary from step (b)
+        can be used instead, but using the previous BUILD binary is simpler
+        and works in both modes.
+      - Run: `bloaty <current_binary> -- /tmp/libhermesvm_prev.so`
+      - Filter the output to keep only ALLOC sections (section names are the
+        last token on each line): `.text`, `.rodata`, `.data`, `.data.rel.ro`,
+        `.bss`, `.tbss`, `.gcc_except_table`, `.eh_frame`, `.eh_frame_hdr`,
+        `.init_array`, `.fini_array`, `.plt`, `.got`, `.got.plt`, `.rela.dyn`,
+        `.rela.plt`, `.dynsym`, `.dynstr`, `.gnu.hash`, `.gnu.version`,
+        `.init`, `.fini`, and the `TOTAL` row.
+      - Append the filtered bloaty output to the end of the markdown file under
+        a `## Bloaty Diff` section, with a heading for each commit.
+   i. If build fails, record BUILD_FAIL and continue
 
 Do **not** include SKIP commits in the output table.
 
@@ -198,6 +310,7 @@ The markdown file (`hermesvm_size_analysis.md` in the repo root) contains:
 1. Build configuration header
 2. Per-commit table: `| # | Commit | Subject | Size (bytes) | Delta | Total Delta |`
 3. Summary section with significant changes tables
+4. Bloaty diff section with per-section breakdowns for commits with delta >= 3KB
 
 ## Notes
 

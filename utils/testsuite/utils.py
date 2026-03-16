@@ -48,6 +48,8 @@ class TestCaseResult(object):
     msg: str = ""
     # Output details of this test run
     output: str = ""
+    # Subprocess wall-clock duration in seconds
+    duration: float = 0.0
 
 
 # Colors for stdout.

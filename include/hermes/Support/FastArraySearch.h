@@ -17,6 +17,39 @@ namespace hermes {
 /// Search the range [start, end) of \p arr forward for \p target.
 /// \pre start <= end <= arr.size().
 /// \return the index of the first match, or -1 if not found.
+int64_t
+searchU8(llvh::ArrayRef<uint8_t> arr, size_t start, size_t end, uint8_t target);
+
+/// Search the range [start, end) of \p arr backward for \p target.
+/// \pre start <= end <= arr.size().
+/// \return the index of the last match, or -1 if not found.
+int64_t searchReverseU8(
+    llvh::ArrayRef<uint8_t> arr,
+    size_t start,
+    size_t end,
+    uint8_t target);
+
+/// Search the range [start, end) of \p arr forward for \p target.
+/// \pre start <= end <= arr.size().
+/// \return the index of the first match, or -1 if not found.
+int64_t searchU16(
+    llvh::ArrayRef<uint16_t> arr,
+    size_t start,
+    size_t end,
+    uint16_t target);
+
+/// Search the range [start, end) of \p arr backward for \p target.
+/// \pre start <= end <= arr.size().
+/// \return the index of the last match, or -1 if not found.
+int64_t searchReverseU16(
+    llvh::ArrayRef<uint16_t> arr,
+    size_t start,
+    size_t end,
+    uint16_t target);
+
+/// Search the range [start, end) of \p arr forward for \p target.
+/// \pre start <= end <= arr.size().
+/// \return the index of the first match, or -1 if not found.
 int64_t searchU32(
     llvh::ArrayRef<uint32_t> arr,
     size_t start,

@@ -7,6 +7,7 @@ import os
 import shutil
 import sys
 import tempfile
+import time
 from asyncio import create_subprocess_exec, subprocess, TimeoutError, wait_for
 from dataclasses import dataclass, field
 from typing import List, Optional
@@ -110,18 +111,25 @@ async def run(
         *cmd_args, env=env, stderr=subprocess.PIPE, stdout=subprocess.PIPE
     )
     stdout, stderr = (None, None)
+    t_start = time.monotonic()
     try:
         (stdout, stderr) = await wait_for(
             proc.communicate(), timeout=compile_run_args.timeout
         )
     except TimeoutError:
+        duration = time.monotonic() - t_start
         msg = f"FAIL: Execution of binary timed out for {file_to_run}"
         output = f"Run command: {' '.join(cmd_args)}\n"
         # Kill the subprocess and all its child processes
         proc.kill()
         return TestCaseResult(
-            compile_run_args.test_name, TestResultCode.EXECUTE_TIMEOUT, msg, output
+            compile_run_args.test_name,
+            TestResultCode.EXECUTE_TIMEOUT,
+            msg,
+            output,
+            duration,
         )
+    duration = time.monotonic() - t_start
 
     output = f"Run command: {' '.join(cmd_args)}\n"
     if stdout:
@@ -138,7 +146,11 @@ async def run(
         if proc.returncode < 0:
             msg = f"FAIL: Execution terminated with {proc.returncode}"
             return TestCaseResult(
-                compile_run_args.test_name, TestResultCode.EXECUTE_FAILED, msg, output
+                compile_run_args.test_name,
+                TestResultCode.EXECUTE_FAILED,
+                msg,
+                output,
+                duration,
             )
         elif (lazy and expected_failure_phase == "") or (
             not lazy and expected_failure_phase != "runtime"
@@ -150,7 +162,11 @@ async def run(
             # capture some issues in lazy mode.
             msg = f"FAIL: Execution of {base_file_name} threw unexpected error"
             return TestCaseResult(
-                compile_run_args.test_name, TestResultCode.EXECUTE_FAILED, msg, output
+                compile_run_args.test_name,
+                TestResultCode.EXECUTE_FAILED,
+                msg,
+                output,
+                duration,
             )
         elif compile_run_args.is_async and (
             "Test262:AsyncTestFailure" in stdout_str
@@ -162,12 +178,19 @@ async def run(
             # Test262:AsyncTestFailure:, the test must be interpreted as failed.
             msg = f"FAIL: Execution of async test failed: {stdout_str}"
             return TestCaseResult(
-                compile_run_args.test_name, TestResultCode.EXECUTE_FAILED, msg, output
+                compile_run_args.test_name,
+                TestResultCode.EXECUTE_FAILED,
+                msg,
+                output,
+                duration,
             )
         else:
             msg = f"PASS: Execution of {base_file_name} threw an error as expected"
             return TestCaseResult(
-                compile_run_args.test_name, TestResultCode.TEST_PASSED, msg
+                compile_run_args.test_name,
+                TestResultCode.TEST_PASSED,
+                msg,
+                duration=duration,
             )
     else:
         if (lazy and expected_failure_phase != "") or (
@@ -178,10 +201,18 @@ async def run(
             # if it's expected for a reason.
             msg = f"FAIL: Expected execution of {base_file_name} to throw"
             return TestCaseResult(
-                compile_run_args.test_name, TestResultCode.EXECUTE_FAILED, msg, output
+                compile_run_args.test_name,
+                TestResultCode.EXECUTE_FAILED,
+                msg,
+                output,
+                duration,
             )
     return TestCaseResult(
-        compile_run_args.test_name, TestResultCode.TEST_PASSED, "Run passed", output
+        compile_run_args.test_name,
+        TestResultCode.TEST_PASSED,
+        "Run passed",
+        output,
+        duration,
     )
 
 
@@ -201,13 +232,18 @@ async def compile_with_args(
         stdout=subprocess.PIPE,
     )
     stdout, stderr = (None, None)
+    t_start = time.monotonic()
     try:
         (stdout, stderr) = await wait_for(proc.communicate(), timeout=timeout)
     except TimeoutError:
+        duration = time.monotonic() - t_start
         msg = f"FAIL: Compilation timed out, args: {args}"
         output = f"Run command: {' '.join(args)}"
         proc.kill()
-        return TestCaseResult(test_name, TestResultCode.COMPILE_TIMEOUT, msg, output)
+        return TestCaseResult(
+            test_name, TestResultCode.COMPILE_TIMEOUT, msg, output, duration
+        )
+    duration = time.monotonic() - t_start
 
     output = f"Run command: {' '.join(args)}\n"
     if stdout:
@@ -229,21 +265,27 @@ async def compile_with_args(
         # bugs like memory corruption.
         if proc.returncode < 0:
             msg = f"FAIL: Execution terminated with {proc.returncode}"
-            return TestCaseResult(test_name, TestResultCode.COMPILE_FAILED, msg, output)
+            return TestCaseResult(
+                test_name, TestResultCode.COMPILE_FAILED, msg, output, duration
+            )
 
         # If compilation failed and it's not expected, consider it a failure.
         if not expect_compile_failure:
             msg = f"FAIL: Compilation failed with command: {args}"
-            return TestCaseResult(test_name, TestResultCode.COMPILE_FAILED, msg, output)
+            return TestCaseResult(
+                test_name, TestResultCode.COMPILE_FAILED, msg, output, duration
+            )
     else:
         # If the compliation succeeded but a compilation failure is expected,
         # it's also considered a failure.
         if expect_compile_failure:
             msg = "FAIL: Compilation failure expected on with Hermes"
-            return TestCaseResult(test_name, TestResultCode.COMPILE_FAILED, msg, output)
+            return TestCaseResult(
+                test_name, TestResultCode.COMPILE_FAILED, msg, output, duration
+            )
 
     return TestCaseResult(
-        test_name, TestResultCode.TEST_PASSED, "Compile passed", output
+        test_name, TestResultCode.TEST_PASSED, "Compile passed", output, duration
     )
 
 
@@ -310,6 +352,7 @@ async def compile_and_run_single(
     if compile_result.code.is_failure:
         return compile_result
     output = compile_result.output
+    total_duration = compile_result.duration
 
     # If compilation failure is not expected, we should have the bytecode
     # ready to run.
@@ -321,7 +364,9 @@ async def compile_and_run_single(
             expected_failure_phase,
             compile_run_args,
         )
+        total_duration += run_result.duration
         if run_result.code.is_failure:
+            run_result.duration = total_duration
             return run_result
         output += run_result.output
     return TestCaseResult(
@@ -329,6 +374,7 @@ async def compile_and_run_single(
         TestResultCode.TEST_PASSED,
         "Compile and Run passed",
         output,
+        total_duration,
     )
 
 
@@ -342,19 +388,26 @@ async def compile_and_run(
     """
 
     output = ""
+    total_duration = 0.0
     for js_source_file in js_source_files:
         # If any file is not passed, return the result immediately.
         result = await compile_and_run_single(
             js_source_file,
             compile_run_args,
         )
+        total_duration += result.duration
         if result.code.is_failure:
+            result.duration = total_duration
             return result
         output = f"Compile and Run {js_source_file}:\n{result.output}"
 
     # All files in js_source_files passed
     return TestCaseResult(
-        compile_run_args.test_name, TestResultCode.TEST_PASSED, "PASS", output
+        compile_run_args.test_name,
+        TestResultCode.TEST_PASSED,
+        "PASS",
+        output,
+        total_duration,
     )
 
 
@@ -376,13 +429,18 @@ async def run_hermes_simple(
         stderr=subprocess.PIPE,
     )
     stdout, stderr = (None, None)
+    t_start = time.monotonic()
     try:
         (stdout, stderr) = await wait_for(proc.communicate(), timeout=timeout)
     except TimeoutError:
+        duration = time.monotonic() - t_start
         proc.kill()
         msg = "FAIL: Hermes timeout"
         details = f"Run command: {' '.join(args)}"
-        return TestCaseResult(test_name, TestResultCode.COMPILE_TIMEOUT, msg, details)
+        return TestCaseResult(
+            test_name, TestResultCode.COMPILE_TIMEOUT, msg, details, duration
+        )
+    duration = time.monotonic() - t_start
 
     if proc.returncode:
         msg = "FAIL: Hermes failed to run"
@@ -390,11 +448,17 @@ async def run_hermes_simple(
         details += f"Return code: {proc.returncode}\n"
         details += f"stdout:\n {stdout.decode('utf-8')}"
         details += f"stderr:\n {stderr.decode('utf-8')}"
-        return TestCaseResult(test_name, TestResultCode.TEST_FAILED, msg, details)
+        return TestCaseResult(
+            test_name, TestResultCode.TEST_FAILED, msg, details, duration
+        )
 
     # Return the evaluated output (could be JS execution result or dumped AST).
     return TestCaseResult(
-        test_name, TestResultCode.TEST_PASSED, "PASS: ", stdout.decode("utf-8").strip()
+        test_name,
+        TestResultCode.TEST_PASSED,
+        "PASS: ",
+        stdout.decode("utf-8").strip(),
+        duration,
     )
 
 
@@ -444,13 +508,16 @@ async def generate_ast(
                 )
                 if result.code != TestResultCode.TEST_PASSED:
                     return result
+                eval_duration = result.duration
                 # get rid of the newline added by print().
                 evaluated.write(result.output.encode("utf-8"))
                 evaluated.flush()
                 # run the test through Hermes parser.
-                return await run_hermes_simple(
+                ast_result = await run_hermes_simple(
                     hermes_exe, test_name, args + [evaluated.name], timeout
                 )
+                ast_result.duration += eval_duration
+                return ast_result
     return await run_hermes_simple(hermes_exe, test_name, args + [test_file], timeout)
 
 
