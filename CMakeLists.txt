@@ -457,7 +457,8 @@ if(HERMESVM_CRASH_TRACE)
     add_definitions(-DHERMESVM_CRASH_TRACE=1)
 endif()
 if (HERMES_ENABLE_ADDRESS_SANITIZER)
-    append("-fsanitize=address" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
+    # Leave frame pointers. Allows the fast unwinder to function properly.
+    append("-fsanitize=address -fno-omit-frame-pointer" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
     # MSVC handles ASAN runtime linking automatically when objects compiled with
     # /fsanitize=address are linked. Don't pass the flag to the linker on MSVC.
     if (MSVC)

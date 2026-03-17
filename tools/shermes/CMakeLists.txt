@@ -25,7 +25,8 @@ set(SHERMES_CC_LIB_PATH "$<TARGET_FILE_DIR:hermesvm>:$<TARGET_FILE_DIR:jsi>:$<TA
   "Library path when invoking CC")
 
 if (HERMES_ENABLE_ADDRESS_SANITIZER)
-  append("-fsanitize=address" SHERMES_CC_SYSCFLAGS SHERMES_CC_SYSLDFLAGS)
+  # Leave frame pointers. Allows the fast unwinder to function properly.
+  append("-fsanitize=address -fno-omit-frame-pointer" SHERMES_CC_SYSCFLAGS SHERMES_CC_SYSLDFLAGS)
 endif()
 
 if (HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER)
