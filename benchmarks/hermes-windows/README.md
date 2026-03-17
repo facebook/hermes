@@ -2,62 +2,39 @@
 
 Runs JS benchmarks and compares results across engines or builds. Full docs: `benchmarks/bench-runner/README.md`.
 
-## PowerShell Scripts
+## bench.ts
 
-All scripts live in `benchmarks/hermes-windows/` and use `$PSScriptRoot` for paths, so they work from any working directory. They expect `build/ninja-clang-release/bin/hermes.exe` to exist.
+A single TypeScript script (`benchmarks/hermes-windows/bench.ts`) replaces the previous PowerShell scripts. It runs with Node.js 24+ (native type stripping) and works from any working directory. It expects `build/ninja-clang-release/bin/hermes.exe` to exist.
 
-### bench-all.ps1
+### Quick start
 
-Runs everything (test suites + individual benchmarks) and merges into one JSON file.
+Run everything (test suites + individual benchmarks) and write a merged JSON file:
 
-```powershell
-.\bench-all.ps1 -c 5 -l baseline -output results.json
+```bash
+node benchmarks/hermes-windows/bench.ts -c 5 -l baseline -o results.json
 ```
 
-- `-c` — number of iterations per benchmark
-- `-l` — label (e.g. "before", "after") included in the JSON output
-- `-output` — output JSON file path
+- `-c` — number of iterations per benchmark (default: 1)
+- `-l` — label (e.g. "before", "after") included in the JSON output (default: "test")
+- `-o` — output JSON file path (required)
 
-### bench-test-suits.ps1
+### Functions
 
-Runs only the bench-runner test suites (`v8`, `octane`, `micros` categories). Wraps `bench-runner.py`.
+The script exposes four main functions:
 
-```powershell
-.\bench-test-suits.ps1 -c 5 -l baseline -output test-suits.json
-```
-
-### bench-individual-samples.ps1
-
-Runs only the standalone individual benchmarks (listed in `Individual.md`), multiple iterations.
-
-```powershell
-.\bench-individual-samples.ps1 -c 5 -output individual.json
-```
-
-### bench-individual.ps1
-
-Single-run helper used by `bench-individual-samples.ps1`. Runs each individual benchmark once and outputs a flat JSON of `{ "path": ms }`.
-
-```powershell
-.\bench-individual.ps1 -output single-run.json
-```
-
-### format-json.ps1
-
-Reformats a JSON file in-place with consistent 4-space indentation (fixes PowerShell's default formatting).
-
-```powershell
-.\format-json.ps1 results.json
-```
+- `benchIndividual()` — runs each standalone benchmark once, returns `{ results: { [path]: ms } }`
+- `benchIndividualSamples(count)` — runs `benchIndividual` N times, computes mean/stdev per benchmark
+- `benchTestSuites(count, label)` — runs bench-runner.py for v8, octane, micros categories
+- `benchAll(count, label)` — runs test suites + individual benchmarks, merges into one result
 
 ### Comparing before/after
 
-```powershell
+```bash
 # 1. Build baseline, run all benchmarks
-.\bench-all.ps1 -c 5 -l before -output before.json
+node benchmarks/hermes-windows/bench.ts -c 5 -l before -o before.json
 
 # 2. Make changes, rebuild, run again
-.\bench-all.ps1 -c 5 -l after -output after.json
+node benchmarks/hermes-windows/bench.ts -c 5 -l after -o after.json
 
 # 3. Compare test-suite results (bench-runner's merge tool)
 python3 benchmarks/bench-runner/bench-merge.py before.json after.json
@@ -150,6 +127,11 @@ Some directories also have typed variants (`*-sh-*.js`, `*-typed.js`) meant for 
 
 ## Examples
 
+Run all benchmarks with bench.ts (recommended):
+```bash
+node benchmarks/hermes-windows/bench.ts -c 3 -l baseline -o results.json
+```
+
 Run a single bench-runner benchmark (quick smoke test):
 ```bash
 python3 benchmarks/bench-runner/bench-runner.py --hermes -b build/ninja-clang-release/bin/hermes.exe --bm v8-crypto
@@ -168,10 +150,10 @@ python3 benchmarks/bench-runner/bench-runner.py --hermes -b build/ninja-clang-re
 Compare before/after a code change:
 ```bash
 # 1. Run benchmarks on the baseline, save as labeled JSON
-python3 benchmarks/bench-runner/bench-runner.py --hermes -b build/ninja-clang-release/bin/hermes.exe --cats v8 -c 3 -l before -f json --out before.json
+node benchmarks/hermes-windows/bench.ts -c 3 -l before -o before.json
 
 # 2. Make changes, rebuild, run again
-python3 benchmarks/bench-runner/bench-runner.py --hermes -b build/ninja-clang-release/bin/hermes.exe --cats v8 -c 3 -l after -f json --out after.json
+node benchmarks/hermes-windows/bench.ts -c 3 -l after -o after.json
 
 # 3. Merge and compare — ratio < 1.0 means faster, > 1.0 means slower
 python3 benchmarks/bench-runner/bench-merge.py before.json after.json
