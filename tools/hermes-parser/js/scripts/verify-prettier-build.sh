@@ -40,10 +40,20 @@ if sl status "$MINIFIED_PRETTIER_PLUGIN" | grep -q .; then
     echo ""
     echo "De-minified diff:"
     EXPAND="$SCRIPT_DIR/expand-minified.js"
-    diff -u \
+    DIFF_OUTPUT=$(diff -u \
       <($NODE "$EXPAND" "$ORIGINAL_COPY") \
       <($NODE "$EXPAND" "$MINIFIED_PRETTIER_PLUGIN") \
-      || true
+      || true)
+    echo "$DIFF_OUTPUT"
+    echo ""
+    echo "Uploading diff to pastry for easier viewing..."
+    # Authenticate as Flow Bot for pastry access in CI environments
+    jf arcrc --service-user 499706368 2>/dev/null || true
+    if PASTRY_URL=$(echo "$DIFF_OUTPUT" | pastry 2>/dev/null); then
+        echo "View the full diff at: $PASTRY_URL"
+    else
+        echo "(pastry upload failed — requires jf auth or a service user)"
+    fi
     exit 1
 else
     echo "✓ index.mjs is up to date!"
