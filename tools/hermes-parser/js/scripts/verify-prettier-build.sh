@@ -49,7 +49,9 @@ if sl status "$MINIFIED_PRETTIER_PLUGIN" | grep -q .; then
     echo "Uploading diff to pastry for easier viewing..."
     # Authenticate as Flow Bot for pastry access in CI environments
     jf arcrc --service-user 499706368 2>/dev/null || true
-    if PASTRY_URL=$(echo "$DIFF_OUTPUT" | pastry 2>/dev/null); then
+    if PASTRY_OUTPUT=$(echo "$DIFF_OUTPUT" | pastry 2>/dev/null); then
+        PASTRY_ID=$(echo "$PASTRY_OUTPUT" | grep -oE 'P[0-9]+' | head -1)
+        PASTRY_URL="https://www.internalfb.com/phabricator/paste/view/${PASTRY_ID}"
         echo "View the full diff at: $PASTRY_URL"
     else
         echo "(pastry upload failed — requires jf auth or a service user)"
