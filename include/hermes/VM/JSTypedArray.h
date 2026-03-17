@@ -77,11 +77,10 @@ class JSTypedArrayBase : public JSObject {
   /// T used to instantiate a TypedArray.
   uint8_t getByteWidth() const;
 
-  /// \return The underlying array buffer that this TypedArray uses for its
-  /// storage.
-  /// \pre This cannot be called on a detached TypedArray.
+  /// \return The underlying ArrayBuffer that this TypedArray uses for its
+  /// storage, or null if this TypedArray doesn't have a corresponding
+  /// ArrayBuffer. May be called even if the underlying buffer is detached.
   JSArrayBuffer *getBuffer(Runtime &runtime) const {
-    assert(buffer_ && "Must have some JSArrayBuffer");
     return buffer_.get(runtime);
   }
 

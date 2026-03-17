@@ -911,40 +911,41 @@ CallResult<HermesValue> typedArrayOf(void *, Runtime &runtime) {
 /// @name %JSTypedArray%.prototype
 /// @{
 
-/// ES6 22.2.3.1
+/// ES16 23.2.3.2
 CallResult<HermesValue> typedArrayPrototypeBuffer(void *, Runtime &runtime) {
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
-  if (JSTypedArrayBase::validateTypedArray(
-          runtime, args.getThisHandle(), false) == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
+  auto self = args.dyncastThis<JSTypedArrayBase>();
+  if (LLVM_UNLIKELY(!self)) {
+    return runtime.raiseTypeError(
+        "%TypedArray%.prototype.buffer called on a non-TypedArray");
   }
-  auto self = args.vmcastThis<JSTypedArrayBase>();
   return HermesValue::encodeObjectValue(self->getBuffer(runtime));
 }
 
+/// ES16 23.2.3.3
 CallResult<HermesValue> typedArrayPrototypeByteLength(
     void *,
     Runtime &runtime) {
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
-  if (JSTypedArrayBase::validateTypedArray(
-          runtime, args.getThisHandle(), false) == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
+  auto self = args.dyncastThis<JSTypedArrayBase>();
+  if (LLVM_UNLIKELY(!self)) {
+    return runtime.raiseTypeError(
+        "%TypedArray%.prototype.byteLength called on a non-TypedArray");
   }
-  auto self = args.vmcastThis<JSTypedArrayBase>();
   return HermesValue::encodeTrustedNumberValue(
       self->attached(runtime) ? self->getByteLength() : 0);
 }
 
-/// ES6 22.2.3.3
+/// ES16 23.2.3.4
 CallResult<HermesValue> typedArrayPrototypeByteOffset(
     void *,
     Runtime &runtime) {
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
-  if (JSTypedArrayBase::validateTypedArray(
-          runtime, args.getThisHandle(), false) == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
+  auto self = args.dyncastThis<JSTypedArrayBase>();
+  if (LLVM_UNLIKELY(!self)) {
+    return runtime.raiseTypeError(
+        "%TypedArray%.prototype.byteOffset called on a non-TypedArray");
   }
-  auto self = args.vmcastThis<JSTypedArrayBase>();
   return HermesValue::encodeTrustedNumberValue(
       self->attached(runtime) && self->getLength() != 0 ? self->getByteOffset()
                                                         : 0);
