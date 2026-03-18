@@ -2080,9 +2080,12 @@ std::pair<Type *, FlowChecker::CanFlowResult> FlowChecker::tryNarrowType(
   }
 
   // Otherwise, going from narrowType to targetType doesn't require a checked
-  // cast, but we do need to cast to the narrowType.
+  // cast, but we do need to cast from exprType to targetType because targetType
+  // could be a union that shares arms with exprType.
+  // Example: casting from `?T` to `T|void` needs to go to `T|void` properly
+  // because IRGen cannot assume that the type is `T` afterwards.
   cfCast.needCheckedCast = true;
-  return {narrowType, cfCast};
+  return {targetType, cfCast};
 }
 
 ESTree::Node *FlowChecker::implicitCheckedCast(

@@ -20,7 +20,6 @@ function loop(cur: C | null): C | null {
 function call(cur: C | null): void {
   function bar(c: C, cv: C | void): void {}
   if (cur) {
-    // Observe the ImplicitCheckedCast to C instead of C|void for cv.
     bar(cur, cur);
   }
 }
@@ -149,7 +148,7 @@ function retval(c: C | null): C {
 // CHECK-NEXT:                                            Id 'bar' [D:E:%d.11 'bar'] : %function.10
 // CHECK-NEXT:                                            ImplicitCheckedCast : %class.2
 // CHECK-NEXT:                                                Id 'cur' [D:E:%d.10 'cur'] : %union.4
-// CHECK-NEXT:                                            ImplicitCheckedCast : %class.2
+// CHECK-NEXT:                                            ImplicitCheckedCast : %union.9
 // CHECK-NEXT:                                                Id 'cur' [D:E:%d.10 'cur'] : %union.4
 // CHECK-NEXT:                    FunctionDeclaration : %function.7
 // CHECK-NEXT:                        Id 'assign' [D:E:%d.5 'assign']
