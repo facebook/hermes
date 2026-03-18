@@ -2629,6 +2629,21 @@
       "createdDate": "2026-02-27 04:49:49Z",
       "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts.",
       "expirationDate": "2026-08-26 00:00:00Z"
+    },
+    "d46f2b84fd7fa445aa02cf1dca659cf3d03268e93afa3deaaded5092fb451b82": {
+      "signature": "d46f2b84fd7fa445aa02cf1dca659cf3d03268e93afa3deaaded5092fb451b82",
+      "alternativeSignatures": [],
+      "target": "test/hermes/regress-eval-test262.js",
+      "line": 15,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "guardian-baseline"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-03-18 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts.",
+      "expirationDate": "2026-09-14 00:00:00Z"
     }
   }
 }
