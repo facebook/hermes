@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+// REQUIRES: core_extensions
 // RUN: %hermes -Xmicrotask-queue=0 %s | %FileCheck --match-full-lines --check-prefix=DISABLED %s
 // RUN: %hermes -Xmicrotask-queue=1 %s | %FileCheck --match-full-lines --check-prefix=ENABLED %s
 

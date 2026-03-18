@@ -239,8 +239,17 @@ set(HERMES_MEMORY_INSTRUMENTATION ${HERMES_ENABLE_DEBUGGER} CACHE BOOL
 set(HERMES_FACEBOOK_BUILD OFF CACHE BOOL
     "Build Facebook (rather than open-source) version of Hermes")
 
+set(HERMES_ENABLE_CORE_EXTENSIONS ON CACHE BOOL
+    "Include core JSI extensions (TextEncoder, etc.)")
+
 set(HERMES_ENABLE_CONTRIB_EXTENSIONS ON CACHE BOOL
     "Include community-contributed extensions (can be disabled for critical deployments)")
+
+# Contrib extensions require core extensions.
+if(NOT HERMES_ENABLE_CORE_EXTENSIONS AND HERMES_ENABLE_CONTRIB_EXTENSIONS)
+  message(STATUS "HERMES_ENABLE_CONTRIB_EXTENSIONS forced OFF because HERMES_ENABLE_CORE_EXTENSIONS is OFF")
+  set(HERMES_ENABLE_CONTRIB_EXTENSIONS OFF)
+endif()
 
 set(HERMESVM_EXCEPTION_ON_OOM OFF CACHE BOOL
     "GC Out-of-memory raises an exception, rather than causing a crash")
@@ -852,6 +861,7 @@ if(HERMES_ENABLE_TEST_SUITE)
     shermes=${HERMES_TOOLS_OUTPUT_DIR}/shermes
     check_native_stack=${HERMES_CHECK_NATIVE_STACK}
     unicode_lite=${HERMES_UNICODE_LITE}
+    core_extensions_enabled=${HERMES_ENABLE_CORE_EXTENSIONS}
     contrib_extensions_enabled=${HERMES_ENABLE_CONTRIB_EXTENSIONS}
     qemu_run_prefix=${QEMU_RUN_PREFIX}
     )
