@@ -8,13 +8,14 @@
 #ifndef HERMES_AST_ASTUTILS_H
 #define HERMES_AST_ASTUTILS_H
 
+#include "hermes/AST/ESTree.h"
+
+#include "llvh/ADT/ArrayRef.h"
+
 #include <memory>
 
 namespace hermes {
 class Context;
-namespace ESTree {
-class ProgramNode;
-} // namespace ESTree
 
 /// Wrap the given program in a IIFE, e.g.
 /// (function(exports){ ...program body })({});
@@ -22,6 +23,15 @@ class ProgramNode;
 ESTree::ProgramNode *wrapInIIFE(
     std::shared_ptr<Context> &context,
     ESTree::ProgramNode *program);
+
+/// \return true if the given list of Decorators contains the given Decorator
+/// member expression, provided as a list of identifiers.
+/// \pre \p names is not empty.
+/// \param names the list of identifiers to match.
+///   If {"a", "b", "c"}, then we are looking for @a.b.c.
+ESTree::DecoratorNode *findDecorator(
+    ESTree::NodeList &decorators,
+    llvh::ArrayRef<ESTree::NodeLabel> names);
 
 } // namespace hermes
 

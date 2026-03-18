@@ -59,4 +59,59 @@ ESTree::ProgramNode *wrapInIIFE(
   return program;
 }
 
+ESTree::DecoratorNode *findDecorator(
+    ESTree::NodeList &decorators,
+    llvh::ArrayRef<ESTree::NodeLabel> names) {
+  assert(!names.empty() && "can't search for no names");
+
+  // Special case: no member expressions.
+  if (names.size() == 1) {
+    for (ESTree::Node &dec : decorators) {
+      auto *decNode = llvh::cast<ESTree::DecoratorNode>(&dec);
+      auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(decNode->_expression);
+      if (id && id->_name == names.front())
+        return decNode;
+    }
+    return nullptr;
+  }
+
+  /// \return true when the \p decorator matches the names in the \c names list.
+  auto matchMemberExpression = [&names](ESTree::DecoratorNode *decorator) {
+    ESTree::Node *cur = decorator->_expression;
+    // Iterate backwards because nested member expressions have the final
+    // element in the chain higher in the AST.
+    for (size_t nameIdx = names.size() - 1; nameIdx > 0; --nameIdx) {
+      auto *me = llvh::dyn_cast<ESTree::MemberExpressionNode>(cur);
+      if (!me)
+        return false;
+      auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(me->_property);
+      if (!id)
+        return false;
+
+      // Check that the property name is correct.
+      if (id->_name != names[nameIdx])
+        return false;
+
+      if (auto *idObj = llvh::dyn_cast<ESTree::IdentifierNode>(me->_object)) {
+        // If the object is also an ID, then we should be done.
+        // Make sure we're done iterating and check the name.
+        if (nameIdx != 1)
+          return false;
+        return idObj->_name == names[0];
+      } else {
+        cur = me->_object;
+      }
+    }
+
+    return false;
+  };
+
+  for (ESTree::Node &dec : decorators) {
+    auto *decNode = llvh::cast<ESTree::DecoratorNode>(&dec);
+    if (matchMemberExpression(decNode))
+      return decNode;
+  }
+  return nullptr;
+}
+
 } // namespace hermes
