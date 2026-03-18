@@ -7,7 +7,7 @@
 
 #ifdef HERMES_ENABLE_DEBUGGER
 
-#include "AsyncDebuggerAPI.h"
+#include <hermes/AsyncDebuggerAPI.h>
 
 #include <hermes/Support/ErrorHandling.h>
 

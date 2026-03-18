@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include "AsyncDebuggerAPI.h"
+#include <hermes/AsyncDebuggerAPI.h>
 
 namespace facebook {
 namespace hermes {

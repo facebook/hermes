@@ -7,9 +7,8 @@
 
 #ifdef HERMES_ENABLE_DEBUGGER
 
-#include "DebuggerAPI.h"
-
-#include "hermes.h"
+#include <hermes/DebuggerAPI.h>
+#include <hermes/hermes.h>
 #include "hermes/VM/Debugger/DebugCommand.h"
 #include "hermes/VM/Debugger/Debugger.h"
 #include "hermes/VM/HermesValue.h"

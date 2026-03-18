@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "DomainState.h"
+#include <hermes/cdp/DomainState.h>
 
 #include <cassert>
 

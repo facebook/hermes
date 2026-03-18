@@ -5,12 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "DebuggerDomainAgent.h"
-
 #include <hermes/Regex/Executor.h>
 #include <hermes/Regex/Regex.h>
 #include <hermes/Regex/RegexTraits.h>
 #include <hermes/Support/UTF8.h>
+#include <hermes/cdp/DebuggerDomainAgent.h>
 #include <hermes/cdp/RemoteObjectConverters.h>
 
 namespace facebook {

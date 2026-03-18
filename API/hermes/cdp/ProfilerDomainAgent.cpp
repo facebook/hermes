@@ -5,11 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "ProfilerDomainAgent.h"
+#include <hermes/cdp/ProfilerDomainAgent.h>
+#include <hermes/hermes.h>
 
 #include <sstream>
-
-#include <hermes/hermes.h>
 
 namespace facebook {
 namespace hermes {

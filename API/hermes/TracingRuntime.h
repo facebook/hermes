@@ -7,8 +7,7 @@
 
 #pragma once
 
-#include "SynthTrace.h"
-
+#include <hermes/SynthTrace.h>
 #include <hermes/hermes.h>
 #include <jsi/decorator.h>
 #include "llvh/Support/raw_ostream.h"

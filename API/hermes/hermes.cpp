@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes.h"
+#include <hermes/hermes.h>
 
 #include "llvh/Support/Compiler.h"
 

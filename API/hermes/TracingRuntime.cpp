@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "TracingRuntime.h"
+#include <hermes/TracingRuntime.h>
 
 #include <hermes/BCGen/HBC/BCProvider.h>
 #include <hermes/Platform/Logging.h>

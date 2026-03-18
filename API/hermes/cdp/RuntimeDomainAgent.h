@@ -9,9 +9,9 @@
 
 #include <optional>
 
-#include "CDPDebugAPI.h"
-#include "DomainAgent.h"
-#include "RemoteObjectConverters.h"
+#include <hermes/cdp/CDPDebugAPI.h>
+#include <hermes/cdp/DomainAgent.h>
+#include <hermes/cdp/RemoteObjectConverters.h>
 
 namespace facebook {
 namespace hermes {

@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "DebuggerDomainCoordinator.h"
-#include "DebuggerDomainAgent.h"
+#include <hermes/cdp/DebuggerDomainAgent.h>
+#include <hermes/cdp/DebuggerDomainCoordinator.h>
 
 #include <algorithm>
 

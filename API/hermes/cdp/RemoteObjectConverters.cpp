@@ -5,9 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "RemoteObjectConverters.h"
-
 #include <hermes/cdp/MessageConverters.h>
+#include <hermes/cdp/RemoteObjectConverters.h>
 
 namespace facebook {
 namespace hermes {

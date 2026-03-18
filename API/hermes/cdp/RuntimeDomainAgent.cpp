@@ -11,9 +11,8 @@
 #include <hermes/cdp/MessageConverters.h>
 #include <hermes/cdp/RemoteObjectConverters.h>
 #include <hermes/cdp/RemoteObjectsTable.h>
+#include <hermes/cdp/RuntimeDomainAgent.h>
 #include <jsi/instrumentation.h>
-
-#include "RuntimeDomainAgent.h"
 
 namespace facebook {
 namespace hermes {
