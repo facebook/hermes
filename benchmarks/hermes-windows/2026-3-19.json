@@ -1,963 +1,993 @@
-﻿{
+{
     "runtime": "hermes (test)",
     "results": {
         "v8-crypto": {
             "totalTime": {
-                "mean": 614.5,
-                "stdev": 9.5,
+                "mean": 602.5,
+                "stdev": 3.5,
                 "samples": [
-                    624.0,
-                    605.0
+                    599,
+                    606
                 ]
             }
         },
         "v8-deltablue": {
             "totalTime": {
-                "mean": 758.5,
-                "stdev": 4.5,
+                "mean": 756.5,
+                "stdev": 8.5,
                 "samples": [
-                    754.0,
-                    763.0
+                    765,
+                    748
                 ]
             }
         },
         "v8-raytrace": {
             "totalTime": {
-                "mean": 125.0,
-                "stdev": 2.0,
+                "mean": 131.5,
+                "stdev": 5.5,
                 "samples": [
-                    127.0,
-                    123.0
+                    137,
+                    126
                 ]
             }
         },
         "v8-regexp": {
             "totalTime": {
-                "mean": 639.5,
-                "stdev": 2.5,
+                "mean": 632.5,
+                "stdev": 3.5,
                 "samples": [
-                    637.0,
-                    642.0
+                    629,
+                    636
                 ]
             }
         },
         "v8-richards": {
             "totalTime": {
-                "mean": 987.0,
-                "stdev": 11.0,
+                "mean": 984,
+                "stdev": 4,
                 "samples": [
-                    998.0,
-                    976.0
+                    988,
+                    980
                 ]
             }
         },
         "v8-splay": {
             "totalTime": {
-                "mean": 223.0,
-                "stdev": 0.0,
+                "mean": 222.5,
+                "stdev": 0.5,
                 "samples": [
-                    223.0,
-                    223.0
+                    223,
+                    222
                 ]
             }
         },
         "box2d": {
             "totalTime": {
-                "mean": 2562.5,
-                "stdev": 3.5,
+                "mean": 2628.5,
+                "stdev": 72.5,
                 "samples": [
-                    2566.0,
-                    2559.0
+                    2556,
+                    2701
                 ]
             }
         },
         "earley-boyer": {
             "totalTime": {
-                "mean": 2391.5,
-                "stdev": 6.5,
+                "mean": 2358.5,
+                "stdev": 16.5,
                 "samples": [
-                    2398.0,
-                    2385.0
+                    2375,
+                    2342
                 ]
             }
         },
         "navier-stokes": {
             "totalTime": {
-                "mean": 4377.0,
-                "stdev": 37.0,
+                "mean": 4493,
+                "stdev": 143,
                 "samples": [
-                    4414.0,
-                    4340.0
+                    4636,
+                    4350
                 ]
             }
         },
         "pdfjs": {
             "totalTime": {
-                "mean": 945.0,
-                "stdev": 12.0,
+                "mean": 927,
+                "stdev": 4,
                 "samples": [
-                    933.0,
-                    957.0
+                    923,
+                    931
                 ]
             }
         },
         "gbemu": {
             "totalTime": {
-                "mean": 2199.5,
-                "stdev": 8.5,
+                "mean": 2207.5,
+                "stdev": 9.5,
                 "samples": [
-                    2208.0,
-                    2191.0
+                    2198,
+                    2217
                 ]
             }
         },
         "code-load": {
             "totalTime": {
-                "mean": 4454.0,
-                "stdev": 30.0,
+                "mean": 4402,
+                "stdev": 2,
                 "samples": [
-                    4484.0,
-                    4424.0
+                    4400,
+                    4404
                 ]
             }
         },
         "typescript": {
             "totalTime": {
-                "mean": 3278.5,
-                "stdev": 8.5,
+                "mean": 3255,
+                "stdev": 8,
                 "samples": [
-                    3287.0,
-                    3270.0
+                    3263,
+                    3247
                 ]
             }
         },
         "simpleSum": {
             "totalTime": {
-                "mean": 5692.0,
-                "stdev": 28.0,
+                "mean": 5637.5,
+                "stdev": 9.5,
                 "samples": [
-                    5664.0,
-                    5720.0
+                    5628,
+                    5647
                 ]
             }
         },
         "propAccess": {
             "totalTime": {
-                "mean": 2183.0,
-                "stdev": 5.0,
+                "mean": 2223.5,
+                "stdev": 1.5,
                 "samples": [
-                    2188.0,
-                    2178.0
+                    2225,
+                    2222
                 ]
             }
         },
         "allocObj": {
             "totalTime": {
-                "mean": 196.0,
-                "stdev": 0.0,
+                "mean": 197.5,
+                "stdev": 1.5,
                 "samples": [
-                    196.0,
-                    196.0
+                    199,
+                    196
                 ]
             }
         },
         "allocObjLit": {
             "totalTime": {
-                "mean": 6147.0,
-                "stdev": 14.0,
+                "mean": 6130,
+                "stdev": 1,
                 "samples": [
-                    6161.0,
-                    6133.0
+                    6129,
+                    6131
                 ]
             }
         },
         "allocNewObj": {
             "totalTime": {
-                "mean": 19789.0,
-                "stdev": 14.0,
+                "mean": 19828,
+                "stdev": 75,
                 "samples": [
-                    19803.0,
-                    19775.0
+                    19903,
+                    19753
                 ]
             }
         },
         "allocArray": {
             "totalTime": {
-                "mean": 196.0,
-                "stdev": 0.0,
+                "mean": 202,
+                "stdev": 0,
                 "samples": [
-                    196.0,
-                    196.0
+                    202,
+                    202
                 ]
             }
         },
         "allocNewArray": {
             "totalTime": {
-                "mean": 34519.0,
-                "stdev": 87.0,
+                "mean": 34766.5,
+                "stdev": 289.5,
                 "samples": [
-                    34432.0,
-                    34606.0
+                    35056,
+                    34477
                 ]
             }
         },
         "arrayRead": {
             "totalTime": {
-                "mean": 100.0,
-                "stdev": 5.0,
+                "mean": 97,
+                "stdev": 9,
                 "samples": [
-                    95.0,
-                    105.0
+                    106,
+                    88
                 ]
             }
         },
         "arrayReadByIndex": {
             "totalTime": {
-                "mean": 620.5,
-                "stdev": 15.5,
+                "mean": 608.5,
+                "stdev": 1.5,
                 "samples": [
-                    636.0,
-                    605.0
+                    610,
+                    607
                 ]
             }
         },
         "largeArrayRead": {
             "totalTime": {
-                "mean": 542.0,
-                "stdev": 14.0,
+                "mean": 554,
+                "stdev": 36,
                 "samples": [
-                    528.0,
-                    556.0
+                    518,
+                    590
                 ]
             }
         },
         "arrayWrite": {
             "totalTime": {
-                "mean": 247.5,
-                "stdev": 7.5,
+                "mean": 242,
+                "stdev": 3,
                 "samples": [
-                    240.0,
-                    255.0
+                    239,
+                    245
                 ]
             }
         },
         "largeArrayWrite": {
             "totalTime": {
-                "mean": 2068.0,
-                "stdev": 24.0,
+                "mean": 2075.5,
+                "stdev": 9.5,
                 "samples": [
-                    2092.0,
-                    2044.0
+                    2085,
+                    2066
                 ]
             }
         },
         "interp-dispatch": {
             "totalTime": {
-                "mean": 1979.5,
-                "stdev": 16.5,
+                "mean": 1946,
+                "stdev": 0,
                 "samples": [
-                    1963.0,
-                    1996.0
+                    1946,
+                    1946
                 ]
             }
         },
         "wb-perf": {
             "totalTime": {
-                "mean": 10061.5,
-                "stdev": 15.5,
+                "mean": 9806,
+                "stdev": 66,
                 "samples": [
-                    10077.0,
-                    10046.0
+                    9740,
+                    9872
                 ]
             }
         },
         "arrayReverse": {
             "totalTime": {
-                "mean": 36.5,
-                "stdev": 0.5,
+                "mean": 36,
+                "stdev": 0,
                 "samples": [
-                    36.0,
-                    37.0
+                    36,
+                    36
                 ]
             }
         },
         "arrayMap": {
             "totalTime": {
-                "mean": 1479.0,
-                "stdev": 0.0,
+                "mean": 1476,
+                "stdev": 0,
                 "samples": [
-                    1479.0,
-                    1479.0
+                    1476,
+                    1476
                 ]
             }
         },
         "arrayIndexOf": {
             "totalTime": {
                 "mean": 139.5,
-                "stdev": 1.5,
+                "stdev": 0.5,
                 "samples": [
-                    141.0,
-                    138.0
+                    139,
+                    140
                 ]
             }
         },
         "arrayLastIndexOf": {
             "totalTime": {
-                "mean": 146.0,
-                "stdev": 0.0,
+                "mean": 145,
+                "stdev": 0,
                 "samples": [
-                    146.0,
-                    146.0
+                    145,
+                    145
                 ]
             }
         },
         "arrayEvery": {
             "totalTime": {
-                "mean": 2231.0,
-                "stdev": 0.0,
+                "mean": 2232.5,
+                "stdev": 0.5,
                 "samples": [
-                    2231.0,
-                    2231.0
+                    2233,
+                    2232
                 ]
             }
         },
         "arraySome": {
             "totalTime": {
-                "mean": 2243.5,
-                "stdev": 9.5,
+                "mean": 2232.5,
+                "stdev": 0.5,
                 "samples": [
-                    2234.0,
-                    2253.0
+                    2233,
+                    2232
                 ]
             }
         },
         "arrayFill": {
             "totalTime": {
-                "mean": 2453.0,
-                "stdev": 0.0,
+                "mean": 2451.5,
+                "stdev": 0.5,
                 "samples": [
-                    2453.0,
-                    2453.0
+                    2451,
+                    2452
                 ]
             }
         },
         "arrayFilter": {
             "totalTime": {
-                "mean": 1855.5,
-                "stdev": 24.5,
+                "mean": 1835.5,
+                "stdev": 1.5,
                 "samples": [
-                    1880.0,
-                    1831.0
+                    1837,
+                    1834
                 ]
             }
         },
         "arrayFind": {
             "totalTime": {
-                "mean": 3295.5,
-                "stdev": 8.5,
+                "mean": 3288,
+                "stdev": 1,
                 "samples": [
-                    3287.0,
-                    3304.0
+                    3287,
+                    3289
                 ]
             }
         },
         "arrayFindIndex": {
             "totalTime": {
-                "mean": 3405.0,
-                "stdev": 120.0,
+                "mean": 3288,
+                "stdev": 0,
                 "samples": [
-                    3285.0,
-                    3525.0
+                    3288,
+                    3288
                 ]
             }
         },
         "arrayPop": {
             "totalTime": {
-                "mean": 1015.5,
-                "stdev": 1.5,
+                "mean": 1049.5,
+                "stdev": 36.5,
                 "samples": [
-                    1014.0,
-                    1017.0
+                    1086,
+                    1013
                 ]
             }
         },
         "arrayReduce": {
             "totalTime": {
-                "mean": 2068.0,
-                "stdev": 1.0,
+                "mean": 2075.5,
+                "stdev": 7.5,
                 "samples": [
-                    2069.0,
-                    2067.0
+                    2068,
+                    2083
                 ]
             }
         },
         "arrayReduceRight": {
             "totalTime": {
-                "mean": 2069.5,
-                "stdev": 2.5,
+                "mean": 2070,
+                "stdev": 3,
                 "samples": [
-                    2072.0,
-                    2067.0
+                    2067,
+                    2073
                 ]
             }
         },
         "arrayShift": {
             "totalTime": {
-                "mean": 2057.0,
-                "stdev": 0.0,
+                "mean": 2058.5,
+                "stdev": 0.5,
                 "samples": [
-                    2057.0,
-                    2057.0
+                    2058,
+                    2059
                 ]
             }
         },
         "arrayUnshift": {
             "totalTime": {
-                "mean": 2125.5,
-                "stdev": 21.5,
+                "mean": 2104.5,
+                "stdev": 0.5,
                 "samples": [
-                    2147.0,
-                    2104.0
+                    2105,
+                    2104
                 ]
             }
         },
         "arrayIncludes": {
             "totalTime": {
-                "mean": 1197.0,
-                "stdev": 8.0,
+                "mean": 1184,
+                "stdev": 2,
                 "samples": [
-                    1189.0,
-                    1205.0
+                    1182,
+                    1186
                 ]
             }
         },
         "arrayFrom": {
             "totalTime": {
-                "mean": 1109.5,
-                "stdev": 6.5,
+                "mean": 1107,
+                "stdev": 9,
                 "samples": [
-                    1116.0,
-                    1103.0
+                    1098,
+                    1116
                 ]
             }
         },
         "arrayCopyWithin": {
             "totalTime": {
-                "mean": 1554.0,
-                "stdev": 1.0,
+                "mean": 1507.5,
+                "stdev": 2.5,
                 "samples": [
-                    1553.0,
-                    1555.0
+                    1505,
+                    1510
                 ]
             }
         },
         "stringFromCharCode": {
             "totalTime": {
-                "mean": 91.5,
+                "mean": 89.5,
                 "stdev": 0.5,
                 "samples": [
-                    92.0,
-                    91.0
+                    89,
+                    90
                 ]
             }
         },
         "arraySlice": {
             "totalTime": {
-                "mean": 810.5,
+                "mean": 793.5,
                 "stdev": 0.5,
                 "samples": [
-                    811.0,
-                    810.0
+                    794,
+                    793
                 ]
             }
         },
         "arraySplice": {
             "totalTime": {
-                "mean": 27.0,
-                "stdev": 0.0,
+                "mean": 29,
+                "stdev": 2,
                 "samples": [
-                    27.0,
-                    27.0
+                    27,
+                    31
                 ]
             }
         },
         "arrayOf": {
             "totalTime": {
-                "mean": 1088.5,
-                "stdev": 23.5,
+                "mean": 1045.5,
+                "stdev": 0.5,
                 "samples": [
-                    1065.0,
-                    1112.0
+                    1046,
+                    1045
                 ]
             }
         },
         "stringCharAt": {
             "totalTime": {
-                "mean": 1265.5,
-                "stdev": 3.5,
+                "mean": 1259,
+                "stdev": 0,
                 "samples": [
-                    1269.0,
-                    1262.0
+                    1259,
+                    1259
                 ]
             }
         },
         "stringMatch": {
             "totalTime": {
-                "mean": 2933.5,
-                "stdev": 16.5,
+                "mean": 2907,
+                "stdev": 1,
                 "samples": [
-                    2917.0,
-                    2950.0
+                    2906,
+                    2908
                 ]
             }
         },
         "stringSearch": {
             "totalTime": {
-                "mean": 2949.0,
-                "stdev": 23.0,
+                "mean": 2904.5,
+                "stdev": 0.5,
                 "samples": [
-                    2926.0,
-                    2972.0
+                    2905,
+                    2904
                 ]
             }
         },
         "stringStartsWith": {
             "totalTime": {
-                "mean": 557.0,
-                "stdev": 1.0,
+                "mean": 564.5,
+                "stdev": 1.5,
                 "samples": [
-                    556.0,
-                    558.0
+                    563,
+                    566
                 ]
             }
         },
         "stringEndsWith": {
             "totalTime": {
-                "mean": 533.0,
-                "stdev": 0.0,
+                "mean": 534.5,
+                "stdev": 1.5,
                 "samples": [
-                    533.0,
-                    533.0
+                    533,
+                    536
                 ]
             }
         },
         "stringIncludes": {
             "totalTime": {
-                "mean": 1943.0,
-                "stdev": 1.0,
+                "mean": 1945.5,
+                "stdev": 1.5,
                 "samples": [
-                    1942.0,
-                    1944.0
+                    1944,
+                    1947
                 ]
             }
         },
         "stringIndexOf": {
             "totalTime": {
-                "mean": 1964.0,
-                "stdev": 2.0,
+                "mean": 1953.5,
+                "stdev": 16.5,
                 "samples": [
-                    1966.0,
-                    1962.0
+                    1970,
+                    1937
                 ]
             }
         },
         "stringLastIndexOf": {
             "totalTime": {
-                "mean": 1930.5,
-                "stdev": 0.5,
+                "mean": 1926,
+                "stdev": 0,
                 "samples": [
-                    1931.0,
-                    1930.0
+                    1926,
+                    1926
                 ]
             }
         },
         "stringSplit": {
             "totalTime": {
-                "mean": 795.0,
-                "stdev": 2.0,
+                "mean": 796.5,
+                "stdev": 0.5,
                 "samples": [
-                    797.0,
-                    793.0
+                    796,
+                    797
                 ]
             }
         },
         "stringSlice": {
             "totalTime": {
-                "mean": 482.5,
-                "stdev": 0.5,
+                "mean": 486,
+                "stdev": 3,
                 "samples": [
-                    482.0,
-                    483.0
+                    483,
+                    489
                 ]
             }
         },
         "stringPadStart": {
             "totalTime": {
-                "mean": 2896.0,
-                "stdev": 2.0,
+                "mean": 2896,
+                "stdev": 1,
                 "samples": [
-                    2898.0,
-                    2894.0
+                    2895,
+                    2897
                 ]
             }
         },
         "stringPadEnd": {
             "totalTime": {
-                "mean": 2895.5,
-                "stdev": 0.5,
+                "mean": 2896,
+                "stdev": 1,
                 "samples": [
-                    2895.0,
-                    2896.0
+                    2897,
+                    2895
                 ]
             }
         },
         "regExpMatch": {
             "totalTime": {
                 "mean": 1551.5,
-                "stdev": 13.5,
+                "stdev": 2.5,
                 "samples": [
-                    1538.0,
-                    1565.0
+                    1554,
+                    1549
                 ]
             }
         },
         "regExpSearch": {
             "totalTime": {
-                "mean": 1215.5,
-                "stdev": 2.5,
+                "mean": 1216.5,
+                "stdev": 1.5,
                 "samples": [
-                    1213.0,
-                    1218.0
+                    1218,
+                    1215
                 ]
             }
         },
         "regExpToString": {
             "totalTime": {
-                "mean": 1059.5,
-                "stdev": 0.5,
+                "mean": 1061.5,
+                "stdev": 1.5,
                 "samples": [
-                    1060.0,
-                    1059.0
+                    1060,
+                    1063
                 ]
             }
         },
         "stringReplace": {
             "totalTime": {
-                "mean": 1570.5,
-                "stdev": 19.5,
+                "mean": 1511.5,
+                "stdev": 0.5,
                 "samples": [
-                    1590.0,
-                    1551.0
+                    1512,
+                    1511
                 ]
             }
         },
         "regExpReplace": {
             "totalTime": {
-                "mean": 885.0,
-                "stdev": 1.0,
+                "mean": 890,
+                "stdev": 4,
                 "samples": [
-                    884.0,
-                    886.0
+                    886,
+                    894
                 ]
             }
         },
         "regExpFlags": {
             "totalTime": {
-                "mean": 938.5,
-                "stdev": 0.5,
+                "mean": 981.5,
+                "stdev": 28.5,
                 "samples": [
-                    939.0,
-                    938.0
+                    953,
+                    1010
                 ]
             }
         },
         "regExpSplit": {
             "totalTime": {
-                "mean": 1249.5,
-                "stdev": 2.5,
+                "mean": 1246.5,
+                "stdev": 1.5,
                 "samples": [
-                    1252.0,
-                    1247.0
+                    1245,
+                    1248
                 ]
             }
         },
         "numberArrayReadWrite": {
             "totalTime": {
-                "mean": 2372.0,
-                "stdev": 9.0,
+                "mean": 2381,
+                "stdev": 7,
                 "samples": [
-                    2381.0,
-                    2363.0
+                    2388,
+                    2374
                 ]
             }
         },
         "protoCache": {
             "totalTime": {
-                "mean": 2333.0,
-                "stdev": 12.0,
+                "mean": 2333.5,
+                "stdev": 57.5,
                 "samples": [
-                    2345.0,
-                    2321.0
+                    2391,
+                    2276
                 ]
             }
         },
         "micros/getNodeById.js": {
             "totalTime": {
-                "mean": 4877.5,
-                "stdev": 9.1923881554251174,
+                "mean": 4772.5,
+                "stdev": 24.748737341529164,
                 "samples": [
-                    4884,
-                    4871
+                    4755,
+                    4790
                 ]
             }
         },
         "micros/setInsert.js": {
             "totalTime": {
-                "mean": 2623.5,
-                "stdev": 3.5355339059327378,
+                "mean": 2557.5,
+                "stdev": 108.18733752154178,
                 "samples": [
-                    2621,
-                    2626
+                    2481,
+                    2634
                 ]
             }
         },
         "micros/stringify-number.js": {
             "totalTime": {
-                "mean": 1842,
-                "stdev": 9.8994949366116654,
+                "mean": 1819,
+                "stdev": 14.142135623730951,
                 "samples": [
-                    1849,
-                    1835
+                    1809,
+                    1829
                 ]
             }
         },
         "micros/typed-array-sort.js": {
             "totalTime": {
-                "mean": 22607.5,
-                "stdev": 45.961940777125591,
+                "mean": 22505.5,
+                "stdev": 34.64823227814083,
                 "samples": [
-                    22640,
-                    22575
+                    22530,
+                    22481
                 ]
             }
         },
         "jit-benches/idisp.js": {
             "totalTime": {
-                "mean": 1961.5,
-                "stdev": 10.606601717798213,
+                "mean": 1974.5,
+                "stdev": 13.435028842544403,
                 "samples": [
-                    1969,
-                    1954
+                    1965,
+                    1984
                 ]
             }
         },
         "jit-benches/idispn.js": {
             "totalTime": {
-                "mean": 2056.5,
-                "stdev": 23.334523779156068,
+                "mean": 2051,
+                "stdev": 9.899494936611665,
                 "samples": [
-                    2073,
-                    2040
+                    2044,
+                    2058
                 ]
             }
         },
         "many-subclasses/many.js": {
             "totalTime": {
-                "mean": 18405,
-                "stdev": 93.338095116624274,
+                "mean": 18391.5,
+                "stdev": 54.44722215136416,
                 "samples": [
-                    18339,
-                    18471
+                    18353,
+                    18430
                 ]
             }
         },
         "many-subclasses/many-sh-1.js": {
             "totalTime": {
-                "mean": 8048.5,
-                "stdev": 16.263455967290593,
+                "mean": 8024,
+                "stdev": 12.727922061357855,
                 "samples": [
-                    8060,
-                    8037
+                    8015,
+                    8033
                 ]
             }
         },
         "many-subclasses/many-sh-2.js": {
             "totalTime": {
-                "mean": 8063.5,
-                "stdev": 28.991378028648448,
+                "mean": 8092,
+                "stdev": 9.899494936611665,
                 "samples": [
-                    8084,
-                    8043
+                    8085,
+                    8099
                 ]
             }
         },
         "many-subclasses/many-sh-3.js": {
             "totalTime": {
-                "mean": 7960,
-                "stdev": 8.48528137423857,
+                "mean": 7960.5,
+                "stdev": 14.849242404917497,
                 "samples": [
-                    7954,
-                    7966
+                    7950,
+                    7971
                 ]
             }
         },
         "many-subclasses/many-sh-4.js": {
             "totalTime": {
-                "mean": 7976.5,
-                "stdev": 34.648232278140831,
+                "mean": 7945.5,
+                "stdev": 0.7071067811865476,
                 "samples": [
-                    8001,
-                    7952
+                    7945,
+                    7946
                 ]
             }
         },
         "map-objects/map-objects-untyped.js": {
             "totalTime": {
-                "mean": 989,
-                "stdev": 2.8284271247461903,
+                "mean": 986,
+                "stdev": 0,
                 "samples": [
-                    991,
-                    987
+                    986,
+                    986
                 ]
             }
         },
         "map-objects/map-objects-typed.js": {
             "totalTime": {
-                "mean": 924,
-                "stdev": 5.6568542494923806,
+                "mean": 931.5,
+                "stdev": 6.363961030678928,
                 "samples": [
-                    920,
-                    928
+                    936,
+                    927
                 ]
             }
         },
         "map-strings/map-strings-untyped.js": {
             "totalTime": {
-                "mean": 1164.5,
-                "stdev": 2.1213203435596424,
+                "mean": 1162,
+                "stdev": 0,
                 "samples": [
-                    1163,
-                    1166
+                    1162,
+                    1162
                 ]
             }
         },
         "map-strings/map-strings-typed.js": {
             "totalTime": {
-                "mean": 1095,
-                "stdev": 11.313708498984761,
+                "mean": 1101,
+                "stdev": 1.4142135623730951,
                 "samples": [
-                    1103,
-                    1087
+                    1100,
+                    1102
                 ]
             }
         },
         "nbody/original/nbody.js": {
             "totalTime": {
-                "mean": 655.5,
-                "stdev": 33.234018715767732,
+                "mean": 685,
+                "stdev": 15.556349186104045,
                 "samples": [
-                    679,
-                    632
+                    674,
+                    696
                 ]
             }
         },
         "nbody/fully-typed/nbody.js": {
             "totalTime": {
-                "mean": 579.5,
-                "stdev": 47.376154339498683,
+                "mean": 614.5,
+                "stdev": 14.849242404917497,
                 "samples": [
-                    613,
-                    546
+                    604,
+                    625
                 ]
             }
         },
         "nbody/fully-typed/nbody.ts": {
             "totalTime": {
-                "mean": 683,
-                "stdev": 7.0710678118654755,
+                "mean": 674.5,
+                "stdev": 33.23401871576773,
                 "samples": [
-                    688,
-                    678
+                    651,
+                    698
                 ]
             }
         },
         "string-switch/plain/bench.js": {
             "totalTime": {
-                "mean": 1314,
-                "stdev": 11.313708498984761,
+                "mean": 1317,
+                "stdev": 19.79898987322333,
                 "samples": [
-                    1322,
-                    1306
+                    1303,
+                    1331
                 ]
             }
         },
         "raytracer/original/bench-raytracer.js": {
             "totalTime": {
-                "mean": 1467.5,
-                "stdev": 47.376154339498683,
+                "mean": 1443.5,
+                "stdev": 6.363961030678928,
                 "samples": [
-                    1501,
-                    1434
+                    1448,
+                    1439
+                ]
+            }
+        },
+        "raytracer/original/raytracer.ts": {
+            "totalTime": {
+                "mean": 1548,
+                "stdev": 4.242640687119285,
+                "samples": [
+                    1545,
+                    1551
                 ]
             }
         },
         "MiniReact/no-objects/out/simple-stripped.js": {
             "totalTime": {
-                "mean": 2188.5,
-                "stdev": 72.8319984622144,
+                "mean": 2136.5,
+                "stdev": 2.1213203435596424,
                 "samples": [
-                    2240,
-                    2137
+                    2135,
+                    2138
                 ]
             }
         },
         "MiniReact/no-objects/out/simple-lowered.js": {
             "totalTime": {
-                "mean": 2191,
-                "stdev": 14.142135623730951,
+                "mean": 2192,
+                "stdev": 26.870057685088806,
                 "samples": [
-                    2201,
-                    2181
+                    2211,
+                    2173
                 ]
             }
         },
         "MiniReact/no-objects/out/music-stripped.js": {
             "totalTime": {
-                "mean": 69,
-                "stdev": 21.213203435596427,
+                "mean": 73,
+                "stdev": 18.384776310850235,
                 "samples": [
-                    84,
-                    54
+                    60,
+                    86
                 ]
             }
         },
         "MiniReact/no-objects/out/music-lowered.js": {
             "totalTime": {
-                "mean": 73.5,
-                "stdev": 21.920310216782973,
+                "mean": 76,
+                "stdev": 16.97056274847714,
                 "samples": [
-                    89,
-                    58
+                    64,
+                    88
                 ]
             }
         },
         "MiniReact/no-deps/stripped/MiniReact.js": {
             "totalTime": {
-                "mean": 4712.5,
-                "stdev": 70.0035713374682,
+                "mean": 4721,
+                "stdev": 59.39696961966999,
                 "samples": [
-                    4762,
-                    4663
+                    4679,
+                    4763
                 ]
             }
         },
         "widgets/simple-classes/widgets.js": {
             "totalTime": {
-                "mean": 1608.5,
-                "stdev": 12.020815280171307,
+                "mean": 1618,
+                "stdev": 49.49747468305833,
                 "samples": [
-                    1617,
-                    1600
+                    1583,
+                    1653
+                ]
+            }
+        },
+        "widgets/original/es5/widgets.js": {
+            "totalTime": {
+                "mean": 2703.5,
+                "stdev": 10.606601717798213,
+                "samples": [
+                    2711,
+                    2696
+                ]
+            }
+        },
+        "widgets/single-file/es5/widgets.js": {
+            "totalTime": {
+                "mean": 2707,
+                "stdev": 9.899494936611665,
+                "samples": [
+                    2714,
+                    2700
                 ]
             }
         }

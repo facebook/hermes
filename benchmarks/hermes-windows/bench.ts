@@ -124,6 +124,7 @@ const benchmarks: BenchmarkDef[] = [
 
   // raytracer/
   { path: 'raytracer/original/bench-raytracer.js', parser: pExecTime },
+  { path: 'raytracer/original/raytracer.ts', flags: ['-parse-ts'], parser: pExecTime },
 
   // MiniReact/
   { path: 'MiniReact/no-objects/out/simple-stripped.js', parser: pTrailingMs },
@@ -134,18 +135,19 @@ const benchmarks: BenchmarkDef[] = [
 
   // widgets/
   { path: 'widgets/simple-classes/widgets.js', flags: ['-typed'], parser: pMsIterations },
+  { path: 'widgets/original/es5/widgets.js', parser: pMsIterations },
+  { path: 'widgets/single-file/es5/widgets.js', parser: pMsIterations },
 ];
 
 // ---------------------------------------------------------------------------
-// Does not work -- commented out
+// Does not work -- commented out (see fixingIndividual.md Phase 3)
+// All require -typed mode which hits unimplemented FlowChecker features.
+// MiniReact/original/MiniReact.js is not listed — it is a library with no
+// entry point, not a runnable benchmark.
 // ---------------------------------------------------------------------------
 // { path: 'MiniReact/no-deps/MiniReact.js', flags: ['-typed'] },        // unsupported type annotations
-// { path: 'MiniReact/original/MiniReact.js', flags: ['-typed'] },       // ES module imports
 // { path: 'MiniReact/no-objects/out/simple.js', flags: ['-typed'] },    // crashes
 // { path: 'MiniReact/no-objects/out/music.js', flags: ['-typed'] },     // unsupported type annotations
-// { path: 'widgets/original/app_runner.js', flags: ['-typed'] },        // ES module imports
-// { path: 'widgets/single-file/widgets.js', flags: ['-typed'] },        // unsupported type annotations
-// { path: 'raytracer/original/raytracer.ts', flags: ['-parse-ts'] },    // unsupported TS parameter properties
 
 // ---------------------------------------------------------------------------
 // Run a single benchmark

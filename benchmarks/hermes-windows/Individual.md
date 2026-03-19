@@ -59,7 +59,7 @@ Some files still fail even with `-typed` due to unsupported features (ES module 
 ## raytracer/
 
 - raytracer/original/bench-raytracer.js: `exec time:  {ms} ms`
-- raytracer/original/raytracer.ts: **does not work** (uses TS parameter properties unsupported by hermes)
+- raytracer/original/raytracer.ts: `exec time:  {ms} ms` (requires `-parse-ts`, parameter properties rewritten)
 - raytracer/typed/: **requires shermes + CMake build** (compiled typed JS + C++ GUI, not available on Windows)
 
 ## MiniReact/
@@ -77,8 +77,10 @@ Some files still fail even with `-typed` due to unsupported features (ES module 
 ## widgets/
 
 - widgets/simple-classes/widgets.js: `{ms} ms {N} iterations` (requires `-typed`)
-- widgets/original/app_runner.js: **does not work** (ES module imports not supported)
-- widgets/single-file/widgets.js: **does not work** (unsupported type annotations even with `-typed`)
+- widgets/original/es5/widgets.js: `{ms} ms {N} iterations` (webpack-bundled ES5 variant)
+- widgets/single-file/es5/widgets.js: `{ms} ms {N} iterations` (Babel-lowered ES5 variant)
+- widgets/original/app_runner.js: **does not work** (ES module imports; use `es5/widgets.js` instead)
+- widgets/single-file/widgets.js: **does not work** (unsupported type annotations; use `es5/widgets.js` instead)
 
 ## octane/ (Google Octane v2, BenchmarkSuite scoring)
 

@@ -1,8 +1,12 @@
 
 class Vector {
-    constructor(public x: number,
-                public y: number,
-                public z: number) {
+    x: number;
+    y: number;
+    z: number;
+    constructor(x: number, y: number, z: number) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
     }
     static times(k: number, v: Vector) { return new Vector(k * v.x, k * v.y, k * v.z); }
     static minus(v1: Vector, v2: Vector) { return new Vector(v1.x - v2.x, v1.y - v2.y, v1.z - v2.z); }
@@ -22,9 +26,13 @@ class Vector {
 }
 
 class Color {
-    constructor(public r: number,
-                public g: number,
-                public b: number) {
+    r: number;
+    g: number;
+    b: number;
+    constructor(r: number, g: number, b: number) {
+        this.r = r;
+        this.g = g;
+        this.b = b;
     }
     static scale(k: number, v: Color) { return new Color(k * v.r, k * v.g, k * v.b); }
     static plus(v1: Color, v2: Color) { return new Color(v1.r + v2.r, v1.g + v2.g, v1.b + v2.b); }
@@ -45,11 +53,13 @@ class Color {
 }
 
 class Camera {
-    public forward: Vector;
-    public right: Vector;
-    public up: Vector;
+    forward: Vector;
+    right: Vector;
+    up: Vector;
+    pos: Vector;
 
-    constructor(public pos: Vector, lookAt: Vector) {
+    constructor(pos: Vector, lookAt: Vector) {
+        this.pos = pos;
         var down = new Vector(0.0, -1.0, 0.0);
         this.forward = Vector.norm(Vector.minus(lookAt, this.pos));
         this.right = Vector.times(1.5, Vector.norm(Vector.cross(this.forward, down)));
@@ -57,45 +67,18 @@ class Camera {
     }
 }
 
-interface Ray {
-    start: Vector;
-    dir: Vector;
-}
+// Interfaces removed — hermes -parse-ts does not support standalone interface
+// declarations. Type annotations on class fields and function parameters are
+// kept as they are supported and provide optimization hints.
 
-interface Intersection {
-    thing: Thing;
-    ray: Ray;
-    dist: number;
-}
-
-interface Surface {
-    diffuse: (pos: Vector) => Color;
-    specular: (pos: Vector) => Color;
-    reflect: (pos: Vector) => number;
-    roughness: number;
-}
-
-interface Thing {
-    intersect: (ray: Ray) => Intersection;
-    normal: (pos: Vector) => Vector;
+class Sphere {
+    radius2: number;
+    center: Vector;
     surface: Surface;
-}
 
-interface Light {
-    pos: Vector;
-    color: Color;
-}
-
-interface Scene {
-    things: Thing[];
-    lights: Light[];
-    camera: Camera;
-}
-
-class Sphere implements Thing {
-    public radius2: number;
-
-    constructor(public center: Vector, radius: number, public surface: Surface) {
+    constructor(center: Vector, radius: number, surface: Surface) {
+        this.center = center;
+        this.surface = surface;
         this.radius2 = radius * radius;
     }
     normal(pos: Vector): Vector { return Vector.norm(Vector.minus(pos, this.center)); }
@@ -117,10 +100,12 @@ class Sphere implements Thing {
     }
 }
 
-class Plane implements Thing {
-    public normal: (pos: Vector) =>Vector;
-    public intersect: (ray: Ray) =>Intersection;
-    constructor(norm: Vector, offset: number, public surface: Surface) {
+class Plane {
+    normal: (pos: Vector) => Vector;
+    intersect: (ray: Ray) => Intersection;
+    surface: Surface;
+    constructor(norm: Vector, offset: number, surface: Surface) {
+        this.surface = surface;
         this.normal = function(pos: Vector) { return norm; }
         this.intersect = function(ray: Ray): Intersection {
             var denom = Vector.dot(norm, ray.dir);
@@ -134,14 +119,14 @@ class Plane implements Thing {
     }
 }
 
-module Surfaces {
-    export var shiny: Surface = {
+var Surfaces = {
+    shiny: {
         diffuse: function(pos) { return Color.white; },
         specular: function(pos) { return Color.grey; },
         reflect: function(pos) { return 0.7; },
         roughness: 250
-    }
-    export var checkerboard: Surface = {
+    },
+    checkerboard: {
         diffuse: function(pos) {
             if ((Math.floor(pos.z) + Math.floor(pos.x)) % 2 !== 0) {
                 return Color.white;
@@ -159,7 +144,7 @@ module Surfaces {
         },
         roughness: 150
     }
-}
+};
 
 
 class RayTracer {
@@ -243,8 +228,7 @@ class RayTracer {
             for (var x = 0; x < screenWidth; x++) {
                 var color = this.traceRay({ start: scene.camera.pos, dir: getPoint(x, y, scene.camera) }, scene, 0);
                 var c = Color.toDrawingColor(color);
-                ctx.fillStyle = "rgb(" + String(c.r) + ", " + String(c.g) + ", " + String(c.b) + ")";
-                ctx.fillRect(x, y, 1, 1);
+                ctx[y * screenWidth + x] = ((255 & 0xFF) << 24) | ((c.b & 0xFF) << 16) | ((c.g & 0xFF) << 8) | (c.r & 0xFF);
             }
         }
     }
@@ -265,13 +249,12 @@ function defaultScene(): Scene {
 }
 
 function exec() {
-    var canv = document.createElement("canvas");
-    canv.width = 256;
-    canv.height = 256;
-    document.body.appendChild(canv);
-    var ctx = canv.getContext("2d");
+    let width = 256;
+    let height = 256;
+    var ctx = new Uint32Array(width * height);
     var rayTracer = new RayTracer();
-    return rayTracer.render(defaultScene(), ctx, canv.width, canv.height);
+    let t1 = Date.now();
+    rayTracer.render(defaultScene(), ctx, width, height);
+    print("exec time: " + (Date.now() - t1) + " ms");
 }
-
 exec();
