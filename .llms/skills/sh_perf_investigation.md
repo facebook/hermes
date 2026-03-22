@@ -264,6 +264,51 @@ jf s
 | `antipattern_scan.py` | C++ source anti-patterns |
 | `js_antipattern_scan.py` | JS benchmark anti-patterns |
 
+## Running Agent-Perf Tests
+
+All Python tools have unit tests in `agent-perf/tests/` using Python's built-in
+`unittest` module. Tests use synthetic input data — no shermes binary, perf
+counters, or build system required.
+
+```bash
+# Run ALL tests (from xplat/static_h/)
+python3 -m unittest discover -s agent-perf/tests -p 'test_*.py' -v
+
+# Run a single test file
+python3 -m unittest agent-perf/tests/test_generated_code_analyzer.py -v
+
+# Run a specific test class
+python3 -m unittest agent-perf.tests.test_generated_code_analyzer.TestAnalyzeGeneratedCode -v
+
+# Run a specific test method
+python3 -m unittest agent-perf.tests.test_generated_code_analyzer.TestAnalyzeGeneratedCode.test_basic_analysis -v
+```
+
+**Always run from `xplat/static_h/`.** Tests import tools via relative path.
+
+Validate shell scripts (syntax check only):
+```bash
+for f in agent-perf/tools/*.sh; do bash -n "$f"; done
+```
+
+**When to run tests:**
+- After modifying any Python tool in `agent-perf/tools/`
+- After modifying any test in `agent-perf/tests/`
+- Before submitting diffs that touch agent-perf code
+
+**Adding tests for a new tool** `agent-perf/tools/my_tool.py`:
+1. Create `agent-perf/tests/test_my_tool.py`
+2. Add the path preamble:
+   ```python
+   import sys
+   from pathlib import Path
+   TOOLS_DIR = Path(__file__).parent.parent / "tools"
+   sys.path.insert(0, str(TOOLS_DIR))
+   from my_tool import my_function
+   ```
+3. Write `unittest.TestCase` classes with synthetic inputs
+4. Verify: `python3 -m unittest agent-perf/tests/test_my_tool.py -v`
+
 ## Key Runtime Files for Optimization
 
 | File | Lines | What's hot |
