@@ -298,7 +298,7 @@ def main() -> None:
     report = compare(typed_data, untyped_data)
 
     if args.json:
-        print(json.dumps(report, indent=2))
+        print(json.dumps(report))
     else:
         print(format_human(report))
 

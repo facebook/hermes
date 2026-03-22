@@ -234,7 +234,7 @@ def main() -> None:
 
     if args.json:
         output = {"metrics": metrics, "anomalies": anomalies}
-        print(json.dumps(output, indent=2))
+        print(json.dumps(output))
     else:
         print(format_human(anomalies, metrics))
 

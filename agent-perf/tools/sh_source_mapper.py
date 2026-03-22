@@ -229,7 +229,7 @@ def main() -> None:
     if args.c_line is not None:
         result = query_c_line(mappings, args.c_line)
         if args.json:
-            print(json.dumps(result, indent=2))
+            print(json.dumps(result))
         else:
             if result:
                 print(format_human_query(result, "c_to_js"))
@@ -239,7 +239,7 @@ def main() -> None:
     elif args.js_line is not None:
         results = query_js_line(mappings, args.js_line, args.js_file)
         if args.json:
-            print(json.dumps(results, indent=2))
+            print(json.dumps(results))
         else:
             if results:
                 print(f"JS line {args.js_line} maps to {len(results)} C line(s):")
@@ -251,7 +251,7 @@ def main() -> None:
     else:
         # Dump full source map.
         if args.json:
-            print(json.dumps(mappings, indent=2))
+            print(json.dumps(mappings))
         else:
             print(format_human_full(mappings))
 

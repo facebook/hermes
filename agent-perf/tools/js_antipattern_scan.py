@@ -354,7 +354,7 @@ def main() -> None:
         all_findings.extend(scan_js_file(filepath))
 
     if args.json:
-        print(json.dumps(all_findings, indent=2))
+        print(json.dumps(all_findings))
     else:
         print(format_human(all_findings))
 

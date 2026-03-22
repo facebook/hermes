@@ -227,7 +227,7 @@ run_single() {
     read -r median mean _ <<< "$result"
 
     if $JSON_OUTPUT; then
-      cat <<ENDJSON
+      python3 -c "import sys,json; print(json.dumps(json.load(sys.stdin)))" <<ENDJSON
 {
   "file": "$JS_FILE",
   "mode": "compile",
@@ -257,7 +257,7 @@ ENDJSON
     read -r median mean _ <<< "$result"
 
     if $JSON_OUTPUT; then
-      cat <<ENDJSON
+      python3 -c "import sys,json; print(json.dumps(json.load(sys.stdin)))" <<ENDJSON
 {
   "file": "$JS_FILE",
   "mode": "execute",
@@ -363,7 +363,7 @@ except ImportError:
   significant=$(python3 -c "print('true' if float('$p_value') < 0.05 else 'false')")
 
   if $JSON_OUTPUT; then
-    cat <<ENDJSON
+    python3 -c "import sys,json; print(json.dumps(json.load(sys.stdin)))" <<ENDJSON
 {
   "file": "$JS_FILE",
   "mode": "compare",

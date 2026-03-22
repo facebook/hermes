@@ -163,7 +163,7 @@ def main() -> None:
     results = filter_results(results, module_filter=args.filter, top_n=args.top)
 
     if args.json:
-        print(json.dumps(results, indent=2))
+        print(json.dumps(results))
     else:
         print(format_human(results))
 

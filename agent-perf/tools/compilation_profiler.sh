@@ -279,7 +279,7 @@ output = {
     },
     'ir_statistics': ir_stats
 }
-print(json.dumps(output, indent=2))
+print(json.dumps(output))
 "
 else
   echo "Compilation Profile: $JS_FILE"

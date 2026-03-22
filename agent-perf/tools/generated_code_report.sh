@@ -261,7 +261,7 @@ output = {
     'b': b,
     'deltas': deltas
 }
-print(json.dumps(output, indent=2))
+print(json.dumps(output))
 "
   else
     python3 -c "
@@ -269,7 +269,7 @@ import json
 a = json.loads('''$REPORT_A''')
 a['typed'] = $( $TYPED && echo 'True' || echo 'False' )
 a['mode'] = 'single'
-print(json.dumps(a, indent=2))
+print(json.dumps(a))
 "
   fi
 else

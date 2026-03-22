@@ -336,7 +336,7 @@ def main() -> None:
         all_findings = cross_reference_profile(all_findings, hot_functions)
 
     if args.json:
-        print(json.dumps(all_findings, indent=2))
+        print(json.dumps(all_findings))
     else:
         print(format_human(all_findings))
 

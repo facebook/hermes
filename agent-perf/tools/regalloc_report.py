@@ -279,7 +279,7 @@ def main() -> None:
     report = build_report(functions)
 
     if args.json:
-        print(json.dumps(report, indent=2))
+        print(json.dumps(report))
     else:
         print(format_human(report))
 

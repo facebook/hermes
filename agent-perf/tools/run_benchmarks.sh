@@ -243,6 +243,7 @@ done
 
 # Output
 if $JSON_OUTPUT; then
+  (
   echo "["
   first=true
   for key in "${UNIQUE_KEYS[@]}"; do
@@ -269,6 +270,7 @@ if $JSON_OUTPUT; then
 ENDJSON
   done
   echo "]"
+  ) | python3 -c "import sys,json; print(json.dumps(json.load(sys.stdin)))"
 else
   printf "%-45s %15s %15s %12s %5s\n" \
     "Benchmark" "Median ops/sec" "Mean ops/sec" "Stddev" "N"

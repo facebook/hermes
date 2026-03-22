@@ -408,7 +408,7 @@ def main() -> None:
     result = parse_generated_c(source)
 
     if args.json:
-        print(json.dumps(result, indent=2))
+        print(json.dumps(result))
     else:
         print(format_human(result))
 

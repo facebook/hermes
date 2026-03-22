@@ -168,14 +168,15 @@ fi
 
 # Output results
 if $JSON_OUTPUT; then
-  echo "{"
-  echo "  \"shermes\": \"$SHERMES\","
-  echo "  \"typed\": $TYPED,"
-  echo "  \"files\": ["
+  JSON_TMPFILE=$(mktemp)
+  echo "{" >> "$JSON_TMPFILE"
+  echo "  \"shermes\": \"$SHERMES\"," >> "$JSON_TMPFILE"
+  echo "  \"typed\": $TYPED," >> "$JSON_TMPFILE"
+  echo "  \"files\": [" >> "$JSON_TMPFILE"
   for i in "${!RESULTS[@]}"; do
     read -r file c_lines c_bytes native_bytes sh_calls func_count avg_lines c_lat cc_lat total_lat prop_calls type_calls gc_calls arith_calls obj_calls str_calls other_calls <<< "${RESULTS[$i]}"
-    [[ $i -gt 0 ]] && echo "    ,"
-    cat <<ENDJSON
+    [[ $i -gt 0 ]] && echo "    ," >> "$JSON_TMPFILE"
+    cat <<ENDJSON >> "$JSON_TMPFILE"
     {
       "file": "$file",
       "generated_c": {
@@ -203,26 +204,28 @@ if $JSON_OUTPUT; then
     }
 ENDJSON
   done
-  echo "  ]"
+  echo "  ]" >> "$JSON_TMPFILE"
 
   if $COMPARE_MODE; then
-    echo "  ,\"comparison\": {"
-    echo "    \"shermes_b\": \"$SHERMES_B\","
-    echo "    \"files\": ["
+    echo "  ,\"comparison\": {" >> "$JSON_TMPFILE"
+    echo "    \"shermes_b\": \"$SHERMES_B\"," >> "$JSON_TMPFILE"
+    echo "    \"files\": [" >> "$JSON_TMPFILE"
     for i in "${!RESULTS_B[@]}"; do
       read -r file c_lines c_bytes native_bytes sh_calls func_count avg_lines c_lat cc_lat total_lat prop_calls type_calls gc_calls arith_calls obj_calls str_calls other_calls <<< "${RESULTS_B[$i]}"
       read -r _ c_lines_a _ native_bytes_a sh_calls_a _ _ _ _ _ _ _ _ _ _ _ _ <<< "${RESULTS[$i]}"
       c_delta=$(python3 -c "print(f'{(($c_lines - $c_lines_a) / max($c_lines_a, 1)) * 100:.2f}')" 2>/dev/null || echo "0.00")
       native_delta=$(python3 -c "print(f'{(($native_bytes - $native_bytes_a) / max($native_bytes_a, 1)) * 100:.2f}')" 2>/dev/null || echo "0.00")
       calls_delta=$(python3 -c "print(f'{(($sh_calls - $sh_calls_a) / max($sh_calls_a, 1)) * 100:.2f}')" 2>/dev/null || echo "0.00")
-      [[ $i -gt 0 ]] && echo "      ,"
-      echo "      {\"file\": \"$file\", \"c_lines_delta_pct\": $c_delta, \"native_size_delta_pct\": $native_delta, \"runtime_calls_delta_pct\": $calls_delta}"
+      [[ $i -gt 0 ]] && echo "      ," >> "$JSON_TMPFILE"
+      echo "      {\"file\": \"$file\", \"c_lines_delta_pct\": $c_delta, \"native_size_delta_pct\": $native_delta, \"runtime_calls_delta_pct\": $calls_delta}" >> "$JSON_TMPFILE"
     done
-    echo "    ]"
-    echo "  }"
+    echo "    ]" >> "$JSON_TMPFILE"
+    echo "  }" >> "$JSON_TMPFILE"
   fi
 
-  echo "}"
+  echo "}" >> "$JSON_TMPFILE"
+  python3 -c "import sys,json; print(json.dumps(json.load(sys.stdin)))" < "$JSON_TMPFILE"
+  rm -f "$JSON_TMPFILE"
 else
   printf "%-40s %8s %10s %10s %8s %5s %6s %6s %6s %6s\n" \
     "File" "C Lines" "C Bytes" "Bin Bytes" "SH Calls" "Funcs" "Avg/F" "C ms" "CC ms" "Tot ms"

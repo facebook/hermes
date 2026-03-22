@@ -1,8 +1,10 @@
 # Static Hermes Agent Performance Infrastructure
 
 Tools for measuring, analyzing, and comparing Static Hermes performance.
-All tools output structured JSON (`--json`) for programmatic parsing and
-human-readable text by default. Designed for both human engineers and AI agents.
+All tools output compact (single-line) structured JSON (`--json`) for
+programmatic parsing and human-readable text by default. Compact JSON
+minimizes token consumption when AI agents ingest tool output. Designed
+for both human engineers and AI agents.
 
 ## Quick Start
 
@@ -61,7 +63,7 @@ Additionally, Octane benchmarks live at `benchmarks/octane/` in the SH root.
 All tools follow these conventions:
 
 - `--help` / `-h` — prints usage, arguments, and examples
-- `--json` — outputs structured JSON instead of human-readable text
+- `--json` — outputs compact (single-line) structured JSON, optimized for minimal token consumption by AI agents
 - `--typed` — compiles with Static Hermes typed mode
 - `--compare <shermes_b>` — A/B comparison mode (shell tools)
 - Exit code 0 on success, non-zero on error or regression detection

@@ -263,7 +263,7 @@ output = {
     'b': {'shermes': '$SHERMES_B', **b},
     'deltas': deltas
 }
-print(json.dumps(output, indent=2))
+print(json.dumps(output))
 "
   else
     python3 -c "
@@ -276,7 +276,7 @@ output = {
     'shermes': '$SHERMES',
     **a
 }
-print(json.dumps(output, indent=2))
+print(json.dumps(output))
 "
   fi
 else

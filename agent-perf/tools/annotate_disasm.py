@@ -166,7 +166,7 @@ def main() -> None:
     results = parse_disasm_annotations(lines, function_filter=args.function)
 
     if args.json:
-        print(json.dumps(results, indent=2))
+        print(json.dumps(results))
     else:
         print(format_human(results))
 

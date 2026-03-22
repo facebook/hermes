@@ -271,6 +271,7 @@ else:
 
 # Output
 if $JSON_OUTPUT; then
+  (
   cat <<ENDJSON
 {
   "shermes_a": "$SHERMES_A",
@@ -302,6 +303,7 @@ ENDJSON
   ]
 }
 ENDJSON
+  ) | python3 -c "import sys,json; print(json.dumps(json.load(sys.stdin)))"
 else
   echo "A/B Comparison: $METRIC_NAME"
   echo "  A: $SHERMES_A"

@@ -228,7 +228,7 @@ TIME_DELTA=$(python3 -c "print(f'{(($TIME_DISABLED - $TIME_FULL) / max($TIME_FUL
 
 # Output
 if $JSON_OUTPUT; then
-  cat <<ENDJSON
+  python3 -c "import sys,json; print(json.dumps(json.load(sys.stdin)))" <<ENDJSON
 {
   "file": "$JS_FILE",
   "typed": $TYPED,

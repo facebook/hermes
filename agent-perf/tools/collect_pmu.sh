@@ -239,7 +239,7 @@ if $COMPARE_MODE; then
   read -r insn_b cyc_b l1d_b l1i_b br_b dtlb_b ipc_b <<< "$(collect_pmu_counters "$SHERMES_B" "$JS_FILE")"
 
   if $JSON_OUTPUT; then
-    cat <<ENDJSON
+    python3 -c "import sys,json; print(json.dumps(json.load(sys.stdin)))" <<ENDJSON
 {
   "file": "$JS_FILE",
   "typed": $TYPED,
@@ -269,7 +269,7 @@ ENDJSON
   fi
 else
   if $JSON_OUTPUT; then
-    cat <<ENDJSON
+    python3 -c "import sys,json; print(json.dumps(json.load(sys.stdin)))" <<ENDJSON
 {
   "file": "$JS_FILE",
   "typed": $TYPED,

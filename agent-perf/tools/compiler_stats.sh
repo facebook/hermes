@@ -219,7 +219,7 @@ if json_mode:
         'pass_timings': pass_timings,
         'total_statistics_count': len(statistics),
     }
-    print(json.dumps(output, indent=2))
+    print(json.dumps(output))
 else:
     print(f'Compiler Statistics for: $JS_FILE')
     print(f'Typed: $TYPED')

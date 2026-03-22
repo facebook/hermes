@@ -370,7 +370,7 @@ def main() -> None:
     findings = scan_generated_c(args.input)
 
     if args.json:
-        print(json.dumps(findings, indent=2))
+        print(json.dumps(findings))
     else:
         print(format_human(findings))
 
