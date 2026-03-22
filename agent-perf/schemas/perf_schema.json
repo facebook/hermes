@@ -1,0 +1,863 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Static Hermes Agent Performance Tool Output Schemas",
+  "description": "JSON Schema documenting the output format of all agent-perf tools for Static Hermes.",
+  "tools": [
+    {
+      "tool_name": "count_instructions",
+      "description": "Measure retired CPU instruction counts for native binaries produced by shermes. Falls back to wall-clock nanoseconds if perf is unavailable.",
+      "json_output_schema": {
+        "type": "object",
+        "properties": {
+          "file": { "type": "string", "description": "Path to the JavaScript input file" },
+          "mode": { "type": "string", "enum": ["execute", "compile", "compare"], "description": "Measurement mode" },
+          "metric": { "type": "string", "enum": ["instructions", "nanoseconds"], "description": "Measurement unit" },
+          "typed": { "type": "boolean", "description": "Whether --typed flag was used" },
+          "iterations": { "type": "integer", "description": "Number of measurement iterations" },
+          "median": { "type": "integer", "description": "Median measurement value" },
+          "mean": { "type": "integer", "description": "Mean measurement value" },
+          "binary_size_bytes": { "type": "integer", "description": "Size of compiled native binary" },
+          "binary_a": {
+            "type": "object",
+            "description": "Results for binary A (compare mode only)",
+            "properties": {
+              "shermes": { "type": "string" },
+              "median": { "type": "integer" },
+              "binary_size_bytes": { "type": "integer" }
+            }
+          },
+          "binary_b": {
+            "type": "object",
+            "description": "Results for binary B (compare mode only)",
+            "properties": {
+              "shermes": { "type": "string" },
+              "median": { "type": "integer" },
+              "binary_size_bytes": { "type": "integer" }
+            }
+          },
+          "delta_pct": { "type": "number", "description": "Percentage difference B vs A (compare mode)" },
+          "p_value": { "type": "number", "description": "Mann-Whitney U test p-value (compare mode)" },
+          "significant": { "type": "boolean", "description": "Whether difference is statistically significant" }
+        }
+      }
+    },
+    {
+      "tool_name": "perf_proxies",
+      "description": "Quick multi-dimensional performance health check measuring generated C code size, native binary size, runtime call density, compilation latency, and function metrics.",
+      "json_output_schema": {
+        "type": "object",
+        "properties": {
+          "shermes": { "type": "string", "description": "Path to shermes binary" },
+          "typed": { "type": "boolean", "description": "Whether --typed flag was used" },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "file": { "type": "string", "description": "Path to JS source file" },
+                "generated_c": {
+                  "type": "object",
+                  "properties": {
+                    "lines": { "type": "integer", "description": "Lines of generated C code" },
+                    "bytes": { "type": "integer", "description": "Size of generated C file in bytes" },
+                    "function_count": { "type": "integer", "description": "Number of generated C functions" },
+                    "avg_lines_per_function": { "type": "integer", "description": "Average lines per function" }
+                  }
+                },
+                "native_binary_bytes": { "type": "integer", "description": "Size of native binary" },
+                "runtime_calls": {
+                  "type": "object",
+                  "properties": {
+                    "total": { "type": "integer" },
+                    "property_access": { "type": "integer" },
+                    "type_checks": { "type": "integer" },
+                    "gc_management": { "type": "integer" },
+                    "arithmetic": { "type": "integer" },
+                    "object_creation": { "type": "integer" },
+                    "string_ops": { "type": "integer" },
+                    "other": { "type": "integer" }
+                  }
+                },
+                "latency_ms": {
+                  "type": "object",
+                  "properties": {
+                    "js_to_c": { "type": "integer", "description": "Milliseconds for JS->C compilation" },
+                    "c_to_native": { "type": "integer", "description": "Milliseconds for C->native compilation" },
+                    "total": { "type": "integer", "description": "Total compilation time in milliseconds" }
+                  }
+                }
+              }
+            }
+          },
+          "comparison": {
+            "type": "object",
+            "description": "Present only in compare mode",
+            "properties": {
+              "shermes_b": { "type": "string" },
+              "files": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "file": { "type": "string" },
+                    "c_lines_delta_pct": { "type": "number" },
+                    "native_size_delta_pct": { "type": "number" },
+                    "runtime_calls_delta_pct": { "type": "number" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "tool_name": "run_benchmarks",
+      "description": "Benchmark runner for Static Hermes. Compiles each JS benchmark with shermes, runs the native binary, measures wall-clock time and computes ops/sec from RESULT: lines.",
+      "json_output_schema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string", "description": "Benchmark name in format suite/sub_benchmark" },
+            "median_ops_sec": { "type": "number", "description": "Median operations per second" },
+            "mean_ops_sec": { "type": "number", "description": "Mean operations per second" },
+            "stddev": { "type": "number", "description": "Standard deviation of ops/sec" },
+            "iterations": { "type": "integer", "description": "Number of measurement iterations" }
+          },
+          "required": ["name", "median_ops_sec", "mean_ops_sec", "stddev", "iterations"]
+        }
+      }
+    },
+    {
+      "tool_name": "benchmark_compare",
+      "description": "Statistical A/B comparison of two shermes binaries with interleaved execution, Mann-Whitney U test, and regression detection.",
+      "json_output_schema": {
+        "type": "object",
+        "properties": {
+          "shermes_a": { "type": "string", "description": "Path to baseline shermes binary" },
+          "shermes_b": { "type": "string", "description": "Path to candidate shermes binary" },
+          "suite": { "type": "string", "enum": ["micro", "macro", "all"] },
+          "metric": { "type": "string", "enum": ["instructions", "nanoseconds"] },
+          "typed": { "type": "boolean" },
+          "iterations": { "type": "integer" },
+          "threshold_pct": { "type": "number", "description": "Regression threshold percentage" },
+          "geometric_mean_delta_pct": { "type": "number", "description": "Geometric mean of all benchmark deltas" },
+          "has_regression": { "type": "boolean", "description": "True if any benchmark regressed beyond threshold" },
+          "benchmarks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "median_a": { "type": "number", "description": "Median measurement for binary A" },
+                "median_b": { "type": "number", "description": "Median measurement for binary B" },
+                "delta_pct": { "type": "number", "description": "Percentage change B vs A" },
+                "p_value": { "type": "number", "description": "Mann-Whitney U test p-value" },
+                "significant": { "type": "boolean", "description": "True if p < 0.05" },
+                "regression": { "type": "boolean", "description": "True if significant and beyond threshold" }
+              },
+              "required": ["name", "median_a", "median_b", "delta_pct", "p_value", "significant", "regression"]
+            }
+          }
+        },
+        "required": ["shermes_a", "shermes_b", "suite", "metric", "benchmarks", "has_regression"]
+      }
+    },
+    {
+      "tool_name": "collect_pmu",
+      "description": "Collect hardware PMU counters (instructions, cycles, cache misses, branch misses, TLB misses) and compute derived ratios like IPC and miss rates.",
+      "json_output_schema": {
+        "type": "object",
+        "properties": {
+          "file": { "type": "string" },
+          "typed": { "type": "boolean" },
+          "mode": { "type": "string", "enum": ["single", "compare"] },
+          "result": {
+            "type": "object",
+            "description": "Present in single mode",
+            "properties": {
+              "label": { "type": "string" },
+              "shermes": { "type": "string" },
+              "counters": {
+                "type": "object",
+                "properties": {
+                  "instructions": { "type": "integer" },
+                  "cycles": { "type": "integer" },
+                  "L1_dcache_load_misses": { "type": "integer" },
+                  "L1_icache_load_misses": { "type": "integer" },
+                  "branch_misses": { "type": "integer" },
+                  "dTLB_load_misses": { "type": "integer" }
+                }
+              },
+              "derived": {
+                "type": "object",
+                "properties": {
+                  "ipc": { "type": "number", "description": "Instructions per cycle" },
+                  "l1d_miss_per_1k_insn": { "type": "number" },
+                  "l1i_miss_per_1k_insn": { "type": "number" },
+                  "branch_miss_per_1k_insn": { "type": "number" },
+                  "dtlb_miss_per_1k_insn": { "type": "number" }
+                }
+              }
+            }
+          },
+          "a": { "type": "object", "description": "PMU results for binary A (compare mode)" },
+          "b": { "type": "object", "description": "PMU results for binary B (compare mode)" },
+          "deltas": {
+            "type": "object",
+            "description": "Deltas between A and B (compare mode)",
+            "properties": {
+              "instructions_pct": { "type": "number" },
+              "cycles_pct": { "type": "number" },
+              "ipc_delta": { "type": "number" },
+              "l1d_misses_pct": { "type": "number" },
+              "branch_misses_pct": { "type": "number" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "tool_name": "pmu_anomalies",
+      "description": "Detect PMU counter anomalies by comparing against expected baselines and flagging outlier metrics.",
+      "json_output_schema": {
+        "type": "object",
+        "properties": {
+          "file": { "type": "string" },
+          "anomalies": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "counter": { "type": "string", "description": "Name of the anomalous PMU counter" },
+                "value": { "type": "number", "description": "Observed value" },
+                "expected_range": {
+                  "type": "object",
+                  "properties": {
+                    "min": { "type": "number" },
+                    "max": { "type": "number" }
+                  }
+                },
+                "severity": { "type": "string", "enum": ["warning", "critical"] },
+                "description": { "type": "string" }
+              }
+            }
+          },
+          "summary": {
+            "type": "object",
+            "properties": {
+              "total_anomalies": { "type": "integer" },
+              "critical_count": { "type": "integer" },
+              "warning_count": { "type": "integer" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "tool_name": "gc_stats",
+      "description": "GC statistics wrapper capturing GC timing, collection counts, allocation rates, overhead percentage, and survival ratio.",
+      "json_output_schema": {
+        "type": "object",
+        "properties": {
+          "file": { "type": "string" },
+          "typed": { "type": "boolean" },
+          "mode": { "type": "string", "enum": ["single", "compare"] },
+          "shermes": { "type": "string", "description": "Path to shermes binary (single mode)" },
+          "wall_time_ms": { "type": "number", "description": "Total wall-clock execution time" },
+          "gc_time_ms": { "type": "number", "description": "Time spent in GC" },
+          "num_collections": { "type": "integer", "description": "Number of GC collections" },
+          "total_allocated_bytes": { "type": "integer", "description": "Total bytes allocated" },
+          "total_freed_bytes": { "type": "integer", "description": "Total bytes freed by GC" },
+          "heap_size_bytes": { "type": "integer", "description": "Final heap size" },
+          "peak_heap_bytes": { "type": "integer", "description": "Peak heap size" },
+          "gc_overhead_pct": { "type": "number", "description": "GC time as percentage of total time" },
+          "allocation_rate_mb_per_sec": { "type": "number", "description": "Allocation rate in MB/s" },
+          "survival_ratio": { "type": "number", "description": "Ratio of surviving objects (1 - freed/allocated)" },
+          "a": { "type": "object", "description": "GC stats for binary A (compare mode)" },
+          "b": { "type": "object", "description": "GC stats for binary B (compare mode)" },
+          "deltas": {
+            "type": "object",
+            "description": "Deltas between A and B (compare mode)",
+            "properties": {
+              "wall_time_pct": { "type": "number" },
+              "gc_time_pct": { "type": "number" },
+              "gc_overhead_delta": { "type": "number" },
+              "alloc_rate_pct": { "type": "number" },
+              "survival_ratio_delta": { "type": "number" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "tool_name": "compiler_stats",
+      "description": "Compiler pass statistics capturing LLVM STATISTIC() counters, pass timing, and key optimization counts (inlining, DCE, CSE, type inference).",
+      "json_output_schema": {
+        "type": "object",
+        "properties": {
+          "file": { "type": "string" },
+          "typed": { "type": "boolean" },
+          "compile_time_ms": { "type": "integer", "description": "Total compilation time" },
+          "stats_flag": { "type": ["string", "null"], "description": "Flag used to collect statistics" },
+          "key_counters": {
+            "type": "object",
+            "description": "Aggregated counts for key optimization passes",
+            "properties": {
+              "inlining": { "type": "integer" },
+              "dce": { "type": "integer" },
+              "cse": { "type": "integer" },
+              "type_inference": { "type": "integer" },
+              "simplifycfg": { "type": "integer" },
+              "mem2reg": { "type": "integer" },
+              "instsimplify": { "type": "integer" },
+              "stackpromotion": { "type": "integer" },
+              "codemotion": { "type": "integer" },
+              "funcsigopts": { "type": "integer" }
+            }
+          },
+          "all_statistics": {
+            "type": "object",
+            "description": "All raw STATISTIC counters as key:count pairs",
+            "additionalProperties": { "type": "integer" }
+          },
+          "statistic_details": {
+            "type": "object",
+            "description": "Detailed STATISTIC entries with counts and descriptions",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "count": { "type": "integer" },
+                "description": { "type": "string" }
+              }
+            }
+          },
+          "pass_timings": {
+            "type": "object",
+            "description": "Per-pass wall time in seconds",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "wall_time_sec": { "type": "number" }
+              }
+            }
+          },
+          "total_statistics_count": { "type": "integer" }
+        }
+      }
+    },
+    {
+      "tool_name": "pass_experiment",
+      "description": "Optimization pass experiments measuring the marginal value of a specific pass by comparing full pipeline vs. pipeline with that pass excluded.",
+      "json_output_schema": {
+        "type": "object",
+        "properties": {
+          "file": { "type": "string" },
+          "typed": { "type": "boolean" },
+          "disabled_pass": { "type": "string", "description": "Name of the disabled optimization pass" },
+          "pass_available": { "type": "boolean", "description": "Whether the pass could actually be disabled" },
+          "baseline": {
+            "type": "object",
+            "description": "Full pipeline results",
+            "properties": {
+              "c_lines": { "type": "integer" },
+              "c_bytes": { "type": "integer" },
+              "binary_bytes": { "type": "integer" },
+              "execution_time_ms": { "type": "integer" }
+            }
+          },
+          "with_pass_disabled": {
+            "type": "object",
+            "description": "Results with the pass excluded",
+            "properties": {
+              "c_lines": { "type": "integer" },
+              "c_bytes": { "type": "integer" },
+              "binary_bytes": { "type": "integer" },
+              "execution_time_ms": { "type": "integer" }
+            }
+          },
+          "marginal_value": {
+            "type": "object",
+            "description": "Percentage difference showing the pass's contribution",
+            "properties": {
+              "c_lines_delta_pct": { "type": "number" },
+              "binary_size_delta_pct": { "type": "number" },
+              "execution_time_delta_pct": { "type": "number" }
+            }
+          }
+        },
+        "required": ["file", "disabled_pass", "baseline", "with_pass_disabled", "marginal_value"]
+      }
+    },
+    {
+      "tool_name": "generated_code_analyzer",
+      "description": "Analyze generated C code from shermes -emit-c, reporting function-level metrics, runtime call patterns, and code quality indicators.",
+      "json_output_schema": {
+        "type": "object",
+        "properties": {
+          "file": { "type": "string", "description": "Path to analyzed C file" },
+          "total_lines": { "type": "integer" },
+          "function_count": { "type": "integer" },
+          "functions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "lines": { "type": "integer" },
+                "runtime_calls": { "type": "integer" },
+                "branches": { "type": "integer" },
+                "runtime_call_density": { "type": "number", "description": "Runtime calls per line" }
+              }
+            }
+          },
+          "call_breakdown": {
+            "type": "object",
+            "properties": {
+              "total": { "type": "integer" },
+              "property_access": { "type": "integer" },
+              "type_checks": { "type": "integer" },
+              "gc_management": { "type": "integer" },
+              "arithmetic": { "type": "integer" },
+              "object_creation": { "type": "integer" },
+              "string_ops": { "type": "integer" },
+              "other": { "type": "integer" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "tool_name": "generated_code_report",
+      "description": "Generated C code analysis reporting per-function lines, runtime call count, complexity, and total call breakdown by category.",
+      "json_output_schema": {
+        "type": "object",
+        "properties": {
+          "file": { "type": "string" },
+          "typed": { "type": "boolean" },
+          "mode": { "type": "string", "enum": ["single", "compare"] },
+          "label": { "type": "string" },
+          "shermes": { "type": "string" },
+          "total_lines": { "type": "integer" },
+          "function_count": { "type": "integer" },
+          "functions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "lines": { "type": "integer" },
+                "runtime_calls": { "type": "integer" },
+                "branches": { "type": "integer" }
+              }
+            }
+          },
+          "call_breakdown": {
+            "type": "object",
+            "properties": {
+              "total": { "type": "integer" },
+              "property_access": { "type": "integer" },
+              "type_checks": { "type": "integer" },
+              "gc_management": { "type": "integer" },
+              "arithmetic": { "type": "integer" },
+              "object_creation": { "type": "integer" },
+              "string_ops": { "type": "integer" },
+              "other": { "type": "integer" }
+            }
+          },
+          "a": { "type": "object", "description": "Report for binary A (compare mode)" },
+          "b": { "type": "object", "description": "Report for binary B (compare mode)" },
+          "deltas": {
+            "type": "object",
+            "description": "Deltas between A and B (compare mode)",
+            "properties": {
+              "total_lines_pct": { "type": "number" },
+              "function_count_delta": { "type": "integer" },
+              "total_calls_pct": { "type": "number" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "tool_name": "runtime_call_profiler",
+      "description": "Profile runtime call patterns in generated C code, identifying hot call sites and optimization opportunities.",
+      "json_output_schema": {
+        "type": "object",
+        "properties": {
+          "file": { "type": "string" },
+          "total_runtime_calls": { "type": "integer" },
+          "unique_call_types": { "type": "integer" },
+          "call_frequency": {
+            "type": "array",
+            "description": "Runtime calls sorted by frequency",
+            "items": {
+              "type": "object",
+              "properties": {
+                "call_name": { "type": "string" },
+                "count": { "type": "integer" },
+                "percentage": { "type": "number" },
+                "category": { "type": "string" }
+              }
+            }
+          },
+          "per_function": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "function_name": { "type": "string" },
+                "total_calls": { "type": "integer" },
+                "call_density": { "type": "number", "description": "Calls per line of code" },
+                "dominant_call_type": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "tool_name": "type_coverage_analyzer",
+      "description": "Analyze type annotation coverage and type inference effectiveness in Static Hermes typed mode compilation.",
+      "json_output_schema": {
+        "type": "object",
+        "properties": {
+          "file": { "type": "string" },
+          "typed_mode": { "type": "boolean" },
+          "coverage": {
+            "type": "object",
+            "properties": {
+              "total_values": { "type": "integer", "description": "Total values tracked" },
+              "typed_values": { "type": "integer", "description": "Values with known types" },
+              "untyped_values": { "type": "integer", "description": "Values with unknown/any types" },
+              "coverage_pct": { "type": "number", "description": "Percentage of typed values" }
+            }
+          },
+          "type_distribution": {
+            "type": "object",
+            "description": "Count of values per type",
+            "additionalProperties": { "type": "integer" }
+          },
+          "optimization_impact": {
+            "type": "object",
+            "properties": {
+              "eliminated_type_checks": { "type": "integer" },
+              "specialized_operations": { "type": "integer" },
+              "remaining_dynamic_calls": { "type": "integer" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "tool_name": "profile_to_json",
+      "description": "Convert raw perf profiles to structured JSON format for analysis.",
+      "json_output_schema": {
+        "type": "object",
+        "properties": {
+          "profile_file": { "type": "string" },
+          "total_samples": { "type": "integer" },
+          "sample_rate_hz": { "type": "integer" },
+          "top_functions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "function": { "type": "string" },
+                "samples": { "type": "integer" },
+                "percentage": { "type": "number" },
+                "module": { "type": "string" }
+              }
+            }
+          },
+          "callchain": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "caller": { "type": "string" },
+                "callee": { "type": "string" },
+                "samples": { "type": "integer" }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "tool_name": "annotate_source",
+      "description": "Annotate source code with performance data from profiles, showing hot lines and their sample counts.",
+      "json_output_schema": {
+        "type": "object",
+        "properties": {
+          "source_file": { "type": "string" },
+          "total_samples": { "type": "integer" },
+          "hot_lines": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "line_number": { "type": "integer" },
+                "samples": { "type": "integer" },
+                "percentage": { "type": "number" },
+                "source_text": { "type": "string" }
+              }
+            }
+          },
+          "hot_functions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "start_line": { "type": "integer" },
+                "end_line": { "type": "integer" },
+                "samples": { "type": "integer" },
+                "percentage": { "type": "number" }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "tool_name": "annotate_disasm",
+      "description": "Annotate disassembly with performance data, showing hot instructions and their sample counts.",
+      "json_output_schema": {
+        "type": "object",
+        "properties": {
+          "binary": { "type": "string" },
+          "total_samples": { "type": "integer" },
+          "hot_instructions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "address": { "type": "string" },
+                "instruction": { "type": "string" },
+                "samples": { "type": "integer" },
+                "percentage": { "type": "number" },
+                "function": { "type": "string" },
+                "source_line": { "type": ["string", "null"] }
+              }
+            }
+          },
+          "function_disassembly": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "function": { "type": "string" },
+                "total_samples": { "type": "integer" },
+                "instructions": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "address": { "type": "string" },
+                      "instruction": { "type": "string" },
+                      "samples": { "type": "integer" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "tool_name": "antipattern_scan",
+      "description": "Scan generated native code for performance anti-patterns such as unnecessary spills, redundant loads, and missed optimizations.",
+      "json_output_schema": {
+        "type": "object",
+        "properties": {
+          "file": { "type": "string" },
+          "total_antipatterns": { "type": "integer" },
+          "antipatterns": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": { "type": "string", "description": "Anti-pattern category" },
+                "severity": { "type": "string", "enum": ["low", "medium", "high"] },
+                "location": {
+                  "type": "object",
+                  "properties": {
+                    "function": { "type": "string" },
+                    "line": { "type": "integer" },
+                    "address": { "type": "string" }
+                  }
+                },
+                "description": { "type": "string" },
+                "suggestion": { "type": "string" }
+              }
+            }
+          },
+          "summary_by_type": {
+            "type": "object",
+            "additionalProperties": { "type": "integer" }
+          }
+        }
+      }
+    },
+    {
+      "tool_name": "js_antipattern_scan",
+      "description": "Scan JavaScript source code for patterns that are expensive in Static Hermes, such as dynamic property access and arguments object usage.",
+      "json_output_schema": {
+        "type": "object",
+        "properties": {
+          "file": { "type": "string" },
+          "total_antipatterns": { "type": "integer" },
+          "antipatterns": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": { "type": "string" },
+                "severity": { "type": "string", "enum": ["info", "warning", "error"] },
+                "line": { "type": "integer" },
+                "column": { "type": "integer" },
+                "source_text": { "type": "string" },
+                "description": { "type": "string" },
+                "suggestion": { "type": "string" }
+              }
+            }
+          },
+          "summary_by_type": {
+            "type": "object",
+            "additionalProperties": { "type": "integer" }
+          }
+        }
+      }
+    },
+    {
+      "tool_name": "generated_code_antipatterns",
+      "description": "Scan generated C code for patterns indicating missed optimization opportunities.",
+      "json_output_schema": {
+        "type": "object",
+        "properties": {
+          "file": { "type": "string" },
+          "total_antipatterns": { "type": "integer" },
+          "antipatterns": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": { "type": "string", "description": "Anti-pattern type (e.g., redundant_type_check, unnecessary_boxing)" },
+                "severity": { "type": "string", "enum": ["low", "medium", "high"] },
+                "function": { "type": "string" },
+                "line": { "type": "integer" },
+                "description": { "type": "string" },
+                "estimated_cost": { "type": "string", "description": "Estimated performance impact" }
+              }
+            }
+          },
+          "optimization_opportunities": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "opportunity": { "type": "string" },
+                "affected_functions": { "type": "integer" },
+                "estimated_improvement": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "tool_name": "sh_source_mapper",
+      "description": "Map between JavaScript source, generated C code, and native binary addresses for correlating performance data across abstraction layers.",
+      "json_output_schema": {
+        "type": "object",
+        "properties": {
+          "js_file": { "type": "string" },
+          "c_file": { "type": "string" },
+          "binary": { "type": "string" },
+          "mappings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "js_function": { "type": "string" },
+                "js_line_range": {
+                  "type": "object",
+                  "properties": {
+                    "start": { "type": "integer" },
+                    "end": { "type": "integer" }
+                  }
+                },
+                "c_function": { "type": "string" },
+                "c_line_range": {
+                  "type": "object",
+                  "properties": {
+                    "start": { "type": "integer" },
+                    "end": { "type": "integer" }
+                  }
+                },
+                "binary_symbol": { "type": "string" },
+                "binary_address_range": {
+                  "type": "object",
+                  "properties": {
+                    "start": { "type": "string" },
+                    "end": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "tool_name": "regalloc_report",
+      "description": "Register allocation quality report analyzing spill counts, register pressure, and allocation efficiency in generated native code.",
+      "json_output_schema": {
+        "type": "object",
+        "properties": {
+          "binary": { "type": "string" },
+          "total_functions": { "type": "integer" },
+          "summary": {
+            "type": "object",
+            "properties": {
+              "total_spills": { "type": "integer", "description": "Total stack spill instructions" },
+              "total_reloads": { "type": "integer", "description": "Total stack reload instructions" },
+              "avg_spills_per_function": { "type": "number" },
+              "max_spills_function": { "type": "string", "description": "Function with most spills" },
+              "max_spills_count": { "type": "integer" }
+            }
+          },
+          "per_function": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "function": { "type": "string" },
+                "spills": { "type": "integer" },
+                "reloads": { "type": "integer" },
+                "register_pressure": { "type": "number", "description": "Estimated register pressure (0-1)" },
+                "stack_frame_bytes": { "type": "integer" },
+                "instruction_count": { "type": "integer" }
+              }
+            }
+          },
+          "spill_hotspots": {
+            "type": "array",
+            "description": "Functions with highest spill density",
+            "items": {
+              "type": "object",
+              "properties": {
+                "function": { "type": "string" },
+                "spill_density": { "type": "number", "description": "Spills per instruction" },
+                "spills": { "type": "integer" }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}
