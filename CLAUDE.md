@@ -83,8 +83,12 @@ cmake-build-debug/bin/hermes path/to/test.js
 # Run tests with sanitizers (requires separate sanitizer build)
 cmake --build cmake-build-test --target check-hermes
 
-# Format code
-arc f
+# Run test262 testsuite (ONLY run it when user asks for it)
+python3 utils/test_runner.py path/to/test262/test -b cmake-build-debug/bin
+
+# Generate the preprocessed JS file from a single test262 test.
+# Then you can run the <output_file> with hermes.
+python3 utils/test_runner.py <path_to_single_test262_test> -b cmake-build-debug/bin -d > <output_file>
 ```
 
 ### Running Tests in Claude Code on macOS
