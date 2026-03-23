@@ -2782,6 +2782,80 @@ TEST(SynthTraceReplayTestNoFixture, ExternalMemoryTest) {
   }
 }
 
+TEST_F(NonDeterminismReplayTest, NestedCallUntracedWithHostObject) {
+  class ConstHostObject : public jsi::HostObject {
+   public:
+    jsi::Value get(jsi::Runtime &rt, const jsi::PropNameID &) override {
+      return jsi::Value(42);
+    }
+  };
+  auto &rt = *traceRt;
+  rt.global().setProperty(
+      rt,
+      "nativeObj",
+      jsi::Object::createFromHostObject(
+          rt, std::make_shared<ConstHostObject>()));
+  eval(rt, "new Date(0).toJSON(); nativeObj.foo;");
+  replay();
+}
+
+// Exercise nested callUntraced records interleaved with every kind of native
+// record type: HostObject get (GetPropertyNative), set (SetPropertyNative),
+// getPropertyNames (GetNativePropertyNames), and a regular host function call
+// (CallToNative). Also tests multiple sequential nested blocks and ordering
+// where HostObject access appears both before and after the nested blocks.
+TEST_F(NonDeterminismReplayTest, NestedCallUntracedInterleavedRecordTypes) {
+  class TestHostObject : public jsi::HostObject {
+   public:
+    jsi::Value get(jsi::Runtime &rt, const jsi::PropNameID &name) override {
+      return jsi::Value(val_);
+    }
+    void set(jsi::Runtime &, const jsi::PropNameID &, const jsi::Value &value)
+        override {
+      val_ = value.asNumber();
+    }
+    std::vector<jsi::PropNameID> getPropertyNames(jsi::Runtime &rt) override {
+      std::vector<jsi::PropNameID> names;
+      names.emplace_back(jsi::PropNameID::forAscii(rt, "x"));
+      return names;
+    }
+
+   private:
+    double val_ = 0;
+  };
+  {
+    auto &rt = *traceRt;
+    rt.global().setProperty(
+        rt,
+        "nativeObj",
+        jsi::Object::createFromHostObject(
+            rt, std::make_shared<TestHostObject>()));
+    auto hostFn = jsi::Function::createFromHostFunction(
+        rt,
+        jsi::PropNameID::forAscii(rt, "hostFn"),
+        0,
+        [](jsi::Runtime &, const jsi::Value &, const jsi::Value *, size_t) {
+          return jsi::Value(99);
+        });
+    rt.global().setProperty(rt, "hostFn", std::move(hostFn));
+    eval(
+        rt,
+        // HostObject get before nested block.
+        "nativeObj.x;"
+        // Multiple sequential nested callUntraced blocks.
+        "new Date(0).toJSON(); new Date(0).toJSON();"
+        // HostObject set after nested blocks.
+        "nativeObj.x = 7;"
+        // Another nested block, then HostObject get.
+        "new Date(0).toJSON(); nativeObj.x;"
+        // Property enumeration after nested block.
+        "Object.keys(nativeObj);"
+        // Host function call after nested block.
+        "new Date(0).toJSON(); hostFn();");
+  }
+  replay();
+}
+
 /// @}
 
 } // namespace

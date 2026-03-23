@@ -819,6 +819,16 @@ void TraceInterpreter::executeRecords() {
   // Carry the return value from BeginJSExec to EndJSExec.
   Value overallRetval;
 
+  // Track nesting depth of native call records (CallToNative,
+  // GetPropertyNative, SetPropertyNative, GetNativePropertyNames).
+  // During tracing, a host function like callUntraced may trigger nested
+  // native calls (e.g., Date.prototype.toJSON calls toISOString, both
+  // wrapped in callUntraced). During replay, these nested calls don't
+  // actually occur, but their trace records still exist. Without tracking
+  // depth, the inner ReturnFromNative would prematurely terminate
+  // executeRecords(), leaving the outer ReturnFromNative unconsumed.
+  unsigned nativeCallDepth = 0;
+
 #ifndef NDEBUG
   // We'll want the first record, to verify that it's the one that consumes
   // nativePropNameToConsumeAsDef if that is non-null.
@@ -1218,9 +1228,6 @@ void TraceInterpreter::executeRecords() {
           retval = func.callAsConstructor(rt_, argStart, args.size());
           break;
         }
-        case RecordType::ReturnFromNative: {
-          return;
-        }
         case RecordType::ReturnToNative: {
           const auto &rtnr =
               record_cast<const SynthTrace::ReturnToNativeRecord>(*rec);
@@ -1229,28 +1236,23 @@ void TraceInterpreter::executeRecords() {
           // If the return value wasn't an object, it can be ignored.
           break;
         }
-        case RecordType::CallToNative: {
-          break;
-        }
-        case RecordType::GetPropertyNative: {
-          break;
-        }
-        case RecordType::GetPropertyNativeReturn: {
-          return;
-        }
-        case RecordType::SetPropertyNative: {
-          break;
-        }
-        case RecordType::SetPropertyNativeReturn: {
-          return;
-        }
+        case RecordType::CallToNative:
+        case RecordType::GetPropertyNative:
+        case RecordType::SetPropertyNative:
         case RecordType::GetNativePropertyNames: {
-          // Nothing actually needs to happen here, as no defs are provided to
-          // the local function. The HostObject already handles accessing the
-          // property names.
+          ++nativeCallDepth;
           break;
         }
+        case RecordType::ReturnFromNative:
+        case RecordType::GetPropertyNativeReturn:
+        case RecordType::SetPropertyNativeReturn:
         case RecordType::GetNativePropertyNamesReturn: {
+          if (nativeCallDepth > 1) {
+            // This return matches a nested native call that doesn't occur
+            // during replay. Skip it and continue processing.
+            --nativeCallDepth;
+            break;
+          }
           return;
         }
         case RecordType::SetExternalMemoryPressure: {
