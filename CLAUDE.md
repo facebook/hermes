@@ -206,6 +206,10 @@ When making systematic changes, check for macro-generated code:
 - `TYPED_ARRAY` macro in `lib/VM/JSLib/TypedArray.cpp` - generates typed array constructors
 - `NATIVE_FUNCTION` macro in `include/hermes/VM/JSNativeFunctions.h` - generates function declarations
 
+## GC-Safe Coding (Runtime Code)
+
+When writing, modifying, or reviewing C++ code in the VM runtime (`lib/VM/`, `include/hermes/VM/`, `API/hermes/`), always invoke the `gc-safe-coding` skill first. Runtime code must follow strict GC-safety rules around handles, locals, and heap-allocated objects. The skill covers all the rules and common pitfalls.
+
 ## GC Handle Patterns
 
 ### Locals Pattern (preferred for new code)
