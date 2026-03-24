@@ -262,6 +262,8 @@ if $JSON_OUTPUT; then
     cat <<ENDJSON
   {
     "name": "$full_name",
+    "metric": "ops/sec",
+    "metric_interpretation": "throughput (higher is better)",
     "median_ops_sec": $median,
     "mean_ops_sec": $mean,
     "stddev": $stddev,
@@ -272,6 +274,8 @@ ENDJSON
   echo "]"
   ) | python3 -c "import sys,json; print(json.dumps(json.load(sys.stdin)))"
 else
+  echo "Metric: ops/sec (throughput — higher is better)"
+  echo ""
   printf "%-45s %15s %15s %12s %5s\n" \
     "Benchmark" "Median ops/sec" "Mean ops/sec" "Stddev" "N"
   printf "%-45s %15s %15s %12s %5s\n" \

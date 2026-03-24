@@ -278,6 +278,8 @@ if $JSON_OUTPUT; then
   "shermes_b": "$SHERMES_B",
   "suite": "$SUITE",
   "metric": "$METRIC_NAME",
+  "metric_interpretation": "cost (lower is better)",
+  "delta_interpretation": "positive = regression (more cost), negative = improvement (less cost)",
   "typed": $TYPED,
   "iterations": $ITERATIONS,
   "threshold_pct": $THRESHOLD,
@@ -306,9 +308,12 @@ ENDJSON
   ) | python3 -c "import sys,json; print(json.dumps(json.load(sys.stdin)))"
 else
   echo "A/B Comparison: $METRIC_NAME"
-  echo "  A: $SHERMES_A"
-  echo "  B: $SHERMES_B"
+  echo "  A (baseline):  $SHERMES_A"
+  echo "  B (candidate): $SHERMES_B"
   echo "  Suite: $SUITE | Typed: $TYPED | Iterations: $ITERATIONS | Threshold: ${THRESHOLD}%"
+  echo ""
+  echo "  Metric: $METRIC_NAME (cost — lower is better)"
+  echo "  Delta %: positive = more $METRIC_NAME = regression; negative = improvement"
   echo ""
   printf "%-30s %15s %15s %10s %10s %6s\n" \
     "Benchmark" "Median A" "Median B" "Delta %" "p-value" "Regr?"
