@@ -51,16 +51,24 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Build prompt
+        env:
+          PR_TITLE: ${{ steps.pr.outputs.title }}
+        run: |
+          cat > /tmp/prompt.txt << 'EOF'
+          Review this pull request diff. Provide a concise code review.
+          Flag any bugs, security issues, or style problems.
+          Format with Summary, Issues Found (critical/suggestion/nitpick), and Positive Observations.
+
+          EOF
+          printf 'PR Title: %s\n\n' "$PR_TITLE" >> /tmp/prompt.txt
+          cat /tmp/pr.diff >> /tmp/prompt.txt
+
       - name: Run Claude review
         id: claude
         uses: anthropics/claude-code-base-action@beta
         with:
-          prompt_file: /tmp/pr.diff
-          prompt: |
-            Review this pull request diff. PR title: "${{ steps.pr.outputs.title }}"
-
-            Provide a concise code review. Flag any bugs, security issues, or style problems.
-            Format with Summary, Issues Found (critical/suggestion/nitpick), and Positive Observations.
+          prompt_file: /tmp/prompt.txt
           claude_args: "--model ${{ inputs.model }} --max-turns 10 --allowedTools View,GlobTool,GrepTool"
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 
