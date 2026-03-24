@@ -32,7 +32,9 @@ add_subdirectory(utils/FileCheck)
 add_subdirectory(utils/TableGen)
 add_subdirectory(utils/not)
 add_subdirectory(utils/count)
-add_subdirectory(utils/unittest)
+if(HERMES_ENABLE_TEST_SUITE)
+  add_subdirectory(utils/unittest)
+endif()
 
 set(LLVH_LIT_ARGS "-sv")
 set(LLVH_LIT_TEST_PARAMS
