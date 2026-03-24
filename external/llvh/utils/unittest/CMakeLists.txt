@@ -50,7 +50,7 @@ if (LLVM_PTHREAD_LIBRARY_PATH)
   list(APPEND LIBS pthread)
 endif()
 
-add_hermes_library(gtest STATIC
+add_hermes_library(llvh-gtest STATIC
   googletest/src/gtest-all.cc
   googlemock/src/gmock-all.cc
 
