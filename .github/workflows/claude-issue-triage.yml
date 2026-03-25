@@ -1,0 +1,86 @@
+name: Issue Triage & Debug
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  check-limit:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.count.outputs.should_run }}
+    steps:
+      - name: Count recent runs
+        id: count
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DAILY_LIMIT: 20
+        run: |
+          # Count how many times this workflow has run in the past 24 hours.
+          TIMESTAMP=$(date -u -d '24 hours ago' '+%Y-%m-%dT%H:%M:%SZ')
+          COUNT=$(gh run list --workflow "${{ github.workflow }}" --created ">$TIMESTAMP" --json databaseId --jq '. | length')
+          if [ "$COUNT" -le "$DAILY_LIMIT" ]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+          else
+            echo "Limit reached. Skipping Claude triage."
+            echo "should_run=false" >> $GITHUB_OUTPUT
+          fi
+
+  triage:
+    needs: check-limit
+    if: needs.check-limit.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          path: hermes
+      - name: Setup dependencies
+        run: |-
+          sudo apt update
+          sudo apt install -y git openssh-client cmake build-essential \
+              libreadline-dev libicu-dev zip python3 ninja-build
+          mkdir cmake-build
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            REPO: ${{ github.repository }}
+            ISSUE NUMBER: ${{ github.event.issue.number }}
+            TITLE: ${{ github.event.issue.title }}
+            BODY: ${{ github.event.issue.body }}
+            AUTHOR: ${{ github.event.issue.user.login }}
+
+            Analyze this new issue and:
+            1. Determine if it's a bug report, feature request, or question.
+            2. Assess priority (critical, high, medium, low).
+            3. Suggest appropriate labels.
+            4. Check if it duplicates existing issues.
+
+            If it is a bug:
+            - Attempt to reproduce it based on the description.
+            - Identify the root cause by exploring the codebase.
+            - Propose a potential solution or code fix.
+
+            Use ./.github/scripts/gh.sh to interact with GitHub:
+            - `./.github/scripts/gh.sh issue view [number]` to view the issue
+            - `./.github/scripts/gh.sh search issues "query"` to find similar issues
+            - `./.github/scripts/gh.sh label list` to see available labels
+            - `./.github/scripts/gh.sh issue comment [number] --body "text"` to post results
+
+            Based on your analysis, add the appropriate labels using:
+            `./.github/scripts/edit-issue-labels.sh --issue [number] --add-label "label1" --add-label "label2"`
+
+            If it's a bug, your final comment MUST include:
+            - **Reproduction Status**: (Can you trigger it?)
+            - **Root Cause**: (Technical explanation)
+
+            Refer to CLAUDE.md for details on how to build and run Hermes using CMake.
+            Place the CMake builds under cmake-build/
+
+          claude_args: |
+            --allowedTools "View,GlobTool,GrepTool,Bash(./.github/scripts/gh.sh *),Bash(./.github/scripts/edit-issue-labels.sh *),Bash(ls *),Bash(cat *),Bash(cmake-build/*)"
