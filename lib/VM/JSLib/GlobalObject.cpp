@@ -614,6 +614,9 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   gcScope.clearAllHandles();
 #include "hermes/VM/TypedArrays.def"
 
+  // Add Uint8Array-specific base64/hex methods.
+  populateUint8ArrayBuiltins(runtime);
+
   // Set constructor.
   runtime.setConstructor.castAndSetHermesValue<NativeConstructor>(
       createSetConstructor(runtime));

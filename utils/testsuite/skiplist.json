@@ -4413,7 +4413,6 @@
     "Array.fromAsync",
     "json-parse-with-source",
     "explicit-resource-management",
-    "uint8array-base64",
     "upsert",
     "Float16Array",
     "RegExp.escape",
