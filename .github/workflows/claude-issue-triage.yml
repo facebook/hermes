@@ -132,8 +132,7 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt_file: /tmp/prompt.txt
-          allowed_tools: "View,GlobTool,GrepTool,Bash(ls *),Bash(cat *),Bash(cmake-build/*)"
-          max_turns: "25"
+          max_turns: "100"
 
       - name: Post triage results
         if: always()
