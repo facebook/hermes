@@ -1035,6 +1035,33 @@ EqualityResult areEqualSmallNumbers(const double x, BigIntPrimitive *y) {
 /// ES11 7.2.15 Abstract Equality Comparison
 CallResult<bool>
 abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
+  // Fast path: handle common same-type comparisons without allocating
+  // MutableHandles, which avoids GCScope overhead for the frequent cases.
+  {
+    HermesValue xFast = xHandle.get();
+    HermesValue yFast = yHandle.get();
+    assert(
+        !xFast.isEmpty() && !yFast.isEmpty() && "invalid value for comparison");
+
+    // Both numbers: compare as doubles (handles NaN correctly).
+    if (LLVM_LIKELY(xFast.isNumber())) {
+      if (LLVM_LIKELY(yFast.isNumber()))
+        return xFast.getNumber() == yFast.getNumber();
+    } else if (xFast.getRaw() == yFast.getRaw()) {
+      // Identical non-number values are always equal: covers undefined===
+      // undefined, null===null, same bool, same object, same string pointer.
+      return true;
+    } else if (xFast.isNull() || xFast.isUndefined()) {
+      // null == undefined and undefined == null per ES11 7.2.15 steps 2-3.
+      // Also handles null != <non-null-non-undefined> and undefined !=
+      // <non-null-non-undefined>.
+      return yFast.isNull() || yFast.isUndefined();
+    } else if (yFast.isNull() || yFast.isUndefined()) {
+      // <non-null-non-undefined> != null and != undefined.
+      return false;
+    }
+  }
+
   MutableHandle<> x{runtime, xHandle.get()};
   MutableHandle<> y{runtime, yHandle.get()};
 
