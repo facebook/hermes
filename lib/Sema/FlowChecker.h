@@ -893,9 +893,11 @@ template <typename AnnotationCB>
 Type *FlowChecker::processFunctionTypeAnnotation(
     ESTree::FunctionTypeAnnotationNode *node,
     AnnotationCB cb) {
-  if (node->_rest || node->_typeParameters) {
+  if (node->_typeParameters) {
     sm_.error(node->getSourceRange(), "unsupported function type params");
   }
+  // Rest parameters in function type annotations are ignored for typing;
+  // the function is still callable with any number of arguments.
 
   Type *thisType = node->_this
       ? cb(llvh::cast<ESTree::FunctionTypeParamNode>(node->_this)
@@ -961,9 +963,7 @@ Type *FlowChecker::processObjectTypeAnnotation(
     ESTree::ObjectTypeAnnotationNode *node,
     AnnotationCB cb) {
   if (!node->_indexers.empty()) {
-    sm_.error(
-        node->_indexers.front().getStartLoc(),
-        "ft: indexers are not supported in object types");
+    // Indexers are not fully supported; treat the whole object as 'any'.
     return flowContext_.getAny();
   }
   if (!node->_callProperties.empty()) {
@@ -988,6 +988,10 @@ Type *FlowChecker::processObjectTypeAnnotation(
   // Used for checking for duplicate names.
   llvh::SmallDenseSet<UniqueString *> names{};
   for (auto &n : node->_properties) {
+    // Spread properties in object types: treat whole object as 'any'.
+    if (llvh::isa<ESTree::ObjectTypeSpreadPropertyNode>(&n)) {
+      return flowContext_.getAny();
+    }
     auto *prop = llvh::dyn_cast<ESTree::ObjectTypePropertyNode>(&n);
     if (!prop) {
       sm_.error(n.getSourceRange(), "ft: unsupported object type property");

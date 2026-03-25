@@ -1430,8 +1430,9 @@ class FlowChecker::AnnotateScopeDecls {
             } else if (
                 auto *rest =
                     llvh::dyn_cast<ESTree::RestElementNode>(&propNode)) {
-              outer.sm_.error(
-                  rest->getSourceRange(), "ft: rest elements not supported");
+              // Rest element collects remaining properties; assign 'any'.
+              worklist.emplace_back(
+                  rest->_argument, outer.flowContext_.getAny());
               continue;
             }
           }
@@ -1444,8 +1445,8 @@ class FlowChecker::AnnotateScopeDecls {
             } else if (
                 auto *rest =
                     llvh::dyn_cast<ESTree::RestElementNode>(&propNode)) {
-              outer.sm_.error(
-                  rest->getSourceRange(), "ft: rest elements not supported");
+              // Propagate 'any' to the rest element target.
+              worklist.emplace_back(rest->_argument, t);
               continue;
             }
           }
@@ -1701,6 +1702,15 @@ Type *FlowChecker::parseTypeAnnotation(ESTree::Node *node) {
       return parseFunctionTypeAnnotation(
           llvh::cast<ESTree::FunctionTypeAnnotationNode>(node));
 
+    // Literal type annotations: treat as their base type.
+    // e.g. type T = 'hello' | 'world' becomes string | string => string.
+    case ESTree::NodeKind::StringLiteralTypeAnnotation:
+      return flowContext_.getString();
+    case ESTree::NodeKind::NumberLiteralTypeAnnotation:
+      return flowContext_.getNumber();
+    case ESTree::NodeKind::BooleanLiteralTypeAnnotation:
+      return flowContext_.getBoolean();
+
     default:
       sm_.error(
           node->getSourceRange(),
@@ -1759,6 +1769,25 @@ Type *FlowChecker::parseGenericTypeAnnotation(
   if (!id) {
     sm_.error(node->getSourceRange(), "ft: unsupported type annotation");
     return flowContext_.getAny();
+  }
+
+  // Handle built-in generic types that are not in the binding table.
+  {
+    llvh::StringRef name = id->_name->str();
+    // $FlowFixMe is a common Flow escape hatch meaning 'any'.
+    if (name == "$FlowFixMe") {
+      return flowContext_.getAny();
+    }
+    if (node->_typeParameters) {
+      auto *typeParams =
+          llvh::cast<ESTree::TypeParameterInstantiationNode>(
+              node->_typeParameters);
+      if (name == "Array" && typeParams->_params.size() == 1) {
+        Type *elemType = parseTypeAnnotation(&typeParams->_params.front());
+        return flowContext_.createType(
+            flowContext_.createArray(elemType), node);
+      }
+    }
   }
 
   TypeDecl *td = bindingTable_.find(id->_name);

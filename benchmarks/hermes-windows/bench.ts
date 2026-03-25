@@ -133,21 +133,20 @@ const benchmarks: BenchmarkDef[] = [
   { path: 'MiniReact/no-objects/out/music-lowered.js' },   // no timing, measure
   { path: 'MiniReact/no-deps/stripped/MiniReact.js' },     // no output, measure
 
+  // MiniReact Flow-typed variants — use -parse-flow (not -typed) because
+  // -typed segfaults due to unimplemented CheckedTypeCastInst in HBC ISel
+  // (see lib/BCGen/HBC/ISel.cpp generateCheckedTypeCastInst TODO).
+  // MiniReact/original/MiniReact.js is not listed — it is a library with no
+  // entry point, not a runnable benchmark.
+  { path: 'MiniReact/no-deps/MiniReact.js', flags: ['-parse-flow'] },
+  { path: 'MiniReact/no-objects/out/simple.js', flags: ['-parse-flow'], parser: pTrailingMs },
+  { path: 'MiniReact/no-objects/out/music.js', flags: ['-parse-flow'] },
+
   // widgets/
   { path: 'widgets/simple-classes/widgets.js', flags: ['-typed'], parser: pMsIterations },
   { path: 'widgets/original/es5/widgets.js', parser: pMsIterations },
   { path: 'widgets/single-file/es5/widgets.js', parser: pMsIterations },
 ];
-
-// ---------------------------------------------------------------------------
-// Does not work -- commented out (see fixingIndividual.md Phase 3)
-// All require -typed mode which hits unimplemented FlowChecker features.
-// MiniReact/original/MiniReact.js is not listed — it is a library with no
-// entry point, not a runnable benchmark.
-// ---------------------------------------------------------------------------
-// { path: 'MiniReact/no-deps/MiniReact.js', flags: ['-typed'] },        // unsupported type annotations
-// { path: 'MiniReact/no-objects/out/simple.js', flags: ['-typed'] },    // crashes
-// { path: 'MiniReact/no-objects/out/music.js', flags: ['-typed'] },     // unsupported type annotations
 
 // ---------------------------------------------------------------------------
 // Run a single benchmark
