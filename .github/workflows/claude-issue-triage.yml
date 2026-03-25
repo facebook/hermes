@@ -17,7 +17,12 @@ jobs:
         run: |
           # Count how many times this workflow has run in the past 24 hours.
           TIMESTAMP=$(date -u -d '24 hours ago' '+%Y-%m-%dT%H:%M:%SZ')
-          COUNT=$(gh run list --workflow "${{ github.workflow }}" --created ">$TIMESTAMP" --json databaseId --jq '. | length')
+          COUNT=$(gh run list \
+            --repo ${{ github.repository }} \
+            --workflow "${{ github.workflow }}" \
+            --created ">$TIMESTAMP" \
+            --json databaseId \
+            --jq '. | length')
           if [ "$COUNT" -le "$DAILY_LIMIT" ]; then
             echo "should_run=true" >> $GITHUB_OUTPUT
           else
