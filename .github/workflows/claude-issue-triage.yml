@@ -132,6 +132,8 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt_file: /tmp/prompt.txt
+          allowed_tools: "View,GlobTool,GrepTool,Bash"
+          model: "claude-opus-4-6"
           max_turns: "100"
 
       - name: Post triage results
