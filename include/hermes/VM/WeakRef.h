@@ -132,7 +132,11 @@ class WeakRefObjOrSym : public WeakRefBase {
   explicit WeakRefObjOrSym(WeakRefSlot *slot) : WeakRefBase(slot) {}
 
   HermesValue getNoBarrierUnsafe(PointerBase &base) const {
-    return slot_->getValueNoBarrierUnsafe(base);
+    if (slot_->isObject()) {
+      return HermesValue::encodeObjectValue(
+          slot_->getObjectNoBarrierUnsafe(base));
+    }
+    return HermesValue::encodeSymbolValue(slot_->getSymbolNoBarrierUnsafe());
   }
 
   /// \return the HeapSnapshot node id for the underlying Object or Symbol.
