@@ -25,6 +25,11 @@ GCCell *WeakRefSlot::getObject(PointerBase &base, GC &gc) const {
   return value_.root.getObject(base, gc);
 }
 
+HermesValue WeakRefSlot::getValue(PointerBase &base, GC &gc) const {
+  assert(hasValue() && "tried to access collected referent");
+  return value_.root.unboxToHVWithReadBarrier(base, gc);
+}
+
 HermesValue WeakRefSlot::getValueNoBarrierUnsafe(PointerBase &base) const {
   assert(hasValue() && "tried to access collected referent");
   return value_.root.unboxToHV(base);

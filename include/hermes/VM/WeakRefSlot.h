@@ -40,6 +40,10 @@ class WeakRefSlot {
     return value_.root.isSymbol();
   }
 
+  /// Return the underlying value, with a read barrier if it's a pointer or
+  /// symbol.
+  inline HermesValue getValue(PointerBase &base, GC &gc) const;
+
   /// Return the underlying value, without a read barrier. This should only be
   /// used in cases where it is known that no read barrier is necessary (e.g.,
   /// in the GC itself).
