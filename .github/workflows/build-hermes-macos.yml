@@ -60,7 +60,7 @@ jobs:
       - name: Create universal xcframework
         shell: bash
         run: |
-          echo "[HERMES] Creating the universal framework (including macOS)"
+          echo "[HERMES] Creating the universal framework"
           chmod +x ./utils/build-apple-framework.sh
           ./utils/build-apple-framework.sh build_framework
 
