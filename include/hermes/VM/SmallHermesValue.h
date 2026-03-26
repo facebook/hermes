@@ -217,6 +217,11 @@ class SmallHermesValueAdaptor : protected HermesValue {
   static bool canInlineDouble(double d) {
     return true;
   }
+
+ protected:
+  /// Perform read barrier when the value is Pointer or Symbol, then unbox. This
+  /// is only used by WeakSmallHermesValue.
+  inline HermesValue unboxToHVWithReadBarrier(PointerBase &pb, GC &gc) const;
 };
 using SmallHermesValue = SmallHermesValueAdaptor;
 
@@ -601,6 +606,12 @@ class HermesValue32 {
   inline void setNoBarrier(HermesValue32 other) {
     raw_ = other.raw_;
   }
+
+  /// Convert this to a full HermesValue, and unbox it if it is currently boxed.
+  /// The conversion is the same as unboxToHV, but it also performs a read
+  /// barrier if the value is pointer or symbol. This is only used by
+  /// WeakSmallHermesValue, where we need to hold the read pointer/symbol alive.
+  inline HermesValue unboxToHVWithReadBarrier(PointerBase &pb, GC &gc) const;
 };
 using SmallHermesValue = HermesValue32;
 

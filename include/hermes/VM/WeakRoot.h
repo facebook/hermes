@@ -134,7 +134,7 @@ class WeakRootSymbolID final : protected SymbolID {
 /// value if the pointed object has been evacuated, or invalidate it if it's
 /// dead. During old gen collection, we invalidate it if the pointed object is
 /// dead or the symbol is invalid.
-class WeakSmallHermesValue final : protected SmallHermesValue {
+class WeakSmallHermesValue final : private SmallHermesValue {
  public:
   WeakSmallHermesValue() : SmallHermesValue(encodeEmptyValue()) {}
 
@@ -150,6 +150,7 @@ class WeakSmallHermesValue final : protected SmallHermesValue {
   using SmallHermesValue::operator=;
   using SmallHermesValue::getRaw;
   using SmallHermesValue::unboxToHV;
+  using SmallHermesValue::unboxToHVWithReadBarrier;
 
   inline SymbolID getSymbol(GC &gc) const;
   SymbolID getSymbolNoBarrierUnsafe() const {
