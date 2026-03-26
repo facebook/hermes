@@ -105,15 +105,6 @@ function createHermesPrebuiltArtifactsTarball(
 function validateHermesFrameworksExist(destrootDir /*: string */) {
   if (
     !fs.existsSync(
-      path.join(destrootDir, "Library/Frameworks/macosx/hermesvm.framework")
-    )
-  ) {
-    throw new Error(
-      "Error: Hermes macOS Framework not found. Are you sure Hermes has been built?"
-    );
-  }
-  if (
-    !fs.existsSync(
       path.join(
         destrootDir,
         "Library/Frameworks/universal/hermesvm.xcframework"
@@ -121,7 +112,7 @@ function validateHermesFrameworksExist(destrootDir /*: string */) {
     )
   ) {
     throw new Error(
-      "Error: Hermes iOS XCFramework not found. Are you sure Hermes has been built?"
+      "Error: Hermes universal XCFramework not found. Are you sure Hermes has been built?"
     );
   }
 }

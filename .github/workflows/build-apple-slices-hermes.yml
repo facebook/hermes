@@ -45,17 +45,10 @@ jobs:
           # HermesC is used to build hermes, so it has to be executable
           chmod +x ./build_host_hermesc/bin/hermesc
 
-          if [[ "$SLICE" == "macosx" ]]; then
-            echo "[HERMES] Building Hermes for MacOS"
+          echo "[HERMES] Building Hermes for $SLICE"
 
-            chmod +x ./utils/build-mac-framework.sh
-            BUILD_TYPE="${{ matrix.flavor }}" ./utils/build-mac-framework.sh
-          else
-            echo "[HERMES] Building Hermes for iOS: $SLICE"
-
-            chmod +x ./utils/build-ios-framework.sh
-            BUILD_TYPE="${{ matrix.flavor }}" ./utils/build-ios-framework.sh "$SLICE"
-          fi
+          chmod +x ./utils/build-apple-framework.sh
+          BUILD_TYPE="${{ matrix.flavor }}" ./utils/build-apple-framework.sh "$SLICE"
 
           echo "Moving from build_$SLICE to $FINAL_PATH"
           mv build_"$SLICE" "$FINAL_PATH"

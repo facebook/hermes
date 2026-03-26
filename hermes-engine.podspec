@@ -33,7 +33,7 @@ Pod::Spec.new do |spec|
   spec.ios.vendored_frameworks = "destroot/Library/Frameworks/universal/hermesvm.xcframework"
   spec.visionos.vendored_frameworks = "destroot/Library/Frameworks/universal/hermesvm.xcframework"
   spec.tvos.vendored_frameworks = "destroot/Library/Frameworks/universal/hermesvm.xcframework"
-  spec.osx.vendored_frameworks = "destroot/Library/Frameworks/macosx/hermesvm.framework"
+  spec.osx.vendored_frameworks = "destroot/Library/Frameworks/universal/hermesvm.xcframework"
 
   spec.xcconfig            = { "CLANG_CXX_LANGUAGE_STANDARD" => "c++17", "CLANG_CXX_LIBRARY" => "compiler-default", "GCC_PREPROCESSOR_DEFINITIONS" => "HERMES_ENABLE_DEBUGGER=1" }
 
@@ -43,11 +43,8 @@ Pod::Spec.new do |spec|
       # See `build-apple-framework.sh` for details
       DEBUG=#{HermesHelper::BUILD_TYPE == :debug}
 
-      # Build iOS framework
-      ./utils/build-ios-framework.sh
-
-      # Build Mac framework
-      ./utils/build-mac-framework.sh
+      # Build all Apple frameworks (iOS, macOS, tvOS, visionOS, Catalyst)
+      ./utils/build-apple-framework.sh
     EOS
   end
 end

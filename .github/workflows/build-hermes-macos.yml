@@ -57,12 +57,12 @@ jobs:
           chmod +x ./utils/build-apple-framework.sh
           source ./utils/build-apple-framework.sh
           prepare_dest_root_for_ci
-      - name: Create fat framework for iOS
+      - name: Create universal xcframework
         shell: bash
         run: |
-          echo "[HERMES] Creating the universal framework"
-          chmod +x ./utils/build-ios-framework.sh
-          ./utils/build-ios-framework.sh build_framework
+          echo "[HERMES] Creating the universal framework (including macOS)"
+          chmod +x ./utils/build-apple-framework.sh
+          ./utils/build-apple-framework.sh build_framework
 
           chmod +x ./destroot/bin/hermesc
       - name: Package the Hermes Apple frameworks
