@@ -26,11 +26,8 @@ GCCell *WeakRefSlot::getObject(PointerBase &base, GC &gc) const {
 }
 
 HermesValue WeakRefSlot::getValueNoBarrierUnsafe(PointerBase &base) const {
-  // We don't use unboxToHV here because we know the exact possible types.
-  if (value_.root.isObject())
-    return HermesValue::encodeObjectValue(
-        value_.root.getObjectNoBarrierUnsafe(base));
-  return HermesValue::encodeSymbolValue(value_.root.getSymbolNoBarrierUnsafe());
+  assert(hasValue() && "tried to access collected referent");
+  return value_.root.unboxToHV(base);
 }
 
 } // namespace vm
