@@ -6,5 +6,6 @@
  */
 
 // RUN: (! echo "a" "=>b"{1..10000} | %hermesc -dump-ast - 2>&1 ) | %FileCheck -match-full-lines %s
+// UNSUPPORTED: windows
 
 // CHECK: {{.*}}: error: Too many nested expressions/statements/declarations
