@@ -50,7 +50,7 @@ Some files still fail even with `-typed` due to unsupported features (ES module 
 
 - nbody/original/nbody.js: `{energy-value}` (correctness check only, no timing output)
 - nbody/fully-typed/nbody.js: `{energy-value}` (requires `-typed`, correctness check only, no timing output)
-- nbody/fully-typed/nbody.ts: `{energy-value}` (requires `-parse-ts` or `-transform-ts`, correctness check only, no timing output)
+- nbody/fully-typed/nbody.ts: `{energy-value}` (requires `-parse-ts`, correctness check only, no timing output)
 
 ## string-switch/
 
@@ -69,10 +69,10 @@ Some files still fail even with `-typed` due to unsupported features (ES module 
 - MiniReact/no-objects/out/music-stripped.js: renders HTML only, no timing output
 - MiniReact/no-objects/out/music-lowered.js: renders HTML only, no timing output
 - MiniReact/no-deps/stripped/MiniReact.js: no output
-- MiniReact/no-deps/MiniReact.js: **does not work** (unsupported type annotations even with `-typed`)
-- MiniReact/original/MiniReact.js: **does not work** (ES module imports not supported)
-- MiniReact/no-objects/out/simple.js: **does not work** (crashes with `-typed`)
-- MiniReact/no-objects/out/music.js: **does not work** (unsupported type annotations even with `-typed`)
+- MiniReact/no-deps/MiniReact.js: no output (requires `-parse-flow`; `-typed` crashes due to unimplemented CheckedTypeCastInst)
+- MiniReact/no-objects/out/simple.js: `{ms} ms` (requires `-parse-flow`; `-typed` crashes)
+- MiniReact/no-objects/out/music.js: renders HTML only, no timing output (requires `-parse-flow`; `-typed` crashes)
+- MiniReact/original/MiniReact.js: **not a benchmark** (library with no entry point, not runnable)
 
 ## widgets/
 
@@ -109,3 +109,15 @@ bench-runner `--cats v8 octane` covers most of these but not all:
 - crypto, deltablue, raytrace, regexp, richards, splay — available in bench-runner under the `v8` category
 - box2d, earley-boyer, navier-stokes, pdfjs, gbemu, code-load, typescript — available in bench-runner under the `octane` category
 - mandreel, mandreel_latency, splay_latency, zlib — **only available here**, not in bench-runner
+
+## Upstream Fixes
+
+These commits fixed upstream code to make individual benchmarks work:
+
+- `e631f052` Fix es5/bundled and typescript benchmark files (#285)
+  — Rewrote `raytracer/original/raytracer.ts` to replace TypeScript parameter
+  properties (unsupported by Hermes's `-parse-ts`) with plain assignments.
+- `d8add470` Fix FlowChecker.cpp to support remaining benchmark cases (#287)
+  — Fixed `lib/Sema/FlowChecker.cpp` to handle Flow type annotations used by
+  MiniReact and widgets benchmarks, enabling `-parse-flow` for MiniReact
+  variants and `-typed` for widgets.

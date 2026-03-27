@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync, unlinkSync } from 'node:fs';
-import { join, dirname, resolve } from 'node:path';
+import { join, dirname, resolve, delimiter } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { tmpdir } from 'node:os';
@@ -10,9 +10,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const benchmarksDir = resolve(__dirname, '..');
 const repoRoot = resolve(benchmarksDir, '..');
-const hermes = resolve(
-  repoRoot, 'build', 'ninja-clang-release', 'bin', 'hermes.exe',
-);
+// Binary path — set after CLI arg parsing.
+let hermes: string;
 
 // ---------------------------------------------------------------------------
 // Interfaces
@@ -149,6 +148,44 @@ const benchmarks: BenchmarkDef[] = [
 ];
 
 // ---------------------------------------------------------------------------
+// Static Hermes helpers — two-phase compile-then-run so that compilation
+// time is excluded from wall-clock measurements.
+// ---------------------------------------------------------------------------
+
+let shermesExecEnv: Record<string, string> | undefined;
+
+/// Build a process env with DLL directories on PATH so that executables
+/// compiled by shermes can find hermesvm.dll and shermes_console.dll.
+function getShermesExecEnv(): Record<string, string> {
+  if (shermesExecEnv) return shermesExecEnv;
+  const buildDir = resolve(dirname(hermes), '..');
+  const libDir = join(buildDir, 'lib');
+  const consoleDir = join(buildDir, 'tools', 'shermes');
+  shermesExecEnv = { ...process.env } as Record<string, string>;
+  shermesExecEnv['PATH'] =
+    libDir + delimiter + consoleDir + delimiter + (process.env['PATH'] || '');
+  return shermesExecEnv;
+}
+
+let shermesSeq = 0;
+
+/// Compile a JS file to a native executable via shermes.
+/// Returns the path to the temp .exe, or null on failure.
+function shermesCompile(def: BenchmarkDef, jsPath: string): string | null {
+  const exePath = join(tmpdir(), `shermes-bench-${process.pid}-${shermesSeq++}.exe`);
+  const args = ['-O', ...(def.flags || []), '-o', exePath, jsPath];
+  const result = spawnSync(hermes, args, {
+    encoding: 'utf-8',
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
+  if (result.status !== 0) {
+    console.warn(`  ${def.path} compile failed: ${(result.stderr || '').trim()}`);
+    return null;
+  }
+  return exePath;
+}
+
+// ---------------------------------------------------------------------------
 // Run a single benchmark
 // ---------------------------------------------------------------------------
 
@@ -160,9 +197,22 @@ function runBenchmark(def: BenchmarkDef): [string, number] | null {
   }
 
   const resolvedPath = resolve(fullPath);
-  const args = [...(def.flags || []), resolvedPath];
   const key = def.path;
 
+  // In static mode, pre-compile to a native exe so wall-clock measurements
+  // reflect only execution time, not compilation.
+  if (mode === 'static') {
+    const exePath = shermesCompile(def, resolvedPath);
+    if (!exePath) return null;
+    const env = getShermesExecEnv();
+    try {
+      return runCompiledBenchmark(def, key, exePath, env);
+    } finally {
+      try { unlinkSync(exePath); } catch {}
+    }
+  }
+
+  const args = [...(def.flags || []), resolvedPath];
   try {
     if (def.parser) {
       const result = spawnSync(hermes, args, {
@@ -191,18 +241,54 @@ function runBenchmark(def: BenchmarkDef): [string, number] | null {
   }
 }
 
+/// Run an already-compiled native exe and collect timing.
+function runCompiledBenchmark(
+  def: BenchmarkDef,
+  key: string,
+  exePath: string,
+  env: Record<string, string>,
+): [string, number] | null {
+  try {
+    if (def.parser) {
+      const result = spawnSync(exePath, [], {
+        encoding: 'utf-8',
+        stdio: ['pipe', 'pipe', 'ignore'],
+        env,
+      });
+      const stdout = result.stdout || '';
+      const time = def.parser(stdout);
+      if (time !== null && time > 0) {
+        console.log(`  ${def.path} ${time} ms`);
+        return [key, time];
+      } else {
+        console.warn(`  ${def.path} failed to parse time`);
+        return null;
+      }
+    } else {
+      const start = Date.now();
+      spawnSync(exePath, [], { stdio: 'ignore', env });
+      const elapsed = Date.now() - start;
+      console.log(`  ${def.path} ${elapsed} ms (measured)`);
+      return [key, elapsed];
+    }
+  } catch (e) {
+    console.warn(`  ERROR ${def.path}: ${e}`);
+    return null;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // benchIndividual — run each individual benchmark once
 // ---------------------------------------------------------------------------
 
 function benchIndividual(): Benchmark {
   if (!existsSync(hermes)) {
-    console.error(`hermes.exe not found at: ${hermes}`);
+    console.error(`Binary not found at: ${hermes}`);
     process.exit(1);
   }
 
   console.log('Running individual benchmarks...');
-  console.log(`hermes: ${hermes}`);
+  console.log(`binary: ${hermes}`);
   console.log('');
 
   const results: { [key: string]: number } = {};
@@ -285,7 +371,7 @@ function benchTestSuites(count: number, label: string): TestSuiteBenchmark {
   }
 
   if (!existsSync(hermes)) {
-    console.error(`hermes.exe not found at: ${hermes}`);
+    console.error(`Binary not found at: ${hermes}`);
     process.exit(1);
   }
 
@@ -297,7 +383,7 @@ function benchTestSuites(count: number, label: string): TestSuiteBenchmark {
 
   // tsc category is excluded -- tsc-vs-chunk.js is not available in this repo
   console.log('Running test suites: v8 octane micros');
-  console.log(`hermes: ${hermes}`);
+  console.log(`binary: ${hermes}`);
   console.log(`count: ${count}`);
   console.log(`label: ${label}`);
   console.log('');
@@ -306,7 +392,7 @@ function benchTestSuites(count: number, label: string): TestSuiteBenchmark {
 
   try {
     const result = spawnSync('python3', [
-      benchRunner, '--hermes', '-b', hermes,
+      benchRunner, mode === 'static' ? '--shermes' : '--hermes', '-b', hermes,
       '--cats', 'v8', 'octane', 'micros',
       '-c', String(count), '-l', label,
       '-f', 'json', '--out', tempOut,
@@ -366,17 +452,33 @@ const { values } = parseArgs({
     count: { type: 'string', short: 'c' },
     label: { type: 'string', short: 'l' },
     output: { type: 'string', short: 'o' },
+    dynamic: { type: 'boolean', default: false },
+    static: { type: 'boolean', default: false },
   },
 });
 
 const count = parseInt(values.count || '1');
 const label = values.label || 'test';
 const output = values.output;
+const useDynamic = values.dynamic!;
+const useStatic = values.static!;
 
-if (!output) {
-  console.error('Usage: node bench.ts -c <count> -l <label> -o <output.json>');
+if (useDynamic && useStatic) {
+  console.error('Error: --dynamic and --static cannot be used together.');
   process.exit(1);
 }
+
+if (!output) {
+  console.error(
+    'Usage: node bench.ts -c <count> -l <label> -o <output.json> [--dynamic|--static]',
+  );
+  process.exit(1);
+}
+
+// Default to dynamic (hermes.exe) unless --static is specified.
+const mode: 'dynamic' | 'static' = useStatic ? 'static' : 'dynamic';
+const binaryName = mode === 'static' ? 'shermes.exe' : 'hermes.exe';
+hermes = resolve(repoRoot, 'build', 'ninja-clang-release', 'bin', binaryName);
 
 const result = benchAll(count, label);
 writeFileSync(output, JSON.stringify(result, undefined, 4) + '\n');

@@ -4,19 +4,27 @@ Runs JS benchmarks and compares results across engines or builds. Full docs: `be
 
 ## bench.ts
 
-A single TypeScript script (`benchmarks/hermes-windows/bench.ts`) replaces the previous PowerShell scripts. It runs with Node.js 24+ (native type stripping) and works from any working directory. It expects `build/ninja-clang-release/bin/hermes.exe` to exist.
+A single TypeScript script (`benchmarks/hermes-windows/bench.ts`) replaces the previous PowerShell scripts. It runs with Node.js 24+ (native type stripping) and works from any working directory. It expects `build/ninja-clang-release/bin/hermes.exe` (or `shermes.exe` for static mode) to exist.
 
 ### Quick start
 
 Run everything (test suites + individual benchmarks) and write a merged JSON file:
 
 ```bash
+# Dynamic Hermes (default) — interprets JS via bytecode
 node benchmarks/hermes-windows/bench.ts -c 5 -l baseline -o results.json
+
+# Static Hermes — compiles JS to native code, then runs
+node benchmarks/hermes-windows/bench.ts --static -c 5 -l baseline -o results-static.json
 ```
 
 - `-c` — number of iterations per benchmark (default: 1)
 - `-l` — label (e.g. "before", "after") included in the JSON output (default: "test")
 - `-o` — output JSON file path (required)
+- `--dynamic` — use `hermes.exe` (default)
+- `--static` — use `shermes.exe` (Static Hermes)
+
+`--dynamic` and `--static` are mutually exclusive. When omitted, `--dynamic` is the default.
 
 ### Functions
 
@@ -40,6 +48,14 @@ node benchmarks/hermes-windows/bench.ts -c 5 -l after -o after.json
 python3 benchmarks/bench-runner/bench-merge.py before.json after.json
 ```
 
+### Comparing dynamic vs static
+
+```bash
+node benchmarks/hermes-windows/bench.ts -c 5 -l dynamic -o dynamic.json
+node benchmarks/hermes-windows/bench.ts --static -c 5 -l static -o static.json
+python3 benchmarks/bench-runner/bench-merge.py dynamic.json static.json
+```
+
 Note: `bench-merge.py` only compares bench-runner test suite results (it ignores individual benchmark entries). For individual benchmarks, compare the JSON files directly.
 
 ## How It Works
@@ -59,9 +75,17 @@ print("Time: " + (end - start));
 ```
 
 The runner (`bench-runner.py`) does the following for each benchmark:
+
+**Dynamic mode** (`--hermes`, default):
 1. **Compiles** the JS file to Hermes bytecode (`.hbc`) using: `hermes -O -Wno-undefined-variable -emit-binary`
 2. **Warm-up run** — runs once to warm disk caches (discards result)
 3. **Timed runs** — runs N times (set by `-c`), parses `Time: <ms>` from each run's stdout
+4. **Reports** mean and stddev across runs
+
+**Static mode** (`--shermes`):
+1. **Compiles** the JS file to a native executable using: `shermes -O -o <temp>.exe`
+2. **Warm-up run** — runs once to warm disk caches (discards result)
+3. **Timed runs** — runs the native exe N times, parses `Time: <ms>` from stdout
 4. **Reports** mean and stddev across runs
 
 Benchmark names (used with `--bm`) and their JS file mappings are defined in `benchmarks/bench-runner/categories.py`.
@@ -75,7 +99,11 @@ Benchmark names (used with `--bm`) and their JS file mappings are defined in `be
 ## Running Benchmarks
 
 ```bash
+# Dynamic Hermes
 python3 benchmarks/bench-runner/bench-runner.py --hermes -b build/ninja-clang-release/bin/hermes.exe {PARAMETERS}
+
+# Static Hermes
+python3 benchmarks/bench-runner/bench-runner.py --shermes -b build/ninja-clang-release/bin/shermes.exe {PARAMETERS}
 ```
 
 Parameters:
@@ -130,6 +158,11 @@ Some directories also have typed variants (`*-sh-*.js`, `*-typed.js`) meant for 
 Run all benchmarks with bench.ts (recommended):
 ```bash
 node benchmarks/hermes-windows/bench.ts -c 3 -l baseline -o results.json
+```
+
+Run all benchmarks with Static Hermes:
+```bash
+node benchmarks/hermes-windows/bench.ts --static -c 3 -l baseline -o results-static.json
 ```
 
 Run a single bench-runner benchmark (quick smoke test):

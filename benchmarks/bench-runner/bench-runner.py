@@ -11,6 +11,7 @@ import output
 from categories import categories, synths
 
 from runner import HermesRunner, V8Runner
+from shermes_runner import ShermesRunner
 from stats import HermesGCStatsCollector, StatsCollector
 from tmpdir import TemporaryDirectory
 
@@ -26,19 +27,21 @@ def progress(*args):
 
 
 HermesName = "hermes"
+ShermesName = "shermes"
 SynthName = "synth"
 V8Name = "v8"
 V8JitlessName = "v8jitless"
 
 
-def determineRuntime(hermes, synth, v8, v8jitless):
+def determineRuntime(hermes, shermes, synth, v8, v8jitless):
     """
     Choose which Runtime configuration to use, given the flags that were passed
     in. If no flags have been set (i.e. the user made no choice about the
     runtime), default to using the Non-contiguous generational GC.
     """
 
-    runtimes = [(HermesName, hermes), (SynthName, synth), (V8Name, v8),
+    runtimes = [(HermesName, hermes), (ShermesName, shermes),
+                (SynthName, synth), (V8Name, v8),
                 (V8JitlessName, v8jitless)]
 
     choices = [rt for (rt, chosen) in runtimes if chosen]
@@ -69,6 +72,7 @@ def main():
     )
     runtimeGroup = argparser.add_mutually_exclusive_group()
     runtimeGroup.add_argument("--hermes", help="Use the Hermes VM", action="store_true")
+    runtimeGroup.add_argument("--shermes", help="Use Static Hermes (shermes)", action="store_true")
     runtimeGroup.add_argument(
         "--synth", help="Use the synthetic benchmark interpreter", action="store_true"
     )
@@ -152,7 +156,7 @@ def main():
     args = argparser.parse_args()
     logging.basicConfig(level=args.loglevel)
 
-    runtime = determineRuntime(args.hermes, args.synth, args.v8, args.v8jitless)
+    runtime = determineRuntime(args.hermes, args.shermes, args.synth, args.v8, args.v8jitless)
 
     formatter = FORMATTERS[args.output_format]
 
@@ -167,6 +171,11 @@ def main():
         # Hermes runtime, use the hermes runner and stat collector
         statCollector = StatsCollector(
             HermesRunner(binary, args.count, args.keep_tmp)
+        )
+    elif runtime == ShermesName:
+        # Static Hermes, compile to native then run
+        statCollector = StatsCollector(
+            ShermesRunner(binary, args.count, args.keep_tmp)
         )
     elif runtime == SynthName:
         # Synthetic benchmarks, use the synth runner and hermes stat collector
