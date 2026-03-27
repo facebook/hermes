@@ -6,6 +6,7 @@
  */
 
 // RUN: ulimit -s 1024 && %shermes -exec %s  | %FileCheck --match-full-lines %s
+// UNSUPPORTED: windows
 
 "use strict";
 
