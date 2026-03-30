@@ -629,7 +629,6 @@
     "mjsunit/regress/regress-347262.js",
     "mjsunit/regress/regress-3985.js",
     "mjsunit/regress/regress-crbug-601617.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.split/last-index-exceeds-str-size.js",
     "mjsunit/regexp.js",
     "mjsunit/regress/regress-396.js",
     "mjsunit/compiler/debug-catch-prediction.js",
@@ -1182,8 +1181,6 @@
         "test262/test/staging/sm/TypedArray/write-out-of-bounds-tonumber.js"
       ]
     },
-    "test262/test/built-ins/Object/internals/DefineOwnProperty/consistent-value-regexp-$1.js",
-    "test262/test/built-ins/Object/internals/DefineOwnProperty/consistent-writable-regexp-$1.js",
     "mjsunit/regress/regress-crbug-501711.js",
     "test262/test/built-ins/ThrowTypeError/name.js",
     "test262/test/built-ins/ThrowTypeError/frozen.js",
@@ -1204,9 +1201,6 @@
     "test262/test/language/expressions/tagged-template/cache-differing-expressions.js",
     "test262/test/language/expressions/tagged-template/template-object-template-map.js",
     "mjsunit/es6/unicode-regexp-ignore-case-noi18n.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.search/lastindex-no-restore.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.split/species-ctor-ctor-non-obj.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.split/species-ctor-ctor-get-err.js",
     "mjsunit/function-bind.js",
     "test262/test/built-ins/Object/prototype/toLocaleString/primitive_this_value.js",
     "test262/test/built-ins/Object/prototype/toLocaleString/primitive_this_value_getter.js",
@@ -1219,8 +1213,6 @@
     "test262/test/harness/assert-throws-early-referenceerror.js",
     "test262/test/harness/assert-throws-same-realm.js",
     "test262/test/built-ins/ArrayBuffer/prototype/slice/species-constructor-is-not-object.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.matchAll/species-constructor-get-constructor-throws.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.matchAll/species-constructor-is-not-object-throws.js",
     "test262/test/built-ins/Date/year-zero.js",
     "test262/test/built-ins/Date/parse/time-value-maximum-range.js",
     "test262/test/built-ins/Date/parse/year-zero.js",
@@ -1324,12 +1316,6 @@
     "test262/test/built-ins/Symbol/prototype/description/this-val-symbol.js",
     "test262/test/built-ins/Symbol/prototype/description/wrapper.js",
     "test262/test/built-ins/Symbol/prototype/description/get.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.match/flags-tostring-error.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.match/get-flags-err.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.match/get-unicode-error.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.replace/flags-tostring-error.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.replace/get-flags-err.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.replace/get-unicode-error.js",
     "test262/test/built-ins/BigInt/constructor-coercion.js",
     "test262/test/built-ins/Object/prototype/toString/symbol-tag-promise-builtin.js",
     "mjsunit/concurrent-initial-prototype-change.js",
@@ -2401,18 +2387,6 @@
     "test262/test/annexB/language/expressions/assignmenttargettype/callexpression-in-prefix-update.js",
     "test262/test/annexB/language/expressions/assignmenttargettype/callexpression.js",
     "test262/test/annexB/language/expressions/assignmenttargettype/cover-callexpression-and-asyncarrowhead.js",
-    "test262/test/built-ins/RegExp/CharacterClassEscapes/character-class-digit-class-escape-negative-cases.js",
-    "test262/test/built-ins/RegExp/CharacterClassEscapes/character-class-digit-class-escape-positive-cases.js",
-    "test262/test/built-ins/RegExp/CharacterClassEscapes/character-class-non-digit-class-escape-negative-cases.js",
-    "test262/test/built-ins/RegExp/CharacterClassEscapes/character-class-non-digit-class-escape-positive-cases.js",
-    "test262/test/built-ins/RegExp/CharacterClassEscapes/character-class-non-whitespace-class-escape-negative-cases.js",
-    "test262/test/built-ins/RegExp/CharacterClassEscapes/character-class-non-whitespace-class-escape-positive-cases.js",
-    "test262/test/built-ins/RegExp/CharacterClassEscapes/character-class-non-word-class-escape-negative-cases.js",
-    "test262/test/built-ins/RegExp/CharacterClassEscapes/character-class-non-word-class-escape-positive-cases.js",
-    "test262/test/built-ins/RegExp/CharacterClassEscapes/character-class-whitespace-class-escape-negative-cases.js",
-    "test262/test/built-ins/RegExp/CharacterClassEscapes/character-class-whitespace-class-escape-positive-cases.js",
-    "test262/test/built-ins/RegExp/CharacterClassEscapes/character-class-word-class-escape-negative-cases.js",
-    "test262/test/built-ins/RegExp/CharacterClassEscapes/character-class-word-class-escape-positive-cases.js",
     "test262/test/language/destructuring/binding/keyed-destructuring-property-reference-target-evaluation-order-with-bindings.js",
     "test262/test/language/expressions/assignment/destructuring/keyed-destructuring-property-reference-target-evaluation-order-with-bindings.js",
     "test262/test/language/statements/with/get-binding-value-call-with-proxy-env.js",
@@ -2502,36 +2476,6 @@
     "test262/test/staging/sm/PrivateName/modify-non-extensible.js",
     "test262/test/staging/sm/PrivateName/read-private-eval.js",
     "test262/test/staging/sm/BigInt/property-name.js",
-    "test262/test/staging/sm/RegExp/unicode-ignoreCase-escape.js",
-    "test262/test/staging/sm/RegExp/flags.js",
-    "test262/test/staging/sm/RegExp/compile-lastIndex.js",
-    "test262/test/staging/sm/RegExp/constructor-ordering.js",
-    "test262/test/staging/sm/RegExp/RegExpExec-exec-type-check.js",
-    "test262/test/staging/sm/RegExp/split-limit.js",
-    "test262/test/staging/sm/RegExp/unicode-back-reference.js",
-    "test262/test/staging/sm/RegExp/match-local-tolength-recompilation.js",
-    "test262/test/staging/sm/RegExp/cross-compartment-getter.js",
-    "test262/test/staging/sm/RegExp/split-prop-access.js",
-    "test262/test/staging/sm/RegExp/escape.js",
-    "test262/test/staging/sm/RegExp/unicode-class-raw.js",
-    "test262/test/staging/sm/RegExp/unicode-ignoreCase.js",
-    "test262/test/staging/sm/RegExp/split-trace.js",
-    "test262/test/staging/sm/RegExp/getter-name.js",
-    "test262/test/staging/sm/RegExp/unicode-ignoreCase-word-boundary.js",
-    "test262/test/staging/sm/RegExp/replace-compile.js",
-    "test262/test/staging/sm/RegExp/unicode-raw.js",
-    "test262/test/staging/sm/RegExp/prototype-different-global.js",
-    "test262/test/staging/sm/RegExp/split-invalid-lastIndex.js",
-    "test262/test/staging/sm/RegExp/replace-trace.js",
-    "test262/test/staging/sm/RegExp/prototype.js",
-    "test262/test/staging/sm/RegExp/replace-local-tolength-recompilation.js",
-    "test262/test/staging/sm/RegExp/constructor-regexp.js",
-    "test262/test/staging/sm/RegExp/lastIndex-search.js",
-    "test262/test/staging/sm/RegExp/search-trace.js",
-    "test262/test/staging/sm/RegExp/match-trace.js",
-    "test262/test/staging/sm/RegExp/replace-compile-elembase.js",
-    "test262/test/staging/sm/RegExp/flags-param-handling.js",
-    "test262/test/staging/sm/RegExp/constructor-constructor.js",
     "test262/test/staging/sm/Proxy/proxy-no-receiver-overwrite.js",
     "test262/test/staging/sm/Proxy/revoked-get-function-realm-typeerror.js",
     "test262/test/staging/sm/Proxy/proxy-with-revoked-arguments.js",
@@ -2826,6 +2770,102 @@
         "test262/test/staging/sm/class/fields-static-class-name-binding-eval.js"
       ],
       "comment": "Class static methods/fields: initialization and scoping issues."
+    },
+    {
+      "paths": [
+        "test262/test/built-ins/RegExp/prototype/Symbol.split/last-index-exceeds-str-size.js",
+        "test262/test/built-ins/RegExp/prototype/Symbol.search/lastindex-no-restore.js",
+        "test262/test/built-ins/RegExp/prototype/Symbol.split/species-ctor-ctor-non-obj.js",
+        "test262/test/built-ins/RegExp/prototype/Symbol.split/species-ctor-ctor-get-err.js",
+        "test262/test/built-ins/RegExp/prototype/Symbol.match/flags-tostring-error.js",
+        "test262/test/built-ins/RegExp/prototype/Symbol.match/get-flags-err.js",
+        "test262/test/built-ins/RegExp/prototype/Symbol.match/get-unicode-error.js",
+        "test262/test/built-ins/RegExp/prototype/Symbol.replace/flags-tostring-error.js",
+        "test262/test/built-ins/RegExp/prototype/Symbol.replace/get-flags-err.js",
+        "test262/test/built-ins/RegExp/prototype/Symbol.replace/get-unicode-error.js"
+      ],
+      "comment": "RegExp Symbol.split/match/replace/search issues."
+    },
+    {
+      "paths": [
+        "test262/test/built-ins/RegExp/CharacterClassEscapes/character-class-digit-class-escape-negative-cases.js",
+        "test262/test/built-ins/RegExp/CharacterClassEscapes/character-class-digit-class-escape-positive-cases.js",
+        "test262/test/built-ins/RegExp/CharacterClassEscapes/character-class-non-digit-class-escape-negative-cases.js",
+        "test262/test/built-ins/RegExp/CharacterClassEscapes/character-class-non-digit-class-escape-positive-cases.js",
+        "test262/test/built-ins/RegExp/CharacterClassEscapes/character-class-non-whitespace-class-escape-negative-cases.js",
+        "test262/test/built-ins/RegExp/CharacterClassEscapes/character-class-non-whitespace-class-escape-positive-cases.js",
+        "test262/test/built-ins/RegExp/CharacterClassEscapes/character-class-non-word-class-escape-negative-cases.js",
+        "test262/test/built-ins/RegExp/CharacterClassEscapes/character-class-non-word-class-escape-positive-cases.js",
+        "test262/test/built-ins/RegExp/CharacterClassEscapes/character-class-whitespace-class-escape-negative-cases.js",
+        "test262/test/built-ins/RegExp/CharacterClassEscapes/character-class-whitespace-class-escape-positive-cases.js",
+        "test262/test/built-ins/RegExp/CharacterClassEscapes/character-class-word-class-escape-negative-cases.js",
+        "test262/test/built-ins/RegExp/CharacterClassEscapes/character-class-word-class-escape-positive-cases.js",
+        "test262/test/staging/sm/RegExp/flags.js",
+        "test262/test/staging/sm/RegExp/split-invalid-lastIndex.js"
+      ],
+      "comment": "RegExp: v flag (unicodeSets) not supported."
+    },
+    {
+      "paths": [
+        "test262/test/staging/sm/RegExp/compile-lastIndex.js",
+        "test262/test/staging/sm/RegExp/constructor-ordering.js",
+        "test262/test/staging/sm/RegExp/match-local-tolength-recompilation.js",
+        "test262/test/staging/sm/RegExp/replace-compile.js",
+        "test262/test/staging/sm/RegExp/replace-local-tolength-recompilation.js",
+        "test262/test/staging/sm/RegExp/replace-compile-elembase.js",
+        "test262/test/staging/sm/RegExp/flags-param-handling.js",
+        "test262/test/staging/sm/RegExp/prototype.js",
+        "test262/test/staging/sm/RegExp/getter-name.js",
+        "test262/test/staging/sm/RegExp/constructor-regexp.js"
+      ],
+      "comment": "RegExp: RegExp.prototype features not implemented."
+    },
+    {
+      "paths": [
+        "test262/test/staging/sm/RegExp/split-limit.js",
+        "test262/test/staging/sm/RegExp/split-prop-access.js",
+        "test262/test/staging/sm/RegExp/split-trace.js",
+        "test262/test/staging/sm/RegExp/replace-trace.js",
+        "test262/test/staging/sm/RegExp/search-trace.js",
+        "test262/test/staging/sm/RegExp/match-trace.js"
+      ],
+      "comment": "RegExp: Symbol method spec compliance (@@split/@@replace/@@match/@@search trace/semantics)."
+    },
+    {
+      "paths": [
+        "test262/test/staging/sm/RegExp/cross-compartment-getter.js",
+        "test262/test/staging/sm/RegExp/prototype-different-global.js",
+        "test262/test/staging/sm/RegExp/constructor-constructor.js"
+      ],
+      "comment": "RegExp: $262.createRealm() not available (harness limitation, not Hermes bugs)."
+    },
+    {
+      "paths": [
+        "test262/test/staging/sm/RegExp/unicode-back-reference.js",
+        "test262/test/staging/sm/RegExp/unicode-raw.js",
+        "test262/test/staging/sm/RegExp/unicode-class-raw.js"
+      ],
+      "comment": "RegExp: Unicode surrogate pair handling in /u mode."
+    },
+    {
+      "paths": [
+        "test262/test/built-ins/Object/internals/DefineOwnProperty/consistent-value-regexp-$1.js",
+        "test262/test/built-ins/Object/internals/DefineOwnProperty/consistent-writable-regexp-$1.js",
+        "test262/test/staging/sm/RegExp/unicode-ignoreCase-escape.js",
+        "test262/test/staging/sm/RegExp/unicode-ignoreCase.js",
+        "test262/test/staging/sm/RegExp/RegExpExec-exec-type-check.js",
+        "test262/test/staging/sm/RegExp/escape.js",
+        "test262/test/staging/sm/RegExp/unicode-ignoreCase-word-boundary.js",
+        "test262/test/staging/sm/RegExp/lastIndex-search.js"
+      ],
+      "comment": "RegExp: miscellaneous edge cases (case folding, duck-typing, lastIndex, source escaping, getter name)."
+    },
+    {
+      "paths": [
+        "test262/test/built-ins/RegExp/prototype/Symbol.matchAll/species-constructor-get-constructor-throws.js",
+        "test262/test/built-ins/RegExp/prototype/Symbol.matchAll/species-constructor-is-not-object-throws.js"
+      ],
+      "comment": "String.prototype.matchAll / RegExp matchAll issues."
     }
   ],
   "lazy_skip_list": [
