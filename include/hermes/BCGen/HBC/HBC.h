@@ -68,6 +68,8 @@ struct CompileFlags {
   bool enableGenerator{true};
   /// Enable ES6 block scoping support
   bool enableES6BlockScoping{false};
+  /// Enable Temporal Dead Zone (TDZ) checking for let/const.
+  bool enableTDZ{false};
   /// Enable async generators support
   bool enableAsyncGenerators{false};
   /// Enable TypeScript support.
