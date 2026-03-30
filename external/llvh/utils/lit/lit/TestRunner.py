@@ -1640,6 +1640,12 @@ def executeShTest(test, litConfig, useExternalSh,
                                              normalize_slashes=useExternalSh)
     script = applySubstitutions(script, substitutions)
 
+    # Drop empty RUN lines (e.g. from disabled substitutions).
+    script = [ln for ln in script if ln]
+    if not script:
+        return lit.Test.Result(Test.UNSUPPORTED,
+                               "Test has no remaining run lines after substitution")
+
     # Re-run failed tests up to test_retry_attempts times.
     attempts = 1
     if hasattr(test.config, 'test_retry_attempts'):

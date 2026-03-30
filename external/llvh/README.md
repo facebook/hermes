@@ -55,6 +55,13 @@ Some copied files were omitted because we don't use them
 Update: pull in the `run_under` argument in googletest.py, from LLVM release
 v20.1.8, commit hash `87f0227cb60147a26a1eeb4fb06e3b505e9c7261`.
 
+Skip empty RUN lines after substitution in `TestRunner.py`. When a
+substitution replaces a RUN line with an empty string, the line is dropped.
+If all RUN lines are dropped, the test is marked `UNSUPPORTED`. This allows
+`lit.cfg` to disable specific tools (e.g. `%shermes`) by substituting them
+with a marker and then replacing the entire line with an empty string.
+Patch: `patches/lit-skip-empty-run-lines.patch`.
+
 ## Other imports from v9.0.1
 
 Support/JSON and Support/ToolOutputFile.
