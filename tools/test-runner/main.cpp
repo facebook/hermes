@@ -20,6 +20,8 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cassert>
+#include <chrono>
 #include <string>
 #include <thread>
 #include <vector>
@@ -134,6 +136,7 @@ std::vector<std::string> buildIncludes(
 struct FilterResult {
   std::vector<TestEntry> tests;
   size_t skippedCount = 0;
+  size_t permanentlySkippedCount = 0;
 };
 
 /// Filter test entries by the skiplist, separating tests to run from skipped.
@@ -146,12 +149,160 @@ FilterResult filterBySkiplist(
       SkipReason reason = skiplist->shouldSkipPath(entry.path);
       if (reason != SkipReason::NotSkipped) {
         ++result.skippedCount;
+        if (reason == SkipReason::PermanentSkipList)
+          ++result.permanentlySkippedCount;
         continue;
       }
     }
     result.tests.push_back(std::move(entry));
   }
   return result;
+}
+
+/// Tallied result counts for reporting.
+/// Each test file produces exactly one result (short-circuit on first failure).
+struct ResultTally {
+  size_t passed = 0;
+  size_t compileFail = 0;
+  size_t compileTimeout = 0;
+  size_t executeFail = 0;
+  size_t executeTimeout = 0;
+  std::vector<TestResult> failures;
+
+  size_t totalFailed() const {
+    return compileFail + compileTimeout + executeFail + executeTimeout;
+  }
+};
+
+/// Tally results. Each entry is already one-per-file (the executor
+/// short-circuits on first variant failure, matching the Python runner).
+ResultTally tallyResults(const std::vector<TestResult> &results) {
+  ResultTally tally;
+  for (const auto &r : results) {
+    switch (r.code) {
+      case ResultCode::Passed:
+        ++tally.passed;
+        break;
+      case ResultCode::CompileFailed:
+        ++tally.compileFail;
+        tally.failures.push_back(r);
+        break;
+      case ResultCode::CompileTimeout:
+        ++tally.compileTimeout;
+        tally.failures.push_back(r);
+        break;
+      case ResultCode::Failed:
+      case ResultCode::ExecuteFailed:
+        ++tally.executeFail;
+        tally.failures.push_back(r);
+        break;
+      case ResultCode::ExecuteTimeout:
+        ++tally.executeTimeout;
+        tally.failures.push_back(r);
+        break;
+      case ResultCode::Skipped:
+      case ResultCode::PermanentlySkipped:
+        break;
+    }
+  }
+  return tally;
+}
+
+/// Print the N slowest tests by duration.
+void printSlowestTests(const std::vector<TestResult> &results, unsigned count) {
+  if (count == 0 || results.empty())
+    return;
+
+  std::vector<const TestResult *> sorted;
+  sorted.reserve(results.size());
+  for (const auto &r : results)
+    sorted.push_back(&r);
+  std::sort(sorted.begin(), sorted.end(), [](const auto *a, const auto *b) {
+    return a->duration > b->duration;
+  });
+
+  unsigned n = std::min((unsigned)sorted.size(), count);
+  llvh::outs() << "\nSlowest " << n << " tests:\n";
+  llvh::outs() << "-----------------------------------\n";
+  for (unsigned i = 0; i < n; ++i) {
+    double secs = sorted[i]->duration.count() / 1000000.0;
+    llvh::outs() << llvh::format("   %.2fs  ", secs) << sorted[i]->testName
+                 << "\n";
+  }
+  llvh::outs() << "-----------------------------------\n";
+}
+
+/// Tally results and print summary table matching Python/Rust runner format.
+/// Returns the number of failed test files.
+size_t printResults(
+    const std::vector<TestResult> &results,
+    size_t skippedCount,
+    size_t permanentlySkippedCount,
+    size_t featureSkippedCount,
+    size_t permanentFeatureSkippedCount,
+    double wallSeconds) {
+  ResultTally tally = tallyResults(results);
+
+  size_t totalPermanentlySkipped =
+      permanentlySkippedCount + permanentFeatureSkippedCount;
+  assert(
+      skippedCount + featureSkippedCount >= totalPermanentlySkipped &&
+      "permanent skips must be a subset of total skips");
+  size_t totalSkipped =
+      skippedCount + featureSkippedCount - totalPermanentlySkipped;
+  size_t totalFailed = tally.totalFailed();
+  size_t totalTests =
+      tally.passed + totalFailed + totalSkipped + totalPermanentlySkipped;
+  size_t executed = tally.passed + totalFailed;
+  double passRate =
+      executed > 0 ? (double)tally.passed / (double)executed * 100.0 : 0.0;
+
+  // Print result summary table.
+  llvh::outs() << llvh::format("Testing time: %.2fs\n", wallSeconds);
+  llvh::outs() << "-----------------------------------\n";
+  if (totalFailed == 0) {
+    llvh::outs() << "| Results              |   PASS   |\n";
+  } else {
+    llvh::outs() << "| Results              |   FAIL   |\n";
+  }
+  llvh::outs() << "|----------------------+----------|\n";
+  llvh::outs() << llvh::format("| Total                | %8zu |\n", totalTests);
+  llvh::outs() << llvh::format(
+      "| Passes               | %8zu |\n", tally.passed);
+  llvh::outs() << llvh::format(
+      "| Failures             | %8zu |\n", totalFailed);
+  llvh::outs() << llvh::format(
+      "| Skipped              | %8zu |\n", totalSkipped);
+  llvh::outs() << llvh::format(
+      "| Permanently Skipped  | %8zu |\n", totalPermanentlySkipped);
+  llvh::outs() << llvh::format(
+      "| Pass Rate            |  %6.2f%% |\n", passRate);
+  llvh::outs() << "-----------------------------------\n";
+  llvh::outs() << "| Failures             |          |\n";
+  llvh::outs() << "|----------------------+----------|\n";
+  llvh::outs() << llvh::format(
+      "| Compile fail         | %8zu |\n", tally.compileFail);
+  llvh::outs() << llvh::format(
+      "| Compile timeout      | %8zu |\n", tally.compileTimeout);
+  llvh::outs() << llvh::format(
+      "| Execute fail         | %8zu |\n", tally.executeFail);
+  llvh::outs() << llvh::format(
+      "| Execute timeout      | %8zu |\n", tally.executeTimeout);
+  llvh::outs() << "-----------------------------------\n";
+
+  // Print failure details.
+  if (!tally.failures.empty()) {
+    llvh::outs() << "\nFailed tests:\n";
+    for (const auto &f : tally.failures) {
+      llvh::outs() << "  " << resultCodeName(f.code) << ": " << f.testName
+                   << "\n";
+      llvh::outs() << "    " << f.message << "\n";
+    }
+  }
+
+  printSlowestTests(results, ShowSlowestTests);
+
+  return tally.totalFailed();
 }
 
 /// Print preprocessed test source for a single test (--dump-source mode).
@@ -257,11 +408,6 @@ int main(int argc, char **argv) {
   llvh::outs() << "-- Testing: " << filtered.tests.size() << " tests"
                << ", max " << NumThreads << " concurrent tasks --\n";
 
-  if (filtered.skippedCount > 0) {
-    llvh::outs() << "Skipped " << filtered.skippedCount
-                 << " tests via skiplist.\n";
-  }
-
   // --dump-source mode: parse frontmatter, assemble source, print to stdout.
   // Requires exactly one input path that is a .js file.
   if (DumpSource) {
@@ -286,6 +432,9 @@ int main(int argc, char **argv) {
 
   std::vector<TestResult> results;
   std::atomic<size_t> featureSkippedCount{0};
+  std::atomic<size_t> permanentFeatureSkippedCount{0};
+
+  auto wallStart = std::chrono::steady_clock::now();
 
   runAllTests(
       filtered.tests,
@@ -293,81 +442,20 @@ int main(int argc, char **argv) {
       hasSkiplist ? &skiplist : nullptr,
       execConfig,
       results,
-      featureSkippedCount);
+      featureSkippedCount,
+      permanentFeatureSkippedCount);
 
-  // Tally results.
-  size_t passed = 0, executeFailed = 0, compileFailed = 0, compileTimedOut = 0,
-         executeTimedOut = 0;
-  std::vector<TestResult> failures;
+  auto wallEnd = std::chrono::steady_clock::now();
+  double wallSeconds =
+      std::chrono::duration<double>(wallEnd - wallStart).count();
 
-  for (const auto &r : results) {
-    switch (r.code) {
-      case ResultCode::Passed:
-        ++passed;
-        break;
-      case ResultCode::Failed:
-      case ResultCode::ExecuteFailed:
-        ++executeFailed;
-        failures.push_back(r);
-        break;
-      case ResultCode::CompileFailed:
-        ++compileFailed;
-        failures.push_back(r);
-        break;
-      case ResultCode::CompileTimeout:
-        ++compileTimedOut;
-        failures.push_back(r);
-        break;
-      case ResultCode::ExecuteTimeout:
-        ++executeTimedOut;
-        failures.push_back(r);
-        break;
-      case ResultCode::Skipped:
-      case ResultCode::PermanentlySkipped:
-        break;
-    }
-  }
+  size_t totalFailures = printResults(
+      results,
+      filtered.skippedCount,
+      filtered.permanentlySkippedCount,
+      featureSkippedCount.load(),
+      permanentFeatureSkippedCount.load(),
+      wallSeconds);
 
-  // Print failures.
-  if (!failures.empty()) {
-    llvh::outs() << "\n--- FAILURES ---\n";
-    for (const auto &f : failures) {
-      llvh::outs() << resultCodeName(f.code) << ": " << f.testName << "\n";
-      llvh::outs() << "  " << f.message << "\n";
-    }
-  }
-
-  // Show slowest tests.
-  if (ShowSlowestTests > 0 && !results.empty()) {
-    std::vector<TestResult *> sorted;
-    sorted.reserve(results.size());
-    for (auto &r : results)
-      sorted.push_back(&r);
-    std::sort(sorted.begin(), sorted.end(), [](const auto *a, const auto *b) {
-      return a->duration > b->duration;
-    });
-    unsigned count =
-        std::min((unsigned)sorted.size(), ShowSlowestTests.getValue());
-    llvh::outs() << "\n--- " << count << " SLOWEST TESTS ---\n";
-    for (unsigned i = 0; i < count; ++i) {
-      double ms = sorted[i]->duration.count() / 1000.0;
-      llvh::outs() << llvh::format("%8.1f ms  ", ms) << sorted[i]->testName
-                   << "\n";
-    }
-  }
-
-  // Summary.
-  llvh::outs() << "\n=== RESULTS ===\n";
-  llvh::outs() << "  Passed:          " << passed << "\n";
-  llvh::outs() << "  Execute failed:  " << executeFailed << "\n";
-  llvh::outs() << "  Compile failed:  " << compileFailed << "\n";
-  llvh::outs() << "  Compile timeout: " << compileTimedOut << "\n";
-  llvh::outs() << "  Execute timeout: " << executeTimedOut << "\n";
-  llvh::outs() << "  Skipped (path):  " << filtered.skippedCount << "\n";
-  llvh::outs() << "  Skipped (feat):  " << featureSkippedCount.load() << "\n";
-  llvh::outs() << "  Total variants:  " << results.size() << "\n";
-
-  return (executeFailed + compileFailed + compileTimedOut + executeTimedOut) > 0
-      ? 1
-      : 0;
+  return totalFailures > 0 ? 1 : 0;
 }

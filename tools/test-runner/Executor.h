@@ -131,7 +131,8 @@ void runAllTests(
     const Skiplist *skiplist,
     const ExecConfig &config,
     std::vector<TestResult> &results,
-    std::atomic<size_t> &featureSkipped);
+    std::atomic<size_t> &featureSkipped,
+    std::atomic<size_t> &permanentFeatureSkipped);
 
 } // namespace testrunner
 } // namespace hermes
