@@ -5,6 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include "Skiplist.h"
+#include "TestDiscovery.h"
+
 #include "llvh/Support/CommandLine.h"
 #include "llvh/Support/InitLLVM.h"
 #include "llvh/Support/raw_ostream.h"
@@ -14,6 +17,7 @@
 #include <vector>
 
 namespace cl = llvh::cl;
+using namespace hermes::testrunner;
 
 namespace {
 
@@ -45,6 +49,8 @@ cl::opt<bool> DumpSource(
     cl::desc("Print preprocessed test source and exit"),
     cl::init(false));
 
+cl::opt<std::string>
+    SkiplistPath("skiplist", cl::desc("Path to skiplist.json"), cl::init(""));
 } // namespace
 
 int main(int argc, char **argv) {
@@ -56,9 +62,47 @@ int main(int argc, char **argv) {
       "  Runs test262 tests against the Hermes VM.\n"
       "  Accepts individual .js files or directories.\n");
 
-  llvh::outs() << "Received " << TestPaths.size() << " input path(s).\n";
-  llvh::outs() << "Workers: " << NumThreads << "\n";
-  llvh::outs() << "Timeout: " << Timeout << "s\n";
+  // Discover test files.
+  std::vector<TestEntry> allTests = discoverTests(TestPaths);
+
+  if (allTests.empty()) {
+    llvh::errs() << "No test files found.\n";
+    return 1;
+  }
+
+  // Load skiplist if available.
+  Skiplist skiplist;
+  bool hasSkiplist = false;
+  if (!SkiplistPath.empty()) {
+    hasSkiplist = skiplist.load(SkiplistPath);
+    if (hasSkiplist) {
+      llvh::outs() << "Loaded skiplist: " << skiplist.totalSkipPaths()
+                   << " skip paths, " << skiplist.totalUnsupportedFeatures()
+                   << " unsupported features\n";
+    }
+  }
+
+  // Apply skiplist to filter tests.
+  std::vector<TestEntry> testsToRun;
+  size_t skippedCount = 0;
+  for (auto &entry : allTests) {
+    if (hasSkiplist) {
+      SkipReason reason = skiplist.shouldSkipPath(entry.path);
+      if (reason != SkipReason::NotSkipped) {
+        ++skippedCount;
+        continue;
+      }
+    }
+    testsToRun.push_back(std::move(entry));
+  }
+
+  // Match Python output format.
+  llvh::outs() << "-- Testing: " << testsToRun.size() << " tests"
+               << ", max " << NumThreads << " concurrent tasks --\n";
+
+  if (skippedCount > 0) {
+    llvh::outs() << "Skipped " << skippedCount << " tests via skiplist.\n";
+  }
 
   if (DumpSource) {
     llvh::outs() << "dump-source mode: would print preprocessed source.\n";
