@@ -117,21 +117,6 @@ bool shouldSkipByFeature(
   return false;
 }
 
-/// Build the list of harness includes for a test entry.
-std::vector<std::string> buildIncludes(
-    const TestEntry &entry,
-    const TestRecord &record) {
-  std::vector<std::string> includes;
-  if (entry.suiteKind == SuiteKind::Test262) {
-    includes.push_back("sta.js");
-    includes.push_back("assert.js");
-  }
-  for (const auto &inc : record.includes) {
-    includes.push_back(inc);
-  }
-  return includes;
-}
-
 /// Result of filtering tests by the skiplist.
 struct FilterResult {
   std::vector<TestEntry> tests;
@@ -159,7 +144,7 @@ FilterResult filterBySkiplist(
   return result;
 }
 
-/// Tallied result counts for reporting.
+/// Tallied results from test execution.
 /// Each test file produces exactly one result (short-circuit on first failure).
 struct ResultTally {
   size_t passed = 0;
@@ -208,7 +193,7 @@ ResultTally tallyResults(const std::vector<TestResult> &results) {
   return tally;
 }
 
-/// Print the N slowest tests by duration.
+/// Print the N slowest tests by execution time.
 void printSlowestTests(const std::vector<TestResult> &results, unsigned count) {
   if (count == 0 || results.empty())
     return;
@@ -220,7 +205,6 @@ void printSlowestTests(const std::vector<TestResult> &results, unsigned count) {
   std::sort(sorted.begin(), sorted.end(), [](const auto *a, const auto *b) {
     return a->duration > b->duration;
   });
-
   unsigned n = std::min((unsigned)sorted.size(), count);
   llvh::outs() << "\nSlowest " << n << " tests:\n";
   llvh::outs() << "-----------------------------------\n";
@@ -232,8 +216,8 @@ void printSlowestTests(const std::vector<TestResult> &results, unsigned count) {
   llvh::outs() << "-----------------------------------\n";
 }
 
-/// Tally results and print summary table matching Python/Rust runner format.
-/// Returns the number of failed test files.
+/// Print summary table and failure details. Returns the number of failed
+/// test files.
 size_t printResults(
     const std::vector<TestResult> &results,
     size_t skippedCount,
@@ -323,19 +307,15 @@ void dumpTestSource(
   if (shouldSkipByFeature(record, skiplist, hasSkiplist))
     return;
 
-  // Determine strict mode variants.
+  // Skip module tests — Hermes doesn't support ES module execution.
+  if (record.isModule())
+    return;
+
   bool runStrict = !record.isNoStrict() && !record.isRaw();
   bool runNonStrict = !record.isOnlyStrict() && !record.isRaw();
   bool runRaw = record.isRaw();
 
-  // For modules, only run non-strict (modules are implicitly strict).
-  if (record.isModule()) {
-    runStrict = false;
-    runNonStrict = true;
-    runRaw = false;
-  }
-
-  std::vector<std::string> includes = buildIncludes(entry, record);
+  std::vector<std::string> includes = buildTestIncludes(entry, record);
 
   auto printVariant = [&](const char *label, bool isStrict) {
     std::string source = harness.buildSource(includes, record.src, isStrict);

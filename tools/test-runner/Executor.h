@@ -94,6 +94,13 @@ std::unique_ptr<hbc::BCProvider> compileSource(
     bool strict,
     std::string &errorMsg);
 
+/// Build the list of harness includes for a test entry.
+/// Handles test262 default includes (sta.js, assert.js), test-specified
+/// includes, and doneprintHandle.js for async tests.
+std::vector<std::string> buildTestIncludes(
+    const TestEntry &entry,
+    const TestRecord &record);
+
 /// Execute a single test variant (compile + run) in-process.
 ///
 /// Creates a fresh HermesRuntime, compiles the source to bytecode,

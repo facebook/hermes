@@ -182,18 +182,11 @@ inline TestRecord parseFrontmatter(llvh::StringRef content) {
     }
   }
 
-  // Also try to strip the license header.
+  // Build source: everything before frontmatter + everything after.
   std::string src =
       content.substr(0, startPos).str() + content.substr(blockEnd).str();
-  src = stripLicenseHeader(src);
 
-  // Trim leading blank lines from result.
-  while (!src.empty() && src[0] == '\n')
-    src = src.substr(1);
-
-  record.src = src;
-
-  // Parse simplified YAML.
+  // Parse simplified YAML first, so we know if this is a raw test.
   // We handle keys at the top level, with values that are either:
   //   key: value
   //   key:\n  - item1\n  - item2
@@ -261,6 +254,18 @@ inline TestRecord parseFrontmatter(llvh::StringRef content) {
     }
   }
   finishKey();
+
+  // For raw tests, preserve the source exactly as-is (minus frontmatter).
+  // For non-raw tests, strip the license header and leading blank lines.
+  if (!record.isRaw()) {
+    src = stripLicenseHeader(src);
+
+    // Trim leading blank lines from result.
+    while (!src.empty() && src[0] == '\n')
+      src = src.substr(1);
+  }
+
+  record.src = src;
 
   return record;
 }
