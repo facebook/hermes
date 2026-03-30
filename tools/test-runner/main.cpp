@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include "Executor.h"
 #include "Frontmatter.h"
 #include "HarnessCache.h"
 #include "Skiplist.h"
@@ -17,12 +18,14 @@
 #include "llvh/Support/Path.h"
 #include "llvh/Support/raw_ostream.h"
 
+#include <algorithm>
+#include <atomic>
 #include <string>
 #include <thread>
 #include <vector>
 
-namespace cl = llvh::cl;
 using namespace hermes::testrunner;
+namespace cl = llvh::cl;
 
 namespace {
 
@@ -276,11 +279,95 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  if (ShowSlowestTests > 0) {
-    llvh::outs() << "Will show " << ShowSlowestTests << " slowest tests.\n";
+  // Execute tests with thread pool.
+  ExecConfig execConfig;
+  execConfig.numThreads = NumThreads;
+  execConfig.timeoutSeconds = Timeout;
+
+  std::vector<TestResult> results;
+  std::atomic<size_t> featureSkippedCount{0};
+
+  runAllTests(
+      filtered.tests,
+      harness,
+      hasSkiplist ? &skiplist : nullptr,
+      execConfig,
+      results,
+      featureSkippedCount);
+
+  // Tally results.
+  size_t passed = 0, executeFailed = 0, compileFailed = 0, compileTimedOut = 0,
+         executeTimedOut = 0;
+  std::vector<TestResult> failures;
+
+  for (const auto &r : results) {
+    switch (r.code) {
+      case ResultCode::Passed:
+        ++passed;
+        break;
+      case ResultCode::Failed:
+      case ResultCode::ExecuteFailed:
+        ++executeFailed;
+        failures.push_back(r);
+        break;
+      case ResultCode::CompileFailed:
+        ++compileFailed;
+        failures.push_back(r);
+        break;
+      case ResultCode::CompileTimeout:
+        ++compileTimedOut;
+        failures.push_back(r);
+        break;
+      case ResultCode::ExecuteTimeout:
+        ++executeTimedOut;
+        failures.push_back(r);
+        break;
+      case ResultCode::Skipped:
+      case ResultCode::PermanentlySkipped:
+        break;
+    }
   }
 
-  // TODO: Implement test discovery and execution.
-  llvh::outs() << "Test execution not yet implemented.\n";
-  return 0;
+  // Print failures.
+  if (!failures.empty()) {
+    llvh::outs() << "\n--- FAILURES ---\n";
+    for (const auto &f : failures) {
+      llvh::outs() << resultCodeName(f.code) << ": " << f.testName << "\n";
+      llvh::outs() << "  " << f.message << "\n";
+    }
+  }
+
+  // Show slowest tests.
+  if (ShowSlowestTests > 0 && !results.empty()) {
+    std::vector<TestResult *> sorted;
+    sorted.reserve(results.size());
+    for (auto &r : results)
+      sorted.push_back(&r);
+    std::sort(sorted.begin(), sorted.end(), [](const auto *a, const auto *b) {
+      return a->duration > b->duration;
+    });
+    unsigned count =
+        std::min((unsigned)sorted.size(), ShowSlowestTests.getValue());
+    llvh::outs() << "\n--- " << count << " SLOWEST TESTS ---\n";
+    for (unsigned i = 0; i < count; ++i) {
+      double ms = sorted[i]->duration.count() / 1000.0;
+      llvh::outs() << llvh::format("%8.1f ms  ", ms) << sorted[i]->testName
+                   << "\n";
+    }
+  }
+
+  // Summary.
+  llvh::outs() << "\n=== RESULTS ===\n";
+  llvh::outs() << "  Passed:          " << passed << "\n";
+  llvh::outs() << "  Execute failed:  " << executeFailed << "\n";
+  llvh::outs() << "  Compile failed:  " << compileFailed << "\n";
+  llvh::outs() << "  Compile timeout: " << compileTimedOut << "\n";
+  llvh::outs() << "  Execute timeout: " << executeTimedOut << "\n";
+  llvh::outs() << "  Skipped (path):  " << filtered.skippedCount << "\n";
+  llvh::outs() << "  Skipped (feat):  " << featureSkippedCount.load() << "\n";
+  llvh::outs() << "  Total variants:  " << results.size() << "\n";
+
+  return (executeFailed + compileFailed + compileTimedOut + executeTimedOut) > 0
+      ? 1
+      : 0;
 }

@@ -5,6 +5,8 @@
 
 add_hermes_tool(test-runner
   main.cpp
+  Executor.cpp
+  LINK_OBJLIBS hermesConsoleHost_obj
   LINK_LIBS hermesvm_a)
 
 install(TARGETS test-runner
