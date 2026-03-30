@@ -105,13 +105,17 @@ std::vector<std::string> buildTestIncludes(
 ///
 /// Creates a fresh HermesRuntime, compiles the source to bytecode,
 /// runs it, handles negative expectations, and drains microtasks.
+/// When \p disableHandleSan is true, GC handle sanitization is disabled
+/// for this test (sanitize rate set to 0), matching the Python runner's
+/// behavior for handlesan_skip_list tests.
 TestResult executeTestVariant(
     const std::string &testName,
     const std::string &source,
     const std::string &sourceURL,
     bool isStrict,
     const NegativeExpectation &negative,
-    unsigned timeoutSeconds);
+    unsigned timeoutSeconds,
+    bool disableHandleSan = false);
 
 /// Thread-safe work queue for distributing tests to worker threads.
 class WorkQueue {

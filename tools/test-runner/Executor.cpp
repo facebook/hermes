@@ -50,8 +50,20 @@ std::string captureException(vm::Runtime &runtime) {
 }
 
 /// Create a configured Hermes runtime for test262 execution.
-TestRuntimeEnv createTestRuntime(unsigned timeoutSeconds) {
+/// When \p disableHandleSan is true, GC handle sanitization is disabled
+/// (sanitize rate = 0), matching the Python runner's behavior for
+/// handlesan_skip_list tests.
+TestRuntimeEnv createTestRuntime(
+    unsigned timeoutSeconds,
+    bool disableHandleSan) {
+  auto gcConfigBuilder = vm::GCConfig::Builder();
+  if (disableHandleSan) {
+    gcConfigBuilder.withSanitizeConfig(
+        vm::GCSanitizeConfig::Builder().withSanitizeRate(0.0).build());
+  }
+
   auto runtimeConfig = vm::RuntimeConfig::Builder()
+                           .withGCConfig(gcConfigBuilder.build())
                            .withES6Proxy(true)
                            .withES6BlockScoping(true)
                            .withMicrotaskQueue(true)
@@ -110,6 +122,7 @@ TestResult executeCompiledTest(
     const std::string &sourceURL,
     const NegativeExpectation &negative,
     unsigned timeoutSeconds,
+    bool disableHandleSan,
     Clock::time_point startTime) {
   bool expectRuntimeError =
       !negative.phase.empty() && negative.phase == "runtime";
@@ -125,7 +138,7 @@ TestResult executeCompiledTest(
     return r;
   };
 
-  auto env = createTestRuntime(timeoutSeconds);
+  auto env = createTestRuntime(timeoutSeconds, disableHandleSan);
 
   // Install console bindings (including $262, alert, setTimeout, etc.).
   vm::GCScope scope(*env.runtime);
@@ -272,6 +285,10 @@ void processTestEntry(
     }
   }
 
+  // Check if handle sanitizer should be disabled for this test.
+  bool disableHandleSan =
+      skiplist && skiplist->shouldDisableHandleSan(entry.path);
+
   // Determine variants.
   bool runStrict = !record.isNoStrict() && !record.isRaw();
   bool runNonStrict = !record.isOnlyStrict() && !record.isRaw();
@@ -296,7 +313,8 @@ void processTestEntry(
         entry.path,
         compileStrict,
         record.negative,
-        config.timeoutSeconds);
+        config.timeoutSeconds,
+        disableHandleSan);
   };
 
   TestResult lastResult;
@@ -402,7 +420,8 @@ TestResult executeTestVariant(
     const std::string &sourceURL,
     bool isStrict,
     const NegativeExpectation &negative,
-    unsigned timeoutSeconds) {
+    unsigned timeoutSeconds,
+    bool disableHandleSan) {
   auto startTime = Clock::now();
 
   auto makeResult = [&](ResultCode code, const std::string &msg) {
@@ -453,6 +472,7 @@ TestResult executeTestVariant(
       sourceURL,
       negative,
       timeoutSeconds,
+      disableHandleSan,
       startTime);
 }
 

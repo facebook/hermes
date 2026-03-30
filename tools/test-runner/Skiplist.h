@@ -78,10 +78,17 @@ struct SkipCategory {
 class Skiplist {
   /// Path-based skip categories.
   std::vector<SkipCategory> categories_;
+  /// Paths where handle sanitizer should be disabled (not skipped).
+  std::vector<std::string> handlesanPaths_;
   /// Features that cause a skip when present in test metadata.
   std::unordered_set<std::string> unsupportedFeatures_;
   /// Features that cause a permanent skip.
   std::unordered_set<std::string> permanentUnsupportedFeatures_;
+  /// Features that the built Hermes binary supports, even if they appear in
+  /// unsupported_features. Matching the Python runner, which queries
+  /// `hermes --version` to discover supported features and excludes them
+  /// from feature-based skipping.
+  std::unordered_set<std::string> supportedFeatures_;
 
   /// Extract all string values from a JSON array of skip entries into a
   /// container. Each entry can be either a bare string or an object with a
@@ -140,8 +147,9 @@ class Skiplist {
         {"skip_list", SkipReason::SkipList},
         {"lazy_skip_list", SkipReason::LazySkipList},
         {"permanent_skip_list", SkipReason::PermanentSkipList},
-        {"handlesan_skip_list", SkipReason::HandlesanSkipList},
         {"intl_tests", SkipReason::IntlTests},
+        // handlesan_skip_list is loaded separately below — those tests
+        // run with handle sanitizer disabled, not skipped.
     };
 
     for (const auto &cat : pathCategories) {
@@ -151,6 +159,10 @@ class Skiplist {
       if (!sc.paths.empty())
         categories_.push_back(std::move(sc));
     }
+
+    // Load handlesan paths separately — these tests are run (not skipped)
+    // but with GC handle sanitization disabled.
+    flattenEntries(getArray(root, "handlesan_skip_list"), handlesanPaths_);
   }
 
   /// Load platform-specific skip paths from the root JSON object.
@@ -222,6 +234,15 @@ class Skiplist {
         getArray(root, "permanent_unsupported_features"),
         permanentUnsupportedFeatures_);
 
+    // Populate supported features based on compile-time configuration.
+    // This mirrors the Python runner's get_hermes_supported_test262_features(),
+    // which queries `hermes --version` and maps Hermes feature names to
+    // test262 feature names. Since the C++ runner runs in-process, we use
+    // compile-time preprocessor flags instead.
+#ifdef HERMES_ENABLE_UNICODE_REGEXP_PROPERTY_ESCAPES
+    supportedFeatures_.insert("regexp-unicode-property-escapes");
+#endif
+
     return true;
   }
 
@@ -239,13 +260,47 @@ class Skiplist {
     return SkipReason::NotSkipped;
   }
 
+  /// Check if a test path should be skipped by any non-intl category.
+  /// This mirrors the Python runner's two-pass design: first check
+  /// skip_list/permanent_skip_list/manual_skip_list/platform_skip_list,
+  /// then check intl_tests separately. Used when --test-intl bypasses
+  /// IntlTests but platform-specific skips must still be honored.
+  SkipReason shouldSkipPathNonIntl(llvh::StringRef testPath) const {
+    for (const auto &cat : categories_) {
+      if (cat.reason == SkipReason::IntlTests)
+        continue;
+      for (const auto &skipPath : cat.paths) {
+        if (testPath.contains(skipPath)) {
+          return cat.reason;
+        }
+      }
+    }
+    return SkipReason::NotSkipped;
+  }
+
   /// Check if a test should be skipped because it uses an unsupported feature.
+  /// Features that the built binary actually supports (based on compile-time
+  /// config) are not skipped, matching the Python runner's behavior.
   SkipReason shouldSkipFeature(llvh::StringRef feature) const {
-    if (permanentUnsupportedFeatures_.count(feature.str()))
+    std::string feat = feature.str();
+    // If the binary supports this feature, don't skip regardless of skiplist.
+    if (supportedFeatures_.count(feat))
+      return SkipReason::NotSkipped;
+    if (permanentUnsupportedFeatures_.count(feat))
       return SkipReason::PermanentUnsupportedFeature;
-    if (unsupportedFeatures_.count(feature.str()))
+    if (unsupportedFeatures_.count(feat))
       return SkipReason::UnsupportedFeature;
     return SkipReason::NotSkipped;
+  }
+
+  /// Check if a test should disable GC handle sanitization.
+  /// Tests in handlesan_skip_list should run but with sanitize rate = 0.
+  bool shouldDisableHandleSan(llvh::StringRef testPath) const {
+    for (const auto &p : handlesanPaths_) {
+      if (testPath.contains(p))
+        return true;
+    }
+    return false;
   }
 
   /// Get counts for reporting.
