@@ -6,6 +6,7 @@
  */
 
 //RUN: ulimit -s 1024 && %hermes -O -target=HBC %s -gc-sanitize-handles=0 | %FileCheck --match-full-lines %s
+// UNSUPPORTED: windows
 
 try {
   var proxy = new Proxy(function() {}, {});

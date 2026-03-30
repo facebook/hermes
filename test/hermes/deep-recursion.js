@@ -7,6 +7,7 @@
 
 // RUN: ulimit -s 1024 && %hermes -target=HBC -O %s | %FileCheck --match-full-lines %s
 // RUN: ulimit -s 1024 && %shermes -exec %s -Wx,-max-register-stack=1048576 | %FileCheck --match-full-lines %s
+// UNSUPPORTED: windows
 
 function f() {
     f.apply();

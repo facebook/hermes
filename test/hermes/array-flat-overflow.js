@@ -7,6 +7,7 @@
 
 // RUN: ulimit -s 1024 && %hermes -gc-sanitize-handles=0 %s | %FileCheck --match-full-lines %s
 // RUN: ulimit -s 1024 && %shermes -exec -Wx,-gc-sanitize-handles=0 %s | %FileCheck --match-full-lines %s
+// UNSUPPORTED: windows
 
 var a = [1];
 for (var i = 0; i < 100000; ++i) {

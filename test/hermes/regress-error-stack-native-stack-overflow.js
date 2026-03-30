@@ -7,7 +7,7 @@
 
 // RUN: ulimit -s 1024 && %hermes -O0 %s | %FileCheck --match-full-lines %s
 // RUN: ulimit -s 1024 && %hermes -O %s  | %FileCheck --match-full-lines %s
-
+// UNSUPPORTED: windows
 "use strict";
 
 function test(description, createErr) {
