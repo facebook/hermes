@@ -103,6 +103,15 @@
         "test262/test/built-ins/TypedArray/prototype/toLocaleString/calls-valueof-from-each-value.js"
       ],
       "comment": "These tests consume too much memory and time on Sandcastle."
+    },
+    {
+      "paths": [
+        "test262/test/staging/sm/class/classHeritage.js",
+        "test262/test/staging/sm/class/methodName.js",
+        "test262/test/staging/sm/class/classConstructorNoCall.js",
+        "test262/test/staging/sm/class/methodInstallation.js"
+      ],
+      "comment": "Class: these tests pass locally but fail on Sandcastle. Need to debug why."
     }
   ],
   "skip_list": [
@@ -262,10 +271,10 @@
         "test262/test/language/statements/class/elements/nested-private-direct-eval-err-contains-newtarget.js",
         "test262/test/language/expressions/class/elements/private-direct-eval-err-contains-newtarget.js",
         "test262/test/language/statements/class/elements/private-direct-eval-err-contains-newtarget.js",
-        "test/language/expressions/class/elements/arrow-body-direct-eval-err-contains-newtarget.js",
-        "test/language/expressions/class/elements/arrow-body-private-direct-eval-err-contains-newtarget.js",
-        "test/language/statements/class/elements/arrow-body-direct-eval-err-contains-newtarget.js",
-        "test/language/statements/class/elements/arrow-body-private-direct-eval-err-contains-newtarget.js"
+        "test262/test/language/expressions/class/elements/arrow-body-direct-eval-err-contains-newtarget.js",
+        "test262/test/language/expressions/class/elements/arrow-body-private-direct-eval-err-contains-newtarget.js",
+        "test262/test/language/statements/class/elements/arrow-body-direct-eval-err-contains-newtarget.js",
+        "test262/test/language/statements/class/elements/arrow-body-private-direct-eval-err-contains-newtarget.js"
       ],
       "comment": "Classes failures- unicode escaping in identifiers, computed function names, SpeciesConstructor & direct eval."
     },
@@ -2449,7 +2458,6 @@
     "test262/test/language/expressions/super/prop-expr-uninitialized-this-putvalue-increment.js",
     "test262/test/language/expressions/super/prop-expr-uninitialized-this-putvalue-compound-assign.js",
     "test262/test/language/expressions/super/prop-expr-uninitialized-this-putvalue.js",
-    "test262/test/language/statements/class/subclass/private-class-field-on-nonextensible-return-override.js",
     "test262/test/built-ins/String/prototype/split/cstm-split-on-string-primitive.js",
     "test262/test/built-ins/String/prototype/split/cstm-split-on-boolean-primitive.js",
     "test262/test/built-ins/String/prototype/split/cstm-split-on-number-primitive.js",
@@ -2459,7 +2467,6 @@
     "test262/test/built-ins/String/prototype/match/cstm-matcher-on-bigint-primitive.js",
     "test262/test/built-ins/String/prototype/match/cstm-matcher-on-number-primitive.js",
     "test262/test/built-ins/String/prototype/match/cstm-matcher-on-string-primitive.js",
-    "test262/test/language/statements/class/elements/private-class-field-on-nonextensible-objects.js",
     "test262/test/built-ins/String/prototype/search/cstm-search-on-string-primitive.js",
     "test262/test/built-ins/String/prototype/search/cstm-search-on-boolean-primitive.js",
     "test262/test/built-ins/String/prototype/search/cstm-search-on-bigint-primitive.js",
@@ -2686,28 +2693,6 @@
     "test262/test/staging/sm/strict/11.3.1.js",
     "test262/test/staging/sm/strict/12.10.1.js",
     "test262/test/staging/sm/strict/15.3.5.1.js",
-    "test262/test/staging/sm/class/superPropEvalInsideArrow.js",
-    "test262/test/staging/sm/class/parenExprToString.js",
-    "test262/test/staging/sm/class/derivedConstructorArrowEvalNestedSuperCall.js",
-    "test262/test/staging/sm/class/derivedConstructorArrowEvalSuperCall.js",
-    "test262/test/staging/sm/class/innerBinding.js",
-    "test262/test/staging/sm/class/superPropOrdering.js",
-    "test262/test/staging/sm/class/fields-static-class-name-binding-eval.js",
-    "test262/test/staging/sm/class/newTargetCCW.js",
-    "test262/test/staging/sm/class/extendBuiltinConstructors.js",
-    "test262/test/staging/sm/class/superPropDerivedCalls.js",
-    "test262/test/staging/sm/class/derivedConstructorArrowEvalGetThis.js",
-    "test262/test/staging/sm/class/methDefnGen.js",
-    "test262/test/staging/sm/class/methodName.js",
-    "test262/test/staging/sm/class/newTargetArrow.js",
-    "test262/test/staging/sm/class/superPropDelete.js",
-    "test262/test/staging/sm/class/superPropProxies.js",
-    "test262/test/staging/sm/class/newTargetGenerators.js",
-    "test262/test/staging/sm/class/superPropBasicGetter.js",
-    "test262/test/staging/sm/class/newTargetDefaults.js",
-    "test262/test/staging/sm/class/newTargetEval.js",
-    "test262/test/staging/sm/class/fields-instance-class-name-binding-eval.js",
-    "test262/test/staging/sm/class/superPropNoOverwriting.js",
     "test262/test/staging/sm/ArrayBuffer/getter-name.js",
     "test262/test/staging/sm/ArrayBuffer/CloneArrayBuffer.js",
     "test262/test/staging/sm/ArrayBuffer/slice-species.js",
@@ -2761,7 +2746,6 @@
     "test262/test/built-ins/Object/prototype/setPrototypeOf-with-non-circular-values-__proto__.js",
     "test262/test/language/expressions/object/computed-property-name-topropertykey-before-value-evaluation.js",
     "test262/test/staging/sm/String/string-code-point-upper-lower-mapping.js",
-    "test262/test/staging/sm/class/classHeritage.js",
     "test262/test/staging/sm/extensions/quote-string-for-nul-character.js",
     "test262/test/intl402/Collator/prototype/resolvedOptions/ignorePunctuation-default.js",
     "test262/test/intl402/Collator/prototype/resolvedOptions/resolved-collation-unicode-extensions-and-options.js",
@@ -2781,12 +2765,68 @@
     "test262/test/intl402/String/prototype/toLocaleLowerCase/validates-all-locale-identifiers.js",
     "test262/test/intl402/String/prototype/toLocaleUpperCase/validates-all-locale-identifiers.js",
     "test262/test/staging/sm/extensions/newer-type-functions-caller-arguments.js",
-    "test262/test/staging/sm/class/classConstructorNoCall.js",
-    "test262/test/staging/sm/class/methodInstallation.js",
     "test262/test/staging/sm/object/method-non-constructor.js",
     "test262/test/staging/sm/Array/toLocaleString-01.js",
     "test262/test/staging/sm/Function/redefine-arguments-length.js",
-    "test262/test/staging/sm/Math/expm1-monotonicity.js"
+    "test262/test/staging/sm/Math/expm1-monotonicity.js",
+    {
+      "paths": [
+        "test262/test/staging/sm/class/superPropEvalInsideArrow.js",
+        "test262/test/staging/sm/class/derivedConstructorArrowEvalNestedSuperCall.js",
+        "test262/test/staging/sm/class/derivedConstructorArrowEvalSuperCall.js",
+        "test262/test/staging/sm/class/innerBinding.js",
+        "test262/test/staging/sm/class/superPropDerivedCalls.js",
+        "test262/test/staging/sm/class/derivedConstructorArrowEvalGetThis.js",
+        "test262/test/staging/sm/class/newTargetArrow.js",
+        "test262/test/staging/sm/class/newTargetGenerators.js",
+        "test262/test/staging/sm/class/superPropBasicGetter.js",
+        "test262/test/staging/sm/class/newTargetEval.js",
+        "test262/test/staging/sm/class/fields-instance-class-name-binding-eval.js"
+      ],
+      "comment": "Class: direct eval does not inherit super/new.target/class-name bindings (Hermes eval scoping limitation)."
+    },
+    {
+      "paths": [
+        "test262/test/staging/sm/class/superPropOrdering.js",
+        "test262/test/staging/sm/class/superPropDelete.js",
+        "test262/test/staging/sm/class/superPropNoOverwriting.js"
+      ],
+      "comment": "Class: super property semantics bugs (delete/ordering/non-writable)."
+    },
+    {
+      "paths": [
+        "test262/test/staging/sm/class/newTargetCCW.js",
+        "test262/test/staging/sm/class/extendBuiltinConstructors.js",
+        "test262/test/staging/sm/class/superPropProxies.js"
+      ],
+      "comment": "Class: $262.createRealm not supported (harness limitation, not Hermes bugs)."
+    },
+    {
+      "paths": [
+        "test262/test/staging/sm/class/parenExprToString.js",
+        "test262/test/staging/sm/class/newTargetDefaults.js"
+      ],
+      "comment": "Class: Function.toString returns [bytecode] instead of source."
+    },
+    {
+      "paths": [
+        "test262/test/language/statements/class/subclass/private-class-field-on-nonextensible-return-override.js",
+        "test262/test/language/statements/class/elements/private-class-field-on-nonextensible-objects.js"
+      ],
+      "comment": "Class: private field installation on non-extensible objects."
+    },
+    {
+      "paths": [
+        "test262/test/staging/sm/class/methDefnGen.js"
+      ],
+      "comment": "Class: parser does not reject invalid generator method shorthand {*a : 1} as SyntaxError."
+    },
+    {
+      "paths": [
+        "test262/test/staging/sm/class/fields-static-class-name-binding-eval.js"
+      ],
+      "comment": "Class static methods/fields: initialization and scoping issues."
+    }
   ],
   "lazy_skip_list": [
     "test262/test/language/statements/try/scope-catch-param-lex-close.js"
