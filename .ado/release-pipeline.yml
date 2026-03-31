@@ -12,19 +12,19 @@ pr: none
 
 resources:
   pipelines:
-  - pipeline: microsoft.hermes-windows
+  - pipeline: CI
     project: ISS
     source: microsoft.hermes-windows.ci
     trigger: none
 
   repositories:
-  - repository: CustomPipelineTemplates
+  - repository: OfficePipelineTemplates
     type: git
     name: 1ESPipelineTemplates/OfficePipelineTemplates
     ref: refs/tags/release
 
 extends:
-  template: v1/Office.Official.PipelineTemplate.yml@CustomPipelineTemplates
+  template: v1/Office.Official.PipelineTemplate.yml@OfficePipelineTemplates
   parameters:
     pool:
       name: Azure-Pipelines-1ESPT-ExDShared
@@ -52,9 +52,11 @@ extends:
         displayName: Publish Nuget to ms/react-native-public
 
         templateContext:
+          type: releaseJob
+          isProduction: true
           inputs:
           - input: pipelineArtifact
-            pipeline: microsoft.hermes-windows
+            pipeline: CI
             artifactName: published-packages
             targetPath: $(Pipeline.Workspace)\published-packages
 
@@ -92,9 +94,11 @@ extends:
         displayName: Publish NuGet to nuget.org
 
         templateContext:
+          type: releaseJob
+          isProduction: true
           inputs:
           - input: pipelineArtifact
-            pipeline: microsoft.hermes-windows
+            pipeline: CI
             artifactName: published-packages
             targetPath: '$(Pipeline.Workspace)/published-packages'
 
@@ -108,20 +112,17 @@ extends:
             KeyVaultName: OGX-JSHost-KV
             SecretsFilter: 'OGX-JSHost-Nuget-org-API-key-Microsoft-JavaScript-NodeApi'
 
-        - task: PowerShell@2
+        - pwsh: |
+            $nugetOrgApiKey = "$(OGX-JSHost-Nuget-org-API-key-Microsoft-JavaScript-NodeApi)"
+            if ([string]::IsNullOrWhiteSpace($nugetOrgApiKey)) {
+              throw "NuGet.org API key is missing or empty."
+            }
+            # Set the API key as a secret, so it doesn't get leaked in logs.
+            Write-Host "##vso[task.setsecret]$nugetOrgApiKey"
+            # 1ES.PublishNuGet (NuGetCommand path) reads NUGETKEY from
+            # endpoint auth parameters for this external endpoint.
+            Write-Host "##vso[task.setendpoint id=f15cbb2b-c0a8-4325-a866-960fa0bec9af;field=authParameter;key=nugetkey]$nugetOrgApiKey"
           displayName: Inject NuGet.org API key into endpoint
-          inputs:
-            targetType: 'inline'
-            script: |
-              $nugetOrgApiKey = "$(OGX-JSHost-Nuget-org-API-key-Microsoft-JavaScript-NodeApi)"
-              if ([string]::IsNullOrWhiteSpace($nugetOrgApiKey)) {
-                throw "NuGet.org API key is missing or empty."
-              }
-              # Set the API key as a secret, so it doesn't get leaked in logs.
-              Write-Host "##vso[task.setsecret]$nugetOrgApiKey"
-              # 1ES.PublishNuGet (NuGetCommand path) reads NUGETKEY from
-              # endpoint auth parameters for this external endpoint.
-              Write-Host "##vso[task.setendpoint id=f15cbb2b-c0a8-4325-a866-960fa0bec9af;field=authParameter;key=nugetkey]$nugetOrgApiKey"
 
         - task: 1ES.PublishNuGet@1
           displayName: NuGet push to nuget.org
