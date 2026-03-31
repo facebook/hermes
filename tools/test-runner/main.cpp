@@ -67,6 +67,11 @@ cl::opt<bool> TestIntl(
     cl::desc("Include Intl (intl402) tests instead of skipping them"),
     cl::init(false));
 
+cl::opt<bool> Optimize(
+    "O",
+    cl::desc("Enable optimization passes (default: off)"),
+    cl::init(false));
+
 cl::opt<std::string> TestSuiteDir(
     "test-suite-dir",
     cl::desc("Path to test262 suite root"),
@@ -431,6 +436,7 @@ int main(int argc, char **argv) {
   ExecConfig execConfig;
   execConfig.numThreads = NumThreads;
   execConfig.timeoutSeconds = Timeout;
+  execConfig.optimize = Optimize;
 
   std::vector<TestResult> results;
   std::atomic<size_t> featureSkippedCount{0};

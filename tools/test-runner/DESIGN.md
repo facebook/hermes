@@ -55,8 +55,16 @@ source → BCProviderFromSrc (in-memory) → Runtime::runBytecode
 
 - Uses `hbc::BCProviderFromSrc::create()` directly.
 - Skips `CompilerDriver` overhead (no CLI parsing, no file I/O for bytecode).
-- No optimization passes (test262 doesn't need them).
+- Optional optimization passes via `-O` flag (default: off, matching Python runner).
 - No lazy compilation (test files are small).
+
+### Optimization Passes
+
+- `-O` flag enables `hbc::fullOptimizationPipeline` callback.
+- Default is no optimization (`-O0`), matching Python runner's default behavior.
+- The callback is passed to `BCProviderFromSrc::create()`, which sets
+  `opts.optimizationEnabled = !!runOptimizationPasses` internally.
+- Full test262 suite passes with both `-O` and `-O0`.
 
 ### CompileFlags (matching Python's COMPILE_ARGS)
 
@@ -97,7 +105,6 @@ Test262 = true
 
 | Aspect              | Python runner              | C++ runner                 |
 |---------------------|----------------------------|----------------------------|
-| Optimization level  | `-O` (enabled)             | None (default)             |
 | staticBuiltins      | Explicitly disabled        | Default (off)              |
 | Bytecode path       | Serialized to `.hbc` file  | In-memory `BCProvider`     |
 | Crash recovery      | Process isolation          | Signal handler             |
