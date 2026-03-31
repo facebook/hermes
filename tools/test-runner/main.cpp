@@ -67,6 +67,11 @@ cl::opt<bool> TestIntl(
     cl::desc("Include Intl (intl402) tests instead of skipping them"),
     cl::init(false));
 
+cl::opt<bool> Lazy(
+    "lazy",
+    cl::desc("Force lazy compilation (default: off)"),
+    cl::init(false));
+
 cl::opt<bool> Optimize(
     "O",
     cl::desc("Enable optimization passes (default: off)"),
@@ -410,7 +415,7 @@ int main(int argc, char **argv) {
 
   // Filter tests by skiplist.
   FilterResult filtered = filterBySkiplist(
-      allTests, hasSkiplist ? &skiplist : nullptr, TestIntl, false);
+      allTests, hasSkiplist ? &skiplist : nullptr, TestIntl, Lazy);
 
   llvh::outs() << "-- Testing: " << filtered.tests.size() << " tests"
                << ", max " << NumThreads << " concurrent tasks --\n";
@@ -437,6 +442,7 @@ int main(int argc, char **argv) {
   execConfig.numThreads = NumThreads;
   execConfig.timeoutSeconds = Timeout;
   execConfig.optimize = Optimize;
+  execConfig.lazy = Lazy;
 
   std::vector<TestResult> results;
   std::atomic<size_t> featureSkippedCount{0};

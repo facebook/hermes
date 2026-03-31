@@ -79,6 +79,7 @@ struct ExecConfig {
   unsigned numThreads = 1;
   unsigned timeoutSeconds = 30;
   bool optimize = false;
+  bool lazy = false;
 };
 
 /// Compile JS source to bytecode in-memory.
@@ -87,6 +88,7 @@ struct ExecConfig {
 /// \p sourceURL filename for error messages.
 /// \p strict whether to compile in strict mode.
 /// \p optimize whether to run optimization passes.
+/// \p lazy whether to enable lazy compilation.
 /// \p[out] errorMsg set to the compile error message on failure.
 ///
 /// Returns the BCProvider on success, nullptr on failure.
@@ -95,6 +97,7 @@ std::unique_ptr<hbc::BCProvider> compileSource(
     llvh::StringRef sourceURL,
     bool strict,
     bool optimize,
+    bool lazy,
     std::string &errorMsg);
 
 /// Build the list of harness includes for a test entry.
@@ -119,7 +122,8 @@ TestResult executeTestVariant(
     const NegativeExpectation &negative,
     unsigned timeoutSeconds,
     bool disableHandleSan = false,
-    bool optimize = false);
+    bool optimize = false,
+    bool lazy = false);
 
 /// Thread-safe work queue for distributing tests to worker threads.
 class WorkQueue {

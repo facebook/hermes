@@ -56,7 +56,7 @@ source → BCProviderFromSrc (in-memory) → Runtime::runBytecode
 - Uses `hbc::BCProviderFromSrc::create()` directly.
 - Skips `CompilerDriver` overhead (no CLI parsing, no file I/O for bytecode).
 - Optional optimization passes via `-O` flag (default: off, matching Python runner).
-- No lazy compilation (test files are small).
+- Optional lazy compilation via `--lazy` flag.
 
 ### Optimization Passes
 
@@ -65,6 +65,17 @@ source → BCProviderFromSrc (in-memory) → Runtime::runBytecode
 - The callback is passed to `BCProviderFromSrc::create()`, which sets
   `opts.optimizationEnabled = !!runOptimizationPasses` internally.
 - Full test262 suite passes with both `-O` and `-O0`.
+
+### Lazy Compilation
+
+- `--lazy` flag sets `CompileFlags.lazy = true` for `BCProviderFromSrc::create()`.
+- Lazy mode is incompatible with persistent runtime modules. The runner sets
+  `RuntimeModuleFlags.persistent = !lazy` to avoid the fatal error
+  "Cannot enable persistent mode for lazy compilation."
+- `lazy_skip_list` tests are only skipped when `--lazy` is active, matching the
+  Python runner's conditional `if lazy: skip_categories.append(LAZY_SKIP_LIST)`.
+- When `--lazy` is off (default), `lazy_skip_list` entries are loaded but ignored
+  during filtering.
 
 ### CompileFlags (matching Python's COMPILE_ARGS)
 
@@ -105,6 +116,7 @@ Test262 = true
 
 | Aspect              | Python runner              | C++ runner                 |
 |---------------------|----------------------------|----------------------------|
+| Lazy compilation    | `--lazy` flag              | `--lazy` flag              |
 | staticBuiltins      | Explicitly disabled        | Default (off)              |
 | Bytecode path       | Serialized to `.hbc` file  | In-memory `BCProvider`     |
 | Crash recovery      | Process isolation          | Signal handler             |
