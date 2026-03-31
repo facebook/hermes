@@ -77,6 +77,19 @@ cl::opt<bool> Optimize(
     cl::desc("Enable optimization passes (default: off)"),
     cl::init(false));
 
+enum class JITMode { Off, On, Force };
+cl::opt<JITMode> JIT(
+    "jit",
+    cl::desc("JIT compilation mode (default: off)"),
+    cl::init(JITMode::Off),
+    cl::values(
+        clEnumValN(JITMode::Off, "off", "JIT is disabled"),
+        clEnumValN(JITMode::On, "on", "JIT is enabled"),
+        clEnumValN(
+            JITMode::Force,
+            "force",
+            "Force JIT compilation of every function")));
+
 cl::opt<std::string> TestSuiteDir(
     "test-suite-dir",
     cl::desc("Path to test262 suite root"),
@@ -443,6 +456,8 @@ int main(int argc, char **argv) {
   execConfig.timeoutSeconds = Timeout;
   execConfig.optimize = Optimize;
   execConfig.lazy = Lazy;
+  execConfig.enableJIT = JIT != JITMode::Off;
+  execConfig.forceJIT = JIT == JITMode::Force;
 
   std::vector<TestResult> results;
   std::atomic<size_t> featureSkippedCount{0};

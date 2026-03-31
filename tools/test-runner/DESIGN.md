@@ -77,6 +77,13 @@ source → BCProviderFromSrc (in-memory) → Runtime::runBytecode
 - When `--lazy` is off (default), `lazy_skip_list` entries are loaded but ignored
   during filtering.
 
+### JIT Compilation
+
+- `--jit` flag accepts three modes: `off` (default), `on`, and `force`.
+- Maps to `RuntimeConfig::EnableJIT` and `RuntimeConfig::ForceJIT`.
+- JIT is a runtime-only setting — it does not affect compilation flags.
+- `--jit=force` matches the Python runner's `--vm-args='-Xjit=force'` behavior.
+
 ### CompileFlags (matching Python's COMPILE_ARGS)
 
 ```cpp
@@ -117,6 +124,7 @@ Test262 = true
 | Aspect              | Python runner              | C++ runner                 |
 |---------------------|----------------------------|----------------------------|
 | Lazy compilation    | `--lazy` flag              | `--lazy` flag              |
+| JIT compilation     | `--vm-args='-Xjit=force'`  | `--jit={off,on,force}`     |
 | staticBuiltins      | Explicitly disabled        | Default (off)              |
 | Bytecode path       | Serialized to `.hbc` file  | In-memory `BCProvider`     |
 | Crash recovery      | Process isolation          | Signal handler             |

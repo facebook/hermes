@@ -55,7 +55,9 @@ std::string captureException(vm::Runtime &runtime) {
 /// handlesan_skip_list tests.
 TestRuntimeEnv createTestRuntime(
     unsigned timeoutSeconds,
-    bool disableHandleSan) {
+    bool disableHandleSan,
+    bool enableJIT,
+    bool forceJIT) {
   auto gcConfigBuilder = vm::GCConfig::Builder();
   if (disableHandleSan) {
     gcConfigBuilder.withSanitizeConfig(
@@ -73,6 +75,8 @@ TestRuntimeEnv createTestRuntime(
                            .withTest262(true)
                            .withEnableEval(true)
                            .withAsyncBreakCheckInEval(true)
+                           .withEnableJIT(enableJIT)
+                           .withForceJIT(forceJIT)
                            .build();
 
   auto hermesRuntime = facebook::hermes::makeHermesRuntime(runtimeConfig);
@@ -124,6 +128,8 @@ TestResult executeCompiledTest(
     unsigned timeoutSeconds,
     bool disableHandleSan,
     bool lazy,
+    bool enableJIT,
+    bool forceJIT,
     Clock::time_point startTime) {
   bool expectRuntimeError =
       !negative.phase.empty() && negative.phase == "runtime";
@@ -139,7 +145,8 @@ TestResult executeCompiledTest(
     return r;
   };
 
-  auto env = createTestRuntime(timeoutSeconds, disableHandleSan);
+  auto env =
+      createTestRuntime(timeoutSeconds, disableHandleSan, enableJIT, forceJIT);
 
   // Install console bindings (including $262, alert, setTimeout, etc.).
   vm::GCScope scope(*env.runtime);
@@ -323,7 +330,9 @@ void processTestEntry(
         config.timeoutSeconds,
         disableHandleSan,
         config.optimize,
-        config.lazy);
+        config.lazy,
+        config.enableJIT,
+        config.forceJIT);
   };
 
   TestResult lastResult;
@@ -440,7 +449,9 @@ TestResult executeTestVariant(
     unsigned timeoutSeconds,
     bool disableHandleSan,
     bool optimize,
-    bool lazy) {
+    bool lazy,
+    bool enableJIT,
+    bool forceJIT) {
   auto startTime = Clock::now();
 
   auto makeResult = [&](ResultCode code, const std::string &msg) {
@@ -459,6 +470,8 @@ TestResult executeTestVariant(
   bool expectResolutionError = hasNegative && negative.phase == "resolution";
 
   // Compile the source.
+  // Note: enableJIT/forceJIT are runtime-only settings and don't affect
+  // compilation — they are passed through to createTestRuntime instead.
   std::string compileError;
   auto bytecode =
       compileSource(source, sourceURL, isStrict, optimize, lazy, compileError);
@@ -494,6 +507,8 @@ TestResult executeTestVariant(
       timeoutSeconds,
       disableHandleSan,
       lazy,
+      enableJIT,
+      forceJIT,
       startTime);
 }
 

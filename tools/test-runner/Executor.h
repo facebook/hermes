@@ -80,6 +80,8 @@ struct ExecConfig {
   unsigned timeoutSeconds = 30;
   bool optimize = false;
   bool lazy = false;
+  bool enableJIT = false;
+  bool forceJIT = false;
 };
 
 /// Compile JS source to bytecode in-memory.
@@ -123,7 +125,9 @@ TestResult executeTestVariant(
     unsigned timeoutSeconds,
     bool disableHandleSan = false,
     bool optimize = false,
-    bool lazy = false);
+    bool lazy = false,
+    bool enableJIT = false,
+    bool forceJIT = false);
 
 /// Thread-safe work queue for distributing tests to worker threads.
 class WorkQueue {
