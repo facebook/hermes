@@ -434,11 +434,6 @@ CallResult<HermesValue> mapFilterLoop(
   LocalsRAII lraii(runtime, &lv);
   GCScopeMarkerRAII marker{runtime};
   for (JSTypedArrayBase::size_type i = 0; i < len; ++i) {
-    if (!self->attached(runtime)) {
-      // If the callback detached this TypedArray, raise a TypeError and don't
-      // continue.
-      return runtime.raiseTypeError("Detached the TypedArray in the callback");
-    }
     lv.val =
         JSObject::getOwnIndexed(createPseudoHandle(self.get()), runtime, i);
     auto callRes = Callable::executeCall3(

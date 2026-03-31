@@ -951,8 +951,6 @@
     {
       "comment": "TypedArray detached buffer handling is incomplete. Operations on TypedArrays whose ArrayBuffer is detached during callbacks (filter, forEach, map, reduce, includes, indexOf, etc.) throw TypeError instead of handling the detached state per spec. Constructor detach-during-coercion tests crash (SIGABRT) or throw wrong error types. Internal methods don't check for detachment before operating.",
       "paths": [
-        "test262/test/built-ins/TypedArray/prototype/filter/BigInt/callbackfn-detachbuffer.js",
-        "test262/test/built-ins/TypedArray/prototype/filter/callbackfn-detachbuffer.js",
         "test262/test/built-ins/TypedArray/prototype/forEach/BigInt/callbackfn-detachbuffer.js",
         "test262/test/built-ins/TypedArray/prototype/forEach/callbackfn-detachbuffer.js",
         "test262/test/built-ins/TypedArray/prototype/includes/BigInt/detached-buffer-during-fromIndex-returns-false-for-zero.js",
@@ -965,8 +963,6 @@
         "test262/test/built-ins/TypedArray/prototype/join/detached-buffer-during-fromIndex-returns-single-comma.js",
         "test262/test/built-ins/TypedArray/prototype/lastIndexOf/BigInt/detached-buffer-during-fromIndex-returns-minus-one-for-zero.js",
         "test262/test/built-ins/TypedArray/prototype/lastIndexOf/detached-buffer-during-fromIndex-returns-minus-one-for-zero.js",
-        "test262/test/built-ins/TypedArray/prototype/map/BigInt/callbackfn-detachbuffer.js",
-        "test262/test/built-ins/TypedArray/prototype/map/callbackfn-detachbuffer.js",
         "test262/test/built-ins/TypedArray/prototype/reduce/BigInt/callbackfn-detachbuffer.js",
         "test262/test/built-ins/TypedArray/prototype/reduce/callbackfn-detachbuffer.js",
         "test262/test/built-ins/TypedArray/prototype/reduceRight/BigInt/callbackfn-detachbuffer.js",
