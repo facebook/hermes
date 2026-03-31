@@ -45,12 +45,12 @@ jobs:
         os: [macos-15]
         cmake_flags: [""]
         lit_flags: [""]
-        test_runner_flags: [""]
+        test_runner_jit_flag: [""]
         include:
           - os: macos-15
             cmake_flags: "-DHERMESVM_ALLOW_JIT=2"
             lit_flags: "-Xjit=force"
-            test_runner_flags: "--vm-args='-Xjit=force'"
+            test_runner_jit_flag: "--jit=force"
     runs-on: ${{ matrix.os }}
     steps:
     - uses: maxim-lobanov/setup-xcode@v1
@@ -73,7 +73,8 @@ jobs:
         cmake -S hermes -B build -GNinja -DHERMES_ENABLE_INTL=ON -DCMAKE_BUILD_TYPE=Debug ${{ matrix.cmake_flags }}
         cmake --build ./build
         cmake --build ./build --target check-hermes
-        python3 hermes/utils/test_runner.py --test-intl test262/test -b build/bin ${{ matrix.test_runner_flags }}
+        cmake --build ./build --target test-runner
+        build/bin/test-runner --test-intl test262/test --skiplist hermes/utils/testsuite/skiplist.json ${{ matrix.test_runner_jit_flag }}
 
   test-linux-test262:
     strategy:
@@ -82,12 +83,12 @@ jobs:
         os: [4-core-ubuntu, ubuntu-24.04-arm]
         cmake_flags: [""]
         lit_flags: [""]
-        test_runner_flags: [""]
+        test_runner_jit_flag: [""]
         include:
           - os: ubuntu-24.04-arm
             cmake_flags: "-DHERMESVM_ALLOW_JIT=2"
             lit_flags: "-Xjit=force"
-            test_runner_flags: "--vm-args='-Xjit=force'"
+            test_runner_jit_flag: "--jit=force"
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v4.1.0
@@ -111,11 +112,12 @@ jobs:
 
         cmake -S hermes -GNinja -B build_intl -DHERMES_ENABLE_INTL=ON -DCMAKE_CXX_FLAGS=-O2 -DCMAKE_C_FLAGS=-O2 -DCMAKE_BUILD_TYPE=Debug ${{ matrix.cmake_flags }}
         cmake --build ./build_intl
+        cmake --build ./build_intl --target test-runner
         # Not running Hermes test with -DHERMES_ENABLE_INTL=ON  until more of
         # Intl is built out: toLocaleLowerCase and toLocaleUpperCase are the two
         # main ones.
         # cmake --build ./build_intl --target check-hermes
-        python3 hermes/utils/test_runner.py --test-intl test262/test -b build_intl/bin ${{ matrix.test_runner_flags }}
+        build_intl/bin/test-runner --test-intl test262/test --skiplist hermes/utils/testsuite/skiplist.json ${{ matrix.test_runner_jit_flag }}
 
   test-linux-armv7:
     runs-on: ubuntu-24.04-arm
@@ -148,11 +150,12 @@ jobs:
             -DCMAKE_CXX_FLAGS=-O2 -DCMAKE_C_FLAGS=-O2 -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_SYSTEM_PROCESSOR=arm -DCMAKE_SYSTEM_NAME=Linux
           cmake --build ./build_intl
+          cmake --build ./build_intl --target test-runner
           # Not running Hermes test with -DHERMES_ENABLE_INTL=ON  until more of
           # Intl is built out: toLocaleLowerCase and toLocaleUpperCase are the two
           # main ones.
           # cmake --build ./build_intl --target check-hermes
-          python3 hermes/utils/test_runner.py --test-intl test262/test -b build_intl/bin
+          build_intl/bin/test-runner --test-intl test262/test --skiplist hermes/utils/testsuite/skiplist.json
 
   test-windows-test262:
     strategy:
@@ -201,5 +204,5 @@ jobs:
         cmake --build build --config ${{ matrix.build_type }} --target hermes -- \
           -m /p:UseMultiToolTask=true /p:EnforceProcessCountAcrossBuilds=true
 
-        # Run test262 suite
+        # Run test262 suite (using Python runner — C++ runner not yet ported to Windows)
         python3 hermes/utils/test_runner.py test262/test -b build/bin/${{ matrix.build_type }} --timeout 600
