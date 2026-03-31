@@ -1,7 +1,17 @@
 version: 2
 updates:
 - package-ecosystem: npm
-  directory: "/"
+  directories:
+  - "/"
+  - "/.ado/scripts"
+  - "/benchmarks/build-helpers/flow-bundler"
+  - "/benchmarks/raytracer/original"
+  - "/tools/fork-sync"
+  - "/tools/hcdp"
+  - "/tools/hermes-parser/js"
+  - "/unittests/NodeApi/test"
+  - "/utils/promise"
+  - "/utils/scripts/hermes"
   schedule:
     interval: daily
     time: "05:00"
@@ -12,3 +22,7 @@ updates:
   commit-message:
     prefix: 📦
   open-pull-requests-limit: 5
+  groups:
+    all-npm-dependencies:
+      patterns:
+      - "*"
