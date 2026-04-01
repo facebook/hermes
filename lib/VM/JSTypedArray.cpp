@@ -37,16 +37,23 @@ void TypedArrayBaseBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 
 std::pair<uint32_t, uint32_t> JSTypedArrayBase::_getOwnIndexedRangeImpl(
     JSObject *selfObj,
-    PointerBase &) {
+    PointerBase &base) {
   auto *self = vmcast<JSTypedArrayBase>(selfObj);
+  // ECMA-2026 10.4.5: A detached TypedArray has no indexed properties.
+  if (LLVM_UNLIKELY(!self->attached(base)))
+    return {0, 0};
   return {0, self->getLength()};
 }
 
 bool JSTypedArrayBase::_haveOwnIndexedImpl(
     JSObject *selfObj,
-    Runtime &,
+    Runtime &runtime,
     uint32_t index) {
   auto *self = vmcast<JSTypedArrayBase>(selfObj);
+  // ECMA-2026 10.4.5.2 [[HasProperty]]: If the buffer is detached, no indexed
+  // properties exist.
+  if (LLVM_UNLIKELY(!self->attached(runtime)))
+    return false;
   // Check whether the index is within the storage.
   return index < self->getLength();
 }
@@ -56,6 +63,10 @@ OptValue<PropertyFlags> JSTypedArrayBase::_getOwnIndexedPropertyFlagsImpl(
     Runtime &runtime,
     uint32_t index) {
   auto *self = vmcast<JSTypedArrayBase>(selfObj);
+  // ECMA-2026 10.4.5.4 [[GetOwnProperty]]: If the buffer is detached, no
+  // indexed properties exist.
+  if (LLVM_UNLIKELY(!self->attached(runtime)))
+    return llvh::None;
   // Check whether the index is within the storage.
   if (LLVM_UNLIKELY(index >= self->getLength())) {
     return llvh::None;
@@ -88,9 +99,14 @@ bool JSTypedArrayBase::_deleteOwnIndexedImpl(
 
 bool JSTypedArrayBase::_checkAllOwnIndexedImpl(
     JSObject *selfObj,
-    Runtime &,
+    Runtime &runtime,
     ObjectVTable::CheckAllOwnIndexedMode /*mode*/) {
   auto *self = vmcast<JSTypedArrayBase>(selfObj);
+
+  // ECMA-2026 10.4.5: A detached TypedArray has no indexed properties, so all
+  // (zero) indexed properties trivially satisfy sealed/frozen requirements.
+  if (LLVM_UNLIKELY(!self->attached(runtime)))
+    return true;
 
   // If we have any indexed properties at all, they don't satisfy the
   // requirements.

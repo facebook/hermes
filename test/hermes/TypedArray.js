@@ -348,13 +348,12 @@ cons.forEach(function(TypedArray) {
   for(var i in view)
     result.push(i);
   assert.arrayEqual(result, ["0", "1", "2", "3", "4"]);
-  // Detach the buffer. Result should be the same because
-  // IsDetachedBuffer is not checked in ES6 9.4.5.6 [[OwnPropertyKeys]].
+  // Detach the buffer. No keys should be enumerable.
   HermesInternal.detachArrayBuffer(view.buffer);
   result = [];
   for(var i in view)
     result.push(i);
-  assert.arrayEqual(result, ["0", "1", "2", "3", "4"]);
+  assert.arrayEqual(result, []);
 });
 
 // Check basic writability properties
