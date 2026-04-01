@@ -184,6 +184,10 @@ CallResult<HermesValue> typedArrayConstructorFromTypedArray(
     Runtime &runtime,
     Handle<JSTypedArray<T, C>> self,
     Handle<JSTypedArrayBase> other) {
+  if (!other->attached(runtime)) {
+    return runtime.raiseTypeError(
+        "Cannot construct a TypedArray from a detached TypedArray");
+  }
   if (JSTypedArray<T, C>::createBuffer(runtime, self, other->getLength()) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;

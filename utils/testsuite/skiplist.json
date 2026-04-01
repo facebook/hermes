@@ -985,7 +985,6 @@
         "test262/test/built-ins/TypedArrayConstructors/internals/HasProperty/detached-buffer.js",
         "test262/test/built-ins/TypedArrayConstructors/internals/Set/BigInt/detached-buffer.js",
         "test262/test/built-ins/TypedArrayConstructors/internals/Set/detached-buffer.js",
-        "test262/test/staging/sm/TypedArray/constructor-non-detached.js",
         "test262/test/staging/sm/TypedArray/iterator-next-with-detached.js",
         "test262/test/staging/sm/TypedArray/slice-detached.js",
         "test262/test/staging/sm/TypedArray/test-integrity-level-detached.js",
