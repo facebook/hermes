@@ -806,12 +806,14 @@ export const HERMES_AST_VISITOR_KEYS = {
   ClassProperty: {
     key: 'Node',
     value: 'Node',
+    decorators: 'NodeList',
     variance: 'Node',
     typeAnnotation: 'Node',
   },
   ClassPrivateProperty: {
     key: 'Node',
     value: 'Node',
+    decorators: 'NodeList',
     variance: 'Node',
     typeAnnotation: 'Node',
   },

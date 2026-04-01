@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "CDPDebugAPI.h"
+#include <hermes/cdp/CDPDebugAPI.h>
 
 namespace facebook {
 namespace hermes {

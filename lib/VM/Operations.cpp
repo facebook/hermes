@@ -1035,6 +1035,33 @@ EqualityResult areEqualSmallNumbers(const double x, BigIntPrimitive *y) {
 /// ES11 7.2.15 Abstract Equality Comparison
 CallResult<bool>
 abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
+  // Fast path: handle common same-type comparisons without allocating
+  // MutableHandles, which avoids GCScope overhead for the frequent cases.
+  {
+    HermesValue xFast = xHandle.get();
+    HermesValue yFast = yHandle.get();
+    assert(
+        !xFast.isEmpty() && !yFast.isEmpty() && "invalid value for comparison");
+
+    // Both numbers: compare as doubles (handles NaN correctly).
+    if (LLVM_LIKELY(xFast.isNumber())) {
+      if (LLVM_LIKELY(yFast.isNumber()))
+        return xFast.getNumber() == yFast.getNumber();
+    } else if (xFast.getRaw() == yFast.getRaw()) {
+      // Identical non-number values are always equal: covers undefined===
+      // undefined, null===null, same bool, same object, same string pointer.
+      return true;
+    } else if (xFast.isNull() || xFast.isUndefined()) {
+      // null == undefined and undefined == null per ES11 7.2.15 steps 2-3.
+      // Also handles null != <non-null-non-undefined> and undefined !=
+      // <non-null-non-undefined>.
+      return yFast.isNull() || yFast.isUndefined();
+    } else if (yFast.isNull() || yFast.isUndefined()) {
+      // <non-null-non-undefined> != null and != undefined.
+      return false;
+    }
+  }
+
   MutableHandle<> x{runtime, xHandle.get()};
   MutableHandle<> y{runtime, yHandle.get()};
 
@@ -2283,22 +2310,24 @@ CallResult<HermesValue> objectFromPropertyDescriptor(
 
   if (!dpFlags.isAccessor()) {
     // Data Descriptor
-    auto result = JSObject::defineOwnProperty(
-        obj,
-        runtime,
-        Predefined::getSymbolID(Predefined::value),
-        dpf,
-        valueOrAccessor,
-        PropOpFlags().plusThrowOnError());
-    assert(
-        result != ExecutionStatus::EXCEPTION &&
-        "defineOwnProperty() failed on a new object");
-    if (result == ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
+    if (dpFlags.setValue) {
+      auto result = JSObject::defineOwnProperty(
+          obj,
+          runtime,
+          Predefined::getSymbolID(Predefined::value),
+          dpf,
+          valueOrAccessor,
+          PropOpFlags().plusThrowOnError());
+      assert(
+          result != ExecutionStatus::EXCEPTION &&
+          "defineOwnProperty() failed on a new object");
+      if (result == ExecutionStatus::EXCEPTION) {
+        return ExecutionStatus::EXCEPTION;
+      }
     }
 
     if (dpFlags.setWritable) {
-      result = JSObject::defineOwnProperty(
+      auto result = JSObject::defineOwnProperty(
           obj,
           runtime,
           Predefined::getSymbolID(Predefined::writable),
@@ -2314,44 +2343,48 @@ CallResult<HermesValue> objectFromPropertyDescriptor(
     }
   } else {
     // Accessor
-    auto *accessor = vmcast<PropertyAccessor>(valueOrAccessor.get());
+    if (dpFlags.setGetter) {
+      auto *accessor = vmcast<PropertyAccessor>(valueOrAccessor.get());
+      auto getter = runtime.makeHandle(
+          accessor->getter ? HermesValue::encodeObjectValue(
+                                 accessor->getter.getNonNull(runtime))
+                           : HermesValue::encodeUndefinedValue());
 
-    auto getter = runtime.makeHandle(
-        accessor->getter ? HermesValue::encodeObjectValue(
-                               accessor->getter.getNonNull(runtime))
-                         : HermesValue::encodeUndefinedValue());
-
-    auto setter = runtime.makeHandle(
-        accessor->setter ? HermesValue::encodeObjectValue(
-                               accessor->setter.getNonNull(runtime))
-                         : HermesValue::encodeUndefinedValue());
-
-    auto result = JSObject::defineOwnProperty(
-        obj,
-        runtime,
-        Predefined::getSymbolID(Predefined::get),
-        dpf,
-        getter,
-        PropOpFlags().plusThrowOnError());
-    assert(
-        result != ExecutionStatus::EXCEPTION &&
-        "defineOwnProperty() failed on a new object");
-    if (result == ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
+      auto result = JSObject::defineOwnProperty(
+          obj,
+          runtime,
+          Predefined::getSymbolID(Predefined::get),
+          dpf,
+          getter,
+          PropOpFlags().plusThrowOnError());
+      assert(
+          result != ExecutionStatus::EXCEPTION &&
+          "defineOwnProperty() failed on a new object");
+      if (result == ExecutionStatus::EXCEPTION) {
+        return ExecutionStatus::EXCEPTION;
+      }
     }
 
-    result = JSObject::defineOwnProperty(
-        obj,
-        runtime,
-        Predefined::getSymbolID(Predefined::set),
-        dpf,
-        setter,
-        PropOpFlags().plusThrowOnError());
-    assert(
-        result != ExecutionStatus::EXCEPTION &&
-        "defineOwnProperty() failed on a new object");
-    if (result == ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
+    if (dpFlags.setSetter) {
+      auto *accessor = vmcast<PropertyAccessor>(valueOrAccessor.get());
+      auto setter = runtime.makeHandle(
+          accessor->setter ? HermesValue::encodeObjectValue(
+                                 accessor->setter.getNonNull(runtime))
+                           : HermesValue::encodeUndefinedValue());
+
+      auto result = JSObject::defineOwnProperty(
+          obj,
+          runtime,
+          Predefined::getSymbolID(Predefined::set),
+          dpf,
+          setter,
+          PropOpFlags().plusThrowOnError());
+      assert(
+          result != ExecutionStatus::EXCEPTION &&
+          "defineOwnProperty() failed on a new object");
+      if (result == ExecutionStatus::EXCEPTION) {
+        return ExecutionStatus::EXCEPTION;
+      }
     }
   }
 

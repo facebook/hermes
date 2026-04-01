@@ -2109,9 +2109,12 @@ std::pair<Type *, FlowChecker::CanFlowResult> FlowChecker::tryNarrowType(
   }
 
   // Otherwise, going from narrowType to targetType doesn't require a checked
-  // cast, but we do need to cast to the narrowType.
+  // cast, but we do need to cast from exprType to targetType because targetType
+  // could be a union that shares arms with exprType.
+  // Example: casting from `?T` to `T|void` needs to go to `T|void` properly
+  // because IRGen cannot assume that the type is `T` afterwards.
   cfCast.needCheckedCast = true;
-  return {narrowType, cfCast};
+  return {targetType, cfCast};
 }
 
 ESTree::Node *FlowChecker::implicitCheckedCast(
@@ -2355,6 +2358,81 @@ void FlowChecker::resolveCallToGenericFunctionSpecializationWithParsedTypes(
   }
 }
 
+bool FlowChecker::inferPlaceholdersFromCallArgs(
+    ESTree::TypeParameterDeclarationNode *typeParams,
+    ESTree::NodeList &funcParams,
+    ESTree::NodeList &callArgs,
+    llvh::ArrayRef<Type *> typeArgs,
+    sema::LexicalScope *bindScope,
+    ESTree::Node *callNode,
+    Type *receiverType) {
+  // Build argument constraints by binding type params and parsing param types.
+  llvh::SmallVector<Type *, 2> callArgConstraints{};
+  {
+    ScopeRAII paramScope{*this};
+    // Bind type parameters to our type arguments.
+    size_t i = 0;
+    for (ESTree::Node &paramNode : typeParams->_params) {
+      auto *typeParam = llvh::cast<ESTree::TypeParameterNode>(&paramNode);
+      bindingTable_.try_emplace(
+          typeParam->_name, TypeDecl{typeArgs[i], bindScope, &paramNode});
+      ++i;
+    }
+
+    // Parse remaining parameter types to get constraints.
+    bool first = true;
+    for (ESTree::Node &param : funcParams) {
+      auto *ident = llvh::dyn_cast<ESTree::IdentifierNode>(&param);
+
+      if (!ident) {
+        // Cannot infer anything.
+        return false;
+      }
+
+      // 'this' type annotation needs to be handled specially.
+      // It can only be on the first param.
+      if (first && ident->_name == kw_.identThis && ident->_typeAnnotation) {
+        first = false;
+
+        Type *thisParamType = parseTypeAnnotation(
+            llvh::cast<ESTree::TypeAnnotationNode>(ident->_typeAnnotation)
+                ->_typeAnnotation);
+
+        if (receiverType)
+          matchConstraintToType(thisParamType, receiverType);
+
+        continue;
+      }
+
+      first = false;
+
+      if (!ident->_typeAnnotation) {
+        callArgConstraints.push_back(nullptr);
+        continue;
+      }
+      callArgConstraints.push_back(parseTypeAnnotation(
+          llvh::cast<ESTree::TypeAnnotationNode>(ident->_typeAnnotation)
+              ->_typeAnnotation));
+    }
+  }
+
+  // Visit arguments with constraints to infer remaining type params.
+  size_t argIdx = 0;
+  for (ESTree::Node &arg : callArgs) {
+    Type *constraint = argIdx < callArgConstraints.size()
+        ? callArgConstraints[argIdx]
+        : nullptr;
+    visitExpression(&arg, callNode, constraint);
+    ++argIdx;
+  }
+
+  // Inference succeeded iff none of the typeArgs are still
+  // InferencePlaceholderType.
+  return llvh::none_of(typeArgs, [](Type *typeArg) -> bool {
+    return llvh::isa<InferencePlaceholderType>(typeArg->info);
+  });
+}
+
 std::pair<bool, llvh::SmallVector<Type *, 2>>
 FlowChecker::inferTypeArgumentsForGenericFunctionCall(
     ESTree::CallExpressionNode *node,
@@ -2379,47 +2457,16 @@ FlowChecker::inferTypeArgumentsForGenericFunctionCall(
         flowContext_.createType(flowContext_.getInferencePlaceholderInfo()));
   }
 
-  // Bind the placeholder types into the type parameter names and parse the
-  // function type, to get the initial constraint passed to visitExpression.
-  llvh::SmallVector<Type *, 2> callArgConstraints{};
-  {
-    ScopeRAII paramScope{*this};
-    if (!validateAndBindTypeParameters(
-            typeParams, callee->getSourceRange(), typeArgs, oldDecl->scope)) {
-      assert(false && "type parameters must bind here, not user provided");
-    }
-
-    for (ESTree::Node &param : ESTree::getParams(genericDecl)) {
-      auto *ident = llvh::dyn_cast<ESTree::IdentifierNode>(&param);
-      if (!ident) {
-        // Cannot infer anything.
-        return {};
-      }
-      if (!ident->_typeAnnotation)
-        callArgConstraints.push_back(nullptr);
-      callArgConstraints.push_back(parseTypeAnnotation(
-          llvh::cast<ESTree::TypeAnnotationNode>(ident->_typeAnnotation)
-              ->_typeAnnotation));
-    }
-  }
-
-  // Visit all the arguments, even if there's a mismatch and we're not able to
-  // provide constraints for all arguments.
-  // This allows us to easily skip visiting all the arguments in the
-  // CallExpression visitor function in ExprVisitor.
-  size_t i = 0;
-  for (ESTree::Node &arg : node->_arguments) {
-    Type *constraint =
-        i < callArgConstraints.size() ? callArgConstraints[i] : nullptr;
-    visitExpression(&arg, node, constraint);
-    ++i;
-  }
-
-  for (auto *typeArg : typeArgs) {
-    if (llvh::isa<InferencePlaceholderType>(typeArg->info)) {
-      // Failed to infer.
-      return {true, {}};
-    }
+  // Infer placeholders from call arguments.
+  if (!inferPlaceholdersFromCallArgs(
+          typeParams,
+          ESTree::getParams(genericDecl),
+          node->_arguments,
+          typeArgs,
+          oldDecl->scope,
+          node)) {
+    // Failed to infer.
+    return {true, {}};
   }
 
   return {true, std::move(typeArgs)};

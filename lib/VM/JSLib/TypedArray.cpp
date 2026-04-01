@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 #include "JSLibInternal.h"
 #include "hermes/VM/JSArrayBuffer.h"
+#include "hermes/VM/JSLib/Base64Util.h"
 #include "hermes/VM/JSLib/Sorting.h"
 #include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/Operations.h"
@@ -433,11 +434,6 @@ CallResult<HermesValue> mapFilterLoop(
   LocalsRAII lraii(runtime, &lv);
   GCScopeMarkerRAII marker{runtime};
   for (JSTypedArrayBase::size_type i = 0; i < len; ++i) {
-    if (!self->attached(runtime)) {
-      // If the callback detached this TypedArray, raise a TypeError and don't
-      // continue.
-      return runtime.raiseTypeError("Detached the TypedArray in the callback");
-    }
     lv.val =
         JSObject::getOwnIndexed(createPseudoHandle(self.get()), runtime, i);
     auto callRes = Callable::executeCall3(
@@ -911,40 +907,41 @@ CallResult<HermesValue> typedArrayOf(void *, Runtime &runtime) {
 /// @name %JSTypedArray%.prototype
 /// @{
 
-/// ES6 22.2.3.1
+/// ES16 23.2.3.2
 CallResult<HermesValue> typedArrayPrototypeBuffer(void *, Runtime &runtime) {
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
-  if (JSTypedArrayBase::validateTypedArray(
-          runtime, args.getThisHandle(), false) == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
+  auto self = args.dyncastThis<JSTypedArrayBase>();
+  if (LLVM_UNLIKELY(!self)) {
+    return runtime.raiseTypeError(
+        "%TypedArray%.prototype.buffer called on a non-TypedArray");
   }
-  auto self = args.vmcastThis<JSTypedArrayBase>();
   return HermesValue::encodeObjectValue(self->getBuffer(runtime));
 }
 
+/// ES16 23.2.3.3
 CallResult<HermesValue> typedArrayPrototypeByteLength(
     void *,
     Runtime &runtime) {
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
-  if (JSTypedArrayBase::validateTypedArray(
-          runtime, args.getThisHandle(), false) == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
+  auto self = args.dyncastThis<JSTypedArrayBase>();
+  if (LLVM_UNLIKELY(!self)) {
+    return runtime.raiseTypeError(
+        "%TypedArray%.prototype.byteLength called on a non-TypedArray");
   }
-  auto self = args.vmcastThis<JSTypedArrayBase>();
   return HermesValue::encodeTrustedNumberValue(
       self->attached(runtime) ? self->getByteLength() : 0);
 }
 
-/// ES6 22.2.3.3
+/// ES16 23.2.3.4
 CallResult<HermesValue> typedArrayPrototypeByteOffset(
     void *,
     Runtime &runtime) {
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
-  if (JSTypedArrayBase::validateTypedArray(
-          runtime, args.getThisHandle(), false) == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
+  auto self = args.dyncastThis<JSTypedArrayBase>();
+  if (LLVM_UNLIKELY(!self)) {
+    return runtime.raiseTypeError(
+        "%TypedArray%.prototype.byteOffset called on a non-TypedArray");
   }
-  auto self = args.vmcastThis<JSTypedArrayBase>();
   return HermesValue::encodeTrustedNumberValue(
       self->attached(runtime) && self->getLength() != 0 ? self->getByteOffset()
                                                         : 0);
@@ -1965,6 +1962,517 @@ CallResult<HermesValue> typedArrayPrototypeToLocaleString(
     builder->appendStringPrim(lv.element);
   }
   return HermesValue::encodeStringValue(*builder->getStringPrimitive());
+}
+
+//===----------------------------------------------------------------------===//
+/// Uint8Array Base64/Hex Methods
+/// TC39 "Uint8Array to/from Base64 and Hex" proposal
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+/// Result of a hex decode operation.
+struct HexDecodeResult {
+  uint32_t read;
+  llvh::SmallVector<uint8_t, 64> bytes;
+  bool error;
+
+  HexDecodeResult() : read(0), error(false) {}
+};
+
+/// Decode a hex digit character to its 4-bit value. Returns -1 if invalid.
+int decodeHexDigit(char16_t c) {
+  if (c >= '0' && c <= '9')
+    return c - '0';
+  if (c >= 'a' && c <= 'f')
+    return c - 'a' + 10;
+  if (c >= 'A' && c <= 'F')
+    return c - 'A' + 10;
+  return -1;
+}
+
+/// Decode a hex string. Each pair of hex digits produces one byte.
+/// \p input the input string view.
+/// \p maxLength maximum number of bytes to decode.
+HexDecodeResult fromHexImpl(StringView input, uint32_t maxLength) {
+  HexDecodeResult result;
+  uint32_t inputLen = input.length();
+
+  for (uint32_t i = 0; i + 1 < inputLen && result.bytes.size() < maxLength;
+       i += 2) {
+    int hi = decodeHexDigit(input[i]);
+    int lo = decodeHexDigit(input[i + 1]);
+    if (hi < 0 || lo < 0) {
+      result.error = true;
+      result.read = i;
+      return result;
+    }
+    result.bytes.push_back(static_cast<uint8_t>((hi << 4) | lo));
+    result.read = i + 2;
+  }
+
+  return result;
+}
+
+/// Parse the base64 options object.
+/// Returns the alphabet (useBase64url) and lastChunkHandling via output params.
+/// Returns ExecutionStatus::EXCEPTION on error.
+ExecutionStatus parseBase64Options(
+    Runtime &runtime,
+    Handle<> options,
+    bool &useBase64url,
+    LastChunkHandling &lastChunkHandling,
+    bool &omitPadding) {
+  struct : public Locals {
+    PinnedValue<> strVal;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  useBase64url = false;
+  lastChunkHandling = LastChunkHandling::Loose;
+  omitPadding = false;
+
+  if (options->isUndefined())
+    return ExecutionStatus::RETURNED;
+
+  // GetOptionsObject: throw TypeError if not an object.
+  if (!vmisa<JSObject>(options.get())) {
+    return runtime.raiseTypeError("options must be an object");
+  }
+  auto obj = Handle<JSObject>::vmcast(options);
+
+  // Get 'alphabet' property.
+  {
+    auto propRes = JSObject::getNamed_RJS(
+        obj, runtime, Predefined::getSymbolID(Predefined::alphabet));
+    if (propRes == ExecutionStatus::EXCEPTION)
+      return ExecutionStatus::EXCEPTION;
+    lv.strVal = std::move(*propRes);
+    if (!lv.strVal->isUndefined()) {
+      if (!lv.strVal->isString()) {
+        return runtime.raiseTypeError("alphabet must be a string");
+      }
+      auto alphaStr = Handle<StringPrimitive>::vmcast(&lv.strVal);
+      auto alphaView = StringPrimitive::createStringView(runtime, alphaStr);
+      auto base64Ref = createASCIIRef("base64");
+      auto base64urlRef = createASCIIRef("base64url");
+      if (alphaView.equals(base64urlRef)) {
+        useBase64url = true;
+      } else if (!alphaView.equals(base64Ref)) {
+        return runtime.raiseTypeError(
+            "alphabet must be either \"base64\" or \"base64url\"");
+      }
+    }
+  }
+
+  // Get 'lastChunkHandling' property.
+  {
+    auto propRes = JSObject::getNamed_RJS(
+        obj, runtime, Predefined::getSymbolID(Predefined::lastChunkHandling));
+    if (propRes == ExecutionStatus::EXCEPTION)
+      return ExecutionStatus::EXCEPTION;
+    lv.strVal = std::move(*propRes);
+    if (!lv.strVal->isUndefined()) {
+      if (!lv.strVal->isString()) {
+        return runtime.raiseTypeError("lastChunkHandling must be a string");
+      }
+      auto lchStr = Handle<StringPrimitive>::vmcast(&lv.strVal);
+      auto lchView = StringPrimitive::createStringView(runtime, lchStr);
+      auto looseRef = createASCIIRef("loose");
+      auto strictRef = createASCIIRef("strict");
+      auto sbpRef = createASCIIRef("stop-before-partial");
+      if (lchView.equals(strictRef)) {
+        lastChunkHandling = LastChunkHandling::Strict;
+      } else if (lchView.equals(sbpRef)) {
+        lastChunkHandling = LastChunkHandling::StopBeforePartial;
+      } else if (!lchView.equals(looseRef)) {
+        return runtime.raiseTypeError(
+            "lastChunkHandling must be \"loose\", \"strict\", or \"stop-before-partial\"");
+      }
+    }
+  }
+
+  // Get 'omitPadding' property.
+  {
+    auto propRes = JSObject::getNamed_RJS(
+        obj, runtime, Predefined::getSymbolID(Predefined::omitPadding));
+    if (propRes == ExecutionStatus::EXCEPTION)
+      return ExecutionStatus::EXCEPTION;
+    omitPadding = toBoolean(propRes->get());
+  }
+
+  return ExecutionStatus::RETURNED;
+}
+
+/// Validate that 'this' is a Uint8Array per spec Section 7.
+/// Only checks [[TypedArrayName]], not detachment.
+CallResult<Handle<JSTypedArrayBase>> validateUint8Array(
+    Runtime &runtime,
+    Handle<> thisVal) {
+  auto *ta = dyn_vmcast<JSTypedArrayBase>(thisVal.get());
+  if (!ta || ta->getKind() != CellKind::Uint8ArrayKind) {
+    return runtime.raiseTypeError("'this' is not a Uint8Array");
+  }
+  return Handle<JSTypedArrayBase>::vmcast(thisVal);
+}
+
+/// Create a plain object { read: readVal, written: writtenVal }.
+CallResult<HermesValue> createReadWrittenResult(
+    Runtime &runtime,
+    uint32_t readVal,
+    uint32_t writtenVal) {
+  struct : public Locals {
+    PinnedValue<JSObject> resultObj;
+    PinnedValue<> tmpVal;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  auto objRes = JSObject::create(runtime);
+  lv.resultObj = objRes.get();
+
+  lv.tmpVal = HermesValue::encodeTrustedNumberValue(readVal);
+  auto putRes = JSObject::putNamed_RJS(
+      lv.resultObj,
+      runtime,
+      Predefined::getSymbolID(Predefined::read),
+      lv.tmpVal);
+  if (putRes == ExecutionStatus::EXCEPTION)
+    return ExecutionStatus::EXCEPTION;
+
+  lv.tmpVal = HermesValue::encodeTrustedNumberValue(writtenVal);
+  putRes = JSObject::putNamed_RJS(
+      lv.resultObj,
+      runtime,
+      Predefined::getSymbolID(Predefined::written),
+      lv.tmpVal);
+  if (putRes == ExecutionStatus::EXCEPTION)
+    return ExecutionStatus::EXCEPTION;
+
+  return lv.resultObj.getHermesValue();
+}
+
+/// Uint8Array.prototype.toBase64([options])
+CallResult<HermesValue> uint8ArrayPrototypeToBase64(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  GCScope gcScope{runtime};
+
+  auto selfRes = validateUint8Array(runtime, args.getThisHandle());
+  if (selfRes == ExecutionStatus::EXCEPTION)
+    return ExecutionStatus::EXCEPTION;
+  auto self = *selfRes;
+
+  bool useBase64url = false;
+  LastChunkHandling lch = LastChunkHandling::Loose;
+  bool omitPadding = false;
+  if (parseBase64Options(
+          runtime, args.getArgHandle(0), useBase64url, lch, omitPadding) ==
+      ExecutionStatus::EXCEPTION)
+    return ExecutionStatus::EXCEPTION;
+
+  // Re-check attachment since parseBase64Options runs user-observable code.
+  if (!self->attached(runtime)) {
+    return runtime.raiseTypeError("Uint8Array is detached");
+  }
+
+  auto len = self->getLength();
+  auto *data = self->data(runtime);
+
+  // Calculate output length using uint64_t to avoid overflow.
+  uint64_t fullChunks = len / 3;
+  uint32_t remainder = len % 3;
+  uint64_t outLen;
+  if (omitPadding) {
+    outLen = fullChunks * 4 + (remainder == 0 ? 0 : remainder + 1);
+  } else {
+    outLen = remainder == 0 ? fullChunks * 4 : (fullChunks + 1) * 4;
+  }
+  if (outLen > StringPrimitive::MAX_STRING_LENGTH) {
+    return runtime.raiseRangeError(
+        "base64 output exceeds maximum string length");
+  }
+
+  SafeUInt32 safeOutLen{static_cast<uint32_t>(outLen)};
+  auto builder = StringBuilder::createStringBuilder(runtime, safeOutLen, true);
+  if (builder == ExecutionStatus::EXCEPTION)
+    return ExecutionStatus::EXCEPTION;
+
+  base64Encode(
+      llvh::ArrayRef<uint8_t>(data, len), *builder, useBase64url, omitPadding);
+
+  return builder->getStringPrimitive().getHermesValue();
+}
+
+/// Uint8Array.prototype.toHex()
+CallResult<HermesValue> uint8ArrayPrototypeToHex(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+
+  auto selfRes = validateUint8Array(runtime, args.getThisHandle());
+  if (selfRes == ExecutionStatus::EXCEPTION)
+    return ExecutionStatus::EXCEPTION;
+  auto self = *selfRes;
+
+  // GetUint8ArrayBytes: check attachment.
+  if (!self->attached(runtime)) {
+    return runtime.raiseTypeError("Uint8Array is detached");
+  }
+
+  auto len = self->getLength();
+  auto *data = self->data(runtime);
+
+  // Check output length won't exceed max string length.
+  uint64_t outLen = static_cast<uint64_t>(len) * 2;
+  if (outLen > StringPrimitive::MAX_STRING_LENGTH) {
+    return runtime.raiseRangeError("hex output exceeds maximum string length");
+  }
+
+  static const char hexChars[] = "0123456789abcdef";
+  llvh::SmallVector<char, 256> out;
+  out.reserve(outLen);
+
+  for (JSTypedArrayBase::size_type i = 0; i < len; ++i) {
+    out.push_back(hexChars[(data[i] >> 4) & 0x0F]);
+    out.push_back(hexChars[data[i] & 0x0F]);
+  }
+
+  return StringPrimitive::createEfficient(
+      runtime, ASCIIRef(out.data(), out.size()));
+}
+
+/// Uint8Array.fromBase64(string[, options])
+CallResult<HermesValue> uint8ArrayFromBase64(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  GCScope gcScope{runtime};
+
+  // 1. Validate the string argument.
+  auto strArg = args.getArgHandle(0);
+  if (!strArg->isString()) {
+    return runtime.raiseTypeError("fromBase64 argument must be a string");
+  }
+
+  bool useBase64url = false;
+  LastChunkHandling lch = LastChunkHandling::Loose;
+  bool omitPadding = false;
+  if (parseBase64Options(
+          runtime, args.getArgHandle(1), useBase64url, lch, omitPadding) ==
+      ExecutionStatus::EXCEPTION)
+    return ExecutionStatus::EXCEPTION;
+
+  auto str = Handle<StringPrimitive>::vmcast(strArg);
+  auto view = StringPrimitive::createStringView(runtime, str);
+
+  // Decode.
+  auto decoded =
+      fromBase64(view, useBase64url, lch, std::numeric_limits<uint32_t>::max());
+
+  if (decoded.error) {
+    return runtime.raiseSyntaxError(TwineChar16(
+        "Invalid character in base64 string at index ",
+        static_cast<int32_t>(decoded.errorIndex)));
+  }
+
+  // Allocate a new Uint8Array.
+  using Uint8Array = JSTypedArray<uint8_t, CellKind::Uint8ArrayKind>;
+  auto arrRes = Uint8Array::allocate(runtime, decoded.bytes.size());
+  if (arrRes == ExecutionStatus::EXCEPTION)
+    return ExecutionStatus::EXCEPTION;
+  auto arr = arrRes.getValue();
+
+  // Copy decoded bytes.
+  if (!decoded.bytes.empty()) {
+    std::memcpy(arr->data(runtime), decoded.bytes.data(), decoded.bytes.size());
+  }
+
+  return arr.getHermesValue();
+}
+
+/// Uint8Array.fromHex(string)
+CallResult<HermesValue> uint8ArrayFromHex(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  GCScope gcScope{runtime};
+
+  auto strArg = args.getArgHandle(0);
+  if (!strArg->isString()) {
+    return runtime.raiseTypeError("fromHex argument must be a string");
+  }
+
+  auto str = Handle<StringPrimitive>::vmcast(strArg);
+  auto view = StringPrimitive::createStringView(runtime, str);
+
+  // The input string must have even length.
+  if (view.length() % 2 != 0) {
+    return runtime.raiseSyntaxError(
+        "Hex string must have an even number of characters");
+  }
+
+  auto decoded = fromHexImpl(view, std::numeric_limits<uint32_t>::max());
+
+  if (decoded.error) {
+    return runtime.raiseSyntaxError("Invalid character in hex string");
+  }
+
+  using Uint8Array = JSTypedArray<uint8_t, CellKind::Uint8ArrayKind>;
+  auto arrRes = Uint8Array::allocate(runtime, decoded.bytes.size());
+  if (arrRes == ExecutionStatus::EXCEPTION)
+    return ExecutionStatus::EXCEPTION;
+  auto arr = arrRes.getValue();
+
+  if (!decoded.bytes.empty()) {
+    std::memcpy(arr->data(runtime), decoded.bytes.data(), decoded.bytes.size());
+  }
+
+  return arr.getHermesValue();
+}
+
+/// Uint8Array.prototype.setFromBase64(string[, options])
+CallResult<HermesValue> uint8ArrayPrototypeSetFromBase64(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  GCScope gcScope{runtime};
+
+  auto selfRes = validateUint8Array(runtime, args.getThisHandle());
+  if (selfRes == ExecutionStatus::EXCEPTION)
+    return ExecutionStatus::EXCEPTION;
+  auto self = *selfRes;
+
+  auto strArg = args.getArgHandle(0);
+  if (!strArg->isString()) {
+    return runtime.raiseTypeError("setFromBase64 argument must be a string");
+  }
+
+  bool useBase64url = false;
+  LastChunkHandling lch = LastChunkHandling::Loose;
+  bool omitPadding = false;
+  if (parseBase64Options(
+          runtime, args.getArgHandle(1), useBase64url, lch, omitPadding) ==
+      ExecutionStatus::EXCEPTION)
+    return ExecutionStatus::EXCEPTION;
+
+  // Re-check attachment since parseBase64Options runs user-observable code.
+  if (!self->attached(runtime)) {
+    return runtime.raiseTypeError("Uint8Array is detached");
+  }
+
+  auto str = Handle<StringPrimitive>::vmcast(strArg);
+  auto view = StringPrimitive::createStringView(runtime, str);
+
+  // Decode up to self->getLength() bytes.
+  auto maxLen = self->getLength();
+  auto decoded = fromBase64(view, useBase64url, lch, maxLen);
+
+  // Per spec: write bytes into the array BEFORE checking for errors.
+  uint32_t written = decoded.bytes.size();
+  if (written > 0) {
+    std::memcpy(self->data(runtime), decoded.bytes.data(), written);
+  }
+
+  if (decoded.error) {
+    return runtime.raiseSyntaxError(TwineChar16(
+        "Invalid character in base64 string at index ",
+        static_cast<int32_t>(decoded.errorIndex)));
+  }
+
+  return createReadWrittenResult(runtime, decoded.read, written);
+}
+
+/// Uint8Array.prototype.setFromHex(string)
+CallResult<HermesValue> uint8ArrayPrototypeSetFromHex(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  GCScope gcScope{runtime};
+
+  auto selfRes = validateUint8Array(runtime, args.getThisHandle());
+  if (selfRes == ExecutionStatus::EXCEPTION)
+    return ExecutionStatus::EXCEPTION;
+  auto self = *selfRes;
+
+  auto strArg = args.getArgHandle(0);
+  if (!strArg->isString()) {
+    return runtime.raiseTypeError("setFromHex argument must be a string");
+  }
+
+  // Check attachment before accessing data.
+  if (!self->attached(runtime)) {
+    return runtime.raiseTypeError("Uint8Array is detached");
+  }
+
+  auto str = Handle<StringPrimitive>::vmcast(strArg);
+  auto view = StringPrimitive::createStringView(runtime, str);
+
+  // The input string must have even length.
+  if (view.length() % 2 != 0) {
+    return runtime.raiseSyntaxError(
+        "Hex string must have an even number of characters");
+  }
+
+  auto maxLen = self->getLength();
+  auto decoded = fromHexImpl(view, maxLen);
+
+  // Per spec: write bytes into the array BEFORE checking for errors.
+  uint32_t written = decoded.bytes.size();
+  if (written > 0) {
+    std::memcpy(self->data(runtime), decoded.bytes.data(), written);
+  }
+
+  if (decoded.error) {
+    return runtime.raiseSyntaxError("Invalid character in hex string");
+  }
+
+  return createReadWrittenResult(runtime, decoded.read, written);
+}
+
+} // namespace
+
+void populateUint8ArrayBuiltins(Runtime &runtime) {
+  auto proto = Handle<JSObject>::vmcast(&runtime.Uint8ArrayPrototype);
+  auto cons = Handle<JSObject>::vmcast(&runtime.Uint8ArrayConstructor);
+
+  // Prototype methods.
+  defineMethod(
+      runtime,
+      proto,
+      Predefined::getSymbolID(Predefined::toBase64),
+      nullptr,
+      uint8ArrayPrototypeToBase64,
+      0);
+  defineMethod(
+      runtime,
+      proto,
+      Predefined::getSymbolID(Predefined::toHex),
+      nullptr,
+      uint8ArrayPrototypeToHex,
+      0);
+  defineMethod(
+      runtime,
+      proto,
+      Predefined::getSymbolID(Predefined::setFromBase64),
+      nullptr,
+      uint8ArrayPrototypeSetFromBase64,
+      1);
+  defineMethod(
+      runtime,
+      proto,
+      Predefined::getSymbolID(Predefined::setFromHex),
+      nullptr,
+      uint8ArrayPrototypeSetFromHex,
+      1);
+
+  // Static methods.
+  defineMethod(
+      runtime,
+      cons,
+      Predefined::getSymbolID(Predefined::fromBase64),
+      nullptr,
+      uint8ArrayFromBase64,
+      1);
+  defineMethod(
+      runtime,
+      cons,
+      Predefined::getSymbolID(Predefined::fromHex),
+      nullptr,
+      uint8ArrayFromHex,
+      1);
 }
 
 HermesValue createTypedArrayBaseConstructor(Runtime &runtime) {

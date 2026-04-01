@@ -88,7 +88,7 @@ function(add_unittest test_suite test_name)
 
   add_hermes_executable(${test_name} ${ARGN})
 
-  target_link_libraries(${test_name} gtest_main)
+  target_link_libraries(${test_name} llvh-gtest_main)
 
   add_dependencies(${test_suite} ${test_name})
   get_target_property(test_suite_folder ${test_suite} FOLDER)

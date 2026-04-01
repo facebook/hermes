@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "MessageInterfaces.h"
+#include <hermes/cdp/MessageInterfaces.h>
 
 namespace facebook {
 namespace hermes {

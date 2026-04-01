@@ -5,17 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "CDPAgent.h"
-#include "CDPDebugAPI.h"
-#include "ConsoleMessage.h"
-#include "DebuggerDomainAgent.h"
-#include "DebuggerDomainCoordinator.h"
-#include "HeapProfilerDomainAgent.h"
-#include "ProfilerDomainAgent.h"
-#include "RuntimeDomainAgent.h"
-
+#include <hermes/cdp/CDPAgent.h>
+#include <hermes/cdp/CDPDebugAPI.h>
+#include <hermes/cdp/ConsoleMessage.h>
+#include <hermes/cdp/DebuggerDomainAgent.h>
+#include <hermes/cdp/DebuggerDomainCoordinator.h>
+#include <hermes/cdp/HeapProfilerDomainAgent.h>
 #include <hermes/cdp/MessageConverters.h>
 #include <hermes/cdp/MessageTypes.h>
+#include <hermes/cdp/ProfilerDomainAgent.h>
+#include <hermes/cdp/RuntimeDomainAgent.h>
 
 namespace facebook {
 namespace hermes {

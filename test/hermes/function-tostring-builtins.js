@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+// REQUIRES: core_extensions
 // RUN: %hermes -O %s | %FileCheck --match-full-lines %s
 
 // Test that JS-implemented builtin functions return "[native code]" from toString().

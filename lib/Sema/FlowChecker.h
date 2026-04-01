@@ -684,6 +684,25 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
       ESTree::IdentifierNode *callee,
       sema::Decl *oldDecl);
 
+  /// Build constraints from function params and visit call arguments to infer
+  /// type argument placeholders.
+  /// \param typeParams type parameter declaration node.
+  /// \param funcParams function parameters (for deriving constraint types).
+  /// \param callArgs call arguments to visit.
+  /// \param typeArgs type args with placeholders to be resolved in-place.
+  /// \param bindScope scope for type parameter bindings.
+  /// \param callNode parent node for visiting expressions.
+  /// \param receiverType optional receiver type for inferring 'this' param.
+  /// \return true if all placeholders were resolved.
+  bool inferPlaceholdersFromCallArgs(
+      ESTree::TypeParameterDeclarationNode *typeParams,
+      ESTree::NodeList &funcParams,
+      ESTree::NodeList &callArgs,
+      llvh::ArrayRef<Type *> typeArgs,
+      sema::LexicalScope *bindScope,
+      ESTree::Node *callNode,
+      Type *receiverType = nullptr);
+
   /// Run the typechecker on a newly created specialization of a generic
   /// function.
   /// \param typeArgTypes the type arguments passed to the generic function.

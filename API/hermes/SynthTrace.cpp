@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "SynthTrace.h"
+#include <hermes/SynthTrace.h>
 
 #include "hermes/Support/Algorithms.h"
 #include "hermes/Support/Conversions.h"

@@ -1,0 +1,184 @@
+name: Issue Triage & Debug
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  check-limit:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.count.outputs.should_run }}
+    steps:
+      - name: Count recent runs
+        id: count
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DAILY_LIMIT: 20
+        run: |
+          # Count how many times this workflow has run in the past 24 hours.
+          TIMESTAMP=$(date -u -d '24 hours ago' '+%Y-%m-%dT%H:%M:%SZ')
+          COUNT=$(gh run list \
+            --repo ${{ github.repository }} \
+            --workflow "${{ github.workflow }}" \
+            --created ">$TIMESTAMP" \
+            --json databaseId \
+            --jq '. | length')
+          if [ "$COUNT" -le "$DAILY_LIMIT" ]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+          else
+            echo "Limit reached. Skipping Claude triage."
+            echo "should_run=false" >> $GITHUB_OUTPUT
+          fi
+
+  triage:
+    needs: check-limit
+    if: needs.check-limit.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          path: hermes
+
+      - name: Setup dependencies
+        run: |-
+          sudo apt update
+          sudo apt install -y git openssh-client cmake build-essential \
+              libreadline-dev libicu-dev zip python3 ninja-build
+          mkdir cmake-build
+
+      - name: Build prompt
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            // Search for potential duplicates
+            const issueTitle = context.payload.issue.title;
+            const searchQuery = `repo:${context.repo.owner}/${context.repo.repo} is:issue ${issueTitle}`;
+            let duplicatesText = 'No obviously related issues found.';
+            try {
+              const searchResults = await github.rest.search.issuesAndPullRequests({
+                q: searchQuery,
+                per_page: 5
+              });
+              const dupes = searchResults.data.items
+                .filter(i => i.number !== context.payload.issue.number)
+                .map(i => `- #${i.number}: ${i.title} (${i.state})`);
+              if (dupes.length > 0) {
+                duplicatesText = dupes.join('\n');
+              }
+            } catch (e) {
+              duplicatesText = 'Could not search for duplicates.';
+            }
+
+            // Get available labels
+            let labelsText = '';
+            try {
+              const labels = await github.rest.issues.listLabelsForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                per_page: 100
+              });
+              labelsText = labels.data.map(l => l.name).join(', ');
+            } catch (e) {
+              labelsText = 'Could not fetch labels.';
+            }
+
+            const issueBody = context.payload.issue.body || '(empty)';
+
+            const prompt = [
+              'You are triaging a new issue for the Hermes JavaScript engine.',
+              '',
+              `ISSUE NUMBER: ${context.payload.issue.number}`,
+              `TITLE: ${context.payload.issue.title}`,
+              `AUTHOR: ${context.payload.issue.user.login}`,
+              '',
+              'BODY:',
+              issueBody,
+              '',
+              'Potentially related issues:',
+              duplicatesText,
+              '',
+              `Available labels: ${labelsText}`,
+              '',
+              'Analyze this issue and provide:',
+              '1. **Type**: Bug report, feature request, or question.',
+              '2. **Priority**: Critical, high, medium, or low.',
+              '3. **Suggested Labels**: Choose from the available labels listed above.',
+              '4. **Duplicate Check**: Based on the related issues above, is this a duplicate?',
+              '',
+              'If it is a bug:',
+              '- Attempt to reproduce it based on the description.',
+              '- Identify the root cause by exploring the codebase.',
+              '- Propose a potential solution or code fix.',
+              '',
+              "If it's a bug, your final output MUST include:",
+              '- **Reproduction Status**: (Can you trigger it?)',
+              '- **Root Cause**: (Technical explanation)',
+              '',
+              'Refer to CLAUDE.md for details on how to build and run Hermes using CMake.',
+              'Place the CMake builds under cmake-build/',
+            ].join('\n');
+
+            fs.writeFileSync('/tmp/prompt.txt', prompt);
+
+      - name: Run Claude
+        id: claude
+        uses: anthropics/claude-code-base-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt_file: /tmp/prompt.txt
+          allowed_tools: "View,GlobTool,GrepTool,Bash"
+          model: "claude-opus-4-6"
+          max_turns: "100"
+
+      - name: Post triage results
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          EXECUTION_FILE: ${{ steps.claude.outputs.execution_file }}
+          CONCLUSION: ${{ steps.claude.outputs.conclusion }}
+        with:
+          script: |
+            const fs = require('fs');
+
+            let body;
+            try {
+              const executionLog = JSON.parse(
+                fs.readFileSync(process.env.EXECUTION_FILE, 'utf8')
+              );
+              const resultMessage = executionLog.find(m => m.type === 'result');
+
+              if (resultMessage && resultMessage.result) {
+                body = resultMessage.result;
+              } else {
+                body = 'No analysis produced.';
+              }
+            } catch (error) {
+              console.error('Error parsing execution log:', error);
+              body = 'Error parsing Claude response. Check the workflow logs.';
+            }
+
+            if (process.env.CONCLUSION !== 'success') {
+              body = `**Triage completed with status: ${process.env.CONCLUSION}**\n\n${body}`;
+            }
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              body: `## Issue Triage\n\n${body}`
+            });
+
+      - name: Upload execution log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-triage-${{ github.event.issue.number }}
+          path: ${{ steps.claude.outputs.execution_file }}
+          retention-days: 7
+          if-no-files-found: warn

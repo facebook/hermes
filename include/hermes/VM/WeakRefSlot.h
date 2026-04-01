@@ -10,16 +10,19 @@
 
 #include "hermes/VM/CompressedPointer.h"
 #include "hermes/VM/GCCell.h"
-#include "hermes/VM/GCConcurrency.h"
 #include "hermes/VM/HermesValue.h"
+#include "hermes/VM/RootAcceptor.h"
 #include "hermes/VM/WeakRoot.h"
 
 namespace hermes {
 namespace vm {
 
-/// This is a single slot in the weak reference table. It contains a pointer to
-/// a GC managed object. The GC will make sure it is updated when the object is
-/// moved; if the object is garbage-collected, the pointer will be cleared.
+/// This is a single slot in the weak reference table. It manages a
+/// WeakSmallHermesValue that can weakly hold Pointer (i.e., String, Object,
+/// BoxedDouble, BigInt) and Symbol values, or any other primitive values that a
+/// SmallHermesValue can hold (e.g., Bool, small integer, etc.). The GC will
+/// make sure it is updated when the object is moved; if the object/symbol is
+/// garbage-collected, it will be invalidated.
 class WeakRefSlot {
  public:
   // Mutator methods.
@@ -37,8 +40,13 @@ class WeakRefSlot {
     return value_.root.isSymbol();
   }
 
-  /// Return the underlying value, which is either an Object or Symbol, without
-  /// a read barrier.
+  /// Return the underlying value, with a read barrier if it's a pointer or
+  /// symbol.
+  inline HermesValue getValue(PointerBase &base, GC &gc) const;
+
+  /// Return the underlying value, without a read barrier. This should only be
+  /// used in cases where it is known that no read barrier is necessary (e.g.,
+  /// in the GC itself).
   inline HermesValue getValueNoBarrierUnsafe(PointerBase &base) const;
 
   /// Return the object as a GCCell *, with a read barrier

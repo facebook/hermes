@@ -7,6 +7,7 @@
 
 // RUN: TZ="MST+7MDT,M3.2.0/2,M11.1.0/2" %hermes -O %s | %FileCheck --match-full-lines %s
 // RUN: TZ="MST+7MDT,M3.2.0/2,M11.1.0/2" %shermes --exec %s | %FileCheck --match-full-lines %s
+// Windows does not support TZ env variable.
 // UNSUPPORTED: windows
 "use strict";
 

@@ -133,6 +133,56 @@ describe('Locations', () => {
     });
   });
 
+  test('Decorator locations on class properties and methods', () => {
+    // Decorators on both properties and methods should have range
+    expect(
+      parse(`class C {
+  @d1 prop;
+  @d2 method() {}
+}`),
+    ).toMatchObject({
+      type: 'Program',
+      body: [
+        {
+          type: 'ClassDeclaration',
+          body: {
+            type: 'ClassBody',
+            body: [
+              {
+                type: 'PropertyDefinition',
+                decorators: [
+                  {
+                    type: 'Decorator',
+                    range: [12, 15],
+                    expression: {
+                      type: 'Identifier',
+                      name: 'd1',
+                      range: [13, 15],
+                    },
+                  },
+                ],
+              },
+              {
+                type: 'MethodDefinition',
+                decorators: [
+                  {
+                    type: 'Decorator',
+                    range: [24, 27],
+                    expression: {
+                      type: 'Identifier',
+                      name: 'd2',
+                      range: [25, 27],
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      ],
+    });
+  });
+
   test('Program source locations', () => {
     const source = `
 A;

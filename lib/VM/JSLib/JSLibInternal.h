@@ -333,6 +333,12 @@ HermesValue createTypedArrayBaseConstructor(Runtime &runtime);
 #include "hermes/VM/TypedArrays.def"
 #undef TYPED_ARRAY
 
+/// Add Uint8Array-specific prototype methods (toBase64, toHex, setFromBase64,
+/// setFromHex) and static methods (fromBase64, fromHex) per the TC39
+/// "Uint8Array to/from Base64 and Hex" proposal:
+/// https://tc39.es/proposal-arraybuffer-base64/spec/
+void populateUint8ArrayBuiltins(Runtime &runtime);
+
 /// Create and initialize the global Set constructor. Populate the methods
 /// of Set.prototype.
 HermesValue createSetConstructor(Runtime &runtime);

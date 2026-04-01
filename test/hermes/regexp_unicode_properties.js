@@ -172,3 +172,9 @@ print(/\p{Lu}+/ui.exec("aBc"));
 // CHECK-NEXT: aBc
 print(/[\p{Lu}]+/ui.exec("aBc"));
 // CHECK-NEXT: aBc
+
+// Script_Extensions works with languages which only have Script code points.
+// As Script_Extensions is meant to be a superset, it should still match on
+// just the base Script.
+print(/\p{Script_Extensions=Lao}/u.exec("\u{0E81}") !== null);
+// CHECK-NEXT: true

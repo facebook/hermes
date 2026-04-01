@@ -834,10 +834,15 @@ class LIFOAlloc : public sb::Ptr<T> {
 /// TODO(T174477603): Allow the table to shrink if it has too many free entries.
 template <typename T>
 class NativeTable {
+  struct Entry {
+    T value;
+    bool live = false;
+  };
+
   /// Store the elements for the table. Use a deque rather than a vector so we
   /// can hold stable references to elements (needed by getHostFunction for
   /// instance).
-  std::deque<T> table_;
+  std::deque<Entry> table_;
 
   /// Store the indices of free elements in the table. This list is consulted
   /// first before adding more elements to the table.
@@ -850,9 +855,9 @@ class NativeTable {
 
   /// Get the element at the given index.
   T &at(size_t idx) {
-    if (idx >= table_.size())
+    if (idx >= table_.size() || !table_[idx].live)
       abort();
-    return table_[idx];
+    return table_[idx].value;
   }
 
   /// Get the total size of this table.
@@ -864,18 +869,18 @@ class NativeTable {
   template <typename... Args>
   u32 emplace(Args &&...args) {
     if (freeList_.empty()) {
-      table_.emplace_back(std::forward<Args>(args)...);
+      table_.push_back({T(std::forward<Args>(args)...), true});
       return table_.size() - 1;
     }
     u32 idx = freeList_.back();
     freeList_.pop_back();
-    table_[idx] = T(std::forward<Args>(args)...);
+    table_[idx] = {T(std::forward<Args>(args)...), true};
     return idx;
   }
 
   /// Release the entry at the given index, adding it to the free list.
   void release(u32 idx) {
-    if (idx >= table_.size())
+    if (idx >= table_.size() || !table_[idx].live)
       abort();
     table_[idx] = {};
     freeList_.push_back(idx);

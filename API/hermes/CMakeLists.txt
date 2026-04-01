@@ -55,16 +55,21 @@ set(HERMES_ENABLE_EH ON)
 set(HERMES_ENABLE_RTTI ON)
 
 add_subdirectory(cdp)
-add_subdirectory(extensions)
+if(HERMES_ENABLE_CORE_EXTENSIONS)
+  add_subdirectory(extensions)
+endif()
 
 set(api_sources
   hermes.cpp
   DebuggerAPI.cpp
   AsyncDebuggerAPI.cpp
   RuntimeTaskRunner.cpp
-  ${EXTENSIONS_CPP_SOURCES}
   ${CDP_API_SOURCES}
   )
+
+if(HERMES_ENABLE_CORE_EXTENSIONS)
+  list(APPEND api_sources ${EXTENSIONS_CPP_SOURCES})
+endif()
 
 file(GLOB api_headers ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
 file(GLOB api_public_headers ${PROJECT_SOURCE_DIR}/public/hermes/Public/*.h)
@@ -86,20 +91,31 @@ add_hermes_library(hermesapi
   )
 target_include_directories(hermesapi_obj PUBLIC ..)
 
-# Pass contrib extensions flag to C++ code.
-if(HERMES_ENABLE_CONTRIB_EXTENSIONS)
-  target_compile_definitions(hermesapi_obj PRIVATE HERMES_ENABLE_CONTRIB_EXTENSIONS=1)
+# Pass core extensions flag to C++ code.
+if(HERMES_ENABLE_CORE_EXTENSIONS)
+  target_compile_definitions(hermesapi_obj PRIVATE HERMES_ENABLE_CORE_EXTENSIONS=1)
+
+  # Pass contrib extensions flag to C++ code.
+  # Contrib extensions are only effective when core extensions are enabled.
+  if(HERMES_ENABLE_CONTRIB_EXTENSIONS)
+    target_compile_definitions(hermesapi_obj PRIVATE HERMES_ENABLE_CONTRIB_EXTENSIONS=1)
+  else()
+    target_compile_definitions(hermesapi_obj PRIVATE HERMES_ENABLE_CONTRIB_EXTENSIONS=0)
+  endif()
 else()
+  target_compile_definitions(hermesapi_obj PRIVATE HERMES_ENABLE_CORE_EXTENSIONS=0)
   target_compile_definitions(hermesapi_obj PRIVATE HERMES_ENABLE_CONTRIB_EXTENSIONS=0)
 endif()
 
-# ExtensionsBytecode.cpp needs to find the generated .inc file
-target_include_directories(hermesapi_obj PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/extensions)
+if(HERMES_ENABLE_CORE_EXTENSIONS)
+  # ExtensionsBytecode.cpp needs to find the generated .inc file
+  target_include_directories(hermesapi_obj PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/extensions)
 
-# Ensure hermesapi_obj waits for ExtensionsBytecodeInclude to complete.
-# This prevents race conditions with Visual Studio where the .inc file might be
-# accessed while still being generated.
-add_dependencies(hermesapi_obj ExtensionsBytecodeInclude)
+  # Ensure hermesapi_obj waits for ExtensionsBytecodeInclude to complete.
+  # This prevents race conditions with Visual Studio where the .inc file might be
+  # accessed while still being generated.
+  add_dependencies(hermesapi_obj ExtensionsBytecodeInclude)
+endif()
 
 add_hermes_library(synthTrace hermes_tracing.cpp SynthTrace.cpp TracingRuntime.cpp
   LINK_OBJLIBS hermesapi)

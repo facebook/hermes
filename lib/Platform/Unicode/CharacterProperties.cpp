@@ -333,13 +333,22 @@ llvh::ArrayRef<UnicodeRangePoolRef> unicodePropertyRanges(
   }
 
   // Look up the range arrays for the property.
-  auto rangeMapEntry = findMapEntry(
-      rangeMap,
-      UNICODE_DATA_STRING_POOL.substr(
-          canonicalNameEntry->canonical.offset,
-          canonicalNameEntry->canonical.size));
+  auto canonicalName = UNICODE_DATA_STRING_POOL.substr(
+      canonicalNameEntry->canonical.offset, canonicalNameEntry->canonical.size);
+  auto rangeMapEntry = findMapEntry(rangeMap, canonicalName);
   if (rangeMapEntry == nullptr) {
-    return llvh::ArrayRef<UnicodeRangePoolRef>();
+    if (rangeMap.data() == unicodePropertyRangeMap_ScriptExtensions) {
+      // Script_Extensions is a superset of Script. If a script has no explicit
+      // Script_Extensions entries, fall back to the Script ranges and try
+      // again.
+      rangeMapEntry = findMapEntry(
+          llvh::ArrayRef(unicodePropertyRangeMap_Script), canonicalName);
+      if (rangeMapEntry == nullptr) {
+        return llvh::ArrayRef<UnicodeRangePoolRef>();
+      }
+    } else {
+      return llvh::ArrayRef<UnicodeRangePoolRef>();
+    }
   }
 
   return llvh::ArrayRef{

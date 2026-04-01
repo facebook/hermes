@@ -8,5 +8,6 @@
 
 // UNSUPPORTED: windows
 // RUN: (ulimit -s 1024 && echo "1" "+"{1..10000} | %hermes -dump-ast - 2>&1 ) | %FileCheck -match-full-lines %s
+// UNSUPPORTED: windows
 
 // CHECK: {{.*}}: error: Too many nested expressions/statements/declarations

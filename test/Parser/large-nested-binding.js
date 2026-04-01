@@ -6,5 +6,6 @@
  */
 
 // RUN: (! printf '%0.s[' {1..100000} | %hermesc -dump-ast - 2>&1 ) | %FileCheck -match-full-lines %s
+// UNSUPPORTED: windows
 
 // CHECK: {{.*}}Too many nested expressions/statements/declarations{{.*}}

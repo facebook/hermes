@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "JSONValueInterfaces.h"
+#include <hermes/cdp/JSONValueInterfaces.h>
 
 namespace facebook {
 namespace hermes {

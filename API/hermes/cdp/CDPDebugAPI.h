@@ -8,9 +8,8 @@
 #pragma once
 
 #include <hermes/AsyncDebuggerAPI.h>
-
-#include "ConsoleMessage.h"
-#include "DebuggerDomainCoordinator.h"
+#include <hermes/cdp/ConsoleMessage.h>
+#include <hermes/cdp/DebuggerDomainCoordinator.h>
 
 namespace facebook {
 namespace hermes {

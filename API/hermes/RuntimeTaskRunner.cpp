@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "RuntimeTaskRunner.h"
+#include <hermes/RuntimeTaskRunner.h>
 
 namespace facebook {
 namespace hermes {

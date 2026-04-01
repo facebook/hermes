@@ -7,9 +7,8 @@
 
 #include <sstream>
 
-#include "CallbackOStream.h"
-#include "HeapProfilerDomainAgent.h"
-
+#include <hermes/cdp/CallbackOStream.h>
+#include <hermes/cdp/HeapProfilerDomainAgent.h>
 #include <hermes/cdp/MessageConverters.h>
 #include <hermes/cdp/RemoteObjectConverters.h>
 #include <jsi/instrumentation.h>

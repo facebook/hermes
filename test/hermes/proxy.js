@@ -6,6 +6,7 @@
  */
 
 // RUN: ulimit -s 1024 && %hermes -Xhermes-internal-test-methods -Xes6-proxy -non-strict -O -target=HBC %s | %FileCheck --match-full-lines %s
+// UNSUPPORTED: windows
 
 let isStrictMode = (function() { return this === undefined; })();
 

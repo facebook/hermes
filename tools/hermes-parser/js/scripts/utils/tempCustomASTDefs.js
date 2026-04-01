@@ -57,12 +57,14 @@ export default ({
   ClassProperty: {
     key: NODE,
     value: NODE,
+    decorators: NODE_LIST,
     variance: NODE,
     typeAnnotation: NODE,
   },
   ClassPrivateProperty: {
     key: NODE,
     value: NODE,
+    decorators: NODE_LIST,
     variance: NODE,
     typeAnnotation: NODE,
   },

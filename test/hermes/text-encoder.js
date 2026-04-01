@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+// REQUIRES: core_extensions
 // RUN: LC_ALL=en_US.UTF-8 %hermes -O -target=HBC -Xhermes-internal-test-methods %s | %FileCheck --match-full-lines %s
 "use strict";
 

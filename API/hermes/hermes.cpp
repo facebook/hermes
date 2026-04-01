@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes.h"
+#include <hermes/hermes.h>
 
 #include "llvh/Support/Compiler.h"
 
@@ -45,8 +45,10 @@
 #include "hermes/VM/TimeLimitMonitor.h"
 #include "hermes/VM/WeakRoot-inline.h"
 
+#if HERMES_ENABLE_CORE_EXTENSIONS
 #include "extensions/Extensions.h"
 #include "extensions/ExtensionsBytecode.h"
+#endif
 
 #include "llvh/Support/ConvertUTF.h"
 #include "llvh/Support/ErrorHandling.h"
@@ -1290,6 +1292,7 @@ jsi::ICast *HermesRootAPI::castInterface(const jsi::UUID &interfaceUUID) {
   return nullptr;
 }
 
+#if HERMES_ENABLE_CORE_EXTENSIONS
 /// Load and install JSI-based extensions (TextEncoder, etc.).
 /// Uses internal VM APIs to set hidesEpilogue=true so the extensions bytecode
 /// epilogue is not visible to users via runtime.getEpilogues().
@@ -1316,6 +1319,7 @@ static void loadAndInstallExtensions(HermesRuntimeImpl &runtime) {
   jsi::Object extensions = runtime.valueFromHermesValue(*res).asObject(runtime);
   installExtensions(runtime, std::move(extensions));
 }
+#endif // HERMES_ENABLE_CORE_EXTENSIONS
 
 std::unique_ptr<HermesRuntime> HermesRootAPI::makeHermesRuntime(
     const vm::RuntimeConfig &runtimeConfig) {
@@ -1342,7 +1346,9 @@ std::unique_ptr<HermesRuntime> HermesRootAPI::makeHermesRuntime(
   ret->setDebugger(std::make_unique<debugger::Debugger>());
 #endif
 
+#if HERMES_ENABLE_CORE_EXTENSIONS
   loadAndInstallExtensions(*ret);
+#endif
 
   return ret;
 }

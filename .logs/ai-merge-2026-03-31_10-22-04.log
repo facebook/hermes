@@ -1,0 +1,34 @@
+[2026-03-31 10:22:04] [INFO] ui: 
+================================================================================
+  AI MERGE — BATCH MODE
+================================================================================
+Files:       1
+Provider:    claude
+Confidence:  MEDIUM
+Concurrency: 4
+Fallback:    enabled
+
+[2026-03-31 10:22:04] [INFO] date-default-timezone.js: 1 conflict(s), coalesced to 1 hunk(s)
+[2026-03-31 10:22:04] [INFO] Processing 1 hunks across 1 files...
+[2026-03-31 10:22:04] [INFO] ui: * [merge-all] Merge 1 files (1 hunks)
+[2026-03-31 10:22:04] [INFO] ui:   * [file:test\hermes\date-default-timezone.js] date-default-timezone.js (1 hunks)
+[2026-03-31 10:22:04] [INFO] ui:     * [file:test\hermes\date-default-timezone.js:hunk-0] Hunk 1/1
+[2026-03-31 10:22:04] [INFO] ui:     * [file:test\hermes\date-default-timezone.js:hunk-0] resolving...
+[2026-03-31 10:22:20] [INFO] ui:     * [file:test\hermes\date-default-timezone.js:hunk-0] validating...
+[2026-03-31 10:22:32] [INFO] ui: [file:test\hermes\date-default-timezone.js:hunk-0] Notes: ** This is a proper resolution. The conflict represents LOCAL adding a bare `// UNSUPPORTED: windows` comment, while REMOTE added both an explanatory comment and the same unsupported marker. The resolution correctly takes REMOTE's version, which is strictly better because it includes the explanation while preserving the functionality that LOCAL intended. No additions from either side are dropped.
+[2026-03-31 10:22:32] [INFO] ui:     * [file:test\hermes\date-default-timezone.js:hunk-0] retry 2/3...
+[2026-03-31 10:22:32] [INFO] ui:     * [file:test\hermes\date-default-timezone.js:hunk-0] retry 2: resolving...
+[2026-03-31 10:22:43] [INFO] ui:     * [file:test\hermes\date-default-timezone.js:hunk-0] retry 2: validating...
+[2026-03-31 10:22:55] [INFO] ui:     * [file:test\hermes\date-default-timezone.js:hunk-0] applying...
+[2026-03-31 10:22:55] [INFO] ui: [file:test\hermes\date-default-timezone.js:hunk-0] Applied (HIGH)
+[2026-03-31 10:22:55] [INFO] ui:   * [file:test\hermes\date-default-timezone.js] resolved & staged
+[2026-03-31 10:22:55] [INFO] ui: [merge-all] Merge 1 files (1 hunks)
+[2026-03-31 10:22:55] [INFO] ui: 
+================================================================================
+  BATCH RESULTS
+================================================================================
+Files:    1 resolved / 1 total
+Hunks:    1 applied, 0 skipped, 0 failed
+================================================================================
+
+[2026-03-31 10:22:55] [INFO] All conflicts resolved successfully

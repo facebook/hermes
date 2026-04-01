@@ -7,9 +7,8 @@
 
 #pragma once
 
+#include <hermes/cdp/DomainAgent.h>
 #include <hermes/hermes.h>
-
-#include "DomainAgent.h"
 
 namespace facebook {
 namespace hermes {

@@ -30,7 +30,7 @@ from typing import Iterable, Optional
 
 class UnicodeDataFiles:
     # VERSION = "UCD/latest"  # The bleeding edge version of Unicode.
-    VERSION = "15.1.0"
+    VERSION = "17.0.0"
     URLS = {
         "UnicodeData.txt": f"http://unicode.org/Public/{VERSION}/ucd/UnicodeData.txt",
         "SpecialCasing.txt": f"http://unicode.org/Public/{VERSION}/ucd/SpecialCasing.txt",

@@ -11,10 +11,15 @@ set -xe -o pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MINIFIED_PRETTIER_PLUGIN="$SCRIPT_DIR/../prettier-plugin-hermes-parser/index.mjs"
+XPLAT="$(cd "$SCRIPT_DIR/../../../../.." && pwd)"
+NODE="$XPLAT/third-party/node/v24.13.0/node"
 
-# Save original file info BEFORE running the build
+# Save original file info and content BEFORE running the build
 ORIGINAL_SIZE=$(wc -c < "$MINIFIED_PRETTIER_PLUGIN")
 ORIGINAL_HASH=$(sha256sum "$MINIFIED_PRETTIER_PLUGIN" | awk '{print $1}')
+ORIGINAL_COPY=$(mktemp)
+cp "$MINIFIED_PRETTIER_PLUGIN" "$ORIGINAL_COPY"
+trap 'rm -f "$ORIGINAL_COPY"' EXIT
 
 # Run the build script
 "$SCRIPT_DIR/build-prettier.sh"
@@ -32,6 +37,25 @@ if sl status "$MINIFIED_PRETTIER_PLUGIN" | grep -q .; then
     echo "File comparison:"
     echo "  Committed: $ORIGINAL_SIZE bytes (sha256: ${ORIGINAL_HASH:0:16}...)"
     echo "  Generated: $NEW_SIZE bytes (sha256: ${NEW_HASH:0:16}...)"
+    echo ""
+    echo "De-minified diff:"
+    EXPAND="$SCRIPT_DIR/expand-minified.js"
+    DIFF_OUTPUT=$(diff -u \
+      <($NODE "$EXPAND" "$ORIGINAL_COPY") \
+      <($NODE "$EXPAND" "$MINIFIED_PRETTIER_PLUGIN") \
+      || true)
+    echo "$DIFF_OUTPUT"
+    echo ""
+    echo "Uploading diff to pastry for easier viewing..."
+    # Authenticate as Flow Bot for pastry access in CI environments
+    jf arcrc --service-user 499706368 2>/dev/null || true
+    if PASTRY_OUTPUT=$(echo "$DIFF_OUTPUT" | pastry 2>/dev/null); then
+        PASTRY_ID=$(echo "$PASTRY_OUTPUT" | grep -oE 'P[0-9]+' | head -1)
+        PASTRY_URL="https://www.internalfb.com/phabricator/paste/view/${PASTRY_ID}"
+        echo "View the full diff at: $PASTRY_URL"
+    else
+        echo "(pastry upload failed — requires jf auth or a service user)"
+    fi
     exit 1
 else
     echo "✓ index.mjs is up to date!"

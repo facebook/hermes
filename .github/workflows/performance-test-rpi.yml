@@ -1,0 +1,76 @@
+name: Perf Test on Raspberry Pi 5B
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: arm64v8/debian:trixie
+    steps:
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y cmake ninja-build clang-19 build-essential libicu-dev zip python3 git
+      - uses: actions/checkout@v1
+      - name: Build Release
+        run: |
+          export CC=clang-19
+          export CXX=clang++-19
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --target hermes hermesc
+      - name: Upload binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: hermes-bin
+          path: |
+            build/bin/hermes
+      - name: Compile benchmarks to bytecode
+        run: |
+          mkdir -p benchmark-bytecode
+          build/bin/hermesc -O -emit-binary \
+            -out benchmark-bytecode/richards.hbc \
+            benchmarks/bench-runner/resource/test-suites/v8-v6-perf/v8-richards.js
+      - name: Upload benchmark bytecode
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-bytecode
+          path: benchmark-bytecode/
+
+  benchmark:
+    needs: build
+    runs-on: raspberrypi5-8gb
+    steps:
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: hermes-bin
+          path: hermes-bin
+      - name: Download benchmark bytecode
+        uses: actions/download-artifact@v4
+        with:
+          name: benchmark-bytecode
+          path: benchmark-bytecode
+
+      - name: Setup
+        run: |
+          ls -R
+          pwd
+          echo "=== CPU ==="
+          lscpu | grep -E "^(Architecture|Model name|CPU\(s\))"
+          echo "=== Memory ==="
+          free -h | head -2
+
+      - name: Run richards with perf counters
+        run: |
+          echo "========================================"
+          echo "  Richards Benchmark - Perf Counters"
+          echo "========================================"
+          echo ""
+
+          echo "--- 5 runs ---"
+          perf stat -e instructions,cycles,cache-misses,branch-misses,L1-dcache-load-misses,L1-icache-load-misses \
+            -r 5 \
+            -- hermes-bin/hermes -b benchmark-bytecode/richards.hbc
