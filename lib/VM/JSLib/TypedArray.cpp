@@ -196,7 +196,8 @@ CallResult<HermesValue> typedArrayConstructorFromTypedArray(
   return self.getHermesValue();
 }
 
-// ES6 22.2.1.5
+/// ES 2025 23.2.5.1.3 InitializeTypedArrayFromArrayBuffer ( O, buffer,
+/// byteOffset, length )
 template <typename T, CellKind C>
 CallResult<HermesValue> typedArrayConstructorFromArrayBuffer(
     Runtime &runtime,
@@ -204,23 +205,35 @@ CallResult<HermesValue> typedArrayConstructorFromArrayBuffer(
     Handle<JSArrayBuffer> buffer,
     Handle<> byteOffset,
     Handle<> length) {
-  // This differs from step 7 of the spec, which requires `ToInteger` instead
-  // of `ToIndex`; however, we have to bound offset to be fittable into a
-  // 64-bit integer to avoid overflow or loss of precision
+  // 1. Let elementSize be TypedArrayElementSize(O). This is sizeof(T).
+  // 2. Let offset be ? ToIndex(byteOffset).
   auto res = toIndex(runtime, byteOffset);
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   uint64_t offset = res->getNumberAs<uint64_t>();
+  // 3. If offset modulo elementSize ≠ 0, throw a RangeError exception.
   if (offset % sizeof(T) != 0) {
     return runtime.raiseRangeError(
         "new TypedArray(buffer, [byteOffset], "
         "[length]): if byteOffset is specified, it "
         "must be evenly divisible by the element size");
   }
+  // 4. Resizable ArrayBuffer case: unsupported.
+  // 7. Let bufferByteLength be ArrayBufferByteLength(buffer, seq-cst).
+  // 8. Resizable ArrayBuffer case: unsupported.
   auto bufferByteLength = buffer->size();
   uint64_t newByteLength = 0;
   if (length->isUndefined()) {
+    // 6. If IsDetachedBuffer(buffer) is true, throw a TypeError exception.
+    if (!buffer->attached()) {
+      return runtime.raiseTypeError(
+          "Cannot construct a TypedArray from a detached ArrayBuffer");
+    }
+    // 9a. If length is undefined, then
+    //   i. If bufferByteLength modulo elementSize ≠ 0, throw a RangeError
+    //   exception. ii. Let newByteLength be bufferByteLength - offset. iii. If
+    //   newByteLength < 0, throw a RangeError exception.
     if (bufferByteLength % sizeof(T) != 0) {
       return runtime.raiseRangeError(
           "new TypedArray(buffer, [byteOffset], "
@@ -235,10 +248,21 @@ CallResult<HermesValue> typedArrayConstructorFromArrayBuffer(
     }
     newByteLength = bufferByteLength - offset;
   } else {
+    // 5. If length is not undefined, then
+    //   a. Let newLength be ? ToIndex(length).
     auto res2 = toLength(runtime, length);
     if (res2 == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
+    // 6. If IsDetachedBuffer(buffer) is true, throw a TypeError exception.
+    if (!buffer->attached()) {
+      return runtime.raiseTypeError(
+          "Cannot construct a TypedArray from a detached ArrayBuffer");
+    }
+    // 9b. Else,
+    //   i. Let newByteLength be newLength × elementSize.
+    //   ii. If offset + newByteLength > bufferByteLength, throw a RangeError
+    //   exception.
     uint64_t newLength = res2->getNumberAs<uint64_t>();
     newByteLength = newLength * sizeof(T);
     if (offset + newByteLength > bufferByteLength) {
