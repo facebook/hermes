@@ -1284,6 +1284,14 @@ bool strictEqualityTest(HermesValue x, HermesValue y) {
 
 CallResult<HermesValue>
 addOp_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
+  // Fast path: both operands are already strings, concat directly.
+  // Skips toPrimitive + toString (both no-ops for strings) and 4 handle allocs.
+  if (xHandle->isString() && yHandle->isString()) {
+    return StringPrimitive::concat(
+        runtime,
+        Handle<StringPrimitive>::vmcast(xHandle),
+        Handle<StringPrimitive>::vmcast(yHandle));
+  }
   auto resX = toPrimitive_RJS(runtime, xHandle, PreferredType::NONE);
   if (resX == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
