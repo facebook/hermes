@@ -944,6 +944,26 @@ SHERMES_EXPORT bool _sh_ljs_equal_rjs(
     SHRuntime *shr,
     const SHLegacyValue *a,
     const SHLegacyValue *b);
+
+static inline bool _sh_ljs_equal_rjs_inline(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  // Fast path: both are non-NaN numbers, compare as doubles.
+  if (SH_LIKELY(_sh_ljs_are_both_non_nan_numbers(*a, *b))) {
+    return _sh_ljs_get_double(*a) == _sh_ljs_get_double(*b);
+  }
+  // Fast path: identical raw bits for non-numbers are always equal
+  // (same object, same string pointer, null==null, undefined==undefined,
+  // same bool). For NaN, raw equality is possible but NaN != NaN.
+  if (a->raw == b->raw) {
+    return !_sh_ljs_is_double(*a);
+  }
+
+  // Otherwise: go to out-of-line slow path.
+  return _sh_ljs_equal_rjs(shr, a, b);
+}
+
 SHERMES_EXPORT bool _sh_ljs_strict_equal(SHLegacyValue a, SHLegacyValue b);
 
 SHERMES_EXPORT SHLegacyValue

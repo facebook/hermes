@@ -1087,14 +1087,16 @@ class InstrGen {
                                         : "_sh_ljs_left_shift_rjs_inline";
         break;
       case ValueKind::BinaryNotEqualInstKind: // !=
-        funcUntypedOp = "!_sh_ljs_equal_rjs";
+        funcUntypedOp = options_.smallC ? "!_sh_ljs_equal_rjs"
+                                        : "!_sh_ljs_equal_rjs_inline";
         boolConv = true;
         break;
       case ValueKind::BinaryEqualInstKind: // ==
         if (bothDouble) {
           infixDoubleOp = "==";
         } else {
-          funcUntypedOp = "_sh_ljs_equal_rjs";
+          funcUntypedOp = options_.smallC ? "_sh_ljs_equal_rjs"
+                                          : "_sh_ljs_equal_rjs_inline";
         }
         boolConv = true;
         break;
