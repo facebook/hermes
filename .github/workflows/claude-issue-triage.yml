@@ -119,6 +119,7 @@ jobs:
               "If it's a bug, your final output MUST include:",
               '- **Reproduction Status**: (Can you trigger it?)',
               '- **Root Cause**: (Technical explanation)',
+              'Do not put these in a todo plan, just output your analysis directly.',
               '',
               'Refer to CLAUDE.md for details on how to build and run Hermes using CMake.',
               'Place the CMake builds under cmake-build/',
@@ -128,13 +129,13 @@ jobs:
 
       - name: Run Claude
         id: claude
-        uses: anthropics/claude-code-base-action@beta
+        uses: anthropics/claude-code-base-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt_file: /tmp/prompt.txt
-          allowed_tools: "View,GlobTool,GrepTool,Bash"
+          allowed_tools: "View,GlobTool,GrepTool,Bash,BatchTool"
           model: "claude-opus-4-6"
-          max_turns: "100"
+          max_turns: "50"
 
       - name: Post triage results
         if: always()
