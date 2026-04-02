@@ -10,7 +10,7 @@ $ utils/gen-promise-internal-bc.sh
 
 ## Iterator helpers
 
-The Iterator Helper polyfill is adapted from https://github.com/es-shims/iterator-helpers/ at commit fbd6ffee76f28c0aa1f99180d6971caa6a36f39c. The required dependencies are taken and flattened in `05-IteratorHelperDependencies.js` and the actual Iterator implementation are followed after the file. The dependencies may be simplified from the original source. Assertions from the polyfill, which threw `TypeError`s, are removed.
+The Iterator Helper polyfill is adapted from https://github.com/es-shims/iterator-helpers/ at commit fbd6ffee76f28c0aa1f99180d6971caa6a36f39c. The `Iterator.concat` polyfill was later adapted at commit `b790e7409435f3bd3f43edbf9dc1d962818d8f46`. The required dependencies are taken and flattened in `05-IteratorHelperDependencies.js` and the actual Iterator implementation are followed after the file. The dependencies may be simplified from the original source. Assertions from the polyfill, which threw `TypeError`s, are removed.
 
 Note the original polyfill's dependencies included many polyfills for features that are supported by Hermes. In those cases, they are may be removed and use Hermes implementation directly.
 Examples (non-exhausive):

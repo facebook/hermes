@@ -4529,8 +4529,7 @@
     "RegExp.escape",
     "immutable-arraybuffer",
     "regexp-modifiers",
-    "joint-iteration",
-    "iterator-sequencing"
+    "joint-iteration"
   ],
   "permanent_unsupported_features": [
     "Atomics",
