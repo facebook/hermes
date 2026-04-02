@@ -78,6 +78,10 @@ struct CompileJSOptions {
   bool emitAsyncBreakCheck{false};
   /// If true, debugging information will be generated in the bytecode.
   bool debug{false};
+  /// Enable ES6 block scoping support.
+  bool enableES6BlockScoping{false};
+  /// Enable async generators support.
+  bool enableAsyncGenerators{false};
 };
 
 /// Like the other compileJS overloads, but takes a struct of options with some

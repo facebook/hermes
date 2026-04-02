@@ -54,6 +54,8 @@ bool compileJS(
   flags.format = EmitBundle;
   flags.emitAsyncBreakCheck = compileJSOptions.emitAsyncBreakCheck;
   flags.inlineMaxSize = compileJSOptions.inlineMaxSize;
+  flags.enableES6BlockScoping = compileJSOptions.enableES6BlockScoping;
+  flags.enableAsyncGenerators = compileJSOptions.enableAsyncGenerators;
 
   // If there is a source map, ensure that it is null terminated, copying it if
   // needed.
