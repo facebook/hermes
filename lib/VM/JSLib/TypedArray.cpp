@@ -1369,8 +1369,12 @@ CallResult<HermesValue> typedArrayPrototypeIndexOf(
     return ret();
   }
   auto searchElement = args.getArgHandle(0);
-  if (!searchElement->isNumber() && !searchElement->isBigInt()) {
-    // If it's not a number, nothing will match.
+  if (indexOfMode != IndexOfMode::includes && !searchElement->isNumber() &&
+      !searchElement->isBigInt()) {
+    // For "indexOf"/"lastIndexOf", if it's not a number, nothing will match.
+    // However, for "includes", ES2026 23.2.3.16 step 11 uses `SameValueZero`
+    // for comparison. This means that "undefined" can match if the TypedArray
+    // becomes detached while in the loop below.
     return ret();
   }
   double fromIndex = 0;
@@ -1385,11 +1389,6 @@ CallResult<HermesValue> typedArrayPrototypeIndexOf(
       return ExecutionStatus::EXCEPTION;
     }
     fromIndex = res->getNumber();
-    if (LLVM_UNLIKELY(!self->attached(runtime))) {
-      // If the ToInteger call detached this TypedArray, raise a TypeError and
-      // don't continue.
-      return runtime.raiseTypeError("Detached the TypedArray in the callback");
-    }
   }
   // Negative zero case.
   if (fromIndex == 0) {
@@ -1580,11 +1579,16 @@ CallResult<HermesValue> typedArrayPrototypeJoin(void *, Runtime &runtime) {
       lv.elem =
           JSObject::getOwnIndexed(createPseudoHandle(self.get()), runtime, i);
 
-      auto res2 = toString_RJS(runtime, lv.elem);
-      if (LLVM_UNLIKELY(res2 == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
+      if (LLVM_UNLIKELY(lv.elem->isUndefined())) {
+        lv.elem = HermesValue::encodeStringValue(
+            runtime.getPredefinedString(Predefined::emptyString));
+      } else {
+        auto res2 = toString_RJS(runtime, lv.elem);
+        if (LLVM_UNLIKELY(res2 == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        lv.elem = std::move(*res2);
       }
-      lv.elem = std::move(*res2);
       auto stringPtr = vmcast<StringPrimitive>(lv.elem.getHermesValue());
       size.add(stringPtr->getStringLength());
       if (LLVM_UNLIKELY(

@@ -980,14 +980,57 @@ cons.forEach(function(TypedArray) {
   assert.equal(arr.indexOf(50), 0);
   assert.equal(arr.lastIndexOf(50), 1);
 
-  assert.throws(function() {
-    arr.includes(0, {
-      valueOf() {
-        HermesInternal.detachArrayBuffer(arr.buffer);
-        return 0;
-      },
-    });
-  }, TypeError);
+  // When the buffer is detached during includes, elements become undefined.
+  // Searching for undefined should return true.
+  var arr2 = new TypedArray(10);
+  assert.ok(arr2.includes(undefined, {
+    valueOf() {
+      HermesInternal.detachArrayBuffer(arr2.buffer);
+      return 0;
+    },
+  }));
+
+  // Searching for any other value should return false.
+  var arr3 = new TypedArray(10);
+  assert.ok(!arr3.includes(0, {
+    valueOf() {
+      HermesInternal.detachArrayBuffer(arr3.buffer);
+      return 0;
+    },
+  }));
+  // When the buffer is detached during indexOf, it should always return -1.
+  var arr4 = new TypedArray(10);
+  assert.equal(arr4.indexOf(undefined, {
+    valueOf() {
+      HermesInternal.detachArrayBuffer(arr4.buffer);
+      return 0;
+    },
+  }), -1);
+
+  var arr5 = new TypedArray(10);
+  assert.equal(arr5.indexOf(0, {
+    valueOf() {
+      HermesInternal.detachArrayBuffer(arr5.buffer);
+      return 0;
+    },
+  }), -1);
+
+  // When the buffer is detached during lastIndexOf, it should always return -1.
+  var arr6 = new TypedArray(10);
+  assert.equal(arr6.lastIndexOf(undefined, {
+    valueOf() {
+      HermesInternal.detachArrayBuffer(arr6.buffer);
+      return 0;
+    },
+  }), -1);
+
+  var arr7 = new TypedArray(10);
+  assert.equal(arr7.lastIndexOf(0, {
+    valueOf() {
+      HermesInternal.detachArrayBuffer(arr7.buffer);
+      return 0;
+    },
+  }), -1);
 });
 /// @}
 
