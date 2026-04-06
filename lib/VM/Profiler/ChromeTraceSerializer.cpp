@@ -18,7 +18,7 @@ namespace vm {
 
 static std::string getSuspendFrameName(
     const SamplingProfiler::SuspendFrameInfo &info) {
-  const char *suspendFrameName;
+  const char *suspendFrameName = "";
   if (info.kind == SamplingProfiler::SuspendFrameInfo::Kind::GC) {
     suspendFrameName = info.gcFrame->c_str();
   } else if (info.kind == SamplingProfiler::SuspendFrameInfo::Kind::Debugger) {
