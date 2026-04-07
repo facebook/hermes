@@ -19,52 +19,6 @@
 const mapPrototypeGet: any = Map.prototype.get;
 const mapPrototypeSet: any = Map.prototype.set;
 
-function arrayPrototypeFilter<T>(arr: T[], cb: T => any): T[] {
-  'inline';
-  var result: T[] = [];
-  var resultlength: number = 0;
-  var length: number = arr.length;
-  for (var i: number = 0; i < length; ++i) {
-    var elem: T = arr[i];
-    if (cb(elem)) {
-      result.push(elem);
-    }
-  }
-  return result;
-}
-
-function arrayPrototypeIncludes<T>(arr: T[], x: T): bool {
-  'inline';
-  var length: number = arr.length;
-  for (var i: number = 0; i < length; ++i) {
-    var elem: T = arr[i];
-    if (elem === x)
-      return true;
-  }
-  return false;
-}
-
-// forEach overloads take callbacks which return 'any' for now,
-// but eventually we'd probably want to make that return type generic in order
-// to avoid unnecessary conversions to 'any.
-// Note that Flow's type definitions have the callbacks return 'mixed'.
-
-function arrayPrototypeForEach<T>(arr: T[], cb: T => any): void {
-  'inline';
-  var length: number = arr.length;
-  for (var i: number = 0; i < length; ++i) {
-    var elem: T = arr[i];
-    cb(elem);
-  }
-}
-
-function arrayPrototypeConcat<T>(
-  arr1: T[],
-  arr2: T[],
-): T[] {
-  return [...arr1, ...arr2];
-}
-
 // ==> widget.js <==
 
 class Widget {
@@ -209,9 +163,9 @@ function reconcileChildren(
 ): RenderNode[] {
   const outChildren: RenderNode[] = [];
   const oldChildrenByKey: any = new Map();
-  arrayPrototypeForEach(oldChildren, child => $SHBuiltin.call(mapPrototypeSet, oldChildrenByKey, child.key, child));
+  oldChildren.forEach(child => { $SHBuiltin.call(mapPrototypeSet, oldChildrenByKey, child.key, child); });
 
-  arrayPrototypeForEach(newChildren, child => {
+  newChildren.forEach(child => {
     const newKey = child.key;
     const oldChild: RenderNode | void =
       $SHBuiltin.call(mapPrototypeGet, oldChildrenByKey, newKey);
@@ -229,7 +183,7 @@ function mapEntitiesToComponents(
   entities: VirtualEntity[],
 ): any {
   const map: any = new Map();
-  arrayPrototypeForEach(entities, entity => {
+  entities.forEach(entity => {
     const key: number = entity.key;
     const value: Component[] = entity.value;
     if ($SHBuiltin.call(mapPrototypeGet, map, key) == undefined) {
@@ -257,17 +211,17 @@ function diffTrees(
   const oldEntityIds = oldEntities.map(entity => entity.key);
   const newEntityIds = newEntities.map(entity => entity.key);
 
-  const createdEntities: number[] = arrayPrototypeFilter(newEntityIds,
-    entityId => !arrayPrototypeIncludes(oldEntityIds, entityId),
+  const createdEntities: number[] = newEntityIds.filter(
+    entityId => !oldEntityIds.includes(entityId),
   );
-  const deletedEntities: number[] = arrayPrototypeFilter(oldEntityIds,
-    entityId => !arrayPrototypeIncludes(newEntityIds, entityId),
+  const deletedEntities: number[] = oldEntityIds.filter(
+    entityId => !newEntityIds.includes(entityId),
   );
 
   const oldComponents: any = mapEntitiesToComponents(oldEntities);
   const newComponents: any = mapEntitiesToComponents(newEntities);
 
-  arrayPrototypeForEach(createdEntities, entityId => {
+  createdEntities.forEach(entityId => {
     const comps: Component[] =
       $SHBuiltin.call(mapPrototypeGet, newComponents, entityId) || ([]: Component[]);
     const components = comps.map(
@@ -284,22 +238,18 @@ function diffTrees(
     const oldComponentsForKey: Component[] = $SHBuiltin.call(mapPrototypeGet, oldComponents, key) || ([]: Component[]);
     const newComponentsForKey: Component[] = value;
 
-    const deleted: Component[] = arrayPrototypeFilter(
-      oldComponentsForKey,
-      it => !arrayPrototypeIncludes(newComponentsForKey, it),
+    const deleted: Component[] = oldComponentsForKey.filter(
+      it => !newComponentsForKey.includes(it),
     );
-    const created: Component[] = arrayPrototypeFilter(
-      newComponentsForKey,
-      it => !arrayPrototypeIncludes(oldComponentsForKey, it),
+    const created: Component[] = newComponentsForKey.filter(
+      it => !oldComponentsForKey.includes(it),
     );
 
-    arrayPrototypeForEach(
-      deleted,
-      it => deletedComponents.push(new ComponentPair(key, it)),
+    deleted.forEach(
+      it => { deletedComponents.push(new ComponentPair(key, it)); },
     );
-    arrayPrototypeForEach(
-      created,
-      it => createdComponents.push(new ComponentPair(key, it)),
+    created.forEach(
+      it => { createdComponents.push(new ComponentPair(key, it)); },
     );
   });
 
@@ -424,15 +374,11 @@ class RenderNode {
   }
 
   reduce(): VirtualEntity[] {
-    const childrenEntities: VirtualEntity[] = [];
-    arrayPrototypeForEach(
-      this.children,
-      child => childrenEntities.push(...child.reduce()),
+    let childrenEntities: VirtualEntity[] = [];
+    this.children.forEach(
+      child => { childrenEntities = childrenEntities.concat(child.reduce()); },
     );
-    return arrayPrototypeConcat(
-      [new VirtualEntity(this.id, this.components)],
-      childrenEntities,
-    );
+    return [new VirtualEntity(this.id, this.components)].concat(childrenEntities);
   }
 }
 
