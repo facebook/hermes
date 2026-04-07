@@ -238,6 +238,9 @@ if (!*protoRes) {
 }
 ```
 
+### PinnedHermesValue
+`PinnedHermesValue` publicly inherits from `HermesValue` — do not cast to `HermesValue` to access its methods.
+
 ## Copyright Header
 
 ```cpp
