@@ -18,15 +18,9 @@ function foo(c: [number, string][]) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%class.2 = class(Array {
-// CHECK-NEXT:  %homeObject: %class.4
-// CHECK-NEXT:})
+// CHECK-NEXT:%class.2 = class(Array<%tuple.4>)
 // CHECK-NEXT:%function.3 = function(c: %class.2): any
-// CHECK-NEXT:%class.4 = class( {
-// CHECK-NEXT:  map [final]: generic
-// CHECK-NEXT:  toString [final]: %function.5
-// CHECK-NEXT:})
-// CHECK-NEXT:%function.5 = function(this: %class.2): string
+// CHECK-NEXT:%tuple.4 = tuple(number, string)
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict

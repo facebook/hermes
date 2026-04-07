@@ -43,42 +43,16 @@ var strArr: (number | string)[] = ["a", "b", "c", ...numArr];
 // CHECK-NEXT:})
 // CHECK-NEXT:%class_constructor.5 = class_constructor(%class.4)
 // CHECK-NEXT:%function.6 = function(this: %class.4): void
-// CHECK-NEXT:%class.7 = class(Array {
-// CHECK-NEXT:  %homeObject: %class.13
-// CHECK-NEXT:})
-// CHECK-NEXT:%class.8 = class(Array {
-// CHECK-NEXT:  %homeObject: %class.14
-// CHECK-NEXT:})
-// CHECK-NEXT:%class.9 = class(Array {
-// CHECK-NEXT:  %homeObject: %class.15
-// CHECK-NEXT:})
-// CHECK-NEXT:%class.10 = class(Array {
-// CHECK-NEXT:  %homeObject: %class.16
-// CHECK-NEXT:})
+// CHECK-NEXT:%class.7 = class(Array<%union.13>)
+// CHECK-NEXT:%class.8 = class(Array<%class.2>)
+// CHECK-NEXT:%class.9 = class(Array<number>)
+// CHECK-NEXT:%class.10 = class(Array<%union.14>)
 // CHECK-NEXT:%class.11 = class( {
 // CHECK-NEXT:})
 // CHECK-NEXT:%class.12 = class( extends %class.11 {
 // CHECK-NEXT:})
-// CHECK-NEXT:%class.13 = class( {
-// CHECK-NEXT:  map [final]: generic
-// CHECK-NEXT:  toString [final]: %function.17
-// CHECK-NEXT:})
-// CHECK-NEXT:%class.14 = class( {
-// CHECK-NEXT:  map [final]: generic
-// CHECK-NEXT:  toString [final]: %function.18
-// CHECK-NEXT:})
-// CHECK-NEXT:%class.15 = class( {
-// CHECK-NEXT:  map [final]: generic
-// CHECK-NEXT:  toString [final]: %function.19
-// CHECK-NEXT:})
-// CHECK-NEXT:%class.16 = class( {
-// CHECK-NEXT:  map [final]: generic
-// CHECK-NEXT:  toString [final]: %function.20
-// CHECK-NEXT:})
-// CHECK-NEXT:%function.17 = function(this: %class.7): string
-// CHECK-NEXT:%function.18 = function(this: %class.8): string
-// CHECK-NEXT:%function.19 = function(this: %class.9): string
-// CHECK-NEXT:%function.20 = function(this: %class.10): string
+// CHECK-NEXT:%union.13 = union(void | string | number)
+// CHECK-NEXT:%union.14 = union(string | number)
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict

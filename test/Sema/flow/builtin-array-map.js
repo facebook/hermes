@@ -16,17 +16,10 @@ function test(arr: number[]): number[] {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%class.2 = class(Array {
-// CHECK-NEXT:  %homeObject: %class.6
-// CHECK-NEXT:})
+// CHECK-NEXT:%class.2 = class(Array<number>)
 // CHECK-NEXT:%function.3 = function(arr: %class.2): %class.2
 // CHECK-NEXT:%function.4 = function(n: number, i: number, a: %class.2): number
 // CHECK-NEXT:%function.5 = function(this: %class.2, callback: %function.4): %class.2
-// CHECK-NEXT:%class.6 = class( {
-// CHECK-NEXT:  map [final]: generic
-// CHECK-NEXT:  toString [final]: %function.7
-// CHECK-NEXT:})
-// CHECK-NEXT:%function.7 = function(this: %class.2): string
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict

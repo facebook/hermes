@@ -14,22 +14,8 @@ let a: number[][] = [[1, 2], [3, 4], [], ...[[10, 11], [12, 13]]];
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%class.2 = class(Array {
-// CHECK-NEXT:  %homeObject: %class.4
-// CHECK-NEXT:})
-// CHECK-NEXT:%class.3 = class(Array {
-// CHECK-NEXT:  %homeObject: %class.5
-// CHECK-NEXT:})
-// CHECK-NEXT:%class.4 = class( {
-// CHECK-NEXT:  map [final]: generic
-// CHECK-NEXT:  toString [final]: %function.6
-// CHECK-NEXT:})
-// CHECK-NEXT:%class.5 = class( {
-// CHECK-NEXT:  map [final]: generic
-// CHECK-NEXT:  toString [final]: %function.7
-// CHECK-NEXT:})
-// CHECK-NEXT:%function.6 = function(this: %class.2): string
-// CHECK-NEXT:%function.7 = function(this: %class.3): string
+// CHECK-NEXT:%class.2 = class(Array<number>)
+// CHECK-NEXT:%class.3 = class(Array<%class.2>)
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict

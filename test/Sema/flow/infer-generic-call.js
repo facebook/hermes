@@ -25,37 +25,16 @@ let v5 = first(c);
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%class.2 = class(Array {
-// CHECK-NEXT:  %homeObject: %class.12
-// CHECK-NEXT:})
+// CHECK-NEXT:%class.2 = class(Array<boolean>)
 // CHECK-NEXT:%tuple.3 = tuple(boolean, boolean)
-// CHECK-NEXT:%class.4 = class(Array {
-// CHECK-NEXT:  %homeObject: %class.13
-// CHECK-NEXT:})
+// CHECK-NEXT:%class.4 = class(Array<number>)
 // CHECK-NEXT:%function.5 = function(x: %class.4): number
-// CHECK-NEXT:%class.6 = class(Array {
-// CHECK-NEXT:  %homeObject: %class.14
-// CHECK-NEXT:})
+// CHECK-NEXT:%class.6 = class(Array<string>)
 // CHECK-NEXT:%function.7 = function(x: %class.6): string
 // CHECK-NEXT:%function.8 = function(x: %class.2): boolean
 // CHECK-NEXT:%tuple.9 = tuple(number, number)
 // CHECK-NEXT:%function.10 = function(x: %tuple.9): number
 // CHECK-NEXT:%function.11 = function(x: %tuple.3): boolean
-// CHECK-NEXT:%class.12 = class( {
-// CHECK-NEXT:  map [final]: generic
-// CHECK-NEXT:  toString [final]: %function.15
-// CHECK-NEXT:})
-// CHECK-NEXT:%class.13 = class( {
-// CHECK-NEXT:  map [final]: generic
-// CHECK-NEXT:  toString [final]: %function.16
-// CHECK-NEXT:})
-// CHECK-NEXT:%class.14 = class( {
-// CHECK-NEXT:  map [final]: generic
-// CHECK-NEXT:  toString [final]: %function.17
-// CHECK-NEXT:})
-// CHECK-NEXT:%function.15 = function(this: %class.2): string
-// CHECK-NEXT:%function.16 = function(this: %class.4): string
-// CHECK-NEXT:%function.17 = function(this: %class.6): string
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict

@@ -15,14 +15,9 @@ var b: B[] = a;
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%class.2 = class(Array {
-// CHECK-NEXT:  %homeObject: %class.3
-// CHECK-NEXT:})
-// CHECK-NEXT:%class.3 = class( {
-// CHECK-NEXT:  map [final]: generic
-// CHECK-NEXT:  toString [final]: %function.4
-// CHECK-NEXT:})
-// CHECK-NEXT:%function.4 = function(this: %class.2): string
+// CHECK-NEXT:%class.2 = class(Array<%union.3>)
+// CHECK-NEXT:%union.3 = union(null | %tuple.4)
+// CHECK-NEXT:%tuple.4 = tuple(%union.3, number)
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict

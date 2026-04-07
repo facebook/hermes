@@ -43,6 +43,14 @@ class FlowTypesDumper {
   /// Map a type instance to a number.
   llvh::DenseMap<const TypeInfo *, size_t, TypesDenseMapInfo> typeNumber_{};
 
+  /// Set of TypeInfo pointers that are array class types or their homeObjects.
+  /// When printing these, we suppress field details.
+  llvh::DenseSet<const TypeInfo *> arrayClassInfos_{};
+
+  /// Map from array ClassType info to its element type info,
+  /// for printing abbreviated output like class(Array<element>).
+  llvh::DenseMap<const TypeInfo *, const TypeInfo *> arrayElementTypes_{};
+
  public:
   /// \return the unique number associated with the type or 0 if it is a
   /// singleton.

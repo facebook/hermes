@@ -22,26 +22,12 @@ var r2: boolean[] = map(arr, elem => !elem);
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%class.2 = class(Array {
-// CHECK-NEXT:  %homeObject: %class.8
-// CHECK-NEXT:})
-// CHECK-NEXT:%class.3 = class(Array {
-// CHECK-NEXT:  %homeObject: %class.9
-// CHECK-NEXT:})
+// CHECK-NEXT:%class.2 = class(Array<number>)
+// CHECK-NEXT:%class.3 = class(Array<boolean>)
 // CHECK-NEXT:%function.4 = function(elem: number): number
 // CHECK-NEXT:%function.5 = function(x: %class.2, f: %function.4): %class.2
 // CHECK-NEXT:%function.6 = function(elem: number): boolean
 // CHECK-NEXT:%function.7 = function(x: %class.2, f: %function.6): %class.3
-// CHECK-NEXT:%class.8 = class( {
-// CHECK-NEXT:  map [final]: generic
-// CHECK-NEXT:  toString [final]: %function.10
-// CHECK-NEXT:})
-// CHECK-NEXT:%class.9 = class( {
-// CHECK-NEXT:  map [final]: generic
-// CHECK-NEXT:  toString [final]: %function.11
-// CHECK-NEXT:})
-// CHECK-NEXT:%function.10 = function(this: %class.2): string
-// CHECK-NEXT:%function.11 = function(this: %class.3): string
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict

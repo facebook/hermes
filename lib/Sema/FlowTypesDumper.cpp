@@ -132,8 +132,23 @@ void FlowTypesDumper::printTypeDescription(
       break;
 
     case TypeKind::Class: {
-      os << '(';
       auto *classType = llvh::cast<ClassType>(type);
+      // Array class types: print abbreviated form to avoid churn
+      // when Array<T> methods change.
+      if (arrayClassInfos_.count(type)) {
+        os << '(';
+        if (classType->getClassName().isValid())
+          os << classType->getClassName();
+        auto it = arrayElementTypes_.find(type);
+        if (it != arrayElementTypes_.end()) {
+          os << '<';
+          printTypeRef(os, it->second);
+          os << '>';
+        }
+        os << ')';
+        break;
+      }
+      os << '(';
       if (classType->getClassName().isValid())
         os << classType->getClassName();
       if (classType->getSuperClass()) {
@@ -255,6 +270,18 @@ void FlowTypesDumper::printAllTypes(
   } visitor{referencedTypes, flowTypes};
 
   ESTree::visitESTreeNodeNoReplace(visitor, root);
+
+  // Collect array class types for abbreviated printing.
+  for (const Type &t : flowTypes.allocTypes_) {
+    if (flowTypes.isArrayClassType(&t) && t.info) {
+      arrayClassInfos_.insert(t.info);
+      arrayElementTypes_[t.info] = flowTypes.getArrayElementType(&t)->info;
+      // Also suppress the homeObject ClassType.
+      auto *classType = llvh::cast<ClassType>(t.info);
+      if (auto *homeObj = classType->getHomeObjectType())
+        arrayClassInfos_.insert(homeObj->info);
+    }
+  }
 
   // Seed the worklist with referenced types in allocation order.
   for (const Type &t : flowTypes.allocTypes_) {
