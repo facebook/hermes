@@ -610,12 +610,31 @@ class FlowChecker::ExprVisitor {
               node->_property->getSourceRange(), "ft: unknown tuple property");
         }
       }
+    } else if (llvh::isa<StringType>(objType->info)) {
+      if (node->_computed) {
+        resType = outer_.flowContext_.getString();
+        Type *indexType = outer_.getNodeTypeOrAny(node->_property);
+        if (!llvh::isa<NumberType>(indexType->info) &&
+            !llvh::isa<AnyType>(indexType->info)) {
+          outer_.sm_.error(
+              node->_property->getSourceRange(),
+              "ft: string index must be a number");
+        }
+      } else {
+        auto *id = llvh::cast<ESTree::IdentifierNode>(node->_property);
+        if (id->_name == outer_.kw_.identLength) {
+          resType = outer_.flowContext_.getNumber();
+        } else {
+          outer_.sm_.error(
+              node->_property->getSourceRange(), "ft: unknown string property");
+        }
+      }
     } else if (!llvh::isa<AnyType>(objType->info)) {
       if (node->_computed) {
         outer_.sm_.error(
             node->_property->getSourceRange(),
             llvh::Twine(
-                "ft: indexed access only allowed on array and tuple, found ") +
+                "ft: indexed access only allowed on array/tuple/string, found ") +
                 objType->info->getKindName());
       } else {
         outer_.sm_.error(

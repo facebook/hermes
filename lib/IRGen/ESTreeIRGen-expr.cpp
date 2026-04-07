@@ -1124,7 +1124,29 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
     }
     Mod->getContext().getSourceErrorManager().error(
         mem->getSourceRange(), "invalid tuple access");
-  };
+  }
+
+  // Check if we are loading a string property.
+  if (llvh::isa<flow::StringType>(
+          flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
+    if (!mem->_computed) {
+      auto *ident = llvh::cast<ESTree::IdentifierNode>(mem->_property);
+      if (ident->_name == kw_.identLength) {
+        // str.length returns number.
+        auto *loadProp = Builder.createLoadPropertyInst(baseValue, propValue);
+        loadProp->setType(Type::createNumber());
+        return MemberExpressionResult{loadProp, nullptr, baseValue};
+      }
+    } else {
+      auto *loadProp = Builder.createLoadPropertyInst(baseValue, propValue);
+      loadProp->setType(
+          Type::unionTy(Type::createString(), Type::createUndefined()));
+      auto *cast =
+          Builder.createCheckedTypeCastInst(loadProp, Type::createString());
+      return MemberExpressionResult{cast, nullptr, baseValue};
+    }
+  }
+
   Value *loadProp;
   if (auto *PN = llvh::dyn_cast<ESTree::PrivateNameNode>(getProperty(mem))) {
     loadProp = emitPrivateLookup(baseValue, propValue, PN);
