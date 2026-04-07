@@ -1603,6 +1603,7 @@ class FlowChecker::AnnotateScopeDecls {
       ESTree::Node *parent) {
     auto *id = llvh::cast<ESTree::IdentifierNode>(funcDecl->_id);
     sema::Decl *decl = outer.getDecl(id);
+    assert(decl && "unresolved identifier");
     if (funcDecl->_typeParameters) {
       decl->generic = true;
       outer.registerGeneric(

@@ -1713,6 +1713,7 @@ void SemanticResolver::visitFunctionLikeInFunctionContext(
         directives.sourceVisibility;
   curFunctionInfo()->customDirectives.alwaysInline = directives.alwaysInline;
   curFunctionInfo()->customDirectives.noInline = directives.noInline;
+  curFunctionInfo()->customDirectives.builtin = directives.builtin;
 
   if (id) {
     // Set the expression decl of the id.
@@ -2103,6 +2104,19 @@ void SemanticResolver::processDeclarations(const ScopeDecls &decls) {
 #endif
     llvh::SmallVector<ESTree::IdentifierNode *, 4> idents{};
     Decl::Kind kind = extractIdentsFromDecl(decl, idents);
+
+    // In typed mode, ignore function declarations with "builtin" directive.
+    // They're going to be resolved by the FlowChecker.
+    if (typed_) {
+      if (auto *funcDecl = llvh::dyn_cast<FunctionDeclarationNode>(decl);
+          funcDecl && hasBuiltinDirective(funcDecl)) {
+        semCtx_.addBuiltinDeclaration(funcDecl);
+        Decl *newDecl = semCtx_.newDeclInScope(
+            idents.front()->_name, Decl::Kind::TypedBuiltin, curScope_);
+        semCtx_.setDeclarationDecl(idents.front(), newDecl);
+        continue;
+      }
+    }
 
     for (ESTree::IdentifierNode *ident : idents) {
       validateAndDeclareIdentifier(kind, ident);
@@ -2772,8 +2786,21 @@ auto SemanticResolver::scanDirectives(ESTree::NodeList &body) const
       }
       directives.noInline = true;
     }
+    if (directive == kw_.identBuiltin) {
+      directives.builtin = true;
+    }
   }
   return directives;
+}
+
+bool SemanticResolver::hasBuiltinDirective(
+    ESTree::FunctionDeclarationNode *funcDecl) const {
+  if (auto *blockBody =
+          llvh::dyn_cast<ESTree::BlockStatementNode>(funcDecl->_body)) {
+    FoundDirectives directives = scanDirectives(blockBody->_body);
+    return directives.builtin;
+  }
+  return false;
 }
 
 /* static */ void SemanticResolver::registerLocalEval(LexicalScope *scope) {

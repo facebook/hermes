@@ -77,6 +77,8 @@ class Decl {
     /// Name of a class expression, which is visible within the class
     /// but not outside it.
     ClassExprName,
+    /// Name of a builtin function for typed mode compilation.
+    TypedBuiltin,
 
     // ==== Private name declarations ===
     /// This name defines a field.
@@ -587,6 +589,17 @@ class SemContext {
     promotedFunctionDecls_.clear();
   }
 
+  /// Add a builtin declaration for later processing by FlowChecker.
+  void addBuiltinDeclaration(ESTree::FunctionDeclarationNode *decl) {
+    builtinDeclarations_.push_back(decl);
+  }
+
+  /// Get the list of builtin declarations.
+  llvh::ArrayRef<ESTree::FunctionDeclarationNode *> getBuiltinDeclarations()
+      const {
+    return builtinDeclarations_;
+  }
+
   /// Set the "declaration decl" and the "expression decl" of the identifier
   /// node to the same value.
   void setBothDecl(ESTree::IdentifierNode *node, Decl *decl) {
@@ -658,6 +671,11 @@ class SemContext {
 
   /// Storage for all variable declarations.
   std::deque<Decl> decls_{};
+
+  /// A list of function declarations with "builtin" directive that were
+  /// skipped during semantic resolution. FlowChecker needs to process these.
+  llvh::SmallVector<ESTree::FunctionDeclarationNode *, 2>
+      builtinDeclarations_{};
 
   /// This side table is used to associate a "declaration decl" with an
   /// ESTree::IdentifierNode, when the "declaration decl" and the

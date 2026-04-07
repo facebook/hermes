@@ -479,6 +479,8 @@ class SemanticResolver
     bool alwaysInline = false;
     /// If a "noinline" directive is found, this is true.
     bool noInline = false;
+    /// If a "builtin" directive is found, this is true.
+    bool builtin = false;
   };
 
   /// Scan the list of directives in the beginning of a program or function.
@@ -487,6 +489,9 @@ class SemanticResolver
   /// \param body list of statements to scan.
   /// \return information about the encountered directives.
   FoundDirectives scanDirectives(ESTree::NodeList &body) const;
+
+  /// Check if a function declaration has a "builtin" directive.
+  bool hasBuiltinDirective(ESTree::FunctionDeclarationNode *funcDecl) const;
 
   /// Mark \p scope and every one of its ancestor scopes as users of local
   /// `eval()`.

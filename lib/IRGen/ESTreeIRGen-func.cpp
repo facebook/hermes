@@ -903,6 +903,7 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
       case sema::Decl::Kind::Let:
       case sema::Decl::Kind::Const:
       case sema::Decl::Kind::Class:
+      case sema::Decl::Kind::TypedBuiltin:
       case sema::Decl::Kind::Catch:
         assert(
             ((curFunction()->debugAllowRecompileCounter != 0) ||

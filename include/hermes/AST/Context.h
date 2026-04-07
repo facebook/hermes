@@ -160,6 +160,9 @@ struct CustomDirectives {
   /// Whether we should _never_ attempt to inline the function.
   /// Useful (at least) in tests.
   bool noInline{false};
+
+  /// Whether the function is a builtin function.
+  bool builtin{false};
 };
 
 class Keywords {

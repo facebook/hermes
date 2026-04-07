@@ -517,6 +517,7 @@ void SemContextDumper::printDecl(llvh::raw_ostream &os, const Decl *d) {
     CASE(ES5Catch)
     CASE(FunctionExprName)
     CASE(ClassExprName)
+    CASE(TypedBuiltin)
     CASE(ScopedFunction)
     CASE(Var)
     CASE(Parameter)
