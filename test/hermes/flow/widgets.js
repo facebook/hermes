@@ -19,28 +19,6 @@
 const mapPrototypeGet: any = Map.prototype.get;
 const mapPrototypeSet: any = Map.prototype.set;
 
-function arrayPrototypeMap<T, U>(arr: T[], cb: T => U): U[] {
-  'inline';
-  var length: number = arr.length;
-  var result: U[] = [];
-  for (var i: number = 0; i < length; ++i) {
-    var elem: T = arr[i];
-    result.push(cb(elem));
-  }
-  return result;
-}
-
-function arrayPrototypeMapWithIndex<T, U>(arr: T[], cb: (T, number) => U): U[] {
-  'inline';
-  var length: number = arr.length;
-  var result: U[] = [];
-  for (var i: number = 0; i < length; ++i) {
-    var elem: T = arr[i];
-    result.push(cb(elem, i));
-  }
-  return result;
-}
-
 function arrayPrototypeFilter<T>(arr: T[], cb: T => any): T[] {
   'inline';
   var result: T[] = [];
@@ -166,9 +144,8 @@ class Container extends Widget {
 
   reduce(ctx: Context): RenderNode {
     const component: Component = new NumberComponent(13);
-    const children: RenderNode[] = arrayPrototypeMap(
-      this.children,
-      child => RenderNode_createForChild(ctx, child),
+    const children = this.children.map(child =>
+      RenderNode_createForChild(ctx, child),
     );
     return RenderNode_create(ctx, [component], children);
   }
@@ -277,14 +254,8 @@ function diffTrees(
   const createdComponents: ComponentPair[] = [];
   const deletedComponents: ComponentPair[] = [];
 
-  const oldEntityIds: number[] = arrayPrototypeMap(
-    oldEntities,
-    entity => entity.key,
-  );
-  const newEntityIds: number[] = arrayPrototypeMap(
-    newEntities,
-    entity => entity.key
-  );
+  const oldEntityIds = oldEntities.map(entity => entity.key);
+  const newEntityIds = newEntities.map(entity => entity.key);
 
   const createdEntities: number[] = arrayPrototypeFilter(newEntityIds,
     entityId => !arrayPrototypeIncludes(oldEntityIds, entityId),
@@ -297,9 +268,10 @@ function diffTrees(
   const newComponents: any = mapEntitiesToComponents(newEntities);
 
   arrayPrototypeForEach(createdEntities, entityId => {
-    const components: ComponentPair[] = arrayPrototypeMap(
-      $SHBuiltin.call(mapPrototypeGet, newComponents, entityId) || ([]: Component[]),
-      (it: Component) => new ComponentPair(entityId, it),
+    const comps: Component[] =
+      $SHBuiltin.call(mapPrototypeGet, newComponents, entityId) || ([]: Component[]);
+    const components = comps.map(
+      it => new ComponentPair(entityId, it),
     );
     createdComponents.push(...components);
   });
@@ -512,18 +484,15 @@ class TestApp extends ComposedWidget {
     if (sizes.length != models.length) {
       throw new Error('sizes and models must have same length');
     }
-    return arrayPrototypeMapWithIndex(
-      models,
-      (modelPath: string, index: number): Widget => {
-        const buttonSize = sizes[index];
-        const widget = new ButtonAndModel(new RenderData(
-          modelPath,
-          buttonSize,
-        ));
-        widget.key = `${modelPath}_${buttonSize}`;
-        return widget;
-      }
-    );
+    return models.map((modelPath: string, index: number): Widget => {
+      const buttonSize = sizes[index];
+      const widget = new ButtonAndModel(new RenderData(
+        modelPath,
+        buttonSize,
+      ));
+      widget.key = `${modelPath}_${buttonSize}`;
+      return widget;
+    });
   }
 
   getChildren(): Widget[] {
