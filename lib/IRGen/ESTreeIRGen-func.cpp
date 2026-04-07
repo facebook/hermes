@@ -1164,7 +1164,11 @@ void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
             llvh::dyn_cast<flow::TypedFunctionType>(
                 flowContext_.getNodeTypeOrAny(funcNode)->info);
         ftype && paramIndex < ftype->getParams().size()) {
-      jsParam->setType(flowTypeToIRType(ftype->getParams()[paramIndex].type));
+      Type irType = flowTypeToIRType(ftype->getParams()[paramIndex].type);
+      // Optional parameters can receive undefined when omitted.
+      if (ftype->getParams()[paramIndex].optional)
+        irType = Type::unionTy(irType, Type::createUndefined());
+      jsParam->setType(irType);
     }
     Instruction *formalParam = Builder.createLoadParamInst(jsParam);
     curFunction()->jsParams.push_back(formalParam);

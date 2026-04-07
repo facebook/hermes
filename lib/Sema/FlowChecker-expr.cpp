@@ -61,6 +61,15 @@ void FlowChecker::matchConstraintToType(
     // at the CallExpression visitor.
 
     if (constraint->info->getKind() != type->info->getKind()) {
+      // When the constraint is a Union containing placeholders and the
+      // actual type is not a Union, try to resolve placeholder arms by
+      // matching them against the actual type.
+      if (auto *constraintUnion = llvh::dyn_cast<UnionType>(constraint->info)) {
+        for (Type *arm : constraintUnion->getTypes()) {
+          worklist.insert({arm, type});
+        }
+        continue;
+      }
       // Mismatch, nothing more to do.
       continue;
     }
@@ -113,12 +122,28 @@ void FlowChecker::matchConstraintToType(
       case TypeKind::TypedFunction: {
         auto *constraintFn = llvh::cast<TypedFunctionType>(constraint->info);
         auto *typeFn = llvh::cast<TypedFunctionType>(type->info);
+        // Allow mismatched param counts when trailing params are optional.
+        size_t minParams = std::min(
+            constraintFn->getParams().size(), typeFn->getParams().size());
         if (constraintFn->getParams().size() != typeFn->getParams().size()) {
-          continue;
+          // Verify the extra params are optional.
+          bool ok = true;
+          auto &longer =
+              constraintFn->getParams().size() > typeFn->getParams().size()
+              ? constraintFn->getParams()
+              : typeFn->getParams();
+          for (size_t i = minParams, e = longer.size(); i < e; ++i) {
+            if (!longer[i].optional) {
+              ok = false;
+              break;
+            }
+          }
+          if (!ok)
+            continue;
         }
 
         worklist.insert({constraintFn->getThisParam(), typeFn->getThisParam()});
-        for (size_t i = 0, e = constraintFn->getParams().size(); i < e; ++i) {
+        for (size_t i = 0; i < minParams; ++i) {
           worklist.insert(
               {constraintFn->getParams()[i].type, typeFn->getParams()[i].type});
         }
@@ -2315,13 +2340,27 @@ class FlowChecker::ExprVisitor {
       const llvh::Twine &calleeName,
       uint32_t offset = 0) {
     size_t numArgs = arguments.size() - offset;
-    // FIXME: default arguments.
     if (params.size() != numArgs) {
-      outer_.sm_.error(
-          callNode->getSourceRange(),
-          "ft: " + calleeName + " expects " + llvh::Twine(params.size()) +
-              " arguments, but " + llvh::Twine(numArgs) + " supplied");
-      return false;
+      // Allow fewer arguments when trailing params are optional.
+      if (numArgs < params.size() && params[numArgs].optional) {
+        // OK: all remaining params starting from numArgs are optional
+        // (the parser enforces optional params come last).
+      } else {
+        // Count the number of required parameters.
+        size_t numRequired = params.size();
+        while (numRequired > 0 && params[numRequired - 1].optional)
+          --numRequired;
+        outer_.sm_.error(
+            callNode->getSourceRange(),
+            "ft: " + calleeName + " expects " +
+                (numArgs > params.size()
+                     ? "at most " + llvh::Twine(params.size())
+                     : (numRequired != params.size()
+                            ? "at least " + llvh::Twine(numRequired)
+                            : llvh::Twine(params.size()))) +
+                " arguments, but " + llvh::Twine(numArgs) + " supplied");
+        return false;
+      }
     }
 
     auto begin = arguments.begin();

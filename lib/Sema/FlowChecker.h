@@ -1041,12 +1041,16 @@ Type *FlowChecker::processFunctionTypeAnnotation(
       : nullptr;
   Type *returnType = cb(node->_returnType);
 
+  bool seenOptional = false;
+
   llvh::SmallVector<TypedFunctionType::Param, 4> paramsList{};
   for (ESTree::Node &n : node->_params) {
     if (auto *param = llvh::dyn_cast<ESTree::FunctionTypeParamNode>(&n)) {
       auto *id = llvh::cast_or_null<ESTree::IdentifierNode>(param->_name);
       if (param->_optional) {
-        sm_.error(param->getSourceRange(), "unsupported optional parameter");
+        seenOptional = true;
+      } else if (seenOptional) {
+        sm_.error(param->getSourceRange(), "ft: optional params must be last");
       }
       paramsList.push_back(
           {Identifier::getFromPointer(id ? id->_name : nullptr),

@@ -1160,6 +1160,12 @@ void FlowChecker::visitFunctionLike(
           paramType = flowContext_.getAny();
       } else if (typedFn && i < typedFn->getParams().size()) {
         paramType = typedFn->getParams()[i].type;
+        // Optional params can receive undefined when omitted.
+        if (typedFn->getParams()[i].optional) {
+          Type *voidType = flowContext_.getVoid();
+          paramType = flowContext_.createType(
+              flowContext_.maybeCreateUnion({paramType, voidType}));
+        }
         ++i;
       } else {
         paramType = flowContext_.getAny();
@@ -1729,12 +1735,14 @@ Type *FlowChecker::parseFunctionType(
   // function, even if it doesn't have any explicit type annotations.
   bool isTyped = (defaultReturnType != nullptr);
 
+  bool seenOptional = false;
+
   for (ESTree::Node &n : params) {
     if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(&n)) {
       if (id->_optional) {
-        sm_.error(
-            id->getSourceRange(),
-            "optional function parameters not implemented yet");
+        seenOptional = true;
+      } else if (seenOptional) {
+        sm_.error(id->getSourceRange(), "ft: optional params must be last");
       }
       paramsList.push_back(
           {Identifier::getFromPointer(id->_name),
@@ -2126,6 +2134,8 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
       return {};
   }
 
+  bool needCheckedCast = false;
+
   {
     // TODO: Handle default arguments, which will allow for a changing number of
     // parameters. Example:
@@ -2136,10 +2146,30 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     //   funcB = funcA;
     // funcA flows into funcA here because the default argument allows the
     // caller to change the number of parameters.
-    if (aType->getParams().size() != bType->getParams().size())
-      return {};
 
-    for (size_t i = 0, e = aType->getParams().size(); i < e; ++i) {
+    if (aType->getParams().size() < bType->getParams().size()) {
+      // It's valid to flow from a function that has no optional parameters to a
+      // function that adds them.
+      const auto &extraParam = bType->getParams()[aType->getParams().size()];
+      if (!extraParam.optional) {
+        return {};
+      }
+      needCheckedCast = true;
+    } else if (aType->getParams().size() > bType->getParams().size()) {
+      // Removing optional parameters is always valid.
+      // Insert a checked cast in case IRGen needs it, but it'll likely be
+      // optimized out.
+      const auto &extraParam = aType->getParams()[bType->getParams().size()];
+      if (!extraParam.optional) {
+        return {};
+      }
+      needCheckedCast = true;
+    }
+
+    size_t minParamCount =
+        std::min(aType->getParams().size(), bType->getParams().size());
+
+    for (size_t i = 0; i < minParamCount; ++i) {
       Type *paramA = aType->getParams()[i].type;
       Type *paramB = bType->getParams()[i].type;
       CanFlowResult flowRes = canAFlowIntoB(paramB, paramA);
@@ -2162,7 +2192,7 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
       return {};
   }
 
-  return {.canFlow = true};
+  return {.canFlow = true, .needCheckedCast = needCheckedCast};
 }
 
 Type *FlowChecker::getNonOptionalSingleType(Type *exprType) {
