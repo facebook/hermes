@@ -470,6 +470,11 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
     return emitNativeCall(call, natFuncType);
   }
 
+  // Check for known FlowLib builtin method call (e.g., Array map).
+  if (auto *builtinDecl = flowContext_.getBuiltinCallTarget(call)) {
+    return genBuiltinMethodCall(call, builtinDecl);
+  }
+
   // Check for "special calls" -- calls with known special function names.
   if (auto *identNode = llvh::dyn_cast<ESTree::IdentifierNode>(call->_callee)) {
     // Check for a direct call to eval().
@@ -885,6 +890,62 @@ Value *ESTreeIRGen::emitNativeCall(
       flowTypeToIRType(natFuncType->getReturnType()),
       callee,
       natFuncType->getSignature(),
+      args);
+}
+
+Value *ESTreeIRGen::genBuiltinMethodCall(
+    ESTree::CallExpressionNode *call,
+    ESTree::FunctionDeclarationNode *builtinDecl) {
+  auto *builtinId = llvh::cast<ESTree::IdentifierNode>(builtinDecl->_id);
+  sema::Decl *decl = semCtx_.getDeclarationDecl(builtinId);
+
+  // Generic builtins don't have Variables created for them, so we can't
+  // generate a direct call.
+  // This should never happen but just report an error and fail gracefully.
+  if (decl->generic) {
+    Mod->getContext().getSourceErrorManager().error(
+        call->getSourceRange(),
+        "invalid AST: cannot call generic method as builtin");
+    return Builder.getLiteralUndefined();
+  }
+
+  // All builtin calls must have a member expression.
+  auto *memExpr = llvh::cast<ESTree::MemberExpressionNode>(call->_callee);
+
+  // Load the closure from the variable.
+  Variable *var = llvh::cast<Variable>(getDeclData(decl));
+  auto *scope = emitResolveScopeInstIfNeeded(var->getParent());
+  Value *callee = Builder.createLoadFrameInst(scope, var);
+
+  // Generate the arguments.
+  Value *receiver = genExpression(memExpr->_object);
+  CallInst::ArgumentList args;
+  for (auto &arg : call->_arguments) {
+    args.push_back(genExpression(&arg));
+  }
+
+  // Find the function based on the closure creation.
+  Function *func = nullptr;
+  bool found = false;
+  for (auto *varUser : var->getUsers()) {
+    if (auto *closure = llvh::dyn_cast<CreateFunctionInst>(varUser)) {
+      if (found) {
+        found = false;
+        func = nullptr;
+        break;
+      }
+      found = true;
+      func = closure->getFunctionCode();
+    }
+  }
+
+  return Builder.createCallInst(
+      callee,
+      /* target */ found ? (Value *)func : Builder.getEmptySentinel(),
+      /* calleeIsAlwaysClosure */ true,
+      /* env */ Builder.getEmptySentinel(),
+      /* newTarget */ Builder.getLiteralUndefined(),
+      /* thisValue */ receiver,
       args);
 }
 

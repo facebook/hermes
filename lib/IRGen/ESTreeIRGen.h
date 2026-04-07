@@ -948,6 +948,12 @@ class ESTreeIRGen {
 
   Value *genArrayExpr(ESTree::ArrayExpressionNode *Expr);
   Value *genCallExpr(ESTree::CallExpressionNode *call);
+
+  /// Generate a direct call to a FlowLib builtin function.
+  Value *genBuiltinMethodCall(
+      ESTree::CallExpressionNode *call,
+      ESTree::FunctionDeclarationNode *builtinDecl);
+
   Value *emitNativeCall(
       ESTree::CallExpressionNode *call,
       flow::NativeFunctionType *natFuncType);

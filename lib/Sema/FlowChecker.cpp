@@ -141,6 +141,7 @@ bool FlowChecker::run(ESTree::ProgramNode *rootNode) {
       *this, rootNode, nullptr, flowContext_.getAny(), flowContext_.getVoid());
   ScopeRAII scope(*this);
   declareNativeTypes(rootNode->getScope());
+  populateBuiltinMethods();
   if (!resolveScopeTypesAndAnnotate(rootNode, rootNode->getScope()))
     return false;
   visitESTreeNodeNoReplace(*this, rootNode);
@@ -168,6 +169,70 @@ void FlowChecker::declareNativeTypes(sema::LexicalScope *rootScope) {
 #define NATIVE_CTYPE(name, str) \
   declare(llvh::StringLiteral("c_" #name), NativeCType::c_##name, number);
 #include "hermes/AST/NativeTypes.def"
+}
+
+void FlowChecker::populateBuiltinMethods() {
+  for (ESTree::FunctionDeclarationNode *funcDecl :
+       semContext_.getBuiltinDeclarations()) {
+    // Extract the 'this' parameter type for keying.
+    // We only need the TypeKind for lookup via findBuiltinMethod.
+    if (funcDecl->_params.empty()) {
+      sm_.error(
+          funcDecl->getStartLoc(),
+          "ft: builtin function must have annotated 'this' as first parameter");
+      continue;
+    }
+
+    auto *firstParam =
+        llvh::dyn_cast<ESTree::IdentifierNode>(&funcDecl->_params.front());
+    if (!firstParam || firstParam->_name != kw_.identThis ||
+        !firstParam->_typeAnnotation) {
+      sm_.error(
+          funcDecl->getStartLoc(),
+          "ft: builtin function must have annotated 'this' as first parameter");
+      continue;
+    }
+
+    // Determine the TypeKind from the AST structure without parsing.
+    // This avoids creating types with placeholders.
+    auto *typeAnnotation =
+        llvh::cast<ESTree::TypeAnnotationNode>(firstParam->_typeAnnotation);
+    ESTree::Node *innerType = typeAnnotation->_typeAnnotation;
+
+    TypeKind thisTypeKind = TypeKind::InferencePlaceholder;
+    if (llvh::isa<ESTree::ArrayTypeAnnotationNode>(innerType)) {
+      thisTypeKind = TypeKind::Array;
+    } else if (llvh::isa<ESTree::StringTypeAnnotationNode>(innerType)) {
+      thisTypeKind = TypeKind::String;
+    } else {
+      sm_.error(
+          funcDecl->getStartLoc(),
+          "ft: unsupported builtin 'this' type "
+          "(only T[] and string supported right now)");
+      continue;
+    }
+
+    assert(
+        thisTypeKind != TypeKind::InferencePlaceholder && "must find a type");
+
+    // Generic builtins are not supported.
+    if (funcDecl->_typeParameters) {
+      sm_.error(
+          funcDecl->getStartLoc(),
+          "ft: generic builtin methods are not supported");
+      continue;
+    }
+
+    // Name of the function being called.
+    auto *id = llvh::cast<ESTree::IdentifierNode>(funcDecl->_id);
+
+    // Currently all builtin functions from FlowLib are non-static.
+    BuiltinMethodKey key{
+        thisTypeKind,
+        id->_name,
+        /* isStatic */ false};
+    flowContext_.registerBuiltinMethod(key, funcDecl);
+  }
 }
 
 void FlowChecker::recursionDepthExceeded(ESTree::Node *n) {
@@ -206,8 +271,16 @@ void FlowChecker::visitNonGenericFunctionDeclaration(
 }
 
 void FlowChecker::visit(ESTree::FunctionDeclarationNode *node) {
-  sema::Decl *decl = getDecl(llvh::cast<ESTree::IdentifierNode>(node->_id));
+  sema::Decl *decl = semContext_.getDeclarationDecl(
+      llvh::cast<ESTree::IdentifierNode>(node->_id));
   assert(decl && "function declaration must have been resolved");
+
+  // Builtin declarations are registered but their body is not type-checked.
+  // They may contain implementation patterns that are not supported by the
+  // type checker (e.g., string indexing in charAt).
+  if (decl->kind == sema::Decl::Kind::TypedBuiltin) {
+    return;
+  }
 
   // If it has type parameters, it's either a generic declaration
   // or a specialization which should be typechecked directly at clone time
@@ -2122,8 +2195,11 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
   auto *aType = llvh::cast<TypedFunctionType>(a);
   auto *bType = llvh::cast<TypedFunctionType>(b);
 
-  if (!aType->getThisParam() != !bType->getThisParam()) {
-    // Only one of the functions is missing `this`, can't flow.
+  // Handle 'this' parameter compatibility.
+  // A function without 'this' can flow into a function with 'this: void',
+  // because arrow functions (which have no 'this') can be used as callbacks.
+  if (aType->getThisParam() && !bType->getThisParam()) {
+    // 'a' has 'this' but 'b' does not - can't flow.
     return {};
   }
   if (aType->getThisParam() && bType->getThisParam()) {
@@ -2587,6 +2663,33 @@ bool FlowChecker::inferPlaceholdersFromCallArgs(
   return llvh::none_of(typeArgs, [](Type *typeArg) -> bool {
     return llvh::isa<InferencePlaceholderType>(typeArg->info);
   });
+}
+
+bool FlowChecker::resolveBuiltinMethodCall(
+    ESTree::CallExpressionNode *call,
+    ESTree::MemberExpressionNode *callee,
+    ESTree::FunctionDeclarationNode *builtinFunc) {
+  assert(!callee->_computed && "computed properties not allowed for builtin");
+  assert(
+      !builtinFunc->_typeParameters &&
+      "generic builtins should have been rejected");
+
+  // Parse function type directly (no generic substitution needed).
+  auto &params = ESTree::getParams(builtinFunc);
+  auto *returnType = ESTree::getReturnType(builtinFunc);
+  assert(returnType && "builtin must have return type annotation");
+  Type *funcType = parseFunctionType(
+      params,
+      returnType,
+      ESTree::isAsync(builtinFunc),
+      ESTree::isGenerator(builtinFunc));
+
+  setNodeType(callee, funcType);
+
+  // Register for direct call generation in IRGen.
+  flowContext_.setBuiltinCallTarget(call, builtinFunc);
+  // Arguments are visited by the caller.
+  return false;
 }
 
 std::pair<bool, llvh::SmallVector<Type *, 2>>

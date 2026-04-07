@@ -931,6 +931,58 @@ class ClassConstructorType : public TypeWithId {
   }
 };
 
+/// Key for looking up builtin methods.
+///
+/// Methods with "builtin" directive are stored here, so they can be looked up
+/// when typechecking builtin method calls.
+struct BuiltinMethodKey {
+  /// The TypeKind of the 'this' parameter (e.g., TypeKind::Array for Array
+  /// methods).
+  /// Note that we don't store a real Type here because it's easier to match
+  /// against builtin types with just the TypeKind, and we're only using this
+  /// key to lookup a small number of registered "builtin" methods.
+  TypeKind thisTypeKind;
+  /// The method name.
+  UniqueString *name;
+  /// Whether this is a static method (vs prototype/instance method).
+  bool isStatic;
+
+  /// \return a hash value for the key.
+  unsigned getHashValue() const {
+    return llvh::hash_combine(
+        (uint8_t)thisTypeKind,
+        llvh::hash_value(name),
+        llvh::hash_value(isStatic));
+  }
+
+  bool operator==(const BuiltinMethodKey &other) const {
+    return thisTypeKind == other.thisTypeKind && name == other.name &&
+        isStatic == other.isStatic;
+  }
+};
+
+/// DenseMapInfo specialization for BuiltinMethodKey.
+struct BuiltinMethodKeyInfo {
+  static inline BuiltinMethodKey getEmptyKey() {
+    return {
+        (TypeKind)0, llvh::DenseMapInfo<UniqueString *>::getEmptyKey(), false};
+  }
+  static inline BuiltinMethodKey getTombstoneKey() {
+    return {
+        (TypeKind)0,
+        llvh::DenseMapInfo<UniqueString *>::getTombstoneKey(),
+        false};
+  }
+  static unsigned getHashValue(const BuiltinMethodKey &key) {
+    return key.getHashValue();
+  }
+  static bool isEqual(
+      const BuiltinMethodKey &lhs,
+      const BuiltinMethodKey &rhs) {
+    return lhs == rhs;
+  }
+};
+
 class FlowContext {
   friend class FlowTypesDumper;
 
@@ -1057,6 +1109,34 @@ class FlowContext {
     return &allocTypes_.emplace_back(type, node);
   }
 
+  /// Register a builtin method in the table.
+  void registerBuiltinMethod(
+      const BuiltinMethodKey &key,
+      ESTree::FunctionDeclarationNode *funcDecl) {
+    builtinMethods_[key] = funcDecl;
+  }
+
+  /// Look up a builtin method. Returns nullptr if not found.
+  ESTree::FunctionDeclarationNode *findBuiltinMethod(
+      const BuiltinMethodKey &key) const {
+    auto it = builtinMethods_.find(key);
+    return it != builtinMethods_.end() ? it->second : nullptr;
+  }
+
+  /// Register a builtin call target for IRGen.
+  void setBuiltinCallTarget(
+      ESTree::CallExpressionNode *call,
+      ESTree::FunctionDeclarationNode *funcDecl) {
+    builtinCallTargets_[call] = funcDecl;
+  }
+
+  /// Get the builtin function for a call, or nullptr if not a builtin call.
+  ESTree::FunctionDeclarationNode *getBuiltinCallTarget(
+      ESTree::CallExpressionNode *call) const {
+    auto it = builtinCallTargets_.find(call);
+    return it != builtinCallTargets_.end() ? it->second : nullptr;
+  }
+
  private:
   /// Allocate a union from the given \p types. The types may not contain
   /// duplicates or other unions.
@@ -1072,6 +1152,25 @@ class FlowContext {
 
   /// Types associated with expression nodes.
   llvh::DenseMap<const ESTree::Node *, Type *> nodeTypes_{};
+
+  /// Map from a callee node (typically MemberExpressionNode) to the
+  /// specialized method's Decl for generic method calls.
+  /// This allows IRGen to look up the specialized function for a call.
+  llvh::DenseMap<const ESTree::Node *, sema::Decl *> specializedMethodCalls_{};
+
+  /// Table mapping builtin method keys to their function declarations.
+  /// Populated by FlowChecker for functions with "builtin" directive.
+  llvh::DenseMap<
+      BuiltinMethodKey,
+      ESTree::FunctionDeclarationNode *,
+      BuiltinMethodKeyInfo>
+      builtinMethods_{};
+
+  /// Maps CallExpressionNode to the builtin FunctionDeclarationNode.
+  /// Needed for IRGen to generate direct calls to the builtins.
+  llvh::
+      DenseMap<ESTree::CallExpressionNode *, ESTree::FunctionDeclarationNode *>
+          builtinCallTargets_{};
 
   std::deque<Type> allocTypes_{};
 

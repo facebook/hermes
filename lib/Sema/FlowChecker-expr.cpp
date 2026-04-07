@@ -562,6 +562,16 @@ class FlowChecker::ExprVisitor {
         auto *id = llvh::cast<ESTree::IdentifierNode>(node->_property);
         if (id->_name == outer_.kw_.identLength) {
           resType = outer_.flowContext_.getNumber();
+        } else if (
+            auto *builtinDecl = outer_.flowContext_.findBuiltinMethod(
+                {TypeKind::Array,
+                 id->_name,
+                 /* isStatic */ false})) {
+          // Found a builtin method - store for CallExpression to use.
+          outer_.setBuiltinMethodDecl(node, builtinDecl);
+          // The actual type will be determined by CallExpression when it
+          // specializes the generic. For now, use any.
+          resType = outer_.flowContext_.getAny();
         } else if (id->_name == outer_.kw_.identPush) {
           // TODO: Represent .push as a real function.
           resType = outer_.flowContext_.getAny();
@@ -624,6 +634,16 @@ class FlowChecker::ExprVisitor {
         auto *id = llvh::cast<ESTree::IdentifierNode>(node->_property);
         if (id->_name == outer_.kw_.identLength) {
           resType = outer_.flowContext_.getNumber();
+        } else if (
+            auto *builtinDecl = outer_.flowContext_.findBuiltinMethod(
+                {TypeKind::String,
+                 id->_name,
+                 /* isStatic */ false})) {
+          // Found a builtin method - store for CallExpression to use.
+          outer_.setBuiltinMethodDecl(node, builtinDecl);
+          // The actual type will be determined by CallExpression.
+          // For now, use any.
+          resType = outer_.flowContext_.getAny();
         } else {
           outer_.sm_.error(
               node->_property->getSourceRange(), "ft: unknown string property");
@@ -1671,6 +1691,18 @@ class FlowChecker::ExprVisitor {
             calleeType = outer_.getNodeTypeOrAny(node->_callee);
           }
         }
+      }
+    }
+
+    // Handle builtin method calls.
+    // Must be after visiting the callee since setBuiltinMethodDecl is called
+    // during MemberExpression visit.
+    if (auto *methodCallee =
+            llvh::dyn_cast<ESTree::MemberExpressionNode>(node->_callee)) {
+      if (auto *builtinDecl = outer_.getBuiltinMethodDecl(methodCallee)) {
+        if (outer_.resolveBuiltinMethodCall(node, methodCallee, builtinDecl))
+          shouldVisitArguments = false;
+        calleeType = outer_.getNodeTypeOrAny(node->_callee);
       }
     }
 

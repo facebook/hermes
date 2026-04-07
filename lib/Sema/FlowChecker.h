@@ -297,6 +297,13 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// which need their bodies typechecked.
   std::deque<DeferredGenericClass> typecheckQueue_;
 
+  /// Maps MemberExpressionNode to its resolved builtin FunctionDeclarationNode.
+  /// Used to pass builtin info from MemberExpressionNode to CallExpressionNode.
+  llvh::DenseMap<
+      ESTree::MemberExpressionNode *,
+      ESTree::FunctionDeclarationNode *>
+      builtinMethodDecls_;
+
  public:
   explicit FlowChecker(
       Context &astContext,
@@ -313,6 +320,23 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// Executed once at the top scope to define all native types. This is a hack.
   /// Eventually we should have a proper module system.
   void declareNativeTypes(sema::LexicalScope *rootScope);
+
+  /// Populate the builtin method table from functions with "builtin" directive.
+  void populateBuiltinMethods();
+
+  /// Record that \p node resolves to the builtin \p decl.
+  void setBuiltinMethodDecl(
+      ESTree::MemberExpressionNode *node,
+      ESTree::FunctionDeclarationNode *decl) {
+    builtinMethodDecls_[node] = decl;
+  }
+
+  /// Get the builtin function declaration for \p node, or nullptr if not found.
+  ESTree::FunctionDeclarationNode *getBuiltinMethodDecl(
+      ESTree::MemberExpressionNode *node) {
+    auto it = builtinMethodDecls_.find(node);
+    return it != builtinMethodDecls_.end() ? it->second : nullptr;
+  }
 
   /// We call this when we exceed the maximum recursion depth.
   void recursionDepthExceeded(ESTree::Node *n);
@@ -694,6 +718,39 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
       llvh::ArrayRef<Type *> typeArgTypes,
       sema::Decl *oldDecl);
 
+  /// Build constraints from function params and visit call arguments to infer
+  /// type argument placeholders.
+  /// \param typeParams Type parameter declaration node.
+  /// \param funcParams Function parameters (for deriving constraint types).
+  /// \param callArgs Call arguments to visit.
+  /// \param typeArgs Type args with placeholders to be resolved in-place.
+  /// \param bindScope Scope for type parameter bindings.
+  /// \param callNode Parent node for visiting expressions.
+  /// \param receiverType Optional receiver type for inferring 'this' param.
+  /// \param paramParsingScope Optional scope to activate while parsing the
+  ///   method's parameter types (e.g. to make class type params visible for
+  ///   FlowLib methods). Restored before visiting call arguments so
+  ///   user-defined types remain visible in callbacks.
+  /// \return true if all placeholders were resolved.
+  bool inferPlaceholdersFromCallArgs(
+      ESTree::TypeParameterDeclarationNode *typeParams,
+      ESTree::NodeList &funcParams,
+      ESTree::NodeList &callArgs,
+      llvh::ArrayRef<Type *> typeArgs,
+      sema::LexicalScope *bindScope,
+      ESTree::Node *callNode,
+      Type *receiverType = nullptr,
+      TypeBindingTableScopePtrTy paramParsingScope =
+          TypeBindingTableScopePtrTy{});
+
+  /// Resolve a call to a builtin method.
+  /// Sets the MemberExpression callee type and registers for IRGen.
+  /// \return true if arguments were visited, false otherwise.
+  bool resolveBuiltinMethodCall(
+      ESTree::CallExpressionNode *call,
+      ESTree::MemberExpressionNode *callee,
+      ESTree::FunctionDeclarationNode *builtinFunc);
+
   /// Try to visit the arguments to the call expression and typecheck them.
   /// Infer a possible set of type arguments to use for the call
   /// using an eager type assignment mechanism based on the types of the
@@ -710,31 +767,6 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
       ESTree::CallExpressionNode *node,
       ESTree::IdentifierNode *callee,
       sema::Decl *oldDecl);
-
-  /// Build constraints from function params and visit call arguments to infer
-  /// type argument placeholders.
-  /// \param typeParams type parameter declaration node.
-  /// \param funcParams function parameters (for deriving constraint types).
-  /// \param callArgs call arguments to visit.
-  /// \param typeArgs type args with placeholders to be resolved in-place.
-  /// \param bindScope scope for type parameter bindings.
-  /// \param callNode parent node for visiting expressions.
-  /// \param receiverType optional receiver type for inferring 'this' param.
-  /// \param paramParsingScope Optional scope to activate while parsing the
-  ///   method's parameter types (e.g. to make class type params visible for
-  ///   FlowLib methods). Restored before visiting call arguments so
-  ///   user-defined types remain visible in callbacks.
-  /// \return true if all placeholders were resolved.
-  bool inferPlaceholdersFromCallArgs(
-      ESTree::TypeParameterDeclarationNode *typeParams,
-      ESTree::NodeList &funcParams,
-      ESTree::NodeList &callArgs,
-      llvh::ArrayRef<Type *> typeArgs,
-      sema::LexicalScope *bindScope,
-      ESTree::Node *callNode,
-      Type *receiverType = nullptr,
-      TypeBindingTableScopePtrTy paramParsingScope =
-          TypeBindingTableScopePtrTy{});
 
   /// Run the typechecker on a newly created specialization of a generic
   /// function.
