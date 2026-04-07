@@ -454,6 +454,7 @@ const { values } = parseArgs({
     output: { type: 'string', short: 'o' },
     dynamic: { type: 'boolean', default: false },
     static: { type: 'boolean', default: false },
+    binary: { type: 'string', short: 'b' },
   },
 });
 
@@ -470,15 +471,19 @@ if (useDynamic && useStatic) {
 
 if (!output) {
   console.error(
-    'Usage: node bench.ts -c <count> -l <label> -o <output.json> [--dynamic|--static]',
+    'Usage: node bench.ts -c <count> -l <label> -o <output.json> [--dynamic|--static] [--binary <path>]',
   );
   process.exit(1);
 }
 
 // Default to dynamic (hermes.exe) unless --static is specified.
 const mode: 'dynamic' | 'static' = useStatic ? 'static' : 'dynamic';
-const binaryName = mode === 'static' ? 'shermes.exe' : 'hermes.exe';
-hermes = resolve(repoRoot, 'build', 'ninja-clang-release', 'bin', binaryName);
+if (values.binary) {
+  hermes = resolve(values.binary);
+} else {
+  const binaryName = mode === 'static' ? 'shermes.exe' : 'hermes.exe';
+  hermes = resolve(repoRoot, 'build', 'ninja-clang-release', 'bin', binaryName);
+}
 
 const result = benchAll(count, label);
 writeFileSync(output, JSON.stringify(result, undefined, 4) + '\n');

@@ -1,9 +1,17 @@
 import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseArgs } from 'node:util';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+const { values } = parseArgs({
+  options: {
+    binary: { type: 'string', short: 'b' },
+  },
+  strict: false,
+});
 
 const benchScript = join(__dirname, 'bench.ts');
 const reportScript = join(__dirname, 'report.ts');
@@ -12,9 +20,13 @@ const reportMd = join(__dirname, 'bench_report.md');
 
 // Step 1: Run benchmarks
 console.log('=== Running benchmarks ===');
+const benchArgs = ['--experimental-strip-types', benchScript, '--dynamic', '-c', '5', '-l', 'CI', '-o', resultJson];
+if (values.binary) {
+  benchArgs.push('--binary', values.binary);
+}
 const benchResult = spawnSync(
   process.execPath,
-  ['--experimental-strip-types', benchScript, '--dynamic', '-c', '5', '-l', 'CI', '-o', resultJson],
+  benchArgs,
   { stdio: 'inherit' },
 );
 

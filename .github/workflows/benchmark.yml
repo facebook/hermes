@@ -1,0 +1,62 @@
+name: Benchmarks
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: bench-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    name: Run Benchmarks
+    runs-on: windows-2025
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      actions: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-node
+
+      - name: Build hermes (x64 Release)
+        shell: bash
+        env:
+          MSYS2_ARG_CONV_EXCL: "*"
+        run: |
+          cmake -S . -B build -G "Visual Studio 17 2022" \
+            -DCMAKE_SYSTEM_NAME=Windows \
+            -DCMAKE_SYSTEM_VERSION=10.0.15063 \
+            -DCMAKE_SYSTEM_PROCESSOR=x86_64
+
+          cmake --build build --config Release --target hermes -- \
+            -m /p:UseMultiToolTask=true /p:EnforceProcessCountAcrossBuilds=true
+
+      - name: Run benchmarks
+        shell: bash
+        run: |
+          node --experimental-strip-types \
+            benchmarks/hermes-windows/bench_and_report.ts \
+            --binary build/bin/Release/hermes.exe
+
+      - name: Stage results
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p .benchmark-results
+          cp -f benchmarks/hermes-windows/bench_report.md .benchmark-results/ 2>/dev/null || true
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "${{ github.event.pull_request.number }}" > .benchmark-results/pr-number.txt
+          fi
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: .benchmark-results/
+          retention-days: 30
