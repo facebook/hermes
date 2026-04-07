@@ -532,7 +532,9 @@ class IRBuilder {
       const AllocTypedNonEnumObjectInst::ObjectPropertyMap &propMap,
       Value *parentObject);
 
-  AllocFastArrayInst *createAllocFastArrayInst(LiteralNumber *sizeHint);
+  AllocFastArrayInst *createAllocFastArrayInst(
+      LiteralNumber *sizeHint,
+      Value *prototype);
 
   AllocArrayInst *createAllocArrayInst(
       LiteralNumber *sizeHint,

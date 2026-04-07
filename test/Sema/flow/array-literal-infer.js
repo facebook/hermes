@@ -43,16 +43,42 @@ var strArr: (number | string)[] = ["a", "b", "c", ...numArr];
 // CHECK-NEXT:})
 // CHECK-NEXT:%class_constructor.5 = class_constructor(%class.4)
 // CHECK-NEXT:%function.6 = function(this: %class.4): void
-// CHECK-NEXT:%array.7 = array(%union.13)
-// CHECK-NEXT:%array.8 = array(%class.2)
-// CHECK-NEXT:%array.9 = array(number)
-// CHECK-NEXT:%array.10 = array(%union.14)
+// CHECK-NEXT:%class.7 = class(Array {
+// CHECK-NEXT:  %homeObject: %class.13
+// CHECK-NEXT:})
+// CHECK-NEXT:%class.8 = class(Array {
+// CHECK-NEXT:  %homeObject: %class.14
+// CHECK-NEXT:})
+// CHECK-NEXT:%class.9 = class(Array {
+// CHECK-NEXT:  %homeObject: %class.15
+// CHECK-NEXT:})
+// CHECK-NEXT:%class.10 = class(Array {
+// CHECK-NEXT:  %homeObject: %class.16
+// CHECK-NEXT:})
 // CHECK-NEXT:%class.11 = class( {
 // CHECK-NEXT:})
 // CHECK-NEXT:%class.12 = class( extends %class.11 {
 // CHECK-NEXT:})
-// CHECK-NEXT:%union.13 = union(void | string | number)
-// CHECK-NEXT:%union.14 = union(string | number)
+// CHECK-NEXT:%class.13 = class( {
+// CHECK-NEXT:  map [final]: generic
+// CHECK-NEXT:  toString [final]: %function.17
+// CHECK-NEXT:})
+// CHECK-NEXT:%class.14 = class( {
+// CHECK-NEXT:  map [final]: generic
+// CHECK-NEXT:  toString [final]: %function.18
+// CHECK-NEXT:})
+// CHECK-NEXT:%class.15 = class( {
+// CHECK-NEXT:  map [final]: generic
+// CHECK-NEXT:  toString [final]: %function.19
+// CHECK-NEXT:})
+// CHECK-NEXT:%class.16 = class( {
+// CHECK-NEXT:  map [final]: generic
+// CHECK-NEXT:  toString [final]: %function.20
+// CHECK-NEXT:})
+// CHECK-NEXT:%function.17 = function(this: %class.7): string
+// CHECK-NEXT:%function.18 = function(this: %class.8): string
+// CHECK-NEXT:%function.19 = function(this: %class.9): string
+// CHECK-NEXT:%function.20 = function(this: %class.10): string
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -61,13 +87,13 @@ var strArr: (number | string)[] = ["a", "b", "c", ...numArr];
 // CHECK-NEXT:        Decl %d.2 'arguments' Var Arguments
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.2
-// CHECK-NEXT:            Decl %d.3 'unionArr' Var : %array.7
-// CHECK-NEXT:            Decl %d.4 'annotatedArr' Var : %array.7
+// CHECK-NEXT:            Decl %d.3 'unionArr' Var : %class.7
+// CHECK-NEXT:            Decl %d.4 'annotatedArr' Var : %class.7
 // CHECK-NEXT:            Decl %d.5 'Base' Class : %class_constructor.3
 // CHECK-NEXT:            Decl %d.6 'Derived' Class : %class_constructor.5
-// CHECK-NEXT:            Decl %d.7 'baseArr' Var : %array.8
-// CHECK-NEXT:            Decl %d.8 'numArr' Var : %array.9
-// CHECK-NEXT:            Decl %d.9 'strArr' Var : %array.10
+// CHECK-NEXT:            Decl %d.7 'baseArr' Var : %class.8
+// CHECK-NEXT:            Decl %d.8 'numArr' Var : %class.9
+// CHECK-NEXT:            Decl %d.9 'strArr' Var : %class.10
 // CHECK-NEXT:            Decl %d.10 'arguments' Var Arguments
 // CHECK-NEXT:            Scope %s.3
 // CHECK-NEXT:            Scope %s.4
@@ -86,21 +112,21 @@ var strArr: (number | string)[] = ["a", "b", "c", ...numArr];
 // CHECK-NEXT:                    BlockStatement
 // CHECK-NEXT:                        VariableDeclaration
 // CHECK-NEXT:                            VariableDeclarator
-// CHECK-NEXT:                                ArrayExpression : %array.7
+// CHECK-NEXT:                                ArrayExpression : %class.7
 // CHECK-NEXT:                                    NumericLiteral : number
 // CHECK-NEXT:                                    StringLiteral : string
 // CHECK-NEXT:                                    Id 'undefined' [D:E:%d.12 'undefined'] : void
 // CHECK-NEXT:                                Id 'unionArr' [D:E:%d.3 'unionArr']
 // CHECK-NEXT:                        VariableDeclaration
 // CHECK-NEXT:                            VariableDeclarator
-// CHECK-NEXT:                                ArrayExpression : %array.7
+// CHECK-NEXT:                                ArrayExpression : %class.7
 // CHECK-NEXT:                                    NumericLiteral : number
 // CHECK-NEXT:                                    StringLiteral : string
 // CHECK-NEXT:                                Id 'annotatedArr' [D:E:%d.4 'annotatedArr']
 // CHECK-NEXT:                        ExpressionStatement
-// CHECK-NEXT:                            AssignmentExpression : %array.7
-// CHECK-NEXT:                                Id 'annotatedArr' [D:E:%d.4 'annotatedArr'] : %array.7
-// CHECK-NEXT:                                Id 'unionArr' [D:E:%d.3 'unionArr'] : %array.7
+// CHECK-NEXT:                            AssignmentExpression : %class.7
+// CHECK-NEXT:                                Id 'annotatedArr' [D:E:%d.4 'annotatedArr'] : %class.7
+// CHECK-NEXT:                                Id 'unionArr' [D:E:%d.3 'unionArr'] : %class.7
 // CHECK-NEXT:                        ClassDeclaration Scope %s.3
 // CHECK-NEXT:                            Id 'Base' [D:E:%d.5 'Base']
 // CHECK-NEXT:                            ClassBody
@@ -117,7 +143,7 @@ var strArr: (number | string)[] = ["a", "b", "c", ...numArr];
 // CHECK-NEXT:                                                    Super
 // CHECK-NEXT:                        VariableDeclaration
 // CHECK-NEXT:                            VariableDeclarator
-// CHECK-NEXT:                                ArrayExpression : %array.8
+// CHECK-NEXT:                                ArrayExpression : %class.8
 // CHECK-NEXT:                                    NewExpression : %class.2
 // CHECK-NEXT:                                        Id 'Base' [D:E:%d.5 'Base'] : %class_constructor.3
 // CHECK-NEXT:                                    NewExpression : %class.4
@@ -125,17 +151,17 @@ var strArr: (number | string)[] = ["a", "b", "c", ...numArr];
 // CHECK-NEXT:                                Id 'baseArr' [D:E:%d.7 'baseArr']
 // CHECK-NEXT:                        VariableDeclaration
 // CHECK-NEXT:                            VariableDeclarator
-// CHECK-NEXT:                                ArrayExpression : %array.9
+// CHECK-NEXT:                                ArrayExpression : %class.9
 // CHECK-NEXT:                                    NumericLiteral : number
 // CHECK-NEXT:                                    NumericLiteral : number
 // CHECK-NEXT:                                    NumericLiteral : number
 // CHECK-NEXT:                                Id 'numArr' [D:E:%d.8 'numArr']
 // CHECK-NEXT:                        VariableDeclaration
 // CHECK-NEXT:                            VariableDeclarator
-// CHECK-NEXT:                                ArrayExpression : %array.10
+// CHECK-NEXT:                                ArrayExpression : %class.10
 // CHECK-NEXT:                                    StringLiteral : string
 // CHECK-NEXT:                                    StringLiteral : string
 // CHECK-NEXT:                                    StringLiteral : string
 // CHECK-NEXT:                                    SpreadElement
-// CHECK-NEXT:                                        Id 'numArr' [D:E:%d.8 'numArr'] : %array.9
+// CHECK-NEXT:                                        Id 'numArr' [D:E:%d.8 'numArr'] : %class.9
 // CHECK-NEXT:                                Id 'strArr' [D:E:%d.9 'strArr']

@@ -22,13 +22,20 @@ switch (i) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%array.2 = array(number)
+// CHECK-NEXT:%class.2 = class(Array {
+// CHECK-NEXT:  %homeObject: %class.3
+// CHECK-NEXT:})
+// CHECK-NEXT:%class.3 = class( {
+// CHECK-NEXT:  map [final]: generic
+// CHECK-NEXT:  toString [final]: %function.4
+// CHECK-NEXT:})
+// CHECK-NEXT:%function.4 = function(this: %class.2): string
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:        Decl %d.2 'arr' Var : %array.2
+// CHECK-NEXT:        Decl %d.2 'arr' Var : %class.2
 // CHECK-NEXT:        Decl %d.3 'i' Var : number
 // CHECK-NEXT:        Decl %d.4 'arguments' Var Arguments
 // CHECK-NEXT:        Scope %s.2
@@ -40,18 +47,18 @@ switch (i) {
 // CHECK-NEXT:    BlockStatement
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                ArrayExpression : %array.2
+// CHECK-NEXT:                ArrayExpression : %class.2
 // CHECK-NEXT:                Id 'arr' [D:E:%d.2 'arr']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                Id 'i' [D:E:%d.3 'i']
 // CHECK-NEXT:        ForInStatement Scope %s.2
 // CHECK-NEXT:            Id 'i' [D:E:%d.3 'i'] : number
-// CHECK-NEXT:            Id 'arr' [D:E:%d.2 'arr'] : %array.2
+// CHECK-NEXT:            Id 'arr' [D:E:%d.2 'arr'] : %class.2
 // CHECK-NEXT:            EmptyStatement
 // CHECK-NEXT:        ForOfStatement Scope %s.3
 // CHECK-NEXT:            Id 'i' [D:E:%d.3 'i'] : number
-// CHECK-NEXT:            Id 'arr' [D:E:%d.2 'arr'] : %array.2
+// CHECK-NEXT:            Id 'arr' [D:E:%d.2 'arr'] : %class.2
 // CHECK-NEXT:            EmptyStatement
 // CHECK-NEXT:        SwitchStatement Scope %s.4
 // CHECK-NEXT:            Id 'i' [D:E:%d.3 'i'] : number

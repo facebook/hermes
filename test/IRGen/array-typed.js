@@ -23,8 +23,16 @@ return foo;
 
 // CHECK:function global(): object
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %foo(): functionCode
-// CHECK-NEXT:       ReturnInst %0: object
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %Array(): functionCode
+// CHECK-NEXT:  %1 = AllocTypedNonEnumObjectInst (:object) null: null
+// CHECK-NEXT:       StorePropertyStrictInst %1: object, %0: object, "prototype": string
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) empty: any, empty: any, %foo(): functionCode
+// CHECK-NEXT:       ReturnInst %3: object
+// CHECK-NEXT:function_end
+
+// CHECK:function Array(): undefined
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(x: object, sink: any): undefined [typed]

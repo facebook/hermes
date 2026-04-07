@@ -421,8 +421,8 @@ void ESTreeIRGen::genFastArrayPush(Value *array, ESTree::Node &arg) {
   auto *spread = llvh::cast<ESTree::SpreadElementNode>(&arg);
   // TODO: Support spreading non-arrays.
   assert(
-      llvh::isa<flow::ArrayType>(
-          flowContext_.getNodeTypeOrAny(spread->_argument)->info) &&
+      flowContext_.isArrayClassType(
+          flowContext_.getNodeTypeOrAny(spread->_argument)) &&
       "Spread argument must be an array.");
 
   auto *elems = genExpression(spread->_argument);
@@ -430,11 +430,22 @@ void ESTreeIRGen::genFastArrayPush(Value *array, ESTree::Node &arg) {
   Builder.createFastArrayAppendInst(elems, array);
 }
 
-Value *ESTreeIRGen::genFastArrayFromElements(ESTree::NodeList &list) {
+Value *ESTreeIRGen::genFastArrayFromElements(
+    ESTree::NodeList &list,
+    flow::Type *arrayType) {
   // Lower the array literal into creating an empty array followed by a series
   // of push and append.
-  auto *array =
-      Builder.createAllocFastArrayInst(Builder.getLiteralNumber(list.size()));
+
+  // Load Array<T>.prototype from the home object variable for the type.
+  auto *classType = llvh::cast<flow::ClassType>(arrayType->info);
+  auto it = classConstructors_.find(classType);
+  assert(it != classConstructors_.end() && "Array<T> class not compiled");
+  auto *RSI =
+      emitResolveScopeInstIfNeeded(it->second.homeObjectVar->getParent());
+  auto *prototype = Builder.createLoadFrameInst(RSI, it->second.homeObjectVar);
+
+  auto *array = Builder.createAllocFastArrayInst(
+      Builder.getLiteralNumber(list.size()), prototype);
   for (auto &node : list)
     genFastArrayPush(array, node);
   return array;
@@ -453,8 +464,9 @@ Value *ESTreeIRGen::genTupleFromElements(ESTree::NodeList &list) {
 
 Value *ESTreeIRGen::genArrayExpr(ESTree::ArrayExpressionNode *Expr) {
   // If the array literal originates in typed code, produce a fast array.
-  if (llvh::isa<flow::ArrayType>(flowContext_.getNodeTypeOrAny(Expr)->info))
-    return genFastArrayFromElements(Expr->_elements);
+  if (flowContext_.isArrayClassType(flowContext_.getNodeTypeOrAny(Expr)))
+    return genFastArrayFromElements(
+        Expr->_elements, flowContext_.getNodeTypeOrAny(Expr));
   // If the array literal is a tuple, produce a tuple object.
   if (llvh::isa<flow::TupleType>(flowContext_.getNodeTypeOrAny(Expr)->info))
     return genTupleFromElements(Expr->_elements);
@@ -1040,6 +1052,34 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
     }
   }
 
+  // Check if we are loading from a FastArray, and generate the typed IR.
+  // This must be checked before the general ClassType case because Array<T>
+  // is a ClassType but needs special handling for computed access and .length.
+  // NOTE: This is required for correctness, since a regular property load from
+  // a FastArray will simply return undefined if it is out-of-bounds.
+  if (flowContext_.isArrayClassType(
+          flowContext_.getNodeTypeOrAny(mem->_object))) {
+    if (mem->_computed &&
+        llvh::isa<flow::NumberType>(
+            flowContext_.getNodeTypeOrAny(mem->_property)->info)) {
+      return MemberExpressionResult{
+          Builder.createFastArrayLoadInst(
+              baseValue,
+              propValue,
+              flowTypeToIRType(flowContext_.getNodeTypeOrAny(mem))),
+          nullptr,
+          baseValue};
+    }
+
+    // If we are reading the length from a known FastArray, use a
+    // specialised instruction to load it efficiently.
+    auto *ident = llvh::dyn_cast<ESTree::IdentifierNode>(mem->_property);
+    if (!mem->_computed && ident && ident->_name == kw_.identLength) {
+      return MemberExpressionResult{
+          Builder.createFastArrayLengthInst(baseValue), nullptr, baseValue};
+    }
+  }
+
   if (auto *classType = llvh::dyn_cast<flow::ClassType>(
           flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
     if (!mem->_computed) {
@@ -1139,30 +1179,6 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
               flowTypeToIRType(field.type)),
           nullptr,
           baseValue};
-    }
-  }
-
-  // Check if we are loading an array element, and generate the typed IR.
-  // NOTE: This is required for correctness, since a regular property load from
-  // a FastArray will simply return undefined if it is out-of-bounds.
-  if (auto *arrayType = llvh::dyn_cast<flow::ArrayType>(
-          flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
-    if (mem->_computed &&
-        llvh::isa<flow::NumberType>(
-            flowContext_.getNodeTypeOrAny(mem->_property)->info)) {
-      return MemberExpressionResult{
-          Builder.createFastArrayLoadInst(
-              baseValue, propValue, flowTypeToIRType(arrayType->getElement())),
-          nullptr,
-          baseValue};
-    }
-
-    // If we are reading the length from a known FastArray, use the a
-    // specialised instruction to load it efficiently.
-    auto *ident = llvh::dyn_cast<ESTree::IdentifierNode>(mem->_property);
-    if (!mem->_computed && ident && ident->_name == kw_.identLength) {
-      return MemberExpressionResult{
-          Builder.createFastArrayLengthInst(baseValue), nullptr, baseValue};
     }
   }
 
@@ -1320,6 +1336,19 @@ void ESTreeIRGen::emitMemberStore(
     return;
   }
 
+  // Check if we are storing to a FastArray, and generate the specialised
+  // instruction for it. Must be checked before the general ClassType case
+  // because Array<T> is a ClassType.
+  if (flowContext_.isArrayClassType(
+          flowContext_.getNodeTypeOrAny(mem->_object))) {
+    if (mem->_computed &&
+        llvh::isa<flow::NumberType>(
+            flowContext_.getNodeTypeOrAny(mem->_property)->info)) {
+      Builder.createFastArrayStoreInst(storedValue, baseValue, propValue);
+      return;
+    }
+  }
+
   if (auto *classType = llvh::dyn_cast<flow::ClassType>(
           flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
     if (!mem->_computed) {
@@ -1342,18 +1371,6 @@ void ESTreeIRGen::emitMemberStore(
           *optIndex,
           Builder.getLiteralString(propName),
           flowTypeToIRType(field.type).isNonPtr());
-      return;
-    }
-  }
-
-  // Check if we are storing to a FastArray, and generate the specialised
-  // instruction for it.
-  if (llvh::isa<flow::ArrayType>(
-          flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
-    if (mem->_computed &&
-        llvh::isa<flow::NumberType>(
-            flowContext_.getNodeTypeOrAny(mem->_property)->info)) {
-      Builder.createFastArrayStoreInst(storedValue, baseValue, propValue);
       return;
     }
   }

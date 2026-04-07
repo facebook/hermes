@@ -2460,6 +2460,7 @@ void HBCISel::generateAllocFastArrayInst(
     BasicBlock *) {
   BCFGen_->emitNewFastArray(
       encodeValue(inst),
+      encodeValue(inst->getPrototype()),
       std::min<uint32_t>(inst->getCapacity()->asUInt32(), UINT16_MAX));
 }
 void HBCISel::generateFastArrayStoreInst(

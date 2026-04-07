@@ -113,6 +113,35 @@ CallResult<HermesValue> FastArray::create(Runtime &runtime, size_t capacity) {
   return lv.self.getHermesValue();
 }
 
+CallResult<HermesValue> FastArray::create(
+    Runtime &runtime,
+    Handle<JSObject> prototype,
+    size_t capacity) {
+  struct : Locals {
+    PinnedValue<FastArray> self;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  auto classHandle = createClass(runtime, prototype);
+
+  lv.self = JSObjectInit::initToPointer(
+      runtime,
+      runtime.makeAFixed<FastArray>(
+          runtime, prototype, classHandle, GCPointerBase::NoBarriers()));
+
+  auto arrRes = ArrayStorageSmall::create(runtime, capacity);
+  if (arrRes == ExecutionStatus::EXCEPTION)
+    return ExecutionStatus::EXCEPTION;
+
+  lv.self->indexedStorage_.setNonNull(
+      runtime, vmcast<ArrayStorageSmall>(*arrRes), runtime.getHeap());
+
+  auto shv = SmallHermesValue::encodeNumberValue(0, runtime);
+  lv.self->setLength(runtime, shv);
+
+  return lv.self.getHermesValue();
+}
+
 ExecutionStatus
 FastArray::pushSlow(Handle<FastArray> self, Runtime &runtime, Handle<> val) {
   GCScopeMarkerRAII marker{runtime};

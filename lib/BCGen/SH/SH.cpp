@@ -1661,8 +1661,9 @@ class InstrGen {
   void generateAllocFastArrayInst(AllocFastArrayInst &inst) {
     os_.indent(2);
     generateRegister(inst);
-    os_ << " = _sh_new_fastarray(shr, " << inst.getCapacity()->asUInt32()
-        << ");\n";
+    os_ << " = _sh_new_fastarray_with_proto(shr, &";
+    generateRegister(*inst.getPrototype());
+    os_ << ", " << inst.getCapacity()->asUInt32() << ");\n";
   }
   void generateGetTemplateObjectInst(GetTemplateObjectInst &inst) {
     os_.indent(2);

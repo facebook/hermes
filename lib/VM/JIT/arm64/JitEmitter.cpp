@@ -3513,14 +3513,18 @@ void Emitter::newArrayWithBuffer(
   frUpdatedWithHW(frRes, hwRes);
 }
 
-void Emitter::newFastArray(FR frRes, uint32_t size) {
-  comment("// NewFastArray r%u, %u", frRes.index(), size);
+void Emitter::newFastArray(FR frRes, FR frProto, uint32_t size) {
+  comment("// NewFastArray r%u, r%u, %u", frRes.index(), frProto.index(), size);
   syncAllFRTempExcept(frRes);
+  syncToFrame(frProto);
   freeAllFRTempExcept({});
   a.mov(a64::x0, xRuntime);
-  a.mov(a64::w1, size);
+  loadFrameAddr(a64::x1, frProto);
+  a.mov(a64::w2, size);
   EMIT_RUNTIME_CALL(
-      *this, SHLegacyValue (*)(SHRuntime *, uint32_t), _sh_new_fastarray);
+      *this,
+      SHLegacyValue (*)(SHRuntime *, SHLegacyValue *, uint32_t),
+      _sh_new_fastarray_with_proto);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
   movHWFromHW<false>(hwRes, HWReg::gpX(0));
   frUpdatedWithHW(frRes, hwRes);

@@ -174,6 +174,13 @@ void FlowTypesDumper::printTypeDescription(
       os << ')';
       break;
 
+    case TypeKind::InferencePlaceholderArray:
+      os << '(';
+      printTypeRef(
+          os, llvh::cast<InferencePlaceholderArrayType>(type)->getElement());
+      os << ')';
+      break;
+
     case TypeKind::Tuple: {
       os << '(';
       bool first = true;

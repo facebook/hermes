@@ -824,7 +824,7 @@ class Emitter {
       uint32_t numLiterals,
       uint32_t bufferIndex);
 
-  void newFastArray(FR frRes, uint32_t size);
+  void newFastArray(FR frRes, FR frProto, uint32_t size);
   void fastArrayLength(FR frRes, FR arr);
   void fastArrayLoad(FR frRes, FR arr, FR idx);
   void fastArrayStore(FR arr, FR idx, FR val);

@@ -1185,7 +1185,7 @@ EMIT_NEW_ARRAY_WITH_BUFFER(NewArrayWithBufferLong)
 
 inline void JITContext::Compiler::emitNewFastArray(
     const inst::NewFastArrayInst *inst) {
-  em_.newFastArray(FR(inst->op1), inst->op2);
+  em_.newFastArray(FR(inst->op1), FR(inst->op2), inst->op3);
 }
 inline void JITContext::Compiler::emitFastArrayLength(
     const inst::FastArrayLengthInst *inst) {

@@ -744,7 +744,7 @@ class ESTreeIRGen {
   void genForOfStatement(ESTree::ForOfStatementNode *forOfStmt);
   void genForOfFastArrayStatement(
       ESTree::ForOfStatementNode *forOfStmt,
-      flow::ArrayType *type);
+      flow::Type *arrayType);
   void genAsyncForOfStatement(ESTree::ForOfStatementNode *forOfStmt);
   void genWhileLoop(ESTree::WhileStatementNode *loop);
   void genDoWhileLoop(ESTree::DoWhileStatementNode *loop);
@@ -927,7 +927,10 @@ class ESTreeIRGen {
 
   /// Convert the given list of elements in \p list into an array, spreading
   /// SpreadElements as needed.
-  Value *genFastArrayFromElements(ESTree::NodeList &list);
+  /// \p arrayType is the flow::Type of the array, used to find the prototype.
+  Value *genFastArrayFromElements(
+      ESTree::NodeList &list,
+      flow::Type *arrayType);
 
   /// Convert the given list of elements in \p list into an object with
   /// properties at the element indices given by the tuple type, so PrLoad can

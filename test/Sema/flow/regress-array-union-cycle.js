@@ -15,16 +15,21 @@ var b: B[] = a;
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%array.2 = array(%union.3)
-// CHECK-NEXT:%union.3 = union(null | %tuple.4)
-// CHECK-NEXT:%tuple.4 = tuple(%union.3, number)
+// CHECK-NEXT:%class.2 = class(Array {
+// CHECK-NEXT:  %homeObject: %class.3
+// CHECK-NEXT:})
+// CHECK-NEXT:%class.3 = class( {
+// CHECK-NEXT:  map [final]: generic
+// CHECK-NEXT:  toString [final]: %function.4
+// CHECK-NEXT:})
+// CHECK-NEXT:%function.4 = function(this: %class.2): string
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:        Decl %d.2 'a' Var : %array.2
-// CHECK-NEXT:        Decl %d.3 'b' Var : %array.2
+// CHECK-NEXT:        Decl %d.2 'a' Var : %class.2
+// CHECK-NEXT:        Decl %d.3 'b' Var : %class.2
 // CHECK-NEXT:        Decl %d.4 'arguments' Var Arguments
 
 // CHECK:FunctionExpression : %untyped_function.1
@@ -48,9 +53,9 @@ var b: B[] = a;
 // CHECK-NEXT:                NullLiteralTypeAnnotation
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                ArrayExpression : %array.2
+// CHECK-NEXT:                ArrayExpression : %class.2
 // CHECK-NEXT:                Id 'a' [D:E:%d.2 'a']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                Id 'a' [D:E:%d.2 'a'] : %array.2
+// CHECK-NEXT:                Id 'a' [D:E:%d.2 'a'] : %class.2
 // CHECK-NEXT:                Id 'b' [D:E:%d.3 'b']

@@ -205,6 +205,8 @@ llvh::StringRef TypeInfo::getKindName() const {
       return "generic";
     case TypeKind::InferencePlaceholder:
       return "inference placeholder";
+    case TypeKind::InferencePlaceholderArray:
+      return "inference placeholder array";
   }
   llvm_unreachable("invalid TypeKind");
 }
@@ -506,6 +508,23 @@ bool ArrayType::_equalsImpl(const ArrayType *other, CompareState &state) const {
 
 unsigned ArrayType::_hashImpl() const {
   return (unsigned)llvh::hash_combine((unsigned)TypeKind::Array);
+}
+
+int InferencePlaceholderArrayType::_compareImpl(
+    const InferencePlaceholderArrayType *other,
+    CompareState &state) const {
+  return element_->info->compare(other->element_->info, state);
+}
+
+bool InferencePlaceholderArrayType::_equalsImpl(
+    const InferencePlaceholderArrayType *other,
+    CompareState &state) const {
+  return element_->info->equals(other->element_->info, state);
+}
+
+unsigned InferencePlaceholderArrayType::_hashImpl() const {
+  return (unsigned)llvh::hash_combine(
+      (unsigned)TypeKind::InferencePlaceholderArray);
 }
 
 int TupleType::_compareImpl(const TupleType *other, CompareState &state) const {

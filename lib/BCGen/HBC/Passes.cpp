@@ -82,7 +82,7 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
     return true;
 
   if (llvh::isa<AllocFastArrayInst>(Inst))
-    return true;
+    return opIndex == AllocFastArrayInst::CapacityIdx;
 
   // SwitchInst's rest of the operands are case values,
   // hence they will stay as constant.

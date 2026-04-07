@@ -56,8 +56,8 @@ class LowerAST : public ESTree::RecursionDepthTracker<LowerAST> {
         return;
 
       // (obj: FastArray).push(...)
-      if (llvh::isa<flow::ArrayType>(
-              flowContext_.getNodeTypeOrAny(member->_object)->info)) {
+      if (flowContext_.isArrayClassType(
+              flowContext_.getNodeTypeOrAny(member->_object))) {
         auto *ident = llvh::dyn_cast<ESTree::IdentifierNode>(member->_property);
 
         if (!member->_computed && ident && ident->_name == kw_.identPush) {

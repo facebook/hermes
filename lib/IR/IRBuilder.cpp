@@ -787,8 +787,9 @@ TryStoreGlobalPropertyInst *IRBuilder::createTryStoreGlobalPropertyInst(
 }
 
 AllocFastArrayInst *IRBuilder::createAllocFastArrayInst(
-    LiteralNumber *sizeHint) {
-  auto A = new AllocFastArrayInst(sizeHint);
+    LiteralNumber *sizeHint,
+    Value *prototype) {
+  auto A = new AllocFastArrayInst(sizeHint, prototype);
   insert(A);
   return A;
 }

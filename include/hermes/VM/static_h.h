@@ -1308,6 +1308,13 @@ SHERMES_EXPORT void _sh_ljs_define_own_in_dense_array(
 SHERMES_EXPORT SHLegacyValue
 _sh_new_fastarray(SHRuntime *shr, uint32_t capacity);
 
+/// \return a newly created fast array with the given \p prototype and
+/// \p capacity.
+SHERMES_EXPORT SHLegacyValue _sh_new_fastarray_with_proto(
+    SHRuntime *shr,
+    SHLegacyValue *prototype,
+    uint32_t capacity);
+
 /// \p base[in/out] is the object to be iterated.
 /// \p index[out] is the next index in the list.
 /// \p size[out] is the size of the list.

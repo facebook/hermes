@@ -14,14 +14,28 @@ let a: number[][] = [[1, 2], [3, 4], [], ...[[10, 11], [12, 13]]];
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%array.2 = array(number)
-// CHECK-NEXT:%array.3 = array(%array.2)
+// CHECK-NEXT:%class.2 = class(Array {
+// CHECK-NEXT:  %homeObject: %class.4
+// CHECK-NEXT:})
+// CHECK-NEXT:%class.3 = class(Array {
+// CHECK-NEXT:  %homeObject: %class.5
+// CHECK-NEXT:})
+// CHECK-NEXT:%class.4 = class( {
+// CHECK-NEXT:  map [final]: generic
+// CHECK-NEXT:  toString [final]: %function.6
+// CHECK-NEXT:})
+// CHECK-NEXT:%class.5 = class( {
+// CHECK-NEXT:  map [final]: generic
+// CHECK-NEXT:  toString [final]: %function.7
+// CHECK-NEXT:})
+// CHECK-NEXT:%function.6 = function(this: %class.2): string
+// CHECK-NEXT:%function.7 = function(this: %class.3): string
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:        Decl %d.2 'a' Let : %array.3
+// CHECK-NEXT:        Decl %d.2 'a' Let : %class.3
 // CHECK-NEXT:        Decl %d.3 'arguments' Var Arguments
 
 // CHECK:FunctionExpression : %untyped_function.1
@@ -31,20 +45,20 @@ let a: number[][] = [[1, 2], [3, 4], [], ...[[10, 11], [12, 13]]];
 // CHECK-NEXT:            StringLiteral : string
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                ArrayExpression : %array.3
-// CHECK-NEXT:                    ArrayExpression : %array.2
+// CHECK-NEXT:                ArrayExpression : %class.3
+// CHECK-NEXT:                    ArrayExpression : %class.2
 // CHECK-NEXT:                        NumericLiteral : number
 // CHECK-NEXT:                        NumericLiteral : number
-// CHECK-NEXT:                    ArrayExpression : %array.2
+// CHECK-NEXT:                    ArrayExpression : %class.2
 // CHECK-NEXT:                        NumericLiteral : number
 // CHECK-NEXT:                        NumericLiteral : number
-// CHECK-NEXT:                    ArrayExpression : %array.2
+// CHECK-NEXT:                    ArrayExpression : %class.2
 // CHECK-NEXT:                    SpreadElement
-// CHECK-NEXT:                        ArrayExpression : %array.3
-// CHECK-NEXT:                            ArrayExpression : %array.2
+// CHECK-NEXT:                        ArrayExpression : %class.3
+// CHECK-NEXT:                            ArrayExpression : %class.2
 // CHECK-NEXT:                                NumericLiteral : number
 // CHECK-NEXT:                                NumericLiteral : number
-// CHECK-NEXT:                            ArrayExpression : %array.2
+// CHECK-NEXT:                            ArrayExpression : %class.2
 // CHECK-NEXT:                                NumericLiteral : number
 // CHECK-NEXT:                                NumericLiteral : number
 // CHECK-NEXT:                Id 'a' [D:E:%d.2 'a']

@@ -144,6 +144,10 @@ class FastArray : public JSObject {
   /// non-null.
   static CallResult<HermesValue> create(Runtime &runtime, size_t capacity = 4);
 
+  /// Create a new FastArray with the given \p prototype and \p capacity.
+  static CallResult<HermesValue>
+  create(Runtime &runtime, Handle<JSObject> prototype, size_t capacity);
+
   template <typename NeedsBarriers>
   FastArray(
       Runtime &runtime,

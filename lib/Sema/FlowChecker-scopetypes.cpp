@@ -30,6 +30,8 @@
 
 #include "FlowChecker.h"
 
+#include "hermes/AST/ASTUtils.h"
+
 #include "llvh/ADT/MapVector.h"
 #include "llvh/ADT/ScopeExit.h"
 #include "llvh/Support/SaveAndRestore.h"
@@ -46,8 +48,10 @@ class FlowChecker::GenericTypeInstantiation {
  public:
   /// The generic TypeDecl.
   TypeDecl *typeDecl;
-  /// The generic type annotation node.
-  ESTree::GenericTypeAnnotationNode *annotation;
+  /// The type annotation node. This is either a GenericTypeAnnotationNode
+  /// (for explicit generic syntax like Array<T>) or an
+  /// ArrayTypeAnnotationNode (for T[] shorthand syntax).
+  ESTree::Node *annotation;
   /// The type arguments provided to the generic type annotation, may contain
   /// incomplete unions or other forward-declared generics.
   llvh::SmallVector<Type *, 2> typeArgTypes{};
@@ -58,9 +62,7 @@ class FlowChecker::GenericTypeInstantiation {
   /// using the same one.
   ESTree::Node *classSpecialization = nullptr;
 
-  GenericTypeInstantiation(
-      TypeDecl *typeDecl,
-      ESTree::GenericTypeAnnotationNode *annotation)
+  GenericTypeInstantiation(TypeDecl *typeDecl, ESTree::Node *annotation)
       : typeDecl(typeDecl), annotation(annotation) {}
 };
 
@@ -121,6 +123,11 @@ class FlowChecker::FindLoopingTypes {
 
   bool isLooping(Type *type, GenericType *) {
     hermes_fatal("GenericType must be instantiated before checking for loops");
+  }
+
+  bool isLooping(Type *, InferencePlaceholderArrayType *) {
+    // Inference placeholders are transient and don't participate in loops.
+    return false;
   }
 
   bool isLooping(Type *, TypeWithId *type) {
@@ -331,7 +338,7 @@ class FlowChecker::DeclareScopeTypes {
 
         if (decl->generic) {
           // Avoid visiting the body of the class until we have an instance.
-          outer.bindingTable_.try_emplace(
+          auto [entry, _] = outer.bindingTable_.try_emplace(
               id->_name, TypeDecl(nullptr, scope, declNode, decl));
 
           outer.registerGeneric(
@@ -339,6 +346,12 @@ class FlowChecker::DeclareScopeTypes {
               classNode,
               getGenericParentNode(),
               outer.bindingTable_.getCurrentScope());
+          if (hermes::findDecorator(
+                  classNode->_decorators,
+                  {outer.kw_.identHermes, outer.kw_.identArray})) {
+            outer.arrayClassDecl_ = decl;
+            outer.arrayTypeDecl_ = &entry->second;
+          }
           continue;
         }
 
@@ -577,12 +590,26 @@ class FlowChecker::DeclareScopeTypes {
     }
 
     // Array types require resolving the array element.
+    // Treat T[] the same as Array<T> — defer specialization via
+    // forwardGenericInstantiations so that uncanonicalized union element
+    // types are not hashed prematurely.
     if (auto *arr =
             llvh::dyn_cast<ESTree::ArrayTypeAnnotationNode>(annotation)) {
+      Type *elementType =
+          resolveTypeAnnotation(arr->_elementType, visited, depth);
+      if (outer.arrayTypeDecl_) {
+        Type *type = outer.flowContext_.createType(
+            outer.flowContext_.getGenericInfo(), annotation);
+        GenericTypeInstantiation instantiation{outer.arrayTypeDecl_, arr};
+        instantiation.typeArgTypes.push_back(elementType);
+        forwardGenericInstantiations.insert({type, std::move(instantiation)});
+        return type;
+      }
+      // No FlowLib Array class — resolve to any.
+      outer.sm_.error(
+          annotation->getSourceRange(), "ft: Array type requires FlowLib");
       return outer.flowContext_.createType(
-          outer.flowContext_.createArray(
-              resolveTypeAnnotation(arr->_elementType, visited, depth)),
-          annotation);
+          outer.flowContext_.getAnyInfo(), annotation);
     }
 
     // Tuple types require resolving the tuple elements.
@@ -963,7 +990,7 @@ class FlowChecker::DeclareScopeTypes {
       bool populated = outer.validateAndBindTypeParameters(
           llvh::cast<ESTree::TypeParameterDeclarationNode>(
               aliasNode->_typeParameters),
-          generic.annotation->_typeParameters->getSourceRange(),
+          generic.annotation->getSourceRange(),
           generic.typeArgTypes,
           scope);
       if (!populated) {
@@ -1009,7 +1036,7 @@ class FlowChecker::DeclareScopeTypes {
     assert(typeDecl->genericClassDecl && "Expected a generic class");
     auto [newDecl, specialization] = outer.specializeGenericWithParsedTypes(
         typeDecl->genericClassDecl,
-        generic.annotation->_typeParameters->getSourceRange(),
+        generic.annotation->getSourceRange(),
         generic.typeArgTypes,
         typeDecl->genericClassDecl->scope);
     if (!newDecl)
@@ -1019,9 +1046,18 @@ class FlowChecker::DeclareScopeTypes {
     forwardGenericInstantiations.at(type).classSpecialization = specialization;
 
     Type *classConsType = outer.getDeclType(newDecl);
-    type->info = llvh::cast<ClassConstructorType>(classConsType->info)
-                     ->getClassType()
-                     ->info;
+    Type *classType =
+        llvh::cast<ClassConstructorType>(classConsType->info)->getClassType();
+    type->info = classType->info;
+
+    // If this is an Array<T> specialization, register it so that
+    // isArrayClassType works during body typechecking.
+    // Uses getSpecializedArrayClassType which handles registration.
+    if (typeDecl->genericClassDecl == outer.arrayClassDecl_ &&
+        generic.typeArgTypes.size() == 1) {
+      outer.getSpecializedArrayClassType(
+          generic.typeArgTypes[0], generic.annotation->getSourceRange());
+    }
   }
 
   /// Fixup a union by first fixing up any non-looping arms then

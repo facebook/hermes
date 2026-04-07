@@ -2755,11 +2755,17 @@ tailCall:
       }
 
       CASE(NewFastArray) {
-        CAPTURE_IP_ASSIGN(
-            auto createRes, FastArray::create(runtime, ip->iNewFastArray.op2));
-        if (createRes == ExecutionStatus::EXCEPTION)
-          goto exception;
-        O1REG(NewFastArray) = *createRes;
+        {
+          GCScopeMarkerRAII marker{runtime};
+          auto protoHandle =
+              Handle<JSObject>::vmcast(runtime.makeHandle(O2REG(NewFastArray)));
+          CAPTURE_IP_ASSIGN(
+              auto createRes,
+              FastArray::create(runtime, protoHandle, ip->iNewFastArray.op3));
+          if (createRes == ExecutionStatus::EXCEPTION)
+            goto exception;
+          O1REG(NewFastArray) = *createRes;
+        }
         ip = NEXTINST(NewFastArray);
         DISPATCH;
       }

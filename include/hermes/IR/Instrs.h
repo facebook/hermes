@@ -2937,12 +2937,13 @@ class AllocFastArrayInst : public Instruction {
   void operator=(const AllocFastArrayInst &) = delete;
 
  public:
-  enum { CapacityIdx };
+  enum { CapacityIdx, PrototypeIdx };
 
-  explicit AllocFastArrayInst(LiteralNumber *sizeHint)
+  explicit AllocFastArrayInst(LiteralNumber *sizeHint, Value *prototype)
       : Instruction(ValueKind::AllocFastArrayInstKind) {
     setType(*getInherentTypeImpl());
     pushOperand(sizeHint);
+    pushOperand(prototype);
   }
   explicit AllocFastArrayInst(
       const AllocFastArrayInst *src,
@@ -2952,6 +2953,11 @@ class AllocFastArrayInst : public Instruction {
   /// \return the capacity to allocate the array with.
   LiteralNumber *getCapacity() const {
     return cast<LiteralNumber>(getOperand(CapacityIdx));
+  }
+
+  /// \return the prototype to use for the array.
+  Value *getPrototype() const {
+    return getOperand(PrototypeIdx);
   }
 
   static llvh::Optional<Type> getInherentTypeImpl() {

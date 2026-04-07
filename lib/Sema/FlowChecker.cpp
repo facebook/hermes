@@ -1944,10 +1944,28 @@ Type *FlowChecker::parseNullableTypeAnnotation(
   return flowContext_.createType(flowContext_.createPopulatedNullable(t), node);
 }
 
+Type *FlowChecker::resolveArrayType(Type *elementType, ESTree::Node *node) {
+  Type *arrClassType =
+      getSpecializedArrayClassType(elementType, node->getSourceRange());
+  if (!arrClassType) {
+    // If the element type is an inference placeholder, create an
+    // InferencePlaceholderArrayType to preserve the constraint structure
+    // for type inference.
+    if (elementType->info &&
+        llvh::isa<InferencePlaceholderType>(elementType->info)) {
+      return flowContext_.createType(
+          flowContext_.createInferencePlaceholderArray(elementType), node);
+    }
+    sm_.error(node->getSourceRange(), "ft: Array type requires FlowLib");
+    return flowContext_.createType(flowContext_.getAnyInfo(), node);
+  }
+  return arrClassType;
+}
+
 Type *FlowChecker::parseArrayTypeAnnotation(
     ESTree::ArrayTypeAnnotationNode *node) {
-  return flowContext_.createType(
-      flowContext_.createArray(parseTypeAnnotation(node->_elementType)), node);
+  Type *elementType = parseTypeAnnotation(node->_elementType);
+  return resolveArrayType(elementType, node);
 }
 
 Type *FlowChecker::parseTupleTypeAnnotation(
@@ -1991,6 +2009,17 @@ Type *FlowChecker::parseGenericTypeAnnotation(
       return flowContext_.getAny();
     }
     if (td->genericClassDecl) {
+      // Array<T> is equivalent to T[], so use the same code path which
+      // properly handles inference placeholders.
+      if (td->genericClassDecl == arrayClassDecl_) {
+        auto *typeArgsNode = llvh::cast<ESTree::TypeParameterInstantiationNode>(
+            node->_typeParameters);
+        if (typeArgsNode->_params.size() == 1) {
+          Type *elementType =
+              parseTypeAnnotation(&typeArgsNode->_params.front());
+          return resolveArrayType(elementType, node);
+        }
+      }
       // Resolve to the specialized class.
       return resolveGenericClassSpecializationForType(
           node, td->genericClassDecl);
@@ -2050,20 +2079,6 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
       if (canAFlowIntoB(a, bType->info).canFlow)
         return {.canFlow = true};
 
-    return {};
-  }
-
-  // Arrays are invariant, so if `a` is an array, `b` must be an array with the
-  // same element type.
-  if (auto *arrayA = llvh::dyn_cast<ArrayType>(a)) {
-    auto *arrayB = llvh::dyn_cast<ArrayType>(b);
-    if (!arrayB)
-      return {};
-    assert(
-        arrayA->getElement()->info && arrayB->getElement()->info &&
-        "uninitialized elements");
-    if (arrayA->getElement()->info->equals(arrayB->getElement()->info))
-      return {.canFlow = true};
     return {};
   }
 
@@ -2663,6 +2678,66 @@ bool FlowChecker::inferPlaceholdersFromCallArgs(
   return llvh::none_of(typeArgs, [](Type *typeArg) -> bool {
     return llvh::isa<InferencePlaceholderType>(typeArg->info);
   });
+}
+
+Type *FlowChecker::getSpecializedArrayClassType(
+    Type *elementType,
+    SMRange errorRange) {
+  if (!arrayClassDecl_) {
+    return nullptr;
+  }
+  // Avoid specializing if the element type is not concrete (e.g., it is a
+  // generic type parameter), to prevent issues during recursive typechecking
+  // of the Array class body.
+  if (llvh::isa<GenericType>(elementType->info) ||
+      llvh::isa<InferencePlaceholderType>(elementType->info)) {
+    return nullptr;
+  }
+  auto [newDecl, specialization] = specializeGenericWithParsedTypes(
+      arrayClassDecl_, errorRange, {elementType}, arrayClassDecl_->scope);
+  if (!newDecl)
+    return nullptr;
+  Type *classConsType = getDeclType(newDecl);
+  Type *classType =
+      llvh::cast<ClassConstructorType>(classConsType->info)->getClassType();
+  // The scopetypes path may have already registered this specialization.
+  // registerArrayClassType asserts the element type is consistent.
+  flowContext_.registerArrayClassType(classType, elementType);
+  return classType;
+}
+
+Type *FlowChecker::lookupPropertyOnClass(
+    ClassType *classType,
+    Identifier propName,
+    ESTree::Node *propNode) {
+  auto optField = classType->findPublicField(propName);
+  if (optField)
+    return optField->getField()->type;
+  auto *homeObj = classType->getHomeObjectTypeInfo();
+  if (!homeObj)
+    return nullptr;
+  auto optMethod = homeObj->findPublicField(propName);
+  if (optMethod) {
+    Type *type = optMethod->getField()->type;
+    // For non-generic final methods, propagate the Decl from the
+    // method definition key to the call-site property so IRGen
+    // can look it up. Generic final methods get their Decls set
+    // on the call-site property through specializedMethodDecls_.
+    const auto *field = optMethod->getField();
+    if (propNode && field->finalMethod && !llvh::isa<GenericType>(type->info)) {
+      auto *methodKey = llvh::cast<ESTree::IdentifierNode>(field->method->_key);
+      if (auto *decl = semContext_.getExpressionDecl(methodKey)) {
+        auto *idNode = llvh::cast<ESTree::IdentifierNode>(propNode);
+        semContext_.setExpressionDecl(idNode, decl);
+      }
+    }
+    assert(
+        (llvh::isa<BaseFunctionType>(type->info) ||
+         llvh::isa<GenericType>(type->info)) &&
+        "methods must be functions or generic");
+    return type;
+  }
+  return nullptr;
 }
 
 bool FlowChecker::resolveBuiltinMethodCall(

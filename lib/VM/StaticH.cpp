@@ -2025,6 +2025,25 @@ extern "C" SHLegacyValue _sh_new_fastarray(SHRuntime *shr, uint32_t sizeHint) {
 }
 
 LLVM_ATTRIBUTE_NOINLINE
+extern "C" SHLegacyValue _sh_new_fastarray_with_proto(
+    SHRuntime *shr,
+    SHLegacyValue *prototype,
+    uint32_t sizeHint) {
+  Runtime &runtime = getRuntime(shr);
+
+  CallResult<HermesValue> arrayRes{ExecutionStatus::EXCEPTION};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    auto protoHandle = Handle<JSObject>::vmcast(toPHV(prototype));
+    arrayRes = FastArray::create(runtime, protoHandle, sizeHint);
+  }
+  if (LLVM_UNLIKELY(arrayRes == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+
+  return *arrayRes;
+}
+
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue
 _sh_ljs_is_in_rjs(SHRuntime *shr, SHLegacyValue *name, SHLegacyValue *obj) {
   Runtime &runtime = getRuntime(shr);

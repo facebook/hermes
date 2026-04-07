@@ -141,8 +141,8 @@ DEFINE_VALUE_BUFFER_USER(NewArrayWithBufferLong)
 DEFINE_OPCODE_2(NewArray, Reg8, UInt16)
 
 /// Create a new FastArray.
-/// Arg1 = new FastArray(Arg2)
-DEFINE_OPCODE_2(NewFastArray, Reg8, UInt16)
+/// Arg1 = new FastArray(prototype=Arg2, capacity=Arg3)
+DEFINE_OPCODE_3(NewFastArray, Reg8, Reg8, UInt16)
 
 /// Get the length of a FastArray.
 /// Arg1 = Arg2.length

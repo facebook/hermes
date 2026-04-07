@@ -452,6 +452,7 @@ Value *ESTreeIRGen::getDefaultInitValue(flow::Type *type) {
       return Builder.getLiteralPositiveZero();
     case flow::TypeKind::Generic:
     case flow::TypeKind::InferencePlaceholder:
+    case flow::TypeKind::InferencePlaceholderArray:
       hermes_fatal("invalid typekind");
   }
   llvm_unreachable("all cases handled");
@@ -498,6 +499,7 @@ Type ESTreeIRGen::flowTypeToIRType(flow::TypeInfo *flowType) {
       return Type::createObject();
     case flow::TypeKind::Generic:
     case flow::TypeKind::InferencePlaceholder:
+    case flow::TypeKind::InferencePlaceholderArray:
       hermes_fatal("invalid typekind");
   }
   llvm_unreachable("all cases handled");

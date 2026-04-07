@@ -61,6 +61,23 @@ void FlowChecker::matchConstraintToType(
     // at the CallExpression visitor.
 
     if (constraint->info->getKind() != type->info->getKind()) {
+      // Handle InferencePlaceholderArray constraint matched against Array
+      // class type. This occurs during type inference when T[] is parsed as
+      // InferencePlaceholderArrayType (because the placeholder can't be
+      // specialized), but the actual argument is an Array<T> class
+      // specialization.
+      if (auto *constraintArr =
+              llvh::dyn_cast<InferencePlaceholderArrayType>(constraint->info)) {
+        if (flowContext_.isArrayClassType(type)) {
+          Type *constraintElem = constraintArr->getElement();
+          // Resolve the InferencePlaceholderArrayType to the actual array
+          // class type.
+          constraint->info = type->info;
+          worklist.insert(
+              {constraintElem, flowContext_.getArrayElementType(type)});
+          continue;
+        }
+      }
       // When the constraint is a Union containing placeholders and the
       // actual type is not a Union, try to resolve placeholder arms by
       // matching them against the actual type.
@@ -82,11 +99,24 @@ void FlowChecker::matchConstraintToType(
       _HERMES_SEMA_FLOW_SINGLETONS
 
       // Classes are nominally typed.
-      case TypeKind::Class:
+      case TypeKind::Class: {
+        // If both sides are Array<T> specializations, recurse into the
+        // element types so inference placeholders can be matched.
+        if (flowContext_.isArrayClassType(constraint) &&
+            flowContext_.isArrayClassType(type)) {
+          worklist.insert(
+              {flowContext_.getArrayElementType(constraint),
+               flowContext_.getArrayElementType(type)});
+        }
+        continue;
+      }
       case TypeKind::ClassConstructor:
       // Functions that we don't infer the types of here.
       case TypeKind::NativeFunction:
       case TypeKind::UntypedFunction:
+      // InferencePlaceholderArray is only used as constraints, never as
+      // actual types, so both sides having this kind shouldn't happen.
+      case TypeKind::InferencePlaceholderArray:
         continue;
 
       case TypeKind::Union:
@@ -456,51 +486,65 @@ class FlowChecker::ExprVisitor {
           {.canFlow = true, .needCheckedCast = true});
     }
 
-    if (auto *classType = llvh::dyn_cast<ClassType>(objType->info)) {
+    if (outer_.flowContext_.isArrayClassType(objType) &&
+        (node->_computed ||
+         !llvh::isa<ESTree::PrivateNameNode>(node->_property))) {
+      if (node->_computed) {
+        resType = outer_.flowContext_.getArrayElementType(objType);
+        Type *indexType = outer_.getNodeTypeOrAny(node->_property);
+        if (!llvh::isa<NumberType>(indexType->info) &&
+            !llvh::isa<AnyType>(indexType->info)) {
+          outer_.sm_.error(
+              node->_property->getSourceRange(),
+              "ft: array index must be a number");
+        }
+      } else {
+        auto *id = llvh::cast<ESTree::IdentifierNode>(node->_property);
+        if (id->_name == outer_.kw_.identLength) {
+          resType = outer_.flowContext_.getNumber();
+        } else if (id->_name == outer_.kw_.identPush) {
+          // TODO: Represent .push as a real function.
+          resType = outer_.flowContext_.getAny();
+        } else {
+          // Look up the property on the Array<T> class.
+          auto *classInfo = llvh::cast<ClassType>(objType->info);
+          resType = outer_.lookupPropertyOnClass(
+              classInfo, Identifier::getFromPointer(id->_name), id);
+          if (!resType) {
+            outer_.sm_.error(
+                node->_property->getSourceRange(),
+                "ft: property " + id->_name->str() + " not defined on Array");
+          }
+        }
+      }
+    } else if (auto *classType = llvh::dyn_cast<ClassType>(objType->info)) {
       if (node->_computed) {
         outer_.sm_.error(
             node->_property->getSourceRange(),
             "ft: computed access to class instances not supported");
-      } else {
-        bool found = false;
-        Identifier name;
-        bool isPrivate;
-        OptValue<ClassType::FieldLookupEntry> optField;
-        if (auto *privateName =
-                llvh::dyn_cast<ESTree::PrivateNameNode>(node->_property)) {
-          isPrivate = true;
-          name = outer_.astContext_.getPrivateNameIdentifier(
-              llvh::cast<ESTree::IdentifierNode>(privateName->_id)->_name);
-          if (!outer_.classTypeIsEnclosing(classType)) {
-            outer_.sm_.error(
-                node->_property->getSourceRange(),
-                "ft: private field " + name.str() +
-                    " not visible outside class " +
-                    classType->getClassNameOrDefault());
-          }
-          optField = classType->findPrivateField(name);
-        } else {
-          auto *id = llvh::cast<ESTree::IdentifierNode>(node->_property);
-          isPrivate = false;
-          name = Identifier::getFromPointer(id->_name);
-          optField = classType->findPublicField(name);
+      } else if (
+          auto *privateName =
+              llvh::dyn_cast<ESTree::PrivateNameNode>(node->_property)) {
+        // Private field/method access.
+        Identifier name = outer_.astContext_.getPrivateNameIdentifier(
+            llvh::cast<ESTree::IdentifierNode>(privateName->_id)->_name);
+        if (!outer_.classTypeIsEnclosing(classType)) {
+          outer_.sm_.error(
+              node->_property->getSourceRange(),
+              "ft: private field " + name.str() +
+                  " not visible outside class " +
+                  classType->getClassNameOrDefault());
         }
+        auto optField = classType->findPrivateField(name);
         if (optField) {
           resType = optField->getField()->type;
-          found = true;
         } else {
+          auto *homeObj = classType->getHomeObjectTypeInfo();
           OptValue<ClassType::FieldLookupEntry> optMethod;
-          optMethod = isPrivate
-              ? classType->getHomeObjectTypeInfo()->findPrivateField(name)
-              : classType->getHomeObjectTypeInfo()->findPublicField(name);
+          if (homeObj)
+            optMethod = homeObj->findPrivateField(name);
           if (optMethod) {
             resType = optMethod->getField()->type;
-            found = true;
-            // For non-generic final methods, propagate the Decl from the
-            // method definition key to the call-site property so IRGen
-            // can look it up.
-            // Generic final methods get their Decls set through
-            // specializedMethodDecls_.
             const auto *field = optMethod->getField();
             if (field->finalMethod && !llvh::isa<GenericType>(resType->info)) {
               auto *methodKey =
@@ -515,9 +559,20 @@ class FlowChecker::ExprVisitor {
                 (llvh::isa<BaseFunctionType>(resType->info) ||
                  llvh::isa<GenericType>(resType->info)) &&
                 "methods must be functions or generic");
+          } else {
+            // TODO: class declaration location.
+            outer_.sm_.error(
+                node->_property->getSourceRange(),
+                "ft: property " + name.str() + " not defined in class " +
+                    classType->getClassNameOrDefault());
           }
         }
-        if (!found) {
+      } else {
+        // Public field/method access.
+        auto *id = llvh::cast<ESTree::IdentifierNode>(node->_property);
+        Identifier name = Identifier::getFromPointer(id->_name);
+        resType = outer_.lookupPropertyOnClass(classType, name, id);
+        if (!resType) {
           // TODO: class declaration location.
           outer_.sm_.error(
               node->_property->getSourceRange(),
@@ -546,38 +601,6 @@ class FlowChecker::ExprVisitor {
               node->_property->getSourceRange(),
               "ft: property " + id->_name->str() + " not defined in object");
           resType = outer_.flowContext_.getAny();
-        }
-      }
-    } else if (auto *arrayType = llvh::dyn_cast<ArrayType>(objType->info)) {
-      if (node->_computed) {
-        resType = arrayType->getElement();
-        Type *indexType = outer_.getNodeTypeOrAny(node->_property);
-        if (!llvh::isa<NumberType>(indexType->info) &&
-            !llvh::isa<AnyType>(indexType->info)) {
-          outer_.sm_.error(
-              node->_property->getSourceRange(),
-              "ft: array index must be a number");
-        }
-      } else {
-        auto *id = llvh::cast<ESTree::IdentifierNode>(node->_property);
-        if (id->_name == outer_.kw_.identLength) {
-          resType = outer_.flowContext_.getNumber();
-        } else if (
-            auto *builtinDecl = outer_.flowContext_.findBuiltinMethod(
-                {TypeKind::Array,
-                 id->_name,
-                 /* isStatic */ false})) {
-          // Found a builtin method - store for CallExpression to use.
-          outer_.setBuiltinMethodDecl(node, builtinDecl);
-          // The actual type will be determined by CallExpression when it
-          // specializes the generic. For now, use any.
-          resType = outer_.flowContext_.getAny();
-        } else if (id->_name == outer_.kw_.identPush) {
-          // TODO: Represent .push as a real function.
-          resType = outer_.flowContext_.getAny();
-        } else {
-          outer_.sm_.error(
-              node->_property->getSourceRange(), "ft: unknown array property");
         }
       }
     } else if (auto *tupleType = llvh::dyn_cast<TupleType>(objType->info)) {
@@ -779,19 +802,26 @@ class FlowChecker::ExprVisitor {
   }
 
   /// Visits an array expression as an array.
-  /// \param constraint the constraint on the array type.
-  /// \param constraintArrTy optional, the ArrayType info on \p constraint.
+  /// \param constraint the constraint on the array type, if it is an Array
+  ///   ClassType.
   void visitArrayExpressionAsArray(
       ESTree::ArrayExpressionNode *node,
       ESTree::Node *parent,
-      Type *constraint,
-      ArrayType *constraintArrTy) {
-    assert(
-        (constraint ? constraint->info : nullptr) == constraintArrTy &&
-        "incorrect info");
+      Type *constraint) {
+    bool hasArrayConstraint = false;
+    Type *constraintElemTy = nullptr;
+    if (constraint) {
+      if (outer_.flowContext_.isArrayClassType(constraint)) {
+        hasArrayConstraint = true;
+        constraintElemTy = outer_.flowContext_.getArrayElementType(constraint);
+      } else if (
+          auto *inferArray =
+              llvh::dyn_cast<InferencePlaceholderArrayType>(constraint->info)) {
+        hasArrayConstraint = true;
+        constraintElemTy = inferArray->getElement();
+      }
+    }
 
-    Type *constraintElemTy =
-        constraintArrTy ? constraintArrTy->getElement() : nullptr;
     // Construct a union of all the element types if there's no constraint.
     llvh::SmallSetVector<Type *, 4> elTypes{};
     auto &elements = node->_elements;
@@ -801,19 +831,19 @@ class FlowChecker::ExprVisitor {
 
       Type *actualElemTy = nullptr;
       if (auto *spread = llvh::dyn_cast<ESTree::SpreadElementNode>(elem)) {
-        Type *constraintSpreadElemTy = constraintArrTy ? constraint : nullptr;
+        Type *constraintSpreadElemTy =
+            hasArrayConstraint ? constraint : nullptr;
         visitESTreeNodeNoReplace(
             *this, spread->_argument, node, constraintSpreadElemTy);
         auto *spreadTy = outer_.getNodeTypeOrAny(spread->_argument);
-        auto *spreadArrTy = llvh::dyn_cast<ArrayType>(spreadTy->info);
-        if (!spreadArrTy) {
+        if (!outer_.flowContext_.isArrayClassType(spreadTy)) {
           // TODO: Handle spread of non-arrays.
           outer_.sm_.error(
               spread->_argument->getSourceRange(),
               "ft: spread argument must be an array");
           continue;
         }
-        actualElemTy = spreadArrTy->getElement();
+        actualElemTy = outer_.flowContext_.getArrayElementType(spreadTy);
       } else {
         visitESTreeNodeNoReplace(*this, elem, node, constraintElemTy);
         actualElemTy = outer_.getNodeTypeOrAny(elem);
@@ -850,7 +880,8 @@ class FlowChecker::ExprVisitor {
       }
     }
 
-    if (constraint) {
+    if (constraint &&
+        !llvh::isa<InferencePlaceholderArrayType>(constraint->info)) {
       outer_.setNodeType(node, constraint);
     } else if (elTypes.empty()) {
       // If there's no elements in the union, then just use 'any'.
@@ -860,12 +891,17 @@ class FlowChecker::ExprVisitor {
       outer_.setNodeType(node, outer_.flowContext_.getAny());
     } else {
       // Otherwise, construct a union of all the element types.
-      outer_.setNodeType(
-          node,
-          outer_.flowContext_.createType(
-              outer_.flowContext_.createArray(outer_.flowContext_.createType(
-                  outer_.flowContext_.maybeCreateUnion(
-                      elTypes.getArrayRef())))));
+      Type *elemUnion = outer_.flowContext_.createType(
+          outer_.flowContext_.maybeCreateUnion(elTypes.getArrayRef()));
+      Type *arrType = outer_.getSpecializedArrayClassType(
+          elemUnion, node->getSourceRange());
+      if (arrType) {
+        outer_.setNodeType(node, arrType);
+      } else {
+        outer_.sm_.error(
+            node->getSourceRange(), "ft: Array type requires Flowlib");
+        outer_.setNodeType(node, outer_.flowContext_.getAny());
+      }
     }
   }
 
@@ -878,12 +914,8 @@ class FlowChecker::ExprVisitor {
       // The type of ArrayExpression is only Tuple when that constraint was
       // passed in from above.
       visitArrayExpressionAsTuple(node, parent, constraint, tupleTy);
-    } else if (
-        auto *constraintArrTy = llvh::dyn_cast_or_null<ArrayType>(
-            constraint ? constraint->info : nullptr)) {
-      visitArrayExpressionAsArray(node, parent, constraint, constraintArrTy);
     } else {
-      visitArrayExpressionAsArray(node, parent, nullptr, nullptr);
+      visitArrayExpressionAsArray(node, parent, constraint);
     }
   }
 

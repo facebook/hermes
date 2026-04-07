@@ -22,21 +22,35 @@ var r2: boolean[] = map(arr, elem => !elem);
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%array.2 = array(number)
-// CHECK-NEXT:%array.3 = array(boolean)
+// CHECK-NEXT:%class.2 = class(Array {
+// CHECK-NEXT:  %homeObject: %class.8
+// CHECK-NEXT:})
+// CHECK-NEXT:%class.3 = class(Array {
+// CHECK-NEXT:  %homeObject: %class.9
+// CHECK-NEXT:})
 // CHECK-NEXT:%function.4 = function(elem: number): number
-// CHECK-NEXT:%function.5 = function(x: %array.2, f: %function.4): %array.2
+// CHECK-NEXT:%function.5 = function(x: %class.2, f: %function.4): %class.2
 // CHECK-NEXT:%function.6 = function(elem: number): boolean
-// CHECK-NEXT:%function.7 = function(x: %array.2, f: %function.6): %array.3
+// CHECK-NEXT:%function.7 = function(x: %class.2, f: %function.6): %class.3
+// CHECK-NEXT:%class.8 = class( {
+// CHECK-NEXT:  map [final]: generic
+// CHECK-NEXT:  toString [final]: %function.10
+// CHECK-NEXT:})
+// CHECK-NEXT:%class.9 = class( {
+// CHECK-NEXT:  map [final]: generic
+// CHECK-NEXT:  toString [final]: %function.11
+// CHECK-NEXT:})
+// CHECK-NEXT:%function.10 = function(this: %class.2): string
+// CHECK-NEXT:%function.11 = function(this: %class.3): string
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:        Decl %d.2 'map' Var
-// CHECK-NEXT:        Decl %d.3 'arr' Var : %array.2
-// CHECK-NEXT:        Decl %d.4 'r1' Var : %array.2
-// CHECK-NEXT:        Decl %d.5 'r2' Var : %array.3
+// CHECK-NEXT:        Decl %d.3 'arr' Var : %class.2
+// CHECK-NEXT:        Decl %d.4 'r1' Var : %class.2
+// CHECK-NEXT:        Decl %d.5 'r2' Var : %class.3
 // CHECK-NEXT:        Decl %d.6 'arguments' Var Arguments
 // CHECK-NEXT:        Decl %d.7 'map' Var : %function.5
 // CHECK-NEXT:        Decl %d.8 'map' Var : %function.7
@@ -60,18 +74,18 @@ var r2: boolean[] = map(arr, elem => !elem);
 // CHECK-NEXT:            Decl %d.15 'elem' Parameter : number
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.7
-// CHECK-NEXT:            Decl %d.16 'x' Parameter : %array.2
+// CHECK-NEXT:            Decl %d.16 'x' Parameter : %class.2
 // CHECK-NEXT:            Decl %d.17 'f' Parameter : %function.4
-// CHECK-NEXT:            Decl %d.18 'result' Var : %array.2
+// CHECK-NEXT:            Decl %d.18 'result' Var : %class.2
 // CHECK-NEXT:            Decl %d.19 'i' Var : number
 // CHECK-NEXT:            Decl %d.20 'arguments' Var Arguments
 // CHECK-NEXT:            Scope %s.8
 // CHECK-NEXT:                Scope %s.9
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.10
-// CHECK-NEXT:            Decl %d.21 'x' Parameter : %array.2
+// CHECK-NEXT:            Decl %d.21 'x' Parameter : %class.2
 // CHECK-NEXT:            Decl %d.22 'f' Parameter : %function.6
-// CHECK-NEXT:            Decl %d.23 'result' Var : %array.3
+// CHECK-NEXT:            Decl %d.23 'result' Var : %class.3
 // CHECK-NEXT:            Decl %d.24 'i' Var : number
 // CHECK-NEXT:            Decl %d.25 'arguments' Var Arguments
 // CHECK-NEXT:            Scope %s.11
@@ -87,7 +101,7 @@ var r2: boolean[] = map(arr, elem => !elem);
 // CHECK-NEXT:            BlockStatement
 // CHECK-NEXT:                VariableDeclaration
 // CHECK-NEXT:                    VariableDeclarator
-// CHECK-NEXT:                        ArrayExpression : %array.2
+// CHECK-NEXT:                        ArrayExpression : %class.2
 // CHECK-NEXT:                        Id 'result' [D:E:%d.18 'result']
 // CHECK-NEXT:                ForStatement Scope %s.8
 // CHECK-NEXT:                    VariableDeclaration
@@ -97,7 +111,7 @@ var r2: boolean[] = map(arr, elem => !elem);
 // CHECK-NEXT:                    BinaryExpression : boolean
 // CHECK-NEXT:                        Id 'i' [D:E:%d.19 'i'] : number
 // CHECK-NEXT:                        MemberExpression : number
-// CHECK-NEXT:                            Id 'x' [D:E:%d.16 'x'] : %array.2
+// CHECK-NEXT:                            Id 'x' [D:E:%d.16 'x'] : %class.2
 // CHECK-NEXT:                            Id 'length'
 // CHECK-NEXT:                    UpdateExpression : number
 // CHECK-NEXT:                        Id 'i' [D:E:%d.19 'i'] : number
@@ -107,14 +121,14 @@ var r2: boolean[] = map(arr, elem => !elem);
 // CHECK-NEXT:                                MemberExpression : any
 // CHECK-NEXT:                                    SHBuiltin
 // CHECK-NEXT:                                    Id '?fastArrayPush'
-// CHECK-NEXT:                                Id 'result' [D:E:%d.18 'result'] : %array.2
+// CHECK-NEXT:                                Id 'result' [D:E:%d.18 'result'] : %class.2
 // CHECK-NEXT:                                CallExpression : number
 // CHECK-NEXT:                                    Id 'f' [D:E:%d.17 'f'] : %function.4
 // CHECK-NEXT:                                    MemberExpression : number
-// CHECK-NEXT:                                        Id 'x' [D:E:%d.16 'x'] : %array.2
+// CHECK-NEXT:                                        Id 'x' [D:E:%d.16 'x'] : %class.2
 // CHECK-NEXT:                                        Id 'i' [D:E:%d.19 'i'] : number
 // CHECK-NEXT:                ReturnStatement
-// CHECK-NEXT:                    Id 'result' [D:E:%d.18 'result'] : %array.2
+// CHECK-NEXT:                    Id 'result' [D:E:%d.18 'result'] : %class.2
 // CHECK-NEXT:            TypeParameterDeclaration
 // CHECK-NEXT:                TypeParameter
 // CHECK-NEXT:                TypeParameter
@@ -125,7 +139,7 @@ var r2: boolean[] = map(arr, elem => !elem);
 // CHECK-NEXT:            BlockStatement
 // CHECK-NEXT:                VariableDeclaration
 // CHECK-NEXT:                    VariableDeclarator
-// CHECK-NEXT:                        ArrayExpression : %array.3
+// CHECK-NEXT:                        ArrayExpression : %class.3
 // CHECK-NEXT:                        Id 'result' [D:E:%d.23 'result']
 // CHECK-NEXT:                ForStatement Scope %s.11
 // CHECK-NEXT:                    VariableDeclaration
@@ -135,7 +149,7 @@ var r2: boolean[] = map(arr, elem => !elem);
 // CHECK-NEXT:                    BinaryExpression : boolean
 // CHECK-NEXT:                        Id 'i' [D:E:%d.24 'i'] : number
 // CHECK-NEXT:                        MemberExpression : number
-// CHECK-NEXT:                            Id 'x' [D:E:%d.21 'x'] : %array.2
+// CHECK-NEXT:                            Id 'x' [D:E:%d.21 'x'] : %class.2
 // CHECK-NEXT:                            Id 'length'
 // CHECK-NEXT:                    UpdateExpression : number
 // CHECK-NEXT:                        Id 'i' [D:E:%d.24 'i'] : number
@@ -145,14 +159,14 @@ var r2: boolean[] = map(arr, elem => !elem);
 // CHECK-NEXT:                                MemberExpression : any
 // CHECK-NEXT:                                    SHBuiltin
 // CHECK-NEXT:                                    Id '?fastArrayPush'
-// CHECK-NEXT:                                Id 'result' [D:E:%d.23 'result'] : %array.3
+// CHECK-NEXT:                                Id 'result' [D:E:%d.23 'result'] : %class.3
 // CHECK-NEXT:                                CallExpression : boolean
 // CHECK-NEXT:                                    Id 'f' [D:E:%d.22 'f'] : %function.6
 // CHECK-NEXT:                                    MemberExpression : number
-// CHECK-NEXT:                                        Id 'x' [D:E:%d.21 'x'] : %array.2
+// CHECK-NEXT:                                        Id 'x' [D:E:%d.21 'x'] : %class.2
 // CHECK-NEXT:                                        Id 'i' [D:E:%d.24 'i'] : number
 // CHECK-NEXT:                ReturnStatement
-// CHECK-NEXT:                    Id 'result' [D:E:%d.23 'result'] : %array.3
+// CHECK-NEXT:                    Id 'result' [D:E:%d.23 'result'] : %class.3
 // CHECK-NEXT:            TypeParameterDeclaration
 // CHECK-NEXT:                TypeParameter
 // CHECK-NEXT:                TypeParameter
@@ -195,16 +209,16 @@ var r2: boolean[] = map(arr, elem => !elem);
 // CHECK-NEXT:                TypeParameter
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                ArrayExpression : %array.2
+// CHECK-NEXT:                ArrayExpression : %class.2
 // CHECK-NEXT:                    NumericLiteral : number
 // CHECK-NEXT:                    NumericLiteral : number
 // CHECK-NEXT:                    NumericLiteral : number
 // CHECK-NEXT:                Id 'arr' [D:E:%d.3 'arr']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                CallExpression : %array.2
+// CHECK-NEXT:                CallExpression : %class.2
 // CHECK-NEXT:                    Id 'map' [D:E:%d.7 'map'] : %function.5
-// CHECK-NEXT:                    Id 'arr' [D:E:%d.3 'arr'] : %array.2
+// CHECK-NEXT:                    Id 'arr' [D:E:%d.3 'arr'] : %class.2
 // CHECK-NEXT:                    ArrowFunctionExpression : %function.4
 // CHECK-NEXT:                        Id 'elem' [D:E:%d.14 'elem']
 // CHECK-NEXT:                        BlockStatement
@@ -213,9 +227,9 @@ var r2: boolean[] = map(arr, elem => !elem);
 // CHECK-NEXT:                Id 'r1' [D:E:%d.4 'r1']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                CallExpression : %array.3
+// CHECK-NEXT:                CallExpression : %class.3
 // CHECK-NEXT:                    Id 'map' [D:E:%d.8 'map'] : %function.7
-// CHECK-NEXT:                    Id 'arr' [D:E:%d.3 'arr'] : %array.2
+// CHECK-NEXT:                    Id 'arr' [D:E:%d.3 'arr'] : %class.2
 // CHECK-NEXT:                    ArrowFunctionExpression : %function.6
 // CHECK-NEXT:                        Id 'elem' [D:E:%d.15 'elem']
 // CHECK-NEXT:                        BlockStatement

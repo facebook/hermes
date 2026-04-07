@@ -36,16 +36,17 @@ namespace flow {
   _HERMES_SEMA_FLOW_DEFKIND(Any)                  \
   _HERMES_SEMA_FLOW_DEFKIND(Mixed)
 
-#define _HERMES_SEMA_FLOW_COMPLEX_TYPES      \
-  _HERMES_SEMA_FLOW_DEFKIND(Union)           \
-  _HERMES_SEMA_FLOW_DEFKIND(Array)           \
-  _HERMES_SEMA_FLOW_DEFKIND(Tuple)           \
-  _HERMES_SEMA_FLOW_DEFKIND(ExactObject)     \
-  _HERMES_SEMA_FLOW_DEFKIND(UntypedFunction) \
-  _HERMES_SEMA_FLOW_DEFKIND(TypedFunction)   \
-  _HERMES_SEMA_FLOW_DEFKIND(NativeFunction)  \
-  _HERMES_SEMA_FLOW_DEFKIND(Class)           \
-  _HERMES_SEMA_FLOW_DEFKIND(ClassConstructor)
+#define _HERMES_SEMA_FLOW_COMPLEX_TYPES       \
+  _HERMES_SEMA_FLOW_DEFKIND(Union)            \
+  _HERMES_SEMA_FLOW_DEFKIND(Array)            \
+  _HERMES_SEMA_FLOW_DEFKIND(Tuple)            \
+  _HERMES_SEMA_FLOW_DEFKIND(ExactObject)      \
+  _HERMES_SEMA_FLOW_DEFKIND(UntypedFunction)  \
+  _HERMES_SEMA_FLOW_DEFKIND(TypedFunction)    \
+  _HERMES_SEMA_FLOW_DEFKIND(NativeFunction)   \
+  _HERMES_SEMA_FLOW_DEFKIND(Class)            \
+  _HERMES_SEMA_FLOW_DEFKIND(ClassConstructor) \
+  _HERMES_SEMA_FLOW_DEFKIND(InferencePlaceholderArray)
 
 enum class TypeKind : uint8_t {
 #define _HERMES_SEMA_FLOW_DEFKIND(name) name,
@@ -408,6 +409,34 @@ class ArrayType : public SingleType<TypeKind::Array, TypeInfo> {
   bool isInitialized() const {
     return element_ != nullptr;
   }
+};
+
+/// Array type used as a constraint during type argument inference.
+/// Wraps an element type that is an InferencePlaceholderType, allowing
+/// matchConstraintToType to recurse into the element to resolve the
+/// placeholder against an actual Array class type.
+class InferencePlaceholderArrayType
+    : public SingleType<TypeKind::InferencePlaceholderArray, TypeInfo> {
+  Type *element_ = nullptr;
+
+ public:
+  /// Initialize a new instance.
+  explicit InferencePlaceholderArrayType(Type *element) : element_(element) {}
+
+  Type *getElement() const {
+    return element_;
+  }
+
+  /// Compare two instances of the same TypeKind.
+  int _compareImpl(
+      const InferencePlaceholderArrayType *other,
+      CompareState &state) const;
+  /// Compare two instances of the same TypeKind.
+  bool _equalsImpl(
+      const InferencePlaceholderArrayType *other,
+      CompareState &state) const;
+  /// Calculate the type-specific hash.
+  unsigned _hashImpl() const;
 };
 
 class TupleType : public TypeInfo {
@@ -1070,6 +1099,11 @@ class FlowContext {
     assert(element);
     return &allocArray_.emplace_back(element);
   }
+  InferencePlaceholderArrayType *createInferencePlaceholderArray(
+      Type *element) {
+    assert(element);
+    return &allocInferencePlaceholderArray_.emplace_back(element);
+  }
   TupleType *createTuple(llvh::ArrayRef<Type *> types) {
     return &allocTuple_.emplace_back(types);
   }
@@ -1137,6 +1171,25 @@ class FlowContext {
     return it != builtinCallTargets_.end() ? it->second : nullptr;
   }
 
+  /// Register an Array<T> ClassType specialization with its element type.
+  /// This is idempotent — re-registering the same classType is a no-op.
+  void registerArrayClassType(Type *classType, Type *elementType) {
+    arrayClassTypes_.try_emplace(classType, elementType);
+  }
+
+  /// Check if a Type has ClassType info that is an Array<T> specialization.
+  bool isArrayClassType(const Type *t) const {
+    return t && arrayClassTypes_.count(const_cast<Type *>(t)) > 0;
+  }
+
+  /// Return the element type for an Array<T> ClassType specialization.
+  /// \pre isArrayClassType(t) must be true.
+  Type *getArrayElementType(const Type *t) const {
+    auto it = arrayClassTypes_.find(const_cast<Type *>(t));
+    assert(it != arrayClassTypes_.end() && "not an Array ClassType");
+    return it->second;
+  }
+
  private:
   /// Allocate a union from the given \p types. The types may not contain
   /// duplicates or other unions.
@@ -1171,6 +1224,10 @@ class FlowContext {
   llvh::
       DenseMap<ESTree::CallExpressionNode *, ESTree::FunctionDeclarationNode *>
           builtinCallTargets_{};
+
+  /// Maps Array<T> ClassType specializations to their element Type.
+  /// Populated by FlowChecker during specialization, used by IRGen.
+  llvh::DenseMap<Type *, Type *> arrayClassTypes_{};
 
   std::deque<Type> allocTypes_{};
 

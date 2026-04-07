@@ -297,6 +297,11 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// which need their bodies typechecked.
   std::deque<DeferredGenericClass> typecheckQueue_;
 
+  /// The Decl for the generic Array<T> class, identified by @Hermes.array.
+  sema::Decl *arrayClassDecl_ = nullptr;
+  /// The TypeDecl for the generic Array<T> class in the binding table.
+  TypeDecl *arrayTypeDecl_ = nullptr;
+
   /// Maps MemberExpressionNode to its resolved builtin FunctionDeclarationNode.
   /// Used to pass builtin info from MemberExpressionNode to CallExpressionNode.
   llvh::DenseMap<
@@ -522,6 +527,11 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
 
   Type *parseUnionTypeAnnotation(ESTree::UnionTypeAnnotationNode *node);
   Type *parseNullableTypeAnnotation(ESTree::NullableTypeAnnotationNode *node);
+  /// Resolve an array type with the given element type. Handles inference
+  /// placeholders by creating InferencePlaceholderArrayType. Used by both
+  /// T[] syntax (parseArrayTypeAnnotation) and Array<T> syntax
+  /// (parseGenericTypeAnnotation).
+  Type *resolveArrayType(Type *elementType, ESTree::Node *node);
   Type *parseArrayTypeAnnotation(ESTree::ArrayTypeAnnotationNode *node);
   Type *parseTupleTypeAnnotation(ESTree::TupleTypeAnnotationNode *node);
   Type *parseObjectTypeAnnotation(ESTree::ObjectTypeAnnotationNode *node);
@@ -742,6 +752,19 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
       Type *receiverType = nullptr,
       TypeBindingTableScopePtrTy paramParsingScope =
           TypeBindingTableScopePtrTy{});
+
+  /// Specialize Array<T> with the given element type.
+  /// \return the specialized ClassType (instance type), or nullptr on error.
+  Type *getSpecializedArrayClassType(Type *elementType, SMRange errorRange);
+
+  /// Look up a named property on a ClassType (fields + home object methods).
+  /// If \p propNode is provided, propagate the Decl from final method
+  /// definitions to the property node for IRGen.
+  /// \return the type of the found property, or nullptr if not found.
+  Type *lookupPropertyOnClass(
+      flow::ClassType *classType,
+      Identifier propName,
+      ESTree::Node *propNode = nullptr);
 
   /// Resolve a call to a builtin method.
   /// Sets the MemberExpression callee type and registers for IRGen.
