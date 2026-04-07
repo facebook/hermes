@@ -1995,7 +1995,10 @@ Decl *SemanticResolver::resolveIdentifier(
   }
 
   // Undeclared variables outside `typeof` cause runtime errors in strict mode.
-  if (!inTypeof && curFunctionInfo()->strict) {
+  // $SHBuiltin is special-cased: it is always resolved as an undeclared global
+  // property without a warning, since it is a compiler intrinsic.
+  if (!inTypeof && curFunctionInfo()->strict &&
+      identifier->_name != kw_.identSHBuiltin) {
     llvh::StringRef funcName = functionContext()->getFunctionName()
         ? functionContext()->getFunctionName()->str()
         : "";

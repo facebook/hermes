@@ -296,6 +296,9 @@ class FlowChecker::DeclareScopeTypes {
   ///   in which to insert new generic specializations.
   ESTree::Node *getGenericParentNode() const {
     assert(scopeNode && "no scope node found");
+    if (llvh::isa<ESTree::ProgramNode>(scopeNode)) {
+      return scopeNode;
+    }
     if (auto *funcNode = llvh::dyn_cast<ESTree::FunctionLikeNode>(scopeNode)) {
       return ESTree::getBlockStatement(funcNode);
     }

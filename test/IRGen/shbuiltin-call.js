@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -Xdump-functions="" -typed -dump-ir -O0 %s | %FileCheckOrRegen --match-full-lines %s
+// RUN: %shermes -fno-std-globals -Xdump-functions="" -typed -dump-ir -O0 %s | %FileCheckOrRegen --match-full-lines %s
 
 function foo(x, y) {}
 $SHBuiltin.call(foo, 11, 12, 13);

@@ -23,87 +23,79 @@ let u: U;
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%union.2 = union(%function.4 | %function.5)
-// CHECK-NEXT:%object.3 = object({
-// CHECK-NEXT:})
+// CHECK-NEXT:%union.2 = union(%function.3 | %function.4)
+// CHECK-NEXT:%function.3 = function(a: number): %function.5
 // CHECK-NEXT:%function.4 = function(a: number): %function.6
-// CHECK-NEXT:%function.5 = function(a: number): %function.7
+// CHECK-NEXT:%function.5 = function(a: string): %function.7
 // CHECK-NEXT:%function.6 = function(a: string): %function.8
-// CHECK-NEXT:%function.7 = function(a: string): %function.9
-// CHECK-NEXT:%function.8 = function(a: boolean): %function.4
-// CHECK-NEXT:%function.9 = function(a: boolean): %function.7
+// CHECK-NEXT:%function.7 = function(a: boolean): %function.3
+// CHECK-NEXT:%function.8 = function(a: boolean): %function.6
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
 // CHECK-NEXT:    Scope %s.1
-// CHECK-NEXT:    Func strict
-// CHECK-NEXT:        Scope %s.2
-// CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:            Decl %d.2 'u' Let : %union.2
-// CHECK-NEXT:            Decl %d.3 'arguments' Var Arguments
+// CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
+// CHECK-NEXT:        Decl %d.2 'u' Let : %union.2
+// CHECK-NEXT:        Decl %d.3 'arguments' Var Arguments
 
-// CHECK:Program Scope %s.1
-// CHECK-NEXT:    ExpressionStatement
-// CHECK-NEXT:        CallExpression : any
-// CHECK-NEXT:            FunctionExpression : %untyped_function.1
-// CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
-// CHECK-NEXT:                BlockStatement
-// CHECK-NEXT:                    TypeAlias
-// CHECK-NEXT:                        Id 'A'
-// CHECK-NEXT:                        FunctionTypeAnnotation
-// CHECK-NEXT:                            FunctionTypeParam
-// CHECK-NEXT:                                Id 'a'
-// CHECK-NEXT:                                NumberTypeAnnotation
-// CHECK-NEXT:                            GenericTypeAnnotation
-// CHECK-NEXT:                                Id 'B'
-// CHECK-NEXT:                    TypeAlias
-// CHECK-NEXT:                        Id 'B'
-// CHECK-NEXT:                        FunctionTypeAnnotation
-// CHECK-NEXT:                            FunctionTypeParam
-// CHECK-NEXT:                                Id 'a'
-// CHECK-NEXT:                                StringTypeAnnotation
-// CHECK-NEXT:                            GenericTypeAnnotation
-// CHECK-NEXT:                                Id 'C'
-// CHECK-NEXT:                    TypeAlias
-// CHECK-NEXT:                        Id 'C'
-// CHECK-NEXT:                        FunctionTypeAnnotation
-// CHECK-NEXT:                            FunctionTypeParam
-// CHECK-NEXT:                                Id 'a'
-// CHECK-NEXT:                                BooleanTypeAnnotation
-// CHECK-NEXT:                            GenericTypeAnnotation
-// CHECK-NEXT:                                Id 'A'
-// CHECK-NEXT:                    TypeAlias
-// CHECK-NEXT:                        Id 'A1'
-// CHECK-NEXT:                        FunctionTypeAnnotation
-// CHECK-NEXT:                            FunctionTypeParam
-// CHECK-NEXT:                                Id 'a'
-// CHECK-NEXT:                                NumberTypeAnnotation
-// CHECK-NEXT:                            GenericTypeAnnotation
-// CHECK-NEXT:                                Id 'B1'
-// CHECK-NEXT:                    TypeAlias
-// CHECK-NEXT:                        Id 'B1'
-// CHECK-NEXT:                        FunctionTypeAnnotation
-// CHECK-NEXT:                            FunctionTypeParam
-// CHECK-NEXT:                                Id 'a'
-// CHECK-NEXT:                                StringTypeAnnotation
-// CHECK-NEXT:                            GenericTypeAnnotation
-// CHECK-NEXT:                                Id 'C1'
-// CHECK-NEXT:                    TypeAlias
-// CHECK-NEXT:                        Id 'C1'
-// CHECK-NEXT:                        FunctionTypeAnnotation
-// CHECK-NEXT:                            FunctionTypeParam
-// CHECK-NEXT:                                Id 'a'
-// CHECK-NEXT:                                BooleanTypeAnnotation
-// CHECK-NEXT:                            GenericTypeAnnotation
-// CHECK-NEXT:                                Id 'B1'
-// CHECK-NEXT:                    TypeAlias
-// CHECK-NEXT:                        Id 'U'
-// CHECK-NEXT:                        UnionTypeAnnotation
-// CHECK-NEXT:                            GenericTypeAnnotation
-// CHECK-NEXT:                                Id 'A'
-// CHECK-NEXT:                            GenericTypeAnnotation
-// CHECK-NEXT:                                Id 'A1'
-// CHECK-NEXT:                    VariableDeclaration
-// CHECK-NEXT:                        VariableDeclarator
-// CHECK-NEXT:                            Id 'u' [D:E:%d.2 'u']
-// CHECK-NEXT:            ObjectExpression : %object.3
+// CHECK:FunctionExpression : %untyped_function.1
+// CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
+// CHECK-NEXT:    BlockStatement
+// CHECK-NEXT:        TypeAlias
+// CHECK-NEXT:            Id 'A'
+// CHECK-NEXT:            FunctionTypeAnnotation
+// CHECK-NEXT:                FunctionTypeParam
+// CHECK-NEXT:                    Id 'a'
+// CHECK-NEXT:                    NumberTypeAnnotation
+// CHECK-NEXT:                GenericTypeAnnotation
+// CHECK-NEXT:                    Id 'B'
+// CHECK-NEXT:        TypeAlias
+// CHECK-NEXT:            Id 'B'
+// CHECK-NEXT:            FunctionTypeAnnotation
+// CHECK-NEXT:                FunctionTypeParam
+// CHECK-NEXT:                    Id 'a'
+// CHECK-NEXT:                    StringTypeAnnotation
+// CHECK-NEXT:                GenericTypeAnnotation
+// CHECK-NEXT:                    Id 'C'
+// CHECK-NEXT:        TypeAlias
+// CHECK-NEXT:            Id 'C'
+// CHECK-NEXT:            FunctionTypeAnnotation
+// CHECK-NEXT:                FunctionTypeParam
+// CHECK-NEXT:                    Id 'a'
+// CHECK-NEXT:                    BooleanTypeAnnotation
+// CHECK-NEXT:                GenericTypeAnnotation
+// CHECK-NEXT:                    Id 'A'
+// CHECK-NEXT:        TypeAlias
+// CHECK-NEXT:            Id 'A1'
+// CHECK-NEXT:            FunctionTypeAnnotation
+// CHECK-NEXT:                FunctionTypeParam
+// CHECK-NEXT:                    Id 'a'
+// CHECK-NEXT:                    NumberTypeAnnotation
+// CHECK-NEXT:                GenericTypeAnnotation
+// CHECK-NEXT:                    Id 'B1'
+// CHECK-NEXT:        TypeAlias
+// CHECK-NEXT:            Id 'B1'
+// CHECK-NEXT:            FunctionTypeAnnotation
+// CHECK-NEXT:                FunctionTypeParam
+// CHECK-NEXT:                    Id 'a'
+// CHECK-NEXT:                    StringTypeAnnotation
+// CHECK-NEXT:                GenericTypeAnnotation
+// CHECK-NEXT:                    Id 'C1'
+// CHECK-NEXT:        TypeAlias
+// CHECK-NEXT:            Id 'C1'
+// CHECK-NEXT:            FunctionTypeAnnotation
+// CHECK-NEXT:                FunctionTypeParam
+// CHECK-NEXT:                    Id 'a'
+// CHECK-NEXT:                    BooleanTypeAnnotation
+// CHECK-NEXT:                GenericTypeAnnotation
+// CHECK-NEXT:                    Id 'B1'
+// CHECK-NEXT:        TypeAlias
+// CHECK-NEXT:            Id 'U'
+// CHECK-NEXT:            UnionTypeAnnotation
+// CHECK-NEXT:                GenericTypeAnnotation
+// CHECK-NEXT:                    Id 'A'
+// CHECK-NEXT:                GenericTypeAnnotation
+// CHECK-NEXT:                    Id 'A1'
+// CHECK-NEXT:        VariableDeclaration
+// CHECK-NEXT:            VariableDeclarator
+// CHECK-NEXT:                Id 'u' [D:E:%d.2 'u']

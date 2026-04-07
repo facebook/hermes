@@ -414,13 +414,18 @@ void SemContext::setExpressionDecl(ESTree::IdentifierNode *node, Decl *decl) {
 
 void SemContextDumper::printSemContext(
     llvh::raw_ostream &os,
-    const SemContext &semCtx) {
+    const SemContext &semCtx,
+    const FunctionInfo *rootFunc) {
+  // Use the provided root function, or fall back to the first function.
+  if (!rootFunc)
+    rootFunc = &semCtx.functions_[0];
+
   os << "SemContext\n";
   std::map<const FunctionInfo *, llvh::SmallVector<const FunctionInfo *, 2>>
       children;
 
   for (const auto &F : semCtx.functions_) {
-    if (&F == &semCtx.functions_[0])
+    if (&F == rootFunc)
       continue;
     children[F.parentFunction].push_back(&F);
   }
@@ -438,10 +443,7 @@ void SemContextDumper::printSemContext(
           dumpFunction(childFunc, level + 1);
       };
 
-  dumpFunction(&semCtx.functions_[0], 0);
-  assert(
-      processedCount == semCtx.functions_.size() &&
-      "not all scopes were visited");
+  dumpFunction(rootFunc, 0);
 }
 
 void SemContextDumper::printFunction(

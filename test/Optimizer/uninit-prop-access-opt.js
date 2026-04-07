@@ -42,13 +42,20 @@ print(f());
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %""(): functionCode
-// CHECK-NEXT:  %1 = CallInst [njsf] (:undefined) %0: object, %""(): functionCode, true: boolean, empty: any, undefined: undefined, 0: number, 0: number
+// CHECK-NEXT:  %1 = CallInst [njsf] (:undefined) %0: object, %""(): functionCode, true: boolean, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function ""(): undefined [allCallsitesKnownInStrictMode]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %" 1#"(): functionCode
+// CHECK-NEXT:  %1 = CallInst [njsf] (:undefined) %0: object, %" 1#"(): functionCode, true: boolean, empty: any, undefined: undefined, 0: number, 0: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS0 [O: object, Foo: undefined|object, ?O.prototype: object, ?Foo.prototype: object]
 
-// CHECK:function ""(exports: number): undefined [allCallsitesKnownInStrictMode]
+// CHECK:function " 1#"(exports: number): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       StoreFrameInst %0: environment, undefined: undefined, [%VS0.Foo]: undefined|object

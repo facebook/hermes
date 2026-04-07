@@ -14,10 +14,12 @@
 #include "hermes/AST/NativeContext.h"
 #include "hermes/AST/TS2Flow.h"
 #include "hermes/AST/TransformAST.h"
+#include "hermes/FlowLib/FlowLib.h"
 #include "hermes/IR/IRVerifier.h"
 #include "hermes/IRGen/IRGen.h"
 #include "hermes/Optimizer/PassManager/PassManager.h"
 #include "hermes/Optimizer/PassManager/Pipeline.h"
+#include "hermes/Parser/JSParser.h"
 #include "hermes/Runtime/Libhermes.h"
 #include "hermes/Sema/SemContext.h"
 #include "hermes/Sema/SemResolve.h"
@@ -368,6 +370,13 @@ CLFlag StdGlobals(
     "std-globals",
     true,
     "registration of standard globals",
+    CompilerCategory);
+
+CLFlag DumpWrappedSema(
+    'f',
+    "dump-wrapped-sema",
+    false,
+    "dumping of full wrapped AST in sema output",
     CompilerCategory);
 
 cl::opt<unsigned> ErrorLimit(
@@ -815,9 +824,26 @@ ESTree::NodePtr parseJS(
   if (!parsedAST)
     return nullptr;
 
+  ESTree::ProgramNode *prelude = nullptr;
+
+  // Parse FlowLib prelude if std-globals is enabled.
+  if (shouldWrapInIIFE && cli::StdGlobals) {
+    auto flowLibBuf =
+        llvh::MemoryBuffer::getMemBuffer(getFlowLibSource(), "FlowLib", false);
+    parser::JSParser jsParser(*context, std::move(flowLibBuf));
+    auto optPrelude = jsParser.parse();
+    if (!optPrelude) {
+      return nullptr;
+    }
+    prelude = optPrelude.getValue();
+  }
+
   // If we are executing in typed mode and not script, then wrap the program.
+  ESTree::FunctionExpressionNode *originalFunc = nullptr;
   if (shouldWrapInIIFE) {
-    parsedAST = wrapInIIFE(context, parsedAST);
+    auto [wrappedAST, innerFunc] = wrapInIIFE(context, parsedAST, prelude);
+    parsedAST = wrappedAST;
+    originalFunc = innerFunc;
     // In case this API decides it can fail in the future, check for a
     // nullptr.
     if (!parsedAST) {
@@ -861,7 +887,10 @@ ESTree::NodePtr parseJS(
                                : ESTreeRawProp::Exclude);
   }
   if (cli::OutputLevel == OutputLevelKind::Sema) {
-    sema::semDump(llvh::outs(), *context, semCtx, flowContext, parsedAST);
+    ESTree::Node *semaRoot = (originalFunc && !cli::DumpWrappedSema)
+        ? static_cast<ESTree::Node *>(originalFunc)
+        : static_cast<ESTree::Node *>(parsedAST);
+    sema::semDump(llvh::outs(), *context, semCtx, flowContext, semaRoot);
   }
 
   return parsedAST;

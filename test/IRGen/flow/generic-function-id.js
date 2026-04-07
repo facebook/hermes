@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -O0 -typed -dump-ir %s | %FileCheckOrRegen %s --match-full-lines
+// RUN: %shermes -fno-std-globals -O0 -typed -dump-ir %s | %FileCheckOrRegen %s --match-full-lines
 
 // Make sure two specializations are generated for number and string.
 // TODO: Original "any" version still exists during IRGen,

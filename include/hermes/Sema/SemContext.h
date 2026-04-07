@@ -683,7 +683,12 @@ class SemContextDumper {
   template <typename F>
   explicit SemContextDumper(F f) : annotateDecl_(f) {}
 
-  void printSemContext(llvh::raw_ostream &os, const SemContext &semCtx);
+  /// Print the SemContext starting from \p rootFunc if provided, otherwise
+  /// starting from the first function in \p semCtx.
+  void printSemContext(
+      llvh::raw_ostream &os,
+      const SemContext &semCtx,
+      const FunctionInfo *rootFunc = nullptr);
 
   void printFunction(
       llvh::raw_ostream &os,

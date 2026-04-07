@@ -31,85 +31,77 @@ delete o.a;
 // CHECK-NEXT:%object.2 = object({
 // CHECK-NEXT:  a: number
 // CHECK-NEXT:})
-// CHECK-NEXT:%object.3 = object({
-// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
 // CHECK-NEXT:    Scope %s.1
-// CHECK-NEXT:    Func strict
-// CHECK-NEXT:        Scope %s.2
-// CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:            Decl %d.2 't' Let : number
-// CHECK-NEXT:            Decl %d.3 'x' Let : number
-// CHECK-NEXT:            Decl %d.4 'y' Let : bigint
-// CHECK-NEXT:            Decl %d.5 'o' Let : any
-// CHECK-NEXT:            Decl %d.6 'arguments' Var Arguments
+// CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
+// CHECK-NEXT:        Decl %d.2 't' Let : number
+// CHECK-NEXT:        Decl %d.3 'x' Let : number
+// CHECK-NEXT:        Decl %d.4 'y' Let : bigint
+// CHECK-NEXT:        Decl %d.5 'o' Let : any
+// CHECK-NEXT:        Decl %d.6 'arguments' Var Arguments
 
-// CHECK:Program Scope %s.1
-// CHECK-NEXT:    ExpressionStatement
-// CHECK-NEXT:        CallExpression : any
-// CHECK-NEXT:            FunctionExpression : %untyped_function.1
-// CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
-// CHECK-NEXT:                BlockStatement
-// CHECK-NEXT:                    VariableDeclaration
-// CHECK-NEXT:                        VariableDeclarator
-// CHECK-NEXT:                            NumericLiteral : number
-// CHECK-NEXT:                            Id 't' [D:E:%d.2 't']
-// CHECK-NEXT:                    ExpressionStatement
-// CHECK-NEXT:                        UnaryExpression : number
-// CHECK-NEXT:                            Id 't' [D:E:%d.2 't'] : number
-// CHECK-NEXT:                    ExpressionStatement
-// CHECK-NEXT:                        UnaryExpression : number
-// CHECK-NEXT:                            Id 't' [D:E:%d.2 't'] : number
-// CHECK-NEXT:                    ExpressionStatement
-// CHECK-NEXT:                        UnaryExpression : bigint
-// CHECK-NEXT:                            BigIntLiteral : bigint
-// CHECK-NEXT:                    ExpressionStatement
-// CHECK-NEXT:                        UnaryExpression : boolean
-// CHECK-NEXT:                            NumericLiteral : number
-// CHECK-NEXT:                    ExpressionStatement
-// CHECK-NEXT:                        UnaryExpression : number
-// CHECK-NEXT:                            Id 't' [D:E:%d.2 't'] : number
-// CHECK-NEXT:                    ExpressionStatement
-// CHECK-NEXT:                        UnaryExpression : bigint
-// CHECK-NEXT:                            BigIntLiteral : bigint
-// CHECK-NEXT:                    ExpressionStatement
-// CHECK-NEXT:                        UnaryExpression : string
-// CHECK-NEXT:                            NumericLiteral : number
-// CHECK-NEXT:                    ExpressionStatement
-// CHECK-NEXT:                        UnaryExpression : void
-// CHECK-NEXT:                            NumericLiteral : number
-// CHECK-NEXT:                    VariableDeclaration
-// CHECK-NEXT:                        VariableDeclarator
-// CHECK-NEXT:                            NumericLiteral : number
-// CHECK-NEXT:                            Id 'x' [D:E:%d.3 'x']
-// CHECK-NEXT:                    ExpressionStatement
-// CHECK-NEXT:                        UpdateExpression : number
-// CHECK-NEXT:                            Id 'x' [D:E:%d.3 'x'] : number
-// CHECK-NEXT:                    ExpressionStatement
-// CHECK-NEXT:                        UpdateExpression : number
-// CHECK-NEXT:                            Id 'x' [D:E:%d.3 'x'] : number
-// CHECK-NEXT:                    VariableDeclaration
-// CHECK-NEXT:                        VariableDeclarator
-// CHECK-NEXT:                            BigIntLiteral : bigint
-// CHECK-NEXT:                            Id 'y' [D:E:%d.4 'y']
-// CHECK-NEXT:                    ExpressionStatement
-// CHECK-NEXT:                        UpdateExpression : bigint
-// CHECK-NEXT:                            Id 'y' [D:E:%d.4 'y'] : bigint
-// CHECK-NEXT:                    ExpressionStatement
-// CHECK-NEXT:                        UpdateExpression : bigint
-// CHECK-NEXT:                            Id 'y' [D:E:%d.4 'y'] : bigint
-// CHECK-NEXT:                    VariableDeclaration
-// CHECK-NEXT:                        VariableDeclarator
-// CHECK-NEXT:                            ObjectExpression : %object.2
-// CHECK-NEXT:                                Property
-// CHECK-NEXT:                                    Id 'a'
-// CHECK-NEXT:                                    NumericLiteral : number
-// CHECK-NEXT:                            Id 'o' [D:E:%d.5 'o']
-// CHECK-NEXT:                    ExpressionStatement
-// CHECK-NEXT:                        UnaryExpression : boolean
-// CHECK-NEXT:                            MemberExpression : any
-// CHECK-NEXT:                                Id 'o' [D:E:%d.5 'o'] : any
-// CHECK-NEXT:                                Id 'a'
-// CHECK-NEXT:            ObjectExpression : %object.3
+// CHECK:FunctionExpression : %untyped_function.1
+// CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
+// CHECK-NEXT:    BlockStatement
+// CHECK-NEXT:        VariableDeclaration
+// CHECK-NEXT:            VariableDeclarator
+// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:                Id 't' [D:E:%d.2 't']
+// CHECK-NEXT:        ExpressionStatement
+// CHECK-NEXT:            UnaryExpression : number
+// CHECK-NEXT:                Id 't' [D:E:%d.2 't'] : number
+// CHECK-NEXT:        ExpressionStatement
+// CHECK-NEXT:            UnaryExpression : number
+// CHECK-NEXT:                Id 't' [D:E:%d.2 't'] : number
+// CHECK-NEXT:        ExpressionStatement
+// CHECK-NEXT:            UnaryExpression : bigint
+// CHECK-NEXT:                BigIntLiteral : bigint
+// CHECK-NEXT:        ExpressionStatement
+// CHECK-NEXT:            UnaryExpression : boolean
+// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:        ExpressionStatement
+// CHECK-NEXT:            UnaryExpression : number
+// CHECK-NEXT:                Id 't' [D:E:%d.2 't'] : number
+// CHECK-NEXT:        ExpressionStatement
+// CHECK-NEXT:            UnaryExpression : bigint
+// CHECK-NEXT:                BigIntLiteral : bigint
+// CHECK-NEXT:        ExpressionStatement
+// CHECK-NEXT:            UnaryExpression : string
+// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:        ExpressionStatement
+// CHECK-NEXT:            UnaryExpression : void
+// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:        VariableDeclaration
+// CHECK-NEXT:            VariableDeclarator
+// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:                Id 'x' [D:E:%d.3 'x']
+// CHECK-NEXT:        ExpressionStatement
+// CHECK-NEXT:            UpdateExpression : number
+// CHECK-NEXT:                Id 'x' [D:E:%d.3 'x'] : number
+// CHECK-NEXT:        ExpressionStatement
+// CHECK-NEXT:            UpdateExpression : number
+// CHECK-NEXT:                Id 'x' [D:E:%d.3 'x'] : number
+// CHECK-NEXT:        VariableDeclaration
+// CHECK-NEXT:            VariableDeclarator
+// CHECK-NEXT:                BigIntLiteral : bigint
+// CHECK-NEXT:                Id 'y' [D:E:%d.4 'y']
+// CHECK-NEXT:        ExpressionStatement
+// CHECK-NEXT:            UpdateExpression : bigint
+// CHECK-NEXT:                Id 'y' [D:E:%d.4 'y'] : bigint
+// CHECK-NEXT:        ExpressionStatement
+// CHECK-NEXT:            UpdateExpression : bigint
+// CHECK-NEXT:                Id 'y' [D:E:%d.4 'y'] : bigint
+// CHECK-NEXT:        VariableDeclaration
+// CHECK-NEXT:            VariableDeclarator
+// CHECK-NEXT:                ObjectExpression : %object.2
+// CHECK-NEXT:                    Property
+// CHECK-NEXT:                        Id 'a'
+// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                Id 'o' [D:E:%d.5 'o']
+// CHECK-NEXT:        ExpressionStatement
+// CHECK-NEXT:            UnaryExpression : boolean
+// CHECK-NEXT:                MemberExpression : any
+// CHECK-NEXT:                    Id 'o' [D:E:%d.5 'o'] : any
+// CHECK-NEXT:                    Id 'a'

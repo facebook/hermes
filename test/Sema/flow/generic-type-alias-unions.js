@@ -18,78 +18,70 @@ var c2: C_crazy;
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%class_constructor.2 = class_constructor(%class.6)
-// CHECK-NEXT:%class_constructor.3 = class_constructor(%class.7)
-// CHECK-NEXT:%union.4 = union(null | number | %class.6 | %class.7)
-// CHECK-NEXT:%object.5 = object({
+// CHECK-NEXT:%class_constructor.2 = class_constructor(%class.5)
+// CHECK-NEXT:%class_constructor.3 = class_constructor(%class.6)
+// CHECK-NEXT:%union.4 = union(null | number | %class.5 | %class.6)
+// CHECK-NEXT:%class.5 = class(Foo {
+// CHECK-NEXT:  %homeObject: %class.7
 // CHECK-NEXT:})
-// CHECK-NEXT:%class.6 = class(Foo {
+// CHECK-NEXT:%class.6 = class(Bar {
 // CHECK-NEXT:  %homeObject: %class.8
 // CHECK-NEXT:})
-// CHECK-NEXT:%class.7 = class(Bar {
-// CHECK-NEXT:  %homeObject: %class.9
+// CHECK-NEXT:%class.7 = class( {
 // CHECK-NEXT:})
 // CHECK-NEXT:%class.8 = class( {
-// CHECK-NEXT:})
-// CHECK-NEXT:%class.9 = class( {
 // CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
 // CHECK-NEXT:    Scope %s.1
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
+// CHECK-NEXT:        Decl %d.2 'Foo' Class : %class_constructor.2
+// CHECK-NEXT:        Decl %d.3 'Bar' Class : %class_constructor.3
+// CHECK-NEXT:        Decl %d.4 'c2' Var : %union.4
+// CHECK-NEXT:        Decl %d.5 'arguments' Var Arguments
 // CHECK-NEXT:        Scope %s.2
-// CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:            Decl %d.2 'Foo' Class : %class_constructor.2
-// CHECK-NEXT:            Decl %d.3 'Bar' Class : %class_constructor.3
-// CHECK-NEXT:            Decl %d.4 'c2' Var : %union.4
-// CHECK-NEXT:            Decl %d.5 'arguments' Var Arguments
-// CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:            Scope %s.4
-// CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.5
-// CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.6
+// CHECK-NEXT:        Scope %s.3
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.4
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.5
 
-// CHECK:Program Scope %s.1
-// CHECK-NEXT:    ExpressionStatement
-// CHECK-NEXT:        CallExpression : any
-// CHECK-NEXT:            FunctionExpression : %untyped_function.1
-// CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
-// CHECK-NEXT:                BlockStatement
-// CHECK-NEXT:                    ClassDeclaration Scope %s.3
-// CHECK-NEXT:                        Id 'Foo' [D:E:%d.2 'Foo']
-// CHECK-NEXT:                        ClassBody
-// CHECK-NEXT:                    ClassDeclaration Scope %s.4
-// CHECK-NEXT:                        Id 'Bar' [D:E:%d.3 'Bar']
-// CHECK-NEXT:                        ClassBody
-// CHECK-NEXT:                    TypeAlias
-// CHECK-NEXT:                        Id 'C'
-// CHECK-NEXT:                        TypeParameterDeclaration
-// CHECK-NEXT:                            TypeParameter
+// CHECK:FunctionExpression : %untyped_function.1
+// CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
+// CHECK-NEXT:    BlockStatement
+// CHECK-NEXT:        ClassDeclaration Scope %s.2
+// CHECK-NEXT:            Id 'Foo' [D:E:%d.2 'Foo']
+// CHECK-NEXT:            ClassBody
+// CHECK-NEXT:        ClassDeclaration Scope %s.3
+// CHECK-NEXT:            Id 'Bar' [D:E:%d.3 'Bar']
+// CHECK-NEXT:            ClassBody
+// CHECK-NEXT:        TypeAlias
+// CHECK-NEXT:            Id 'C'
+// CHECK-NEXT:            TypeParameterDeclaration
+// CHECK-NEXT:                TypeParameter
+// CHECK-NEXT:            UnionTypeAnnotation
+// CHECK-NEXT:                UnionTypeAnnotation
+// CHECK-NEXT:                    GenericTypeAnnotation
+// CHECK-NEXT:                        Id 'T'
+// CHECK-NEXT:                    GenericTypeAnnotation
+// CHECK-NEXT:                        Id 'Foo'
+// CHECK-NEXT:                    GenericTypeAnnotation
+// CHECK-NEXT:                        Id 'Bar'
+// CHECK-NEXT:                NullLiteralTypeAnnotation
+// CHECK-NEXT:        TypeAlias
+// CHECK-NEXT:            Id 'C_crazy'
+// CHECK-NEXT:            UnionTypeAnnotation
+// CHECK-NEXT:                GenericTypeAnnotation
+// CHECK-NEXT:                    Id 'C'
+// CHECK-NEXT:                    TypeParameterInstantiation
 // CHECK-NEXT:                        UnionTypeAnnotation
-// CHECK-NEXT:                            UnionTypeAnnotation
-// CHECK-NEXT:                                GenericTypeAnnotation
-// CHECK-NEXT:                                    Id 'T'
-// CHECK-NEXT:                                GenericTypeAnnotation
-// CHECK-NEXT:                                    Id 'Foo'
-// CHECK-NEXT:                                GenericTypeAnnotation
-// CHECK-NEXT:                                    Id 'Bar'
-// CHECK-NEXT:                            NullLiteralTypeAnnotation
-// CHECK-NEXT:                    TypeAlias
-// CHECK-NEXT:                        Id 'C_crazy'
-// CHECK-NEXT:                        UnionTypeAnnotation
+// CHECK-NEXT:                            NumberTypeAnnotation
 // CHECK-NEXT:                            GenericTypeAnnotation
-// CHECK-NEXT:                                Id 'C'
-// CHECK-NEXT:                                TypeParameterInstantiation
-// CHECK-NEXT:                                    UnionTypeAnnotation
-// CHECK-NEXT:                                        NumberTypeAnnotation
-// CHECK-NEXT:                                        GenericTypeAnnotation
-// CHECK-NEXT:                                            Id 'Foo'
-// CHECK-NEXT:                                        GenericTypeAnnotation
-// CHECK-NEXT:                                            Id 'Bar'
-// CHECK-NEXT:                            NullLiteralTypeAnnotation
-// CHECK-NEXT:                    VariableDeclaration
-// CHECK-NEXT:                        VariableDeclarator
-// CHECK-NEXT:                            Id 'c2' [D:E:%d.4 'c2']
-// CHECK-NEXT:            ObjectExpression : %object.5
+// CHECK-NEXT:                                Id 'Foo'
+// CHECK-NEXT:                            GenericTypeAnnotation
+// CHECK-NEXT:                                Id 'Bar'
+// CHECK-NEXT:                NullLiteralTypeAnnotation
+// CHECK-NEXT:        VariableDeclaration
+// CHECK-NEXT:            VariableDeclarator
+// CHECK-NEXT:                Id 'c2' [D:E:%d.4 'c2']

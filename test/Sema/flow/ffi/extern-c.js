@@ -27,83 +27,76 @@ let load  = $SHBuiltin.extern_c({}, function load(addr: c_ptr): c_u8 {throw 0});
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
 // CHECK-NEXT:    Scope %s.1
-// CHECK-NEXT:        Decl %d.1 '$SHBuiltin' UndeclaredGlobalProperty
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
+// CHECK-NEXT:        Decl %d.2 'fopen' Let : %native_function.4
+// CHECK-NEXT:        Decl %d.3 'fopen1' Let : %native_function.4
+// CHECK-NEXT:        Decl %d.4 'load' Let : %native_function.6
+// CHECK-NEXT:        Decl %d.5 'arguments' Var Arguments
 // CHECK-NEXT:        Scope %s.2
-// CHECK-NEXT:            Decl %d.2 'exports' Parameter : any
-// CHECK-NEXT:            Decl %d.3 'fopen' Let : %native_function.4
-// CHECK-NEXT:            Decl %d.4 'fopen1' Let : %native_function.4
-// CHECK-NEXT:            Decl %d.5 'load' Let : %native_function.6
-// CHECK-NEXT:            Decl %d.6 'arguments' Var Arguments
-// CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:                Decl %d.7 'fopen' FunctionExprName : %function.3
-// CHECK-NEXT:            Scope %s.4
-// CHECK-NEXT:                Decl %d.8 'fopen' FunctionExprName : %function.3
-// CHECK-NEXT:            Scope %s.5
-// CHECK-NEXT:                Decl %d.9 'load' FunctionExprName : %function.5
-// CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.6
-// CHECK-NEXT:                Decl %d.10 'path' Parameter : c_ptr
-// CHECK-NEXT:                Decl %d.11 'mode' Parameter : c_ptr
-// CHECK-NEXT:                Decl %d.12 'arguments' Var Arguments
-// CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.7
-// CHECK-NEXT:                Decl %d.13 'path' Parameter : c_ptr
-// CHECK-NEXT:                Decl %d.14 'mode' Parameter : c_ptr
-// CHECK-NEXT:                Decl %d.15 'arguments' Var Arguments
-// CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.8
-// CHECK-NEXT:                Decl %d.16 'addr' Parameter : c_ptr
-// CHECK-NEXT:                Decl %d.17 'arguments' Var Arguments
+// CHECK-NEXT:            Decl %d.6 'fopen' FunctionExprName : %function.3
+// CHECK-NEXT:        Scope %s.3
+// CHECK-NEXT:            Decl %d.7 'fopen' FunctionExprName : %function.3
+// CHECK-NEXT:        Scope %s.4
+// CHECK-NEXT:            Decl %d.8 'load' FunctionExprName : %function.5
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.5
+// CHECK-NEXT:            Decl %d.9 'path' Parameter : c_ptr
+// CHECK-NEXT:            Decl %d.10 'mode' Parameter : c_ptr
+// CHECK-NEXT:            Decl %d.11 'arguments' Var Arguments
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.6
+// CHECK-NEXT:            Decl %d.12 'path' Parameter : c_ptr
+// CHECK-NEXT:            Decl %d.13 'mode' Parameter : c_ptr
+// CHECK-NEXT:            Decl %d.14 'arguments' Var Arguments
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.7
+// CHECK-NEXT:            Decl %d.15 'addr' Parameter : c_ptr
+// CHECK-NEXT:            Decl %d.16 'arguments' Var Arguments
 
-// CHECK:Program Scope %s.1
-// CHECK-NEXT:    ExpressionStatement
-// CHECK-NEXT:        CallExpression : any
-// CHECK-NEXT:            FunctionExpression : %untyped_function.1
-// CHECK-NEXT:                Id 'exports' [D:E:%d.2 'exports']
-// CHECK-NEXT:                BlockStatement
-// CHECK-NEXT:                    VariableDeclaration
-// CHECK-NEXT:                        VariableDeclarator
-// CHECK-NEXT:                            CallExpression : %native_function.4
-// CHECK-NEXT:                                MemberExpression : any
-// CHECK-NEXT:                                    SHBuiltin
-// CHECK-NEXT:                                    Id 'extern_c'
-// CHECK-NEXT:                                ObjectExpression : %object.2
-// CHECK-NEXT:                                FunctionExpression : %function.3 Scope %s.3
-// CHECK-NEXT:                                    Id 'fopen' [D:E:%d.7 'fopen']
-// CHECK-NEXT:                                    Id 'path' [D:E:%d.10 'path']
-// CHECK-NEXT:                                    Id 'mode' [D:E:%d.11 'mode']
-// CHECK-NEXT:                                    BlockStatement
-// CHECK-NEXT:                                        ThrowStatement
-// CHECK-NEXT:                                            NumericLiteral
-// CHECK-NEXT:                            Id 'fopen' [D:E:%d.3 'fopen']
-// CHECK-NEXT:                    VariableDeclaration
-// CHECK-NEXT:                        VariableDeclarator
-// CHECK-NEXT:                            CallExpression : %native_function.4
-// CHECK-NEXT:                                MemberExpression : any
-// CHECK-NEXT:                                    SHBuiltin
-// CHECK-NEXT:                                    Id 'extern_c'
-// CHECK-NEXT:                                ObjectExpression : %object.2
-// CHECK-NEXT:                                FunctionExpression : %function.3 Scope %s.4
-// CHECK-NEXT:                                    Id 'fopen' [D:E:%d.8 'fopen']
-// CHECK-NEXT:                                    Id 'path' [D:E:%d.13 'path']
-// CHECK-NEXT:                                    Id 'mode' [D:E:%d.14 'mode']
-// CHECK-NEXT:                                    BlockStatement
-// CHECK-NEXT:                                        ThrowStatement
-// CHECK-NEXT:                                            NumericLiteral
-// CHECK-NEXT:                            Id 'fopen1' [D:E:%d.4 'fopen1']
-// CHECK-NEXT:                    VariableDeclaration
-// CHECK-NEXT:                        VariableDeclarator
-// CHECK-NEXT:                            CallExpression : %native_function.6
-// CHECK-NEXT:                                MemberExpression : any
-// CHECK-NEXT:                                    SHBuiltin
-// CHECK-NEXT:                                    Id 'extern_c'
-// CHECK-NEXT:                                ObjectExpression : %object.2
-// CHECK-NEXT:                                FunctionExpression : %function.5 Scope %s.5
-// CHECK-NEXT:                                    Id 'load' [D:E:%d.9 'load']
-// CHECK-NEXT:                                    Id 'addr' [D:E:%d.16 'addr']
-// CHECK-NEXT:                                    BlockStatement
-// CHECK-NEXT:                                        ThrowStatement
-// CHECK-NEXT:                                            NumericLiteral
-// CHECK-NEXT:                            Id 'load' [D:E:%d.5 'load']
-// CHECK-NEXT:            ObjectExpression : %object.2
+// CHECK:FunctionExpression : %untyped_function.1
+// CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
+// CHECK-NEXT:    BlockStatement
+// CHECK-NEXT:        VariableDeclaration
+// CHECK-NEXT:            VariableDeclarator
+// CHECK-NEXT:                CallExpression : %native_function.4
+// CHECK-NEXT:                    MemberExpression : any
+// CHECK-NEXT:                        SHBuiltin
+// CHECK-NEXT:                        Id 'extern_c'
+// CHECK-NEXT:                    ObjectExpression : %object.2
+// CHECK-NEXT:                    FunctionExpression : %function.3 Scope %s.2
+// CHECK-NEXT:                        Id 'fopen' [D:E:%d.6 'fopen']
+// CHECK-NEXT:                        Id 'path' [D:E:%d.9 'path']
+// CHECK-NEXT:                        Id 'mode' [D:E:%d.10 'mode']
+// CHECK-NEXT:                        BlockStatement
+// CHECK-NEXT:                            ThrowStatement
+// CHECK-NEXT:                                NumericLiteral
+// CHECK-NEXT:                Id 'fopen' [D:E:%d.2 'fopen']
+// CHECK-NEXT:        VariableDeclaration
+// CHECK-NEXT:            VariableDeclarator
+// CHECK-NEXT:                CallExpression : %native_function.4
+// CHECK-NEXT:                    MemberExpression : any
+// CHECK-NEXT:                        SHBuiltin
+// CHECK-NEXT:                        Id 'extern_c'
+// CHECK-NEXT:                    ObjectExpression : %object.2
+// CHECK-NEXT:                    FunctionExpression : %function.3 Scope %s.3
+// CHECK-NEXT:                        Id 'fopen' [D:E:%d.7 'fopen']
+// CHECK-NEXT:                        Id 'path' [D:E:%d.12 'path']
+// CHECK-NEXT:                        Id 'mode' [D:E:%d.13 'mode']
+// CHECK-NEXT:                        BlockStatement
+// CHECK-NEXT:                            ThrowStatement
+// CHECK-NEXT:                                NumericLiteral
+// CHECK-NEXT:                Id 'fopen1' [D:E:%d.3 'fopen1']
+// CHECK-NEXT:        VariableDeclaration
+// CHECK-NEXT:            VariableDeclarator
+// CHECK-NEXT:                CallExpression : %native_function.6
+// CHECK-NEXT:                    MemberExpression : any
+// CHECK-NEXT:                        SHBuiltin
+// CHECK-NEXT:                        Id 'extern_c'
+// CHECK-NEXT:                    ObjectExpression : %object.2
+// CHECK-NEXT:                    FunctionExpression : %function.5 Scope %s.4
+// CHECK-NEXT:                        Id 'load' [D:E:%d.8 'load']
+// CHECK-NEXT:                        Id 'addr' [D:E:%d.15 'addr']
+// CHECK-NEXT:                        BlockStatement
+// CHECK-NEXT:                            ThrowStatement
+// CHECK-NEXT:                                NumericLiteral
+// CHECK-NEXT:                Id 'load' [D:E:%d.4 'load']

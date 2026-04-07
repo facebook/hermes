@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -Werror -O0 -typed -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
+// RUN: %shermes -fno-std-globals -Werror -O0 -typed -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
 
 'use strict';
 
@@ -15,7 +15,7 @@ class C {
   }
 }
 
-print(new C().method());
+return new C().method();
 
 // Auto-generated content below. Please do not modify manually.
 
@@ -49,18 +49,16 @@ print(new C().method());
 // CHECK-NEXT:  %8 = AllocTypedNonEnumObjectInst (:object) null: null, "method": string, %7: object
 // CHECK-NEXT:       StoreFrameInst %1: environment, %8: object, [%VS1.?C.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %8: object, %5: object, "prototype": string
-// CHECK-NEXT:  %11 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [%VS1.C]: any
-// CHECK-NEXT:  %13 = CheckedTypeCastInst (:object) %12: any, type(object)
-// CHECK-NEXT:  %14 = LoadFrameInst (:object) %1: environment, [%VS1.?C.prototype]: object
-// CHECK-NEXT:  %15 = UnionNarrowTrustedInst (:object) %14: object
-// CHECK-NEXT:  %16 = AllocTypedObjectInst (:object) %15: object
-// CHECK-NEXT:  %17 = TypedLoadParentInst (:object) %16: object
-// CHECK-NEXT:  %18 = PrLoadInst (:object) %17: object, 0: number, "method": string
-// CHECK-NEXT:  %19 = CallInst [njsf] (:any) %18: object, %method(): functionCode, true: boolean, empty: any, undefined: undefined, %16: object
-// CHECK-NEXT:  %20 = CheckedTypeCastInst (:number) %19: any, type(number)
-// CHECK-NEXT:  %21 = CallInst (:any) %11: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %20: number
-// CHECK-NEXT:        ReturnInst undefined: undefined
+// CHECK-NEXT:  %11 = LoadFrameInst (:any) %1: environment, [%VS1.C]: any
+// CHECK-NEXT:  %12 = CheckedTypeCastInst (:object) %11: any, type(object)
+// CHECK-NEXT:  %13 = LoadFrameInst (:object) %1: environment, [%VS1.?C.prototype]: object
+// CHECK-NEXT:  %14 = UnionNarrowTrustedInst (:object) %13: object
+// CHECK-NEXT:  %15 = AllocTypedObjectInst (:object) %14: object
+// CHECK-NEXT:  %16 = TypedLoadParentInst (:object) %15: object
+// CHECK-NEXT:  %17 = PrLoadInst (:object) %16: object, 0: number, "method": string
+// CHECK-NEXT:  %18 = CallInst [njsf] (:any) %17: object, %method(): functionCode, true: boolean, empty: any, undefined: undefined, %15: object
+// CHECK-NEXT:  %19 = CheckedTypeCastInst (:number) %18: any, type(number)
+// CHECK-NEXT:        ReturnInst %19: number
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS2 []

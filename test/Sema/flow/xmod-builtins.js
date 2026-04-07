@@ -44,180 +44,111 @@
 // CHECK:%untyped_function.1 = untyped_function()
 // CHECK-NEXT:%function.2 = function(global: any, require: any, s: string): number
 // CHECK-NEXT:%function.3 = function(global: any, require: any): number
-// CHECK-NEXT:%object.4 = object({
-// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
 // CHECK-NEXT:    Scope %s.1
-// CHECK-NEXT:        Decl %d.1 'Array' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.2 'BigInt' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.3 'Boolean' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.4 'Date' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.5 'Error' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.6 'Function' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.7 'HermesInternal' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.8 'HermesAsyncIteratorsInternal' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.9 'JSON' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.10 'Map' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.11 'Math' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.12 'Number' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.13 'Object' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.14 'Proxy' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.15 'Reflect' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.16 'RegExp' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.17 'Set' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.18 'String' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.19 'Symbol' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.20 'WeakMap' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.21 'WeakSet' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.22 '$SHBuiltin' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.23 'Hermes' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.24 'Infinity' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.25 'NaN' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.26 'globalThis' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.27 'undefined' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.28 'AggregateError' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.29 'EvalError' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.30 'RangeError' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.31 'ReferenceError' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.32 'SyntaxError' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.33 'TypeError' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.34 'URIError' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.35 'ArrayBuffer' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.36 'DataView' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.37 'TextEncoder' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.38 'Uint8Array' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.39 'Int8Array' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.40 'Uint8ClampedArray' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.41 'Uint16Array' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.42 'Int16Array' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.43 'Uint32Array' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.44 'Int32Array' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.45 'Float32Array' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.46 'Float64Array' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.47 'BigUint64Array' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.48 'BigInt64Array' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.49 'print' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.50 'eval' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.51 'parseInt' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.52 'parseFloat' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.53 'isNaN' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.54 'isFinite' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.55 'escape' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.56 'unescape' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.57 'decodeURI' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.58 'decodeURIComponent' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.59 'encodeURI' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.60 'encodeURIComponent' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.61 'gc' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
+// CHECK-NEXT:        Decl %d.2 'arguments' Var Arguments
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.2
-// CHECK-NEXT:            Decl %d.62 'exports' Parameter : any
-// CHECK-NEXT:            Decl %d.63 'arguments' Var Arguments
+// CHECK-NEXT:            Decl %d.3 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:                Decl %d.64 'arguments' Var Arguments
-// CHECK-NEXT:            Func strict
-// CHECK-NEXT:                Scope %s.4
-// CHECK-NEXT:                    Decl %d.65 'global' Parameter : any
-// CHECK-NEXT:                    Decl %d.66 'require' Parameter : any
-// CHECK-NEXT:                    Decl %d.67 's' Parameter : string
-// CHECK-NEXT:                    Decl %d.68 'arguments' Var Arguments
-// CHECK-NEXT:            Func strict
-// CHECK-NEXT:                Scope %s.5
-// CHECK-NEXT:                    Decl %d.69 'global' Parameter : any
-// CHECK-NEXT:                    Decl %d.70 'require' Parameter : any
-// CHECK-NEXT:                    Decl %d.71 'n' Var : number
-// CHECK-NEXT:                    Decl %d.72 'arguments' Var Arguments
-// CHECK-NEXT:            Func strict
-// CHECK-NEXT:                Scope %s.6
-// CHECK-NEXT:                    Decl %d.73 'global' Parameter : any
-// CHECK-NEXT:                    Decl %d.74 'require' Parameter : any
-// CHECK-NEXT:                    Decl %d.75 'n2' Var : number
-// CHECK-NEXT:                    Decl %d.76 'arguments' Var Arguments
+// CHECK-NEXT:                Decl %d.4 'global' Parameter : any
+// CHECK-NEXT:                Decl %d.5 'require' Parameter : any
+// CHECK-NEXT:                Decl %d.6 's' Parameter : string
+// CHECK-NEXT:                Decl %d.7 'arguments' Var Arguments
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.4
+// CHECK-NEXT:                Decl %d.8 'global' Parameter : any
+// CHECK-NEXT:                Decl %d.9 'require' Parameter : any
+// CHECK-NEXT:                Decl %d.10 'n' Var : number
+// CHECK-NEXT:                Decl %d.11 'arguments' Var Arguments
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.5
+// CHECK-NEXT:                Decl %d.12 'global' Parameter : any
+// CHECK-NEXT:                Decl %d.13 'require' Parameter : any
+// CHECK-NEXT:                Decl %d.14 'n2' Var : number
+// CHECK-NEXT:                Decl %d.15 'arguments' Var Arguments
 
-// CHECK:Program Scope %s.1
-// CHECK-NEXT:    ExpressionStatement
-// CHECK-NEXT:        CallExpression : any
+// CHECK:FunctionExpression : %untyped_function.1
+// CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
+// CHECK-NEXT:    BlockStatement
+// CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            FunctionExpression : %untyped_function.1
-// CHECK-NEXT:                Id 'exports' [D:E:%d.62 'exports']
 // CHECK-NEXT:                BlockStatement
 // CHECK-NEXT:                    ExpressionStatement
-// CHECK-NEXT:                        FunctionExpression : %untyped_function.1
-// CHECK-NEXT:                            BlockStatement
-// CHECK-NEXT:                                ExpressionStatement
-// CHECK-NEXT:                                    CallExpression : %function.2
-// CHECK-NEXT:                                        MemberExpression : any
-// CHECK-NEXT:                                            SHBuiltin
-// CHECK-NEXT:                                            Id 'moduleFactory'
+// CHECK-NEXT:                        CallExpression : %function.2
+// CHECK-NEXT:                            MemberExpression : any
+// CHECK-NEXT:                                SHBuiltin
+// CHECK-NEXT:                                Id 'moduleFactory'
+// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                            FunctionExpression : %function.2
+// CHECK-NEXT:                                Id 'global' [D:E:%d.4 'global']
+// CHECK-NEXT:                                Id 'require' [D:E:%d.5 'require']
+// CHECK-NEXT:                                Id 's' [D:E:%d.6 's']
+// CHECK-NEXT:                                BlockStatement
+// CHECK-NEXT:                                    ReturnStatement
+// CHECK-NEXT:                                        ImplicitCheckedCast : number
+// CHECK-NEXT:                                            BinaryExpression : any
+// CHECK-NEXT:                                                NumericLiteral : number
+// CHECK-NEXT:                                                BinOp +
+// CHECK-NEXT:                                                MemberExpression : any
+// CHECK-NEXT:                                                    AsExpression : any
+// CHECK-NEXT:                                                        Id 's' [D:E:%d.6 's'] : string
+// CHECK-NEXT:                                                        AnyTypeAnnotation
+// CHECK-NEXT:                                                    Id 'length'
+// CHECK-NEXT:                    ExpressionStatement
+// CHECK-NEXT:                        CallExpression : %function.3
+// CHECK-NEXT:                            MemberExpression : any
+// CHECK-NEXT:                                SHBuiltin
+// CHECK-NEXT:                                Id 'moduleFactory'
+// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                            FunctionExpression : %function.3
+// CHECK-NEXT:                                Id 'global' [D:E:%d.8 'global']
+// CHECK-NEXT:                                Id 'require' [D:E:%d.9 'require']
+// CHECK-NEXT:                                BlockStatement
+// CHECK-NEXT:                                    VariableDeclaration
+// CHECK-NEXT:                                        VariableDeclarator
+// CHECK-NEXT:                                            NumericLiteral : number
+// CHECK-NEXT:                                            Id 'n' [D:E:%d.10 'n']
+// CHECK-NEXT:                                    ExpressionStatement
+// CHECK-NEXT:                                        CallExpression : void
+// CHECK-NEXT:                                            MemberExpression : any
+// CHECK-NEXT:                                                SHBuiltin
+// CHECK-NEXT:                                                Id 'export'
+// CHECK-NEXT:                                            StringLiteral : string
+// CHECK-NEXT:                                            Id 'n' [D:E:%d.10 'n'] : number
+// CHECK-NEXT:                                    ReturnStatement
 // CHECK-NEXT:                                        NumericLiteral : number
-// CHECK-NEXT:                                        FunctionExpression : %function.2
-// CHECK-NEXT:                                            Id 'global' [D:E:%d.65 'global']
-// CHECK-NEXT:                                            Id 'require' [D:E:%d.66 'require']
-// CHECK-NEXT:                                            Id 's' [D:E:%d.67 's']
-// CHECK-NEXT:                                            BlockStatement
-// CHECK-NEXT:                                                ReturnStatement
-// CHECK-NEXT:                                                    ImplicitCheckedCast : number
-// CHECK-NEXT:                                                        BinaryExpression : any
-// CHECK-NEXT:                                                            NumericLiteral : number
-// CHECK-NEXT:                                                            BinOp +
-// CHECK-NEXT:                                                            MemberExpression : any
-// CHECK-NEXT:                                                                AsExpression : any
-// CHECK-NEXT:                                                                    Id 's' [D:E:%d.67 's'] : string
-// CHECK-NEXT:                                                                    AnyTypeAnnotation
-// CHECK-NEXT:                                                                Id 'length'
-// CHECK-NEXT:                                ExpressionStatement
-// CHECK-NEXT:                                    CallExpression : %function.3
-// CHECK-NEXT:                                        MemberExpression : any
-// CHECK-NEXT:                                            SHBuiltin
-// CHECK-NEXT:                                            Id 'moduleFactory'
-// CHECK-NEXT:                                        NumericLiteral : number
-// CHECK-NEXT:                                        FunctionExpression : %function.3
-// CHECK-NEXT:                                            Id 'global' [D:E:%d.69 'global']
-// CHECK-NEXT:                                            Id 'require' [D:E:%d.70 'require']
-// CHECK-NEXT:                                            BlockStatement
-// CHECK-NEXT:                                                VariableDeclaration
-// CHECK-NEXT:                                                    VariableDeclarator
-// CHECK-NEXT:                                                        NumericLiteral : number
-// CHECK-NEXT:                                                        Id 'n' [D:E:%d.71 'n']
-// CHECK-NEXT:                                                ExpressionStatement
-// CHECK-NEXT:                                                    CallExpression : void
-// CHECK-NEXT:                                                        MemberExpression : any
-// CHECK-NEXT:                                                            SHBuiltin
-// CHECK-NEXT:                                                            Id 'export'
-// CHECK-NEXT:                                                        StringLiteral : string
-// CHECK-NEXT:                                                        Id 'n' [D:E:%d.71 'n'] : number
-// CHECK-NEXT:                                                ReturnStatement
-// CHECK-NEXT:                                                    NumericLiteral : number
-// CHECK-NEXT:                                ExpressionStatement
-// CHECK-NEXT:                                    CallExpression : %function.3
-// CHECK-NEXT:                                        MemberExpression : any
-// CHECK-NEXT:                                            SHBuiltin
-// CHECK-NEXT:                                            Id 'moduleFactory'
-// CHECK-NEXT:                                        NumericLiteral : number
-// CHECK-NEXT:                                        FunctionExpression : %function.3
-// CHECK-NEXT:                                            Id 'global' [D:E:%d.73 'global']
-// CHECK-NEXT:                                            Id 'require' [D:E:%d.74 'require']
-// CHECK-NEXT:                                            BlockStatement
-// CHECK-NEXT:                                                VariableDeclaration
-// CHECK-NEXT:                                                    VariableDeclarator
-// CHECK-NEXT:                                                        ImplicitCheckedCast : number
-// CHECK-NEXT:                                                            BinaryExpression : any
+// CHECK-NEXT:                    ExpressionStatement
+// CHECK-NEXT:                        CallExpression : %function.3
+// CHECK-NEXT:                            MemberExpression : any
+// CHECK-NEXT:                                SHBuiltin
+// CHECK-NEXT:                                Id 'moduleFactory'
+// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                            FunctionExpression : %function.3
+// CHECK-NEXT:                                Id 'global' [D:E:%d.12 'global']
+// CHECK-NEXT:                                Id 'require' [D:E:%d.13 'require']
+// CHECK-NEXT:                                BlockStatement
+// CHECK-NEXT:                                    VariableDeclaration
+// CHECK-NEXT:                                        VariableDeclarator
+// CHECK-NEXT:                                            ImplicitCheckedCast : number
+// CHECK-NEXT:                                                BinaryExpression : any
+// CHECK-NEXT:                                                    MemberExpression : any
+// CHECK-NEXT:                                                        AsExpression : any
+// CHECK-NEXT:                                                            CallExpression : string
 // CHECK-NEXT:                                                                MemberExpression : any
-// CHECK-NEXT:                                                                    AsExpression : any
-// CHECK-NEXT:                                                                        CallExpression : string
-// CHECK-NEXT:                                                                            MemberExpression : any
-// CHECK-NEXT:                                                                                SHBuiltin
-// CHECK-NEXT:                                                                                Id 'import'
-// CHECK-NEXT:                                                                            NumericLiteral : number
-// CHECK-NEXT:                                                                            StringLiteral : string
-// CHECK-NEXT:                                                                            StringLiteral : string
-// CHECK-NEXT:                                                                        AnyTypeAnnotation
-// CHECK-NEXT:                                                                    Id 'length'
-// CHECK-NEXT:                                                                BinOp +
+// CHECK-NEXT:                                                                    SHBuiltin
+// CHECK-NEXT:                                                                    Id 'import'
 // CHECK-NEXT:                                                                NumericLiteral : number
-// CHECK-NEXT:                                                        Id 'n2' [D:E:%d.75 'n2']
-// CHECK-NEXT:                                                ReturnStatement
+// CHECK-NEXT:                                                                StringLiteral : string
+// CHECK-NEXT:                                                                StringLiteral : string
+// CHECK-NEXT:                                                            AnyTypeAnnotation
+// CHECK-NEXT:                                                        Id 'length'
+// CHECK-NEXT:                                                    BinOp +
 // CHECK-NEXT:                                                    NumericLiteral : number
-// CHECK-NEXT:            ObjectExpression : %object.4
+// CHECK-NEXT:                                            Id 'n2' [D:E:%d.14 'n2']
+// CHECK-NEXT:                                    ReturnStatement
+// CHECK-NEXT:                                        NumericLiteral : number

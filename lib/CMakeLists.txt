@@ -76,6 +76,7 @@ add_subdirectory(ConsoleHost)
 add_subdirectory(Regex)
 add_subdirectory(Platform)
 add_subdirectory(InternalJavaScript)
+add_subdirectory(FlowLib)
 add_subdirectory(Sema)
 
 # Define combined libraries from all components. Components are defined as object
@@ -119,6 +120,7 @@ target_link_libraries(hermescompiler PUBLIC
   hermesSHBackend_obj
   hermesSourceMap_obj
   hermesSupport_obj
+  hermesFlowLib_obj
   zip_obj
   )
 
@@ -163,6 +165,7 @@ target_link_libraries(hermesvm_a PUBLIC
   hermesSHBackend_obj
   hermesSourceMap_obj
   hermesSupport_obj
+  hermesFlowLib_obj
   hermesVMRuntime_obj
   zip_obj
   )

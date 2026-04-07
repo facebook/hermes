@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -typed -dump-ir %s -O0 | %FileCheckOrRegen --match-full-lines %s
+// RUN: %shermes -fno-std-globals -typed -dump-ir %s -O0 | %FileCheckOrRegen --match-full-lines %s
 
 class A {
     y = 7; // Field init for y.

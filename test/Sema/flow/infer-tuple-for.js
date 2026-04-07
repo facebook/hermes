@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -fno-std-globals --typed --dump-sema %s | %FileCheckOrRegen %s --match-full-lines
+// RUN: %shermes --typed --dump-sema %s | %FileCheckOrRegen %s --match-full-lines
 
 'use strict';
 
@@ -18,48 +18,40 @@ function foo(c: [number, string][]) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%array.2 = array(%tuple.5)
+// CHECK-NEXT:%array.2 = array(%tuple.4)
 // CHECK-NEXT:%function.3 = function(c: %array.2): any
-// CHECK-NEXT:%object.4 = object({
-// CHECK-NEXT:})
-// CHECK-NEXT:%tuple.5 = tuple(number, string)
+// CHECK-NEXT:%tuple.4 = tuple(number, string)
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
 // CHECK-NEXT:    Scope %s.1
+// CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
+// CHECK-NEXT:        Decl %d.2 'foo' Var : %function.3
+// CHECK-NEXT:        Decl %d.3 'arguments' Var Arguments
+// CHECK-NEXT:        hoistedFunction foo
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.2
-// CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:            Decl %d.2 'foo' Var : %function.3
-// CHECK-NEXT:            Decl %d.3 'arguments' Var Arguments
-// CHECK-NEXT:            hoistedFunction foo
-// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Decl %d.4 'c' Parameter : %array.2
+// CHECK-NEXT:            Decl %d.5 'arguments' Var Arguments
 // CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:                Decl %d.4 'c' Parameter : %array.2
-// CHECK-NEXT:                Decl %d.5 'arguments' Var Arguments
+// CHECK-NEXT:                Decl %d.6 'a' Const : any
+// CHECK-NEXT:                Decl %d.7 'b' Const : any
 // CHECK-NEXT:                Scope %s.4
-// CHECK-NEXT:                    Decl %d.6 'a' Const : any
-// CHECK-NEXT:                    Decl %d.7 'b' Const : any
-// CHECK-NEXT:                    Scope %s.5
 
-// CHECK:Program Scope %s.1
-// CHECK-NEXT:    ExpressionStatement
-// CHECK-NEXT:        CallExpression : any
-// CHECK-NEXT:            FunctionExpression : %untyped_function.1
-// CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
-// CHECK-NEXT:                BlockStatement
-// CHECK-NEXT:                    ExpressionStatement
-// CHECK-NEXT:                        StringLiteral : string
-// CHECK-NEXT:                    FunctionDeclaration : %function.3
-// CHECK-NEXT:                        Id 'foo' [D:E:%d.2 'foo']
-// CHECK-NEXT:                        Id 'c' [D:E:%d.4 'c']
-// CHECK-NEXT:                        BlockStatement
-// CHECK-NEXT:                            ForOfStatement Scope %s.4
-// CHECK-NEXT:                                VariableDeclaration
-// CHECK-NEXT:                                    VariableDeclarator
-// CHECK-NEXT:                                        ArrayPattern : any
-// CHECK-NEXT:                                            Id 'a' [D:E:%d.6 'a'] : any
-// CHECK-NEXT:                                            Id 'b' [D:E:%d.7 'b'] : any
-// CHECK-NEXT:                                Id 'c' [D:E:%d.4 'c'] : %array.2
-// CHECK-NEXT:                                BlockStatement Scope %s.5
-// CHECK-NEXT:            ObjectExpression : %object.4
+// CHECK:FunctionExpression : %untyped_function.1
+// CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
+// CHECK-NEXT:    BlockStatement
+// CHECK-NEXT:        ExpressionStatement
+// CHECK-NEXT:            StringLiteral : string
+// CHECK-NEXT:        FunctionDeclaration : %function.3
+// CHECK-NEXT:            Id 'foo' [D:E:%d.2 'foo']
+// CHECK-NEXT:            Id 'c' [D:E:%d.4 'c']
+// CHECK-NEXT:            BlockStatement
+// CHECK-NEXT:                ForOfStatement Scope %s.3
+// CHECK-NEXT:                    VariableDeclaration
+// CHECK-NEXT:                        VariableDeclarator
+// CHECK-NEXT:                            ArrayPattern : any
+// CHECK-NEXT:                                Id 'a' [D:E:%d.6 'a'] : any
+// CHECK-NEXT:                                Id 'b' [D:E:%d.7 'b'] : any
+// CHECK-NEXT:                    Id 'c' [D:E:%d.4 'c'] : %array.2
+// CHECK-NEXT:                    BlockStatement Scope %s.4

@@ -25,141 +25,133 @@ var d: A<string>;
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%union.2 = union(number | %class.8 | %array.9)
-// CHECK-NEXT:%class_constructor.3 = class_constructor(%class.8)
+// CHECK-NEXT:%union.2 = union(number | %class.7 | %array.8)
+// CHECK-NEXT:%class_constructor.3 = class_constructor(%class.7)
 // CHECK-NEXT:%array.4 = array(number)
-// CHECK-NEXT:%union.5 = union(string | %class.10 | %array.11)
-// CHECK-NEXT:%class_constructor.6 = class_constructor(%class.10)
-// CHECK-NEXT:%object.7 = object({
-// CHECK-NEXT:})
-// CHECK-NEXT:%class.8 = class(Cls {
-// CHECK-NEXT:  %homeObject: %class.12
+// CHECK-NEXT:%union.5 = union(string | %class.9 | %array.10)
+// CHECK-NEXT:%class_constructor.6 = class_constructor(%class.9)
+// CHECK-NEXT:%class.7 = class(Cls {
+// CHECK-NEXT:  %homeObject: %class.11
 // CHECK-NEXT:  x: number
 // CHECK-NEXT:  y: %union.2
 // CHECK-NEXT:})
-// CHECK-NEXT:%array.9 = array(%union.13)
-// CHECK-NEXT:%class.10 = class(Cls {
-// CHECK-NEXT:  %homeObject: %class.14
+// CHECK-NEXT:%array.8 = array(%union.12)
+// CHECK-NEXT:%class.9 = class(Cls {
+// CHECK-NEXT:  %homeObject: %class.13
 // CHECK-NEXT:  x: string
 // CHECK-NEXT:  y: %union.5
 // CHECK-NEXT:})
-// CHECK-NEXT:%array.11 = array(%union.15)
-// CHECK-NEXT:%class.12 = class( {
+// CHECK-NEXT:%array.10 = array(%union.14)
+// CHECK-NEXT:%class.11 = class( {
 // CHECK-NEXT:})
-// CHECK-NEXT:%union.13 = union(number | %array.16)
-// CHECK-NEXT:%class.14 = class( {
+// CHECK-NEXT:%union.12 = union(number | %array.15)
+// CHECK-NEXT:%class.13 = class( {
 // CHECK-NEXT:})
-// CHECK-NEXT:%union.15 = union(string | %array.17)
-// CHECK-NEXT:%array.16 = array(%union.2)
-// CHECK-NEXT:%array.17 = array(%union.5)
+// CHECK-NEXT:%union.14 = union(string | %array.16)
+// CHECK-NEXT:%array.15 = array(%union.2)
+// CHECK-NEXT:%array.16 = array(%union.5)
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
 // CHECK-NEXT:    Scope %s.1
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
+// CHECK-NEXT:        Decl %d.2 'arr' Var : %array.4
+// CHECK-NEXT:        Decl %d.3 'Cls' Class
+// CHECK-NEXT:        Decl %d.4 'c' Var : %union.2
+// CHECK-NEXT:        Decl %d.5 'd' Var : %union.5
+// CHECK-NEXT:        Decl %d.6 'arguments' Var Arguments
+// CHECK-NEXT:        Decl %d.7 'Cls' Class : %class_constructor.3
+// CHECK-NEXT:        Decl %d.8 'Cls' Class : %class_constructor.6
 // CHECK-NEXT:        Scope %s.2
-// CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:            Decl %d.2 'arr' Var : %array.4
-// CHECK-NEXT:            Decl %d.3 'Cls' Class
-// CHECK-NEXT:            Decl %d.4 'c' Var : %union.2
-// CHECK-NEXT:            Decl %d.5 'd' Var : %union.5
-// CHECK-NEXT:            Decl %d.6 'arguments' Var Arguments
-// CHECK-NEXT:            Decl %d.7 'Cls' Class : %class_constructor.3
-// CHECK-NEXT:            Decl %d.8 'Cls' Class : %class_constructor.6
-// CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:            Scope %s.4
-// CHECK-NEXT:            Scope %s.5
-// CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.6
-// CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.7
-// CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.8
+// CHECK-NEXT:        Scope %s.3
+// CHECK-NEXT:        Scope %s.4
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.5
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.6
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.7
 
-// CHECK:Program Scope %s.1
-// CHECK-NEXT:    ExpressionStatement
-// CHECK-NEXT:        CallExpression : any
-// CHECK-NEXT:            FunctionExpression : %untyped_function.1
-// CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
-// CHECK-NEXT:                BlockStatement
-// CHECK-NEXT:                    TypeAlias
-// CHECK-NEXT:                        Id 'Array'
-// CHECK-NEXT:                        TypeParameterDeclaration
-// CHECK-NEXT:                            TypeParameter
-// CHECK-NEXT:                        ArrayTypeAnnotation
-// CHECK-NEXT:                            GenericTypeAnnotation
-// CHECK-NEXT:                                Id 'T'
-// CHECK-NEXT:                    VariableDeclaration
-// CHECK-NEXT:                        VariableDeclarator
-// CHECK-NEXT:                            Id 'arr' [D:E:%d.2 'arr']
-// CHECK-NEXT:                    TypeAlias
-// CHECK-NEXT:                        Id 'A'
-// CHECK-NEXT:                        TypeParameterDeclaration
-// CHECK-NEXT:                            TypeParameter
-// CHECK-NEXT:                        UnionTypeAnnotation
-// CHECK-NEXT:                            ArrayTypeAnnotation
-// CHECK-NEXT:                                GenericTypeAnnotation
-// CHECK-NEXT:                                    Id 'B'
-// CHECK-NEXT:                                    TypeParameterInstantiation
-// CHECK-NEXT:                                        GenericTypeAnnotation
-// CHECK-NEXT:                                            Id 'T'
-// CHECK-NEXT:                            GenericTypeAnnotation
-// CHECK-NEXT:                                Id 'T'
-// CHECK-NEXT:                            GenericTypeAnnotation
-// CHECK-NEXT:                                Id 'Cls'
-// CHECK-NEXT:                                TypeParameterInstantiation
-// CHECK-NEXT:                                    GenericTypeAnnotation
-// CHECK-NEXT:                                        Id 'T'
-// CHECK-NEXT:                    TypeAlias
+// CHECK:FunctionExpression : %untyped_function.1
+// CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
+// CHECK-NEXT:    BlockStatement
+// CHECK-NEXT:        TypeAlias
+// CHECK-NEXT:            Id 'Array'
+// CHECK-NEXT:            TypeParameterDeclaration
+// CHECK-NEXT:                TypeParameter
+// CHECK-NEXT:            ArrayTypeAnnotation
+// CHECK-NEXT:                GenericTypeAnnotation
+// CHECK-NEXT:                    Id 'T'
+// CHECK-NEXT:        VariableDeclaration
+// CHECK-NEXT:            VariableDeclarator
+// CHECK-NEXT:                Id 'arr' [D:E:%d.2 'arr']
+// CHECK-NEXT:        TypeAlias
+// CHECK-NEXT:            Id 'A'
+// CHECK-NEXT:            TypeParameterDeclaration
+// CHECK-NEXT:                TypeParameter
+// CHECK-NEXT:            UnionTypeAnnotation
+// CHECK-NEXT:                ArrayTypeAnnotation
+// CHECK-NEXT:                    GenericTypeAnnotation
 // CHECK-NEXT:                        Id 'B'
-// CHECK-NEXT:                        TypeParameterDeclaration
-// CHECK-NEXT:                            TypeParameter
-// CHECK-NEXT:                        UnionTypeAnnotation
-// CHECK-NEXT:                            ArrayTypeAnnotation
-// CHECK-NEXT:                                GenericTypeAnnotation
-// CHECK-NEXT:                                    Id 'A'
-// CHECK-NEXT:                                    TypeParameterInstantiation
-// CHECK-NEXT:                                        GenericTypeAnnotation
-// CHECK-NEXT:                                            Id 'T'
+// CHECK-NEXT:                        TypeParameterInstantiation
 // CHECK-NEXT:                            GenericTypeAnnotation
 // CHECK-NEXT:                                Id 'T'
-// CHECK-NEXT:                    ClassDeclaration Scope %s.4
-// CHECK-NEXT:                        Id 'Cls' [D:E:%d.7 'Cls']
-// CHECK-NEXT:                        TypeParameterDeclaration
-// CHECK-NEXT:                            TypeParameter
-// CHECK-NEXT:                        ClassBody
-// CHECK-NEXT:                            ClassProperty : number
-// CHECK-NEXT:                                Id 'x'
-// CHECK-NEXT:                            ClassProperty : %union.2
-// CHECK-NEXT:                                Id 'y'
-// CHECK-NEXT:                    ClassDeclaration Scope %s.5
-// CHECK-NEXT:                        Id 'Cls' [D:E:%d.8 'Cls']
-// CHECK-NEXT:                        TypeParameterDeclaration
-// CHECK-NEXT:                            TypeParameter
-// CHECK-NEXT:                        ClassBody
-// CHECK-NEXT:                            ClassProperty : string
-// CHECK-NEXT:                                Id 'x'
-// CHECK-NEXT:                            ClassProperty : %union.5
-// CHECK-NEXT:                                Id 'y'
-// CHECK-NEXT:                    ClassDeclaration Scope %s.3
-// CHECK-NEXT:                        Id 'Cls' [D:E:%d.3 'Cls']
-// CHECK-NEXT:                        TypeParameterDeclaration
-// CHECK-NEXT:                            TypeParameter
-// CHECK-NEXT:                        ClassBody
-// CHECK-NEXT:                            ClassProperty
-// CHECK-NEXT:                                Id 'x'
-// CHECK-NEXT:                            ClassProperty
-// CHECK-NEXT:                                Id 'y'
-// CHECK-NEXT:                    TypeAlias
-// CHECK-NEXT:                        Id 'C'
+// CHECK-NEXT:                GenericTypeAnnotation
+// CHECK-NEXT:                    Id 'T'
+// CHECK-NEXT:                GenericTypeAnnotation
+// CHECK-NEXT:                    Id 'Cls'
+// CHECK-NEXT:                    TypeParameterInstantiation
 // CHECK-NEXT:                        GenericTypeAnnotation
-// CHECK-NEXT:                            Id 'A'
-// CHECK-NEXT:                            TypeParameterInstantiation
-// CHECK-NEXT:                                NumberTypeAnnotation
-// CHECK-NEXT:                    VariableDeclaration
-// CHECK-NEXT:                        VariableDeclarator
-// CHECK-NEXT:                            Id 'c' [D:E:%d.4 'c']
-// CHECK-NEXT:                    VariableDeclaration
-// CHECK-NEXT:                        VariableDeclarator
-// CHECK-NEXT:                            Id 'd' [D:E:%d.5 'd']
-// CHECK-NEXT:            ObjectExpression : %object.7
+// CHECK-NEXT:                            Id 'T'
+// CHECK-NEXT:        TypeAlias
+// CHECK-NEXT:            Id 'B'
+// CHECK-NEXT:            TypeParameterDeclaration
+// CHECK-NEXT:                TypeParameter
+// CHECK-NEXT:            UnionTypeAnnotation
+// CHECK-NEXT:                ArrayTypeAnnotation
+// CHECK-NEXT:                    GenericTypeAnnotation
+// CHECK-NEXT:                        Id 'A'
+// CHECK-NEXT:                        TypeParameterInstantiation
+// CHECK-NEXT:                            GenericTypeAnnotation
+// CHECK-NEXT:                                Id 'T'
+// CHECK-NEXT:                GenericTypeAnnotation
+// CHECK-NEXT:                    Id 'T'
+// CHECK-NEXT:        ClassDeclaration Scope %s.3
+// CHECK-NEXT:            Id 'Cls' [D:E:%d.7 'Cls']
+// CHECK-NEXT:            TypeParameterDeclaration
+// CHECK-NEXT:                TypeParameter
+// CHECK-NEXT:            ClassBody
+// CHECK-NEXT:                ClassProperty : number
+// CHECK-NEXT:                    Id 'x'
+// CHECK-NEXT:                ClassProperty : %union.2
+// CHECK-NEXT:                    Id 'y'
+// CHECK-NEXT:        ClassDeclaration Scope %s.4
+// CHECK-NEXT:            Id 'Cls' [D:E:%d.8 'Cls']
+// CHECK-NEXT:            TypeParameterDeclaration
+// CHECK-NEXT:                TypeParameter
+// CHECK-NEXT:            ClassBody
+// CHECK-NEXT:                ClassProperty : string
+// CHECK-NEXT:                    Id 'x'
+// CHECK-NEXT:                ClassProperty : %union.5
+// CHECK-NEXT:                    Id 'y'
+// CHECK-NEXT:        ClassDeclaration Scope %s.2
+// CHECK-NEXT:            Id 'Cls' [D:E:%d.3 'Cls']
+// CHECK-NEXT:            TypeParameterDeclaration
+// CHECK-NEXT:                TypeParameter
+// CHECK-NEXT:            ClassBody
+// CHECK-NEXT:                ClassProperty
+// CHECK-NEXT:                    Id 'x'
+// CHECK-NEXT:                ClassProperty
+// CHECK-NEXT:                    Id 'y'
+// CHECK-NEXT:        TypeAlias
+// CHECK-NEXT:            Id 'C'
+// CHECK-NEXT:            GenericTypeAnnotation
+// CHECK-NEXT:                Id 'A'
+// CHECK-NEXT:                TypeParameterInstantiation
+// CHECK-NEXT:                    NumberTypeAnnotation
+// CHECK-NEXT:        VariableDeclaration
+// CHECK-NEXT:            VariableDeclarator
+// CHECK-NEXT:                Id 'c' [D:E:%d.4 'c']
+// CHECK-NEXT:        VariableDeclaration
+// CHECK-NEXT:            VariableDeclarator
+// CHECK-NEXT:                Id 'd' [D:E:%d.5 'd']

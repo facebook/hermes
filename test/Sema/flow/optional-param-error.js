@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (! %shermes -Werror -ferror-limit=0 -typed -dump-sema -fno-std-globals %s 2>&1 ) | %FileCheckOrRegen --match-full-lines %s
+// RUN: (! %shermes -Werror -ferror-limit=0 -typed -dump-sema %s 2>&1 ) | %FileCheckOrRegen --match-full-lines %s
 
 // Optional param not last in function declaration.
 function declBad(x?: number, y: number): void {}

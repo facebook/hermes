@@ -21,43 +21,35 @@ return function foo(x: any): string {
 
 // CHECK:%untyped_function.1 = untyped_function()
 // CHECK-NEXT:%function.2 = function(x: any): string
-// CHECK-NEXT:%object.3 = object({
-// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
 // CHECK-NEXT:    Scope %s.1
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
+// CHECK-NEXT:        Decl %d.2 'arguments' Var Arguments
 // CHECK-NEXT:        Scope %s.2
-// CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:            Decl %d.2 'arguments' Var Arguments
-// CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:                Decl %d.3 'foo' FunctionExprName : %function.2
-// CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.4
-// CHECK-NEXT:                Decl %d.4 'x' Parameter : any
-// CHECK-NEXT:                Decl %d.5 'res' Let : string
-// CHECK-NEXT:                Decl %d.6 'arguments' Var Arguments
+// CHECK-NEXT:            Decl %d.3 'foo' FunctionExprName : %function.2
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.3
+// CHECK-NEXT:            Decl %d.4 'x' Parameter : any
+// CHECK-NEXT:            Decl %d.5 'res' Let : string
+// CHECK-NEXT:            Decl %d.6 'arguments' Var Arguments
 
-// CHECK:Program Scope %s.1
-// CHECK-NEXT:    ExpressionStatement
-// CHECK-NEXT:        CallExpression : any
-// CHECK-NEXT:            FunctionExpression : %untyped_function.1
-// CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
+// CHECK:FunctionExpression : %untyped_function.1
+// CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
+// CHECK-NEXT:    BlockStatement
+// CHECK-NEXT:        ReturnStatement
+// CHECK-NEXT:            FunctionExpression : %function.2 Scope %s.2
+// CHECK-NEXT:                Id 'foo' [D:E:%d.3 'foo']
+// CHECK-NEXT:                Id 'x' [D:E:%d.4 'x']
 // CHECK-NEXT:                BlockStatement
+// CHECK-NEXT:                    VariableDeclaration
+// CHECK-NEXT:                        VariableDeclarator
+// CHECK-NEXT:                            StringLiteral : string
+// CHECK-NEXT:                            Id 'res' [D:E:%d.5 'res']
+// CHECK-NEXT:                    ExpressionStatement
+// CHECK-NEXT:                        AssignmentExpression : string
+// CHECK-NEXT:                            Id 'res' [D:E:%d.5 'res'] : string
+// CHECK-NEXT:                            Id 'x' [D:E:%d.4 'x'] : any
 // CHECK-NEXT:                    ReturnStatement
-// CHECK-NEXT:                        FunctionExpression : %function.2 Scope %s.3
-// CHECK-NEXT:                            Id 'foo' [D:E:%d.3 'foo']
-// CHECK-NEXT:                            Id 'x' [D:E:%d.4 'x']
-// CHECK-NEXT:                            BlockStatement
-// CHECK-NEXT:                                VariableDeclaration
-// CHECK-NEXT:                                    VariableDeclarator
-// CHECK-NEXT:                                        StringLiteral : string
-// CHECK-NEXT:                                        Id 'res' [D:E:%d.5 'res']
-// CHECK-NEXT:                                ExpressionStatement
-// CHECK-NEXT:                                    AssignmentExpression : string
-// CHECK-NEXT:                                        Id 'res' [D:E:%d.5 'res'] : string
-// CHECK-NEXT:                                        Id 'x' [D:E:%d.4 'x'] : any
-// CHECK-NEXT:                                ReturnStatement
-// CHECK-NEXT:                                    Id 'res' [D:E:%d.5 'res'] : string
-// CHECK-NEXT:            ObjectExpression : %object.3
+// CHECK-NEXT:                        Id 'res' [D:E:%d.5 'res'] : string

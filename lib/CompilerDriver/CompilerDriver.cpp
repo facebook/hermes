@@ -18,6 +18,7 @@
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/BCGen/RegAlloc.h"
 #include "hermes/BCGen/SH/SH.h"
+#include "hermes/FlowLib/FlowLib.h"
 #include "hermes/IR/Analysis.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRBuilder.h"
@@ -274,6 +275,13 @@ CLFlag StdGlobals(
     "std-globals",
     true,
     "registration of standard globals",
+    CompilerCategory);
+
+CLFlag DumpWrappedSema(
+    'f',
+    "dump-wrapped-sema",
+    false,
+    "dumping of full wrapped AST in sema output",
     CompilerCategory);
 
 cl::opt<bool> Script(
@@ -885,8 +893,26 @@ ESTree::NodePtr parseJS(
     return nullptr;
 
   // If we are executing in typed mode and not script, then wrap the program.
+  ESTree::FunctionExpressionNode *originalFunc = nullptr;
   if (shouldWrapInIIFE) {
-    parsedAST = wrapInIIFE(context, llvh::cast<ESTree::ProgramNode>(parsedAST));
+    ESTree::ProgramNode *prelude = nullptr;
+
+    // Parse FlowLib prelude if std-globals is enabled.
+    if (cl::StdGlobals) {
+      auto flowLibBuf = llvh::MemoryBuffer::getMemBuffer(
+          getFlowLibSource(), "FlowLib", false);
+      parser::JSParser jsParser(*context, std::move(flowLibBuf));
+      auto preludeOpt = jsParser.parse();
+      if (!preludeOpt) {
+        return nullptr;
+      }
+      prelude = preludeOpt.getValue();
+    }
+
+    auto [wrappedAST, innerFunc] = wrapInIIFE(
+        context, llvh::cast<ESTree::ProgramNode>(parsedAST), prelude);
+    parsedAST = wrappedAST;
+    originalFunc = innerFunc;
     // In case this API decides it can fail in the future, check for a
     // nullptr.
     if (!parsedAST) {
@@ -925,7 +951,10 @@ ESTree::NodePtr parseJS(
                               : ESTreeRawProp::Exclude);
   }
   if (cl::DumpTarget == DumpSema) {
-    sema::semDump(llvh::outs(), *context, semCtx, flowContext, parsedAST);
+    ESTree::Node *semaRoot = (originalFunc && !cl::DumpWrappedSema)
+        ? static_cast<ESTree::Node *>(originalFunc)
+        : static_cast<ESTree::Node *>(parsedAST);
+    sema::semDump(llvh::outs(), *context, semCtx, flowContext, semaRoot);
   }
   if (cl::DumpTarget == DumpTransformedJS) {
     hermes::generateJS(llvh::outs(), parsedAST, cl::Pretty /* pretty */);

@@ -13,16 +13,22 @@
 #include "llvh/ADT/ArrayRef.h"
 
 #include <memory>
+#include <utility>
 
 namespace hermes {
 class Context;
 
-/// Wrap the given program in a IIFE, e.g.
-/// (function(exports){ ...program body })({});
-/// This function cannot fail.
-ESTree::ProgramNode *wrapInIIFE(
+/// Wrap the given program in an IIFE.
+/// Without prelude: (function(exports){ ...program... })({})
+/// With prelude:
+///   (function(){ ...prelude... (function(exports){ ...program... })({}) })()
+/// \return {wrappedAST, originalFunc} where wrappedAST is the modified
+///     ProgramNode and originalFunc is the inner FunctionExpressionNode
+///     containing the original program body.
+std::pair<ESTree::ProgramNode *, ESTree::FunctionExpressionNode *> wrapInIIFE(
     std::shared_ptr<Context> &context,
-    ESTree::ProgramNode *program);
+    ESTree::ProgramNode *program,
+    ESTree::ProgramNode *prelude = nullptr);
 
 /// \return true if the given list of Decorators contains the given Decorator
 /// member expression, provided as a list of identifiers.

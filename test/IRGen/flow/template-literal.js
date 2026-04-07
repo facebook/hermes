@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -Werror -typed -O0 -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
+// RUN: %shermes -fno-std-globals -Werror -typed -O0 -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
 
 return function main() {
   let x: string = 'X';

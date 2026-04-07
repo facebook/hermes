@@ -30,119 +30,111 @@ class C extends B {
 
 // CHECK:%untyped_function.1 = untyped_function()
 // CHECK-NEXT:%class.2 = class(A {
-// CHECK-NEXT:  %homeObject: %class.10
+// CHECK-NEXT:  %homeObject: %class.9
 // CHECK-NEXT:  #a1: number
 // CHECK-NEXT:})
 // CHECK-NEXT:%class_constructor.3 = class_constructor(%class.2)
-// CHECK-NEXT:%class_constructor.4 = class_constructor(%class.11)
-// CHECK-NEXT:%class_constructor.5 = class_constructor(%class.12)
+// CHECK-NEXT:%class_constructor.4 = class_constructor(%class.10)
+// CHECK-NEXT:%class_constructor.5 = class_constructor(%class.11)
 // CHECK-NEXT:%function.6 = function(this: %class.2): void
-// CHECK-NEXT:%function.7 = function(this: %class.11): void
-// CHECK-NEXT:%function.8 = function(this: %class.12): number
-// CHECK-NEXT:%object.9 = object({
-// CHECK-NEXT:})
-// CHECK-NEXT:%class.10 = class( {
+// CHECK-NEXT:%function.7 = function(this: %class.10): void
+// CHECK-NEXT:%function.8 = function(this: %class.11): number
+// CHECK-NEXT:%class.9 = class( {
 // CHECK-NEXT:  #a2 [final]: %function.6
 // CHECK-NEXT:})
-// CHECK-NEXT:%class.11 = class(B {
-// CHECK-NEXT:  %homeObject: %class.13
+// CHECK-NEXT:%class.10 = class(B {
+// CHECK-NEXT:  %homeObject: %class.12
 // CHECK-NEXT:  #b1: number
 // CHECK-NEXT:})
-// CHECK-NEXT:%class.12 = class(C extends %class.11 {
-// CHECK-NEXT:  %homeObject: %class.14
+// CHECK-NEXT:%class.11 = class(C extends %class.10 {
+// CHECK-NEXT:  %homeObject: %class.13
 // CHECK-NEXT:  #b1: string
 // CHECK-NEXT:})
-// CHECK-NEXT:%class.13 = class( {
+// CHECK-NEXT:%class.12 = class( {
 // CHECK-NEXT:  #b2 [final]: %function.7
 // CHECK-NEXT:})
-// CHECK-NEXT:%class.14 = class( extends %class.13 {
+// CHECK-NEXT:%class.13 = class( extends %class.12 {
 // CHECK-NEXT:  #b2 [final]: %function.8
 // CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
 // CHECK-NEXT:    Scope %s.1
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
+// CHECK-NEXT:        Decl %d.2 'A' Class : %class_constructor.3
+// CHECK-NEXT:        Decl %d.3 'B' Class : %class_constructor.4
+// CHECK-NEXT:        Decl %d.4 'C' Class : %class_constructor.5
+// CHECK-NEXT:        Decl %d.5 'arguments' Var Arguments
 // CHECK-NEXT:        Scope %s.2
-// CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:            Decl %d.2 'A' Class : %class_constructor.3
-// CHECK-NEXT:            Decl %d.3 'B' Class : %class_constructor.4
-// CHECK-NEXT:            Decl %d.4 'C' Class : %class_constructor.5
-// CHECK-NEXT:            Decl %d.5 'arguments' Var Arguments
-// CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:                Decl %d.6 '#a1' PrivateField
-// CHECK-NEXT:                Decl %d.7 '#a2' PrivateMethod
-// CHECK-NEXT:            Scope %s.4
-// CHECK-NEXT:                Decl %d.8 '#b1' PrivateField
-// CHECK-NEXT:                Decl %d.9 '#b2' PrivateMethod
-// CHECK-NEXT:            Scope %s.5
-// CHECK-NEXT:                Decl %d.10 '#b1' PrivateField
-// CHECK-NEXT:                Decl %d.11 '#b2' PrivateMethod
-// CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.6
-// CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.7
-// CHECK-NEXT:                Decl %d.12 'arguments' Var Arguments
-// CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.8
-// CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.9
-// CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.10
-// CHECK-NEXT:                Decl %d.13 'arguments' Var Arguments
-// CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.11
-// CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.12
-// CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.13
-// CHECK-NEXT:                Decl %d.14 'arguments' Var Arguments
-// CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.14
+// CHECK-NEXT:            Decl %d.6 '#a1' PrivateField
+// CHECK-NEXT:            Decl %d.7 '#a2' PrivateMethod
+// CHECK-NEXT:        Scope %s.3
+// CHECK-NEXT:            Decl %d.8 '#b1' PrivateField
+// CHECK-NEXT:            Decl %d.9 '#b2' PrivateMethod
+// CHECK-NEXT:        Scope %s.4
+// CHECK-NEXT:            Decl %d.10 '#b1' PrivateField
+// CHECK-NEXT:            Decl %d.11 '#b2' PrivateMethod
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.5
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.6
+// CHECK-NEXT:            Decl %d.12 'arguments' Var Arguments
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.7
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.8
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.9
+// CHECK-NEXT:            Decl %d.13 'arguments' Var Arguments
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.10
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.11
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.12
+// CHECK-NEXT:            Decl %d.14 'arguments' Var Arguments
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.13
 
-// CHECK:Program Scope %s.1
-// CHECK-NEXT:    ExpressionStatement
-// CHECK-NEXT:        CallExpression : any
-// CHECK-NEXT:            FunctionExpression : %untyped_function.1
-// CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
-// CHECK-NEXT:                BlockStatement
-// CHECK-NEXT:                    ClassDeclaration Scope %s.3
-// CHECK-NEXT:                        Id 'A' [D:E:%d.2 'A']
-// CHECK-NEXT:                        ClassBody
-// CHECK-NEXT:                            ClassPrivateProperty : number
-// CHECK-NEXT:                                Id 'a1' [D:E:%d.6 '#a1']
-// CHECK-NEXT:                            MethodDefinition : %function.6
-// CHECK-NEXT:                                PrivateName
-// CHECK-NEXT:                                    Id 'a2' [D:E:%d.7 '#a2']
-// CHECK-NEXT:                                FunctionExpression : %function.6
-// CHECK-NEXT:                                    BlockStatement
-// CHECK-NEXT:                                        ExpressionStatement
-// CHECK-NEXT:                                            CallExpression : void
-// CHECK-NEXT:                                                MemberExpression : %function.6
-// CHECK-NEXT:                                                    ThisExpression : %class.2
-// CHECK-NEXT:                                                    PrivateName
-// CHECK-NEXT:                                                        Id 'a2' [D:E:%d.7 '#a2']
-// CHECK-NEXT:                    ClassDeclaration Scope %s.4
-// CHECK-NEXT:                        Id 'B' [D:E:%d.3 'B']
-// CHECK-NEXT:                        ClassBody
-// CHECK-NEXT:                            ClassPrivateProperty : number
-// CHECK-NEXT:                                Id 'b1' [D:E:%d.8 '#b1']
-// CHECK-NEXT:                            MethodDefinition : %function.7
-// CHECK-NEXT:                                PrivateName
-// CHECK-NEXT:                                    Id 'b2' [D:E:%d.9 '#b2']
-// CHECK-NEXT:                                FunctionExpression : %function.7
-// CHECK-NEXT:                                    BlockStatement
-// CHECK-NEXT:                    ClassDeclaration Scope %s.5
-// CHECK-NEXT:                        Id 'C' [D:E:%d.4 'C']
-// CHECK-NEXT:                        Id 'B' [D:E:%d.3 'B'] : %class_constructor.4
-// CHECK-NEXT:                        ClassBody
-// CHECK-NEXT:                            ClassPrivateProperty : string
-// CHECK-NEXT:                                Id 'b1' [D:E:%d.10 '#b1']
-// CHECK-NEXT:                            MethodDefinition : %function.8
-// CHECK-NEXT:                                PrivateName
-// CHECK-NEXT:                                    Id 'b2' [D:E:%d.11 '#b2']
-// CHECK-NEXT:                                FunctionExpression : %function.8
-// CHECK-NEXT:                                    BlockStatement
-// CHECK-NEXT:                                        ReturnStatement
-// CHECK-NEXT:                                            NumericLiteral : number
-// CHECK-NEXT:            ObjectExpression : %object.9
+// CHECK:FunctionExpression : %untyped_function.1
+// CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
+// CHECK-NEXT:    BlockStatement
+// CHECK-NEXT:        ClassDeclaration Scope %s.2
+// CHECK-NEXT:            Id 'A' [D:E:%d.2 'A']
+// CHECK-NEXT:            ClassBody
+// CHECK-NEXT:                ClassPrivateProperty : number
+// CHECK-NEXT:                    Id 'a1' [D:E:%d.6 '#a1']
+// CHECK-NEXT:                MethodDefinition : %function.6
+// CHECK-NEXT:                    PrivateName
+// CHECK-NEXT:                        Id 'a2' [D:E:%d.7 '#a2']
+// CHECK-NEXT:                    FunctionExpression : %function.6
+// CHECK-NEXT:                        BlockStatement
+// CHECK-NEXT:                            ExpressionStatement
+// CHECK-NEXT:                                CallExpression : void
+// CHECK-NEXT:                                    MemberExpression : %function.6
+// CHECK-NEXT:                                        ThisExpression : %class.2
+// CHECK-NEXT:                                        PrivateName
+// CHECK-NEXT:                                            Id 'a2' [D:E:%d.7 '#a2']
+// CHECK-NEXT:        ClassDeclaration Scope %s.3
+// CHECK-NEXT:            Id 'B' [D:E:%d.3 'B']
+// CHECK-NEXT:            ClassBody
+// CHECK-NEXT:                ClassPrivateProperty : number
+// CHECK-NEXT:                    Id 'b1' [D:E:%d.8 '#b1']
+// CHECK-NEXT:                MethodDefinition : %function.7
+// CHECK-NEXT:                    PrivateName
+// CHECK-NEXT:                        Id 'b2' [D:E:%d.9 '#b2']
+// CHECK-NEXT:                    FunctionExpression : %function.7
+// CHECK-NEXT:                        BlockStatement
+// CHECK-NEXT:        ClassDeclaration Scope %s.4
+// CHECK-NEXT:            Id 'C' [D:E:%d.4 'C']
+// CHECK-NEXT:            Id 'B' [D:E:%d.3 'B'] : %class_constructor.4
+// CHECK-NEXT:            ClassBody
+// CHECK-NEXT:                ClassPrivateProperty : string
+// CHECK-NEXT:                    Id 'b1' [D:E:%d.10 '#b1']
+// CHECK-NEXT:                MethodDefinition : %function.8
+// CHECK-NEXT:                    PrivateName
+// CHECK-NEXT:                        Id 'b2' [D:E:%d.11 '#b2']
+// CHECK-NEXT:                    FunctionExpression : %function.8
+// CHECK-NEXT:                        BlockStatement
+// CHECK-NEXT:                            ReturnStatement
+// CHECK-NEXT:                                NumericLiteral : number

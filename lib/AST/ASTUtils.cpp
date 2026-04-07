@@ -11,52 +11,110 @@
 
 namespace hermes {
 
-/// Wrap the given program in a IIFE, e.g.
-/// (function(exports){ ...program body })({});
-/// This function cannot fail.
-ESTree::ProgramNode *wrapInIIFE(
+/// Wrap the given program in an IIFE.
+/// Without prelude: (function(exports){ ...program body... })({})
+/// With prelude:
+///   (function(){ ...prelude... (function(exports){ ...program... })({}) })()
+/// \return {wrappedAST, originalFunc}.
+std::pair<ESTree::ProgramNode *, ESTree::FunctionExpressionNode *> wrapInIIFE(
     std::shared_ptr<Context> &context,
-    ESTree::ProgramNode *program) {
-  // Function body should be the given program body.
-  auto *funcBody = new (*context)
-      ESTree::BlockStatementNode(std::move(program->_body), false);
-  funcBody->setSourceRange(program->getSourceRange());
-  funcBody->setDebugLoc(program->getDebugLoc());
+    ESTree::ProgramNode *program,
+    ESTree::ProgramNode *prelude) {
+  // Build function body from program body statements.
+  ESTree::NodeList innerBodyStmts;
+  innerBodyStmts.splice(innerBodyStmts.end(), program->_body);
 
-  // Add an 'exports' parameter to the function.
+  auto *innerBody = new (*context)
+      ESTree::BlockStatementNode(std::move(innerBodyStmts), false);
+  innerBody->setSourceRange(program->getSourceRange());
+  innerBody->setDebugLoc(program->getDebugLoc());
+
+  // Add an 'exports' parameter to the inner function.
   ESTree::NodeList argNames{};
   auto *exports = new (*context) ESTree::IdentifierNode(
       context->getIdentifier("exports").getUnderlyingPointer(), nullptr, false);
   argNames.push_back(*exports);
-  auto *wrappedFn = new (*context) ESTree::FunctionExpressionNode(
+  auto *originalFunc = new (*context) ESTree::FunctionExpressionNode(
       nullptr,
       std::move(argNames),
-      funcBody,
+      innerBody,
       nullptr,
       nullptr,
       nullptr,
       false,
       false);
-  wrappedFn->setSourceRange(program->getSourceRange());
-  wrappedFn->setDebugLoc(program->getDebugLoc());
+  originalFunc->setSourceRange(program->getSourceRange());
+  originalFunc->setDebugLoc(program->getDebugLoc());
 
-  // Supply an empty object to the call expression.
+  // Supply an empty object to the inner call expression.
   auto *emptyObj = new (*context) ESTree::ObjectExpressionNode({});
-  ESTree::NodeList suppliedArgs{};
-  suppliedArgs.push_back(*emptyObj);
+  ESTree::NodeList innerArgs{};
+  innerArgs.push_back(*emptyObj);
 
-  // Call the function.
-  auto *callExpr = new (*context)
-      ESTree::CallExpressionNode(wrappedFn, nullptr, std::move(suppliedArgs));
-  // Create a top level expression statement of the function call.
+  // Call the inner function: (function(exports){...})({})
+  auto *innerCallExpr = new (*context)
+      ESTree::CallExpressionNode(originalFunc, nullptr, std::move(innerArgs));
+  innerCallExpr->setSourceRange(program->getSourceRange());
+  innerCallExpr->setDebugLoc(program->getDebugLoc());
+
+  if (!prelude) {
+    // No prelude: just wrap in a single IIFE.
+    auto *topLevelExpr =
+        new (*context) ESTree::ExpressionStatementNode(innerCallExpr, nullptr);
+
+    ESTree::NodeList stmtList;
+    stmtList.push_back(*topLevelExpr);
+    program->_body = std::move(stmtList);
+
+    return {program, originalFunc};
+  }
+
+  // With prelude: wrap in nested IIFEs.
+  // (function(){ ...prelude... ; return (function(exports){...})({}) })()
+
+  // Wrap inner call in a return statement.
+  auto *innerCallStmt =
+      new (*context) ESTree::ReturnStatementNode(innerCallExpr);
+
+  // Build outer function body: prelude statements + inner call statement.
+  ESTree::NodeList outerBodyStmts;
+  outerBodyStmts.splice(outerBodyStmts.end(), prelude->_body);
+  outerBodyStmts.push_back(*innerCallStmt);
+
+  auto *outerBody = new (*context)
+      ESTree::BlockStatementNode(std::move(outerBodyStmts), false);
+  outerBody->setSourceRange(program->getSourceRange());
+  outerBody->setDebugLoc(program->getDebugLoc());
+
+  // Create outer function with no params.
+  ESTree::NodeList outerParams{};
+  auto *outerFunc = new (*context) ESTree::FunctionExpressionNode(
+      nullptr,
+      std::move(outerParams),
+      outerBody,
+      nullptr,
+      nullptr,
+      nullptr,
+      false,
+      false);
+  outerFunc->setSourceRange(program->getSourceRange());
+  outerFunc->setDebugLoc(program->getDebugLoc());
+
+  // Call the outer function with no args: (function(){...})()
+  ESTree::NodeList outerArgs{};
+  auto *outerCallExpr = new (*context)
+      ESTree::CallExpressionNode(outerFunc, nullptr, std::move(outerArgs));
+  outerCallExpr->setSourceRange(program->getSourceRange());
+  outerCallExpr->setDebugLoc(program->getDebugLoc());
+
   auto *topLevelExpr =
-      new (*context) ESTree::ExpressionStatementNode(callExpr, nullptr);
+      new (*context) ESTree::ExpressionStatementNode(outerCallExpr, nullptr);
 
   ESTree::NodeList stmtList;
   stmtList.push_back(*topLevelExpr);
   program->_body = std::move(stmtList);
 
-  return program;
+  return {program, originalFunc};
 }
 
 ESTree::DecoratorNode *findDecorator(

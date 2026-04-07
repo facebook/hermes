@@ -310,7 +310,6 @@ Value *ESTreeIRGen::emitTypedClassAllocation(
   // so we use getNumLayoutSlots() instead of getFieldNameMap().size().
   size_t numFields = classType->getNumLayoutSlots();
   propMap.resize(numFields);
-
   auto addField = [this, &propMap, classType, parent](
                       const flow::ClassType::FieldLookupEntry &entry) {
     const flow::ClassType::Field &field = *entry.getField();

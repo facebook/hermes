@@ -12,24 +12,15 @@ undefined;
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%object.2 = object({
-// CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
 // CHECK-NEXT:    Scope %s.1
-// CHECK-NEXT:        Decl %d.1 'undefined' UndeclaredGlobalProperty
-// CHECK-NEXT:    Func strict
-// CHECK-NEXT:        Scope %s.2
-// CHECK-NEXT:            Decl %d.2 'exports' Parameter : any
-// CHECK-NEXT:            Decl %d.3 'arguments' Var Arguments
+// CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
+// CHECK-NEXT:        Decl %d.2 'arguments' Var Arguments
 
-// CHECK:Program Scope %s.1
-// CHECK-NEXT:    ExpressionStatement
-// CHECK-NEXT:        CallExpression : any
-// CHECK-NEXT:            FunctionExpression : %untyped_function.1
-// CHECK-NEXT:                Id 'exports' [D:E:%d.2 'exports']
-// CHECK-NEXT:                BlockStatement
-// CHECK-NEXT:                    ExpressionStatement
-// CHECK-NEXT:                        Id 'undefined' [D:E:%d.1 'undefined'] : void
-// CHECK-NEXT:            ObjectExpression : %object.2
+// CHECK:FunctionExpression : %untyped_function.1
+// CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
+// CHECK-NEXT:    BlockStatement
+// CHECK-NEXT:        ExpressionStatement
+// CHECK-NEXT:            Id 'undefined' [D:E:%d.3 'undefined'] : void

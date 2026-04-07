@@ -5,19 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -typed -dump-ir -O %s | %FileCheckOrRegen %s --match-full-lines
+// RUN: %shermes -Xdump-functions=foo -typed -dump-ir -O %s | %FileCheckOrRegen %s --match-full-lines
 
 return function foo(x: string, y: string): string[] {
   return [x + y, x + 'abc', x + y + 'abc' + 'def' + y];
 }
 
 // Auto-generated content below. Please do not modify manually.
-
-// CHECK:function global(): object
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %foo(): functionCode
-// CHECK-NEXT:       ReturnInst %0: object
-// CHECK-NEXT:function_end
 
 // CHECK:function foo(x: string, y: string): object [typed]
 // CHECK-NEXT:%BB0:

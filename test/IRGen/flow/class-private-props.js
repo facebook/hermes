@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -O0 -Werror -typed -dump-ir %s | %FileCheckOrRegen %s --match-full-lines
+// RUN: %shermes -fno-std-globals -O0 -Werror -typed -dump-ir %s | %FileCheckOrRegen %s --match-full-lines
 
 class C {
   #x: number;

@@ -5,32 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -fno-std-globals -typed -dump-transformed-ast %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -typed -dump-transformed-ast %s | %FileCheck --match-full-lines %s
 
 // Test lowering of fastarray push
 
 var x: number[];
 x.push(10, 20);
 
-// CHECK-LABEL:                     "name": "?fastArrayPush"
-// CHECK-NEXT:                    },
-// CHECK-NEXT:                    "computed": false
-// CHECK-NEXT:                  },
-// CHECK-NEXT:                  "arguments": [
-// CHECK-NEXT:                    {
-// CHECK-NEXT:                      "type": "Identifier",
-// CHECK-NEXT:                      "name": "x"
-// CHECK-NEXT:                    },
-// CHECK-NEXT:                    {
-// CHECK-NEXT:                      "type": "NumericLiteral",
-// CHECK-NEXT:                      "value": 10,
-// CHECK-NEXT:                      "raw": "10"
-// CHECK-NEXT:                    },
-// CHECK-NEXT:                    {
-// CHECK-NEXT:                      "type": "NumericLiteral",
-// CHECK-NEXT:                      "value": 20,
-// CHECK-NEXT:                      "raw": "20"
-// CHECK-NEXT:                    }
-// CHECK-NEXT:                  ]
-// CHECK-NEXT:                },
-// CHECK-NEXT:                "directive": null
+// Use "raw": "10" as a unique anchor that only appears in the test's code.
+// CHECK:              "name": "?fastArrayPush"
+// CHECK:              "name": "x"
+// CHECK:              "raw": "10"
+// CHECK:              "raw": "20"

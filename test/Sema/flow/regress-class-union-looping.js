@@ -14,68 +14,60 @@ type D = [B<D>] | C<number>;
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%class_constructor.2 = class_constructor(%class.4)
-// CHECK-NEXT:%object.3 = object({
+// CHECK-NEXT:%class_constructor.2 = class_constructor(%class.3)
+// CHECK-NEXT:%class.3 = class(B {
+// CHECK-NEXT:  %homeObject: %class.4
 // CHECK-NEXT:})
-// CHECK-NEXT:%class.4 = class(B {
-// CHECK-NEXT:  %homeObject: %class.5
-// CHECK-NEXT:})
-// CHECK-NEXT:%class.5 = class( {
+// CHECK-NEXT:%class.4 = class( {
 // CHECK-NEXT:})
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
 // CHECK-NEXT:    Scope %s.1
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
+// CHECK-NEXT:        Decl %d.2 'B' Class
+// CHECK-NEXT:        Decl %d.3 'arguments' Var Arguments
+// CHECK-NEXT:        Decl %d.4 'B' Class : %class_constructor.2
 // CHECK-NEXT:        Scope %s.2
-// CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:            Decl %d.2 'B' Class
-// CHECK-NEXT:            Decl %d.3 'arguments' Var Arguments
-// CHECK-NEXT:            Decl %d.4 'B' Class : %class_constructor.2
-// CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:            Scope %s.4
-// CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.5
-// CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.6
+// CHECK-NEXT:        Scope %s.3
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.4
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.5
 
-// CHECK:Program Scope %s.1
-// CHECK-NEXT:    ExpressionStatement
-// CHECK-NEXT:        CallExpression : any
-// CHECK-NEXT:            FunctionExpression : %untyped_function.1
-// CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
-// CHECK-NEXT:                BlockStatement
-// CHECK-NEXT:                    ClassDeclaration Scope %s.4
-// CHECK-NEXT:                        Id 'B' [D:E:%d.4 'B']
-// CHECK-NEXT:                        TypeParameterDeclaration
-// CHECK-NEXT:                            TypeParameter
-// CHECK-NEXT:                        ClassBody
-// CHECK-NEXT:                    ClassDeclaration Scope %s.3
-// CHECK-NEXT:                        Id 'B' [D:E:%d.2 'B']
-// CHECK-NEXT:                        TypeParameterDeclaration
-// CHECK-NEXT:                            TypeParameter
-// CHECK-NEXT:                        ClassBody
-// CHECK-NEXT:                    TypeAlias
-// CHECK-NEXT:                        Id 'C'
-// CHECK-NEXT:                        TypeParameterDeclaration
-// CHECK-NEXT:                            TypeParameter
-// CHECK-NEXT:                        ArrayTypeAnnotation
+// CHECK:FunctionExpression : %untyped_function.1
+// CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
+// CHECK-NEXT:    BlockStatement
+// CHECK-NEXT:        ClassDeclaration Scope %s.3
+// CHECK-NEXT:            Id 'B' [D:E:%d.4 'B']
+// CHECK-NEXT:            TypeParameterDeclaration
+// CHECK-NEXT:                TypeParameter
+// CHECK-NEXT:            ClassBody
+// CHECK-NEXT:        ClassDeclaration Scope %s.2
+// CHECK-NEXT:            Id 'B' [D:E:%d.2 'B']
+// CHECK-NEXT:            TypeParameterDeclaration
+// CHECK-NEXT:                TypeParameter
+// CHECK-NEXT:            ClassBody
+// CHECK-NEXT:        TypeAlias
+// CHECK-NEXT:            Id 'C'
+// CHECK-NEXT:            TypeParameterDeclaration
+// CHECK-NEXT:                TypeParameter
+// CHECK-NEXT:            ArrayTypeAnnotation
+// CHECK-NEXT:                GenericTypeAnnotation
+// CHECK-NEXT:                    Id 'B'
+// CHECK-NEXT:                    TypeParameterInstantiation
+// CHECK-NEXT:                        GenericTypeAnnotation
+// CHECK-NEXT:                            Id 'D'
+// CHECK-NEXT:        TypeAlias
+// CHECK-NEXT:            Id 'D'
+// CHECK-NEXT:            UnionTypeAnnotation
+// CHECK-NEXT:                TupleTypeAnnotation
+// CHECK-NEXT:                    GenericTypeAnnotation
+// CHECK-NEXT:                        Id 'B'
+// CHECK-NEXT:                        TypeParameterInstantiation
 // CHECK-NEXT:                            GenericTypeAnnotation
-// CHECK-NEXT:                                Id 'B'
-// CHECK-NEXT:                                TypeParameterInstantiation
-// CHECK-NEXT:                                    GenericTypeAnnotation
-// CHECK-NEXT:                                        Id 'D'
-// CHECK-NEXT:                    TypeAlias
-// CHECK-NEXT:                        Id 'D'
-// CHECK-NEXT:                        UnionTypeAnnotation
-// CHECK-NEXT:                            TupleTypeAnnotation
-// CHECK-NEXT:                                GenericTypeAnnotation
-// CHECK-NEXT:                                    Id 'B'
-// CHECK-NEXT:                                    TypeParameterInstantiation
-// CHECK-NEXT:                                        GenericTypeAnnotation
-// CHECK-NEXT:                                            Id 'D'
-// CHECK-NEXT:                            GenericTypeAnnotation
-// CHECK-NEXT:                                Id 'C'
-// CHECK-NEXT:                                TypeParameterInstantiation
-// CHECK-NEXT:                                    NumberTypeAnnotation
-// CHECK-NEXT:            ObjectExpression : %object.3
+// CHECK-NEXT:                                Id 'D'
+// CHECK-NEXT:                GenericTypeAnnotation
+// CHECK-NEXT:                    Id 'C'
+// CHECK-NEXT:                    TypeParameterInstantiation
+// CHECK-NEXT:                        NumberTypeAnnotation

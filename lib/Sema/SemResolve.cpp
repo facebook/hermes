@@ -257,9 +257,14 @@ void semDump(
     SemContext &semCtx,
     flow::FlowContext *flowContext,
     ESTree::Node *root) {
+  // If the root is a function-like node, start the dump from its FunctionInfo.
+  const FunctionInfo *rootFunc = nullptr;
+  if (auto *funcNode = llvh::dyn_cast<ESTree::FunctionLikeNode>(root))
+    rootFunc = funcNode->getSemInfo();
+
   if (!flowContext) {
     SemContextDumper semDumper;
-    semDumper.printSemContext(os, semCtx);
+    semDumper.printSemContext(os, semCtx, rootFunc);
     os << '\n';
     ASTPrinter ap(os, semCtx, semDumper);
     ap.run(root);
@@ -280,7 +285,7 @@ void semDump(
           }
         });
 
-    semDumper.printSemContext(os, semCtx);
+    semDumper.printSemContext(os, semCtx, rootFunc);
     os << '\n';
     ASTPrinter ap(os, semCtx, semDumper, &flowDumper, flowContext);
     ap.run(root);
