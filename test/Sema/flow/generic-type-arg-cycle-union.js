@@ -16,10 +16,10 @@ var d: D;
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%union.2 = union(number | %tuple.3)
-// CHECK-NEXT:%tuple.3 = tuple(%union.2)
-// CHECK-NEXT:%object.4 = object({
+// CHECK-NEXT:%union.2 = union(number | %tuple.4)
+// CHECK-NEXT:%object.3 = object({
 // CHECK-NEXT:})
+// CHECK-NEXT:%tuple.4 = tuple(%union.2)
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -72,4 +72,4 @@ var d: D;
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
 // CHECK-NEXT:                            Id 'd' [D:E:%d.2 'd']
-// CHECK-NEXT:            ObjectExpression : %object.4
+// CHECK-NEXT:            ObjectExpression : %object.3

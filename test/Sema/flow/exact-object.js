@@ -32,15 +32,15 @@ let trec: TRec;
 // CHECK-NEXT:  x: number
 // CHECK-NEXT:})
 // CHECK-NEXT:%object.3 = object({
-// CHECK-NEXT:  x: %union.4
+// CHECK-NEXT:  x: %union.6
 // CHECK-NEXT:})
-// CHECK-NEXT:%union.4 = union(null | %object.3)
-// CHECK-NEXT:%object.5 = object({
+// CHECK-NEXT:%object.4 = object({
 // CHECK-NEXT:  x: string
 // CHECK-NEXT:  y: boolean
 // CHECK-NEXT:})
-// CHECK-NEXT:%object.6 = object({
+// CHECK-NEXT:%object.5 = object({
 // CHECK-NEXT:})
+// CHECK-NEXT:%union.6 = union(null | %object.3)
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -52,7 +52,7 @@ let trec: TRec;
 // CHECK-NEXT:            Decl %d.3 't2' Let : %object.2
 // CHECK-NEXT:            Decl %d.4 'tx' Let : number
 // CHECK-NEXT:            Decl %d.5 't2x' Let : number
-// CHECK-NEXT:            Decl %d.6 'tdup' Let : %object.5
+// CHECK-NEXT:            Decl %d.6 'tdup' Let : %object.4
 // CHECK-NEXT:            Decl %d.7 'trec' Let : %object.3
 // CHECK-NEXT:            Decl %d.8 'arguments' Var Arguments
 
@@ -99,7 +99,7 @@ let trec: TRec;
 // CHECK-NEXT:                            NumericLiteral : number
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
-// CHECK-NEXT:                            ObjectExpression : %object.5
+// CHECK-NEXT:                            ObjectExpression : %object.4
 // CHECK-NEXT:                                Property
 // CHECK-NEXT:                                    Id 'x'
 // CHECK-NEXT:                                    StringLiteral : string
@@ -122,4 +122,4 @@ let trec: TRec;
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
 // CHECK-NEXT:                            Id 'trec' [D:E:%d.7 'trec']
-// CHECK-NEXT:            ObjectExpression : %object.6
+// CHECK-NEXT:            ObjectExpression : %object.5

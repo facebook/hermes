@@ -16,11 +16,11 @@ let a: A = [];
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%array.2 = array(%array.3)
-// CHECK-NEXT:%array.3 = array(%array.4)
-// CHECK-NEXT:%array.4 = array(number)
-// CHECK-NEXT:%object.5 = object({
+// CHECK-NEXT:%array.2 = array(%array.4)
+// CHECK-NEXT:%object.3 = object({
 // CHECK-NEXT:})
+// CHECK-NEXT:%array.4 = array(%array.5)
+// CHECK-NEXT:%array.5 = array(number)
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -59,4 +59,4 @@ let a: A = [];
 // CHECK-NEXT:                        VariableDeclarator
 // CHECK-NEXT:                            ArrayExpression : %array.2
 // CHECK-NEXT:                            Id 'a' [D:E:%d.2 'a']
-// CHECK-NEXT:            ObjectExpression : %object.5
+// CHECK-NEXT:            ObjectExpression : %object.3

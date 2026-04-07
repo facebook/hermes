@@ -15,10 +15,10 @@ var c: C;
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%tuple.2 = tuple(%union.3, %union.3)
-// CHECK-NEXT:%union.3 = union(void | %tuple.2)
-// CHECK-NEXT:%object.4 = object({
+// CHECK-NEXT:%union.2 = union(void | %tuple.4)
+// CHECK-NEXT:%object.3 = object({
 // CHECK-NEXT:})
+// CHECK-NEXT:%tuple.4 = tuple(%union.2, %union.2)
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -26,7 +26,7 @@ var c: C;
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:            Decl %d.2 'c' Var : %union.3
+// CHECK-NEXT:            Decl %d.2 'c' Var : %union.2
 // CHECK-NEXT:            Decl %d.3 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
@@ -63,4 +63,4 @@ var c: C;
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
 // CHECK-NEXT:                            Id 'c' [D:E:%d.2 'c']
-// CHECK-NEXT:            ObjectExpression : %object.4
+// CHECK-NEXT:            ObjectExpression : %object.3

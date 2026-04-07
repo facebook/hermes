@@ -24,15 +24,15 @@ c1 = new C<number | string>('abc');
 // CHECK:%untyped_function.1 = untyped_function()
 // CHECK-NEXT:%union.2 = union(string | number)
 // CHECK-NEXT:%class.3 = class(C {
-// CHECK-NEXT:  %constructor: %function.4
-// CHECK-NEXT:  %homeObject: %class.5
+// CHECK-NEXT:  %constructor: %function.5
+// CHECK-NEXT:  %homeObject: %class.7
 // CHECK-NEXT:  x: %union.2
 // CHECK-NEXT:})
-// CHECK-NEXT:%class_constructor.6 = class_constructor(%class.3)
-// CHECK-NEXT:%function.4 = function(this: %class.3, x: %union.2): void
-// CHECK-NEXT:%class.5 = class( {
+// CHECK-NEXT:%class_constructor.4 = class_constructor(%class.3)
+// CHECK-NEXT:%function.5 = function(this: %class.3, x: %union.2): void
+// CHECK-NEXT:%object.6 = object({
 // CHECK-NEXT:})
-// CHECK-NEXT:%object.7 = object({
+// CHECK-NEXT:%class.7 = class( {
 // CHECK-NEXT:})
 
 // CHECK:SemContext
@@ -44,7 +44,7 @@ c1 = new C<number | string>('abc');
 // CHECK-NEXT:            Decl %d.2 'C' Class
 // CHECK-NEXT:            Decl %d.3 'c1' Var : %class.3
 // CHECK-NEXT:            Decl %d.4 'arguments' Var Arguments
-// CHECK-NEXT:            Decl %d.5 'C' Class : %class_constructor.6
+// CHECK-NEXT:            Decl %d.5 'C' Class : %class_constructor.4
 // CHECK-NEXT:            Scope %s.3
 // CHECK-NEXT:            Scope %s.4
 // CHECK-NEXT:        Func strict
@@ -69,9 +69,9 @@ c1 = new C<number | string>('abc');
 // CHECK-NEXT:                        ClassBody
 // CHECK-NEXT:                            ClassProperty : %union.2
 // CHECK-NEXT:                                Id 'x'
-// CHECK-NEXT:                            MethodDefinition : %function.4
+// CHECK-NEXT:                            MethodDefinition : %function.5
 // CHECK-NEXT:                                Id 'constructor'
-// CHECK-NEXT:                                FunctionExpression : %function.4
+// CHECK-NEXT:                                FunctionExpression : %function.5
 // CHECK-NEXT:                                    Id 'x' [D:E:%d.8 'x']
 // CHECK-NEXT:                                    BlockStatement
 // CHECK-NEXT:                                        ExpressionStatement
@@ -101,7 +101,7 @@ c1 = new C<number | string>('abc');
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
 // CHECK-NEXT:                            NewExpression : %class.3
-// CHECK-NEXT:                                Id 'C' [D:E:%d.5 'C'] : %class_constructor.6
+// CHECK-NEXT:                                Id 'C' [D:E:%d.5 'C'] : %class_constructor.4
 // CHECK-NEXT:                                TypeParameterInstantiation
 // CHECK-NEXT:                                    UnionTypeAnnotation
 // CHECK-NEXT:                                        NumberTypeAnnotation
@@ -112,10 +112,10 @@ c1 = new C<number | string>('abc');
 // CHECK-NEXT:                        AssignmentExpression : %class.3
 // CHECK-NEXT:                            Id 'c1' [D:E:%d.3 'c1'] : %class.3
 // CHECK-NEXT:                            NewExpression : %class.3
-// CHECK-NEXT:                                Id 'C' [D:E:%d.5 'C'] : %class_constructor.6
+// CHECK-NEXT:                                Id 'C' [D:E:%d.5 'C'] : %class_constructor.4
 // CHECK-NEXT:                                TypeParameterInstantiation
 // CHECK-NEXT:                                    UnionTypeAnnotation
 // CHECK-NEXT:                                        NumberTypeAnnotation
 // CHECK-NEXT:                                        StringTypeAnnotation
 // CHECK-NEXT:                                StringLiteral : string
-// CHECK-NEXT:            ObjectExpression : %object.7
+// CHECK-NEXT:            ObjectExpression : %object.6

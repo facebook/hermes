@@ -22,15 +22,15 @@ var xyz: [number, string, number] = a.foo<string>(123, 'str');
 
 // CHECK:%untyped_function.1 = untyped_function()
 // CHECK-NEXT:%class.2 = class(A {
-// CHECK-NEXT:  %homeObject: %class.3
+// CHECK-NEXT:  %homeObject: %class.7
 // CHECK-NEXT:})
-// CHECK-NEXT:%class_constructor.4 = class_constructor(%class.2)
-// CHECK-NEXT:%class.3 = class( {
+// CHECK-NEXT:%class_constructor.3 = class_constructor(%class.2)
+// CHECK-NEXT:%tuple.4 = tuple(number, string, number)
+// CHECK-NEXT:%function.5 = function(this: %class.2, x: number, y: string): %tuple.4
+// CHECK-NEXT:%object.6 = object({
+// CHECK-NEXT:})
+// CHECK-NEXT:%class.7 = class( {
 // CHECK-NEXT:  foo [final]: generic
-// CHECK-NEXT:})
-// CHECK-NEXT:%tuple.5 = tuple(number, string, number)
-// CHECK-NEXT:%function.6 = function(this: %class.2, x: number, y: string): %tuple.5
-// CHECK-NEXT:%object.7 = object({
 // CHECK-NEXT:})
 
 // CHECK:SemContext
@@ -41,9 +41,9 @@ var xyz: [number, string, number] = a.foo<string>(123, 'str');
 // CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:            Decl %d.2 'A' Class
 // CHECK-NEXT:            Decl %d.3 'a' Var : %class.2
-// CHECK-NEXT:            Decl %d.4 'xyz' Var : %tuple.5
+// CHECK-NEXT:            Decl %d.4 'xyz' Var : %tuple.4
 // CHECK-NEXT:            Decl %d.5 'arguments' Var Arguments
-// CHECK-NEXT:            Decl %d.6 'A' Class : %class_constructor.4
+// CHECK-NEXT:            Decl %d.6 'A' Class : %class_constructor.3
 // CHECK-NEXT:            Scope %s.3
 // CHECK-NEXT:            Scope %s.4
 // CHECK-NEXT:                Decl %d.7 'foo' Const
@@ -81,9 +81,9 @@ var xyz: [number, string, number] = a.foo<string>(123, 'str');
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter
 // CHECK-NEXT:                        ClassBody
-// CHECK-NEXT:                            MethodDefinition : %function.6
+// CHECK-NEXT:                            MethodDefinition : %function.5
 // CHECK-NEXT:                                Id 'foo'
-// CHECK-NEXT:                                FunctionExpression : %function.6
+// CHECK-NEXT:                                FunctionExpression : %function.5
 // CHECK-NEXT:                                    Id 'x' [D:E:%d.16 'x']
 // CHECK-NEXT:                                    Id 'y' [D:E:%d.17 'y']
 // CHECK-NEXT:                                    BlockStatement
@@ -92,7 +92,7 @@ var xyz: [number, string, number] = a.foo<string>(123, 'str');
 // CHECK-NEXT:                                                NumericLiteral : number
 // CHECK-NEXT:                                                Id 'z' [D:E:%d.18 'z']
 // CHECK-NEXT:                                        ReturnStatement
-// CHECK-NEXT:                                            ArrayExpression : %tuple.5
+// CHECK-NEXT:                                            ArrayExpression : %tuple.4
 // CHECK-NEXT:                                                Id 'x' [D:E:%d.16 'x'] : number
 // CHECK-NEXT:                                                Id 'y' [D:E:%d.17 'y'] : string
 // CHECK-NEXT:                                                Id 'z' [D:E:%d.18 'z'] : number
@@ -152,14 +152,14 @@ var xyz: [number, string, number] = a.foo<string>(123, 'str');
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
 // CHECK-NEXT:                            NewExpression : %class.2
-// CHECK-NEXT:                                Id 'A' [D:E:%d.6 'A'] : %class_constructor.4
+// CHECK-NEXT:                                Id 'A' [D:E:%d.6 'A'] : %class_constructor.3
 // CHECK-NEXT:                                TypeParameterInstantiation
 // CHECK-NEXT:                                    NumberTypeAnnotation
 // CHECK-NEXT:                            Id 'a' [D:E:%d.3 'a']
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
-// CHECK-NEXT:                            CallExpression : %tuple.5
-// CHECK-NEXT:                                MemberExpression : %function.6
+// CHECK-NEXT:                            CallExpression : %tuple.4
+// CHECK-NEXT:                                MemberExpression : %function.5
 // CHECK-NEXT:                                    Id 'a' [D:E:%d.3 'a'] : %class.2
 // CHECK-NEXT:                                    Id 'foo' [D:E:%d.7 'foo']
 // CHECK-NEXT:                                TypeParameterInstantiation
@@ -167,4 +167,4 @@ var xyz: [number, string, number] = a.foo<string>(123, 'str');
 // CHECK-NEXT:                                NumericLiteral : number
 // CHECK-NEXT:                                StringLiteral : string
 // CHECK-NEXT:                            Id 'xyz' [D:E:%d.4 'xyz']
-// CHECK-NEXT:            ObjectExpression : %object.7
+// CHECK-NEXT:            ObjectExpression : %object.6

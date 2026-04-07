@@ -42,19 +42,19 @@ function retval(c: C | null): C {
 
 // CHECK:%untyped_function.1 = untyped_function()
 // CHECK-NEXT:%class.2 = class(C {
-// CHECK-NEXT:  %homeObject: %class.3
+// CHECK-NEXT:  %homeObject: %class.11
 // CHECK-NEXT:  next: %union.4
 // CHECK-NEXT:})
-// CHECK-NEXT:%class_constructor.5 = class_constructor(%class.2)
+// CHECK-NEXT:%class_constructor.3 = class_constructor(%class.2)
 // CHECK-NEXT:%union.4 = union(null | %class.2)
-// CHECK-NEXT:%class.3 = class( {
+// CHECK-NEXT:%function.5 = function(cur: %union.4): %union.4
+// CHECK-NEXT:%function.6 = function(cur: %union.4): void
+// CHECK-NEXT:%function.7 = function(c: %union.4): %class.2
+// CHECK-NEXT:%union.8 = union(void | %class.2)
+// CHECK-NEXT:%function.9 = function(c: %class.2, cv: %union.8): void
+// CHECK-NEXT:%object.10 = object({
 // CHECK-NEXT:})
-// CHECK-NEXT:%function.6 = function(cur: %union.4): %union.4
-// CHECK-NEXT:%function.7 = function(cur: %union.4): void
-// CHECK-NEXT:%function.8 = function(c: %union.4): %class.2
-// CHECK-NEXT:%union.9 = union(void | %class.2)
-// CHECK-NEXT:%function.10 = function(c: %class.2, cv: %union.9): void
-// CHECK-NEXT:%object.11 = object({
+// CHECK-NEXT:%class.11 = class( {
 // CHECK-NEXT:})
 
 // CHECK:SemContext
@@ -63,11 +63,11 @@ function retval(c: C | null): C {
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:            Decl %d.2 'C' Class : %class_constructor.5
-// CHECK-NEXT:            Decl %d.3 'loop' Var : %function.6
-// CHECK-NEXT:            Decl %d.4 'call' Var : %function.7
-// CHECK-NEXT:            Decl %d.5 'assign' Var : %function.7
-// CHECK-NEXT:            Decl %d.6 'retval' Var : %function.8
+// CHECK-NEXT:            Decl %d.2 'C' Class : %class_constructor.3
+// CHECK-NEXT:            Decl %d.3 'loop' Var : %function.5
+// CHECK-NEXT:            Decl %d.4 'call' Var : %function.6
+// CHECK-NEXT:            Decl %d.5 'assign' Var : %function.6
+// CHECK-NEXT:            Decl %d.6 'retval' Var : %function.7
 // CHECK-NEXT:            Decl %d.7 'arguments' Var Arguments
 // CHECK-NEXT:            hoistedFunction loop
 // CHECK-NEXT:            hoistedFunction call
@@ -83,14 +83,14 @@ function retval(c: C | null): C {
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.6
 // CHECK-NEXT:                Decl %d.10 'cur' Parameter : %union.4
-// CHECK-NEXT:                Decl %d.11 'bar' Var : %function.10
+// CHECK-NEXT:                Decl %d.11 'bar' Var : %function.9
 // CHECK-NEXT:                Decl %d.12 'arguments' Var Arguments
 // CHECK-NEXT:                hoistedFunction bar
 // CHECK-NEXT:                Scope %s.7
 // CHECK-NEXT:            Func strict
 // CHECK-NEXT:                Scope %s.8
 // CHECK-NEXT:                    Decl %d.13 'c' Parameter : %class.2
-// CHECK-NEXT:                    Decl %d.14 'cv' Parameter : %union.9
+// CHECK-NEXT:                    Decl %d.14 'cv' Parameter : %union.8
 // CHECK-NEXT:                    Decl %d.15 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.9
@@ -116,7 +116,7 @@ function retval(c: C | null): C {
 // CHECK-NEXT:                        ClassBody
 // CHECK-NEXT:                            ClassProperty : %union.4
 // CHECK-NEXT:                                Id 'next'
-// CHECK-NEXT:                    FunctionDeclaration : %function.6
+// CHECK-NEXT:                    FunctionDeclaration : %function.5
 // CHECK-NEXT:                        Id 'loop' [D:E:%d.3 'loop']
 // CHECK-NEXT:                        Id 'cur' [D:E:%d.8 'cur']
 // CHECK-NEXT:                        BlockStatement
@@ -131,11 +131,11 @@ function retval(c: C | null): C {
 // CHECK-NEXT:                                Id 'cur' [D:E:%d.8 'cur'] : %union.4
 // CHECK-NEXT:                            ReturnStatement
 // CHECK-NEXT:                                Id 'cur' [D:E:%d.8 'cur'] : %union.4
-// CHECK-NEXT:                    FunctionDeclaration : %function.7
+// CHECK-NEXT:                    FunctionDeclaration : %function.6
 // CHECK-NEXT:                        Id 'call' [D:E:%d.4 'call']
 // CHECK-NEXT:                        Id 'cur' [D:E:%d.10 'cur']
 // CHECK-NEXT:                        BlockStatement
-// CHECK-NEXT:                            FunctionDeclaration : %function.10
+// CHECK-NEXT:                            FunctionDeclaration : %function.9
 // CHECK-NEXT:                                Id 'bar' [D:E:%d.11 'bar']
 // CHECK-NEXT:                                Id 'c' [D:E:%d.13 'c']
 // CHECK-NEXT:                                Id 'cv' [D:E:%d.14 'cv']
@@ -145,12 +145,12 @@ function retval(c: C | null): C {
 // CHECK-NEXT:                                BlockStatement Scope %s.7
 // CHECK-NEXT:                                    ExpressionStatement
 // CHECK-NEXT:                                        CallExpression : void
-// CHECK-NEXT:                                            Id 'bar' [D:E:%d.11 'bar'] : %function.10
+// CHECK-NEXT:                                            Id 'bar' [D:E:%d.11 'bar'] : %function.9
 // CHECK-NEXT:                                            ImplicitCheckedCast : %class.2
 // CHECK-NEXT:                                                Id 'cur' [D:E:%d.10 'cur'] : %union.4
-// CHECK-NEXT:                                            ImplicitCheckedCast : %union.9
+// CHECK-NEXT:                                            ImplicitCheckedCast : %union.8
 // CHECK-NEXT:                                                Id 'cur' [D:E:%d.10 'cur'] : %union.4
-// CHECK-NEXT:                    FunctionDeclaration : %function.7
+// CHECK-NEXT:                    FunctionDeclaration : %function.6
 // CHECK-NEXT:                        Id 'assign' [D:E:%d.5 'assign']
 // CHECK-NEXT:                        Id 'cur' [D:E:%d.16 'cur']
 // CHECK-NEXT:                        BlockStatement
@@ -174,7 +174,7 @@ function retval(c: C | null): C {
 // CHECK-NEXT:                                            Id 'c' [D:E:%d.18 'c'] : %class.2
 // CHECK-NEXT:                                            ImplicitCheckedCast : %class.2
 // CHECK-NEXT:                                                Id 'a' [D:E:%d.17 'a'] : %union.4
-// CHECK-NEXT:                    FunctionDeclaration : %function.8
+// CHECK-NEXT:                    FunctionDeclaration : %function.7
 // CHECK-NEXT:                        Id 'retval' [D:E:%d.6 'retval']
 // CHECK-NEXT:                        Id 'c' [D:E:%d.21 'c']
 // CHECK-NEXT:                        BlockStatement
@@ -185,5 +185,5 @@ function retval(c: C | null): C {
 // CHECK-NEXT:                                        Id 'c' [D:E:%d.21 'c'] : %union.4
 // CHECK-NEXT:                                ReturnStatement
 // CHECK-NEXT:                                    NewExpression : %class.2
-// CHECK-NEXT:                                        Id 'C' [D:E:%d.2 'C'] : %class_constructor.5
-// CHECK-NEXT:            ObjectExpression : %object.11
+// CHECK-NEXT:                                        Id 'C' [D:E:%d.2 'C'] : %class_constructor.3
+// CHECK-NEXT:            ObjectExpression : %object.10

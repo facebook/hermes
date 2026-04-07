@@ -11,6 +11,12 @@
 #include "hermes/Sema/FlowContext.h"
 
 namespace hermes {
+
+namespace ESTree {
+class Node;
+class IdentifierNode;
+} // namespace ESTree
+
 namespace flow {
 
 class FlowTypesDumper {
@@ -54,8 +60,11 @@ class FlowTypesDumper {
   /// Print the descriptions of all recorded types.
   void printAllNumberedTypes(llvh::raw_ostream &os);
 
-  /// Print all existing types.
-  void printAllTypes(llvh::raw_ostream &os, const FlowContext &flowTypes);
+  /// Print all types referenced from the given AST.
+  void printAllTypes(
+      llvh::raw_ostream &os,
+      const FlowContext &flowTypes,
+      ESTree::Node *root);
 
   /// Print all native externs.
   void printNativeExterns(

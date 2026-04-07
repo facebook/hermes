@@ -12,9 +12,7 @@ type A = [number, string, bool, A | null];
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%tuple.2 = tuple(number, string, boolean, %union.3)
-// CHECK-NEXT:%union.3 = union(null | %tuple.2)
-// CHECK-NEXT:%object.4 = object({
+// CHECK-NEXT:%object.2 = object({
 // CHECK-NEXT:})
 
 // CHECK:SemContext
@@ -41,4 +39,4 @@ type A = [number, string, bool, A | null];
 // CHECK-NEXT:                                GenericTypeAnnotation
 // CHECK-NEXT:                                    Id 'A'
 // CHECK-NEXT:                                NullLiteralTypeAnnotation
-// CHECK-NEXT:            ObjectExpression : %object.4
+// CHECK-NEXT:            ObjectExpression : %object.2

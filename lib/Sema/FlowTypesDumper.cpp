@@ -7,6 +7,8 @@
 
 #include "FlowTypesDumper.h"
 
+#include "hermes/AST/RecursiveVisitor.h"
+
 namespace hermes {
 namespace flow {
 
@@ -209,28 +211,60 @@ void FlowTypesDumper::printAllNumberedTypes(llvh::raw_ostream &os) {
 
 void FlowTypesDumper::printAllTypes(
     llvh::raw_ostream &os,
-    const FlowContext &flowTypes) {
-  // The type numbers that have been printed.
-  llvh::DenseSet<size_t> printed{};
-  // Ignore singletons, which have number 0.
-  printed.insert(0);
-  auto printAll = [&os, this, &printed](const auto &all) {
-    for (const Type &t : all) {
-      // Don't print duplicate types.
-      if (!t.info)
-        continue;
-      size_t number = getNumber(t.info);
-      auto [it, inserted] = printed.insert(number);
-      if (!inserted)
-        continue;
+    const FlowContext &flowTypes,
+    ESTree::Node *root) {
+  // Walk the AST and collect all referenced TypeInfos.
+  llvh::DenseSet<const TypeInfo *> referencedTypes{};
+  struct {
+    llvh::DenseSet<const TypeInfo *> &referencedTypes;
+    const FlowContext &flowTypes;
 
-      printTypeRef(os, &t);
-      os << " = ";
-      printTypeDescription(os, t.info);
+    bool incRecursionDepth(ESTree::Node *) {
+      return true;
     }
-  };
+    void decRecursionDepth() {}
 
-  printAll(flowTypes.allocTypes_);
+    void addType(Type *type) {
+      if (type && type->info)
+        referencedTypes.insert(type->info);
+    }
+
+    void visitNode(ESTree::Node *node) {
+      addType(flowTypes.findNodeType(node));
+      ESTree::visitESTreeChildren(*this, node);
+    }
+
+    void visit(ESTree::Node *node) {
+      visitNode(node);
+    }
+
+    void visit(ESTree::IdentifierNode *ident) {
+      if (ident->decl_) {
+        auto *decl = static_cast<sema::Decl *>(ident->decl_);
+        addType(flowTypes.findDeclType(decl));
+      }
+      visitNode(ident);
+    }
+  } visitor{referencedTypes, flowTypes};
+
+  ESTree::visitESTreeNodeNoReplace(visitor, root);
+
+  // Seed the worklist with referenced types in allocation order.
+  for (const Type &t : flowTypes.allocTypes_) {
+    if (t.info && referencedTypes.count(t.info)) {
+      getNumber(t.info);
+    }
+  }
+
+  // Process the worklist. As we print type descriptions, printTypeRef
+  // calls getNumber, which may add new sub-types to types_, extending
+  // the worklist.
+  for (size_t i = 0; i < types_.size(); ++i) {
+    const TypeInfo *info = types_[i];
+    printTypeRef(os, info);
+    os << " = ";
+    printTypeDescription(os, info);
+  }
 }
 
 void FlowTypesDumper::printNativeExterns(

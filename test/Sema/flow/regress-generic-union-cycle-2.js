@@ -14,10 +14,10 @@ var b: B;
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%array.2 = array(%union.3)
-// CHECK-NEXT:%union.3 = union(number | %array.2)
-// CHECK-NEXT:%object.4 = object({
+// CHECK-NEXT:%array.2 = array(%union.4)
+// CHECK-NEXT:%object.3 = object({
 // CHECK-NEXT:})
+// CHECK-NEXT:%union.4 = union(number | %array.2)
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -53,4 +53,4 @@ var b: B;
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
 // CHECK-NEXT:                            Id 'b' [D:E:%d.2 'b']
-// CHECK-NEXT:            ObjectExpression : %object.4
+// CHECK-NEXT:            ObjectExpression : %object.3

@@ -265,7 +265,7 @@ void semDump(
     ap.run(root);
   } else {
     flow::FlowTypesDumper flowDumper{};
-    flowDumper.printAllTypes(os, *flowContext);
+    flowDumper.printAllTypes(os, *flowContext, root);
     os << '\n';
     if (!astContext.getNativeContext().getAllExterns().empty()) {
       flowDumper.printNativeExterns(os, astContext.getNativeContext());

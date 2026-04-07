@@ -17,10 +17,10 @@ let b1: B = [];
 
 // CHECK:%untyped_function.1 = untyped_function()
 // CHECK-NEXT:%array.2 = array(%array.2)
-// CHECK-NEXT:%array.3 = array(%union.4)
-// CHECK-NEXT:%union.4 = union(null | %array.3)
-// CHECK-NEXT:%object.5 = object({
+// CHECK-NEXT:%array.3 = array(%union.5)
+// CHECK-NEXT:%object.4 = object({
 // CHECK-NEXT:})
+// CHECK-NEXT:%union.5 = union(null | %array.3)
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -58,4 +58,4 @@ let b1: B = [];
 // CHECK-NEXT:                        VariableDeclarator
 // CHECK-NEXT:                            ArrayExpression : %array.3
 // CHECK-NEXT:                            Id 'b1' [D:E:%d.3 'b1']
-// CHECK-NEXT:            ObjectExpression : %object.5
+// CHECK-NEXT:            ObjectExpression : %object.4

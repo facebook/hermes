@@ -23,15 +23,15 @@ let u: U;
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%function.2 = function(a: number): %function.3
-// CHECK-NEXT:%function.3 = function(a: string): %function.4
-// CHECK-NEXT:%function.4 = function(a: boolean): %function.2
-// CHECK-NEXT:%function.5 = function(a: number): %function.6
-// CHECK-NEXT:%function.6 = function(a: string): %function.7
-// CHECK-NEXT:%function.7 = function(a: boolean): %function.6
-// CHECK-NEXT:%union.8 = union(%function.2 | %function.5)
-// CHECK-NEXT:%object.9 = object({
+// CHECK-NEXT:%union.2 = union(%function.4 | %function.5)
+// CHECK-NEXT:%object.3 = object({
 // CHECK-NEXT:})
+// CHECK-NEXT:%function.4 = function(a: number): %function.6
+// CHECK-NEXT:%function.5 = function(a: number): %function.7
+// CHECK-NEXT:%function.6 = function(a: string): %function.8
+// CHECK-NEXT:%function.7 = function(a: string): %function.9
+// CHECK-NEXT:%function.8 = function(a: boolean): %function.4
+// CHECK-NEXT:%function.9 = function(a: boolean): %function.7
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -39,7 +39,7 @@ let u: U;
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:            Decl %d.2 'u' Let : %union.8
+// CHECK-NEXT:            Decl %d.2 'u' Let : %union.2
 // CHECK-NEXT:            Decl %d.3 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
@@ -106,4 +106,4 @@ let u: U;
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
 // CHECK-NEXT:                            Id 'u' [D:E:%d.2 'u']
-// CHECK-NEXT:            ObjectExpression : %object.9
+// CHECK-NEXT:            ObjectExpression : %object.3

@@ -14,13 +14,13 @@ var c: C;
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%union.2 = union(%array.3 | %array.4)
-// CHECK-NEXT:%union.5 = union(number | %array.3 | %array.4)
-// CHECK-NEXT:%array.4 = array(%union.5)
-// CHECK-NEXT:%union.6 = union(string | number)
-// CHECK-NEXT:%array.3 = array(%union.6)
-// CHECK-NEXT:%object.7 = object({
+// CHECK-NEXT:%union.2 = union(%array.4 | %array.5)
+// CHECK-NEXT:%object.3 = object({
 // CHECK-NEXT:})
+// CHECK-NEXT:%array.4 = array(%union.6)
+// CHECK-NEXT:%array.5 = array(%union.7)
+// CHECK-NEXT:%union.6 = union(string | number)
+// CHECK-NEXT:%union.7 = union(number | %array.4 | %array.5)
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -62,4 +62,4 @@ var c: C;
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
 // CHECK-NEXT:                            Id 'c' [D:E:%d.2 'c']
-// CHECK-NEXT:            ObjectExpression : %object.7
+// CHECK-NEXT:            ObjectExpression : %object.3

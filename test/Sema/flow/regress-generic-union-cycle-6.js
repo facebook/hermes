@@ -17,11 +17,11 @@ var z: A<number> | B<number>;
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%tuple.2 = tuple(%union.3)
-// CHECK-NEXT:%array.4 = array(%tuple.2)
-// CHECK-NEXT:%union.3 = union(number | %array.4)
-// CHECK-NEXT:%object.5 = object({
+// CHECK-NEXT:%tuple.2 = tuple(%union.4)
+// CHECK-NEXT:%object.3 = object({
 // CHECK-NEXT:})
+// CHECK-NEXT:%union.4 = union(number | %array.5)
+// CHECK-NEXT:%array.5 = array(%tuple.2)
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -84,4 +84,4 @@ var z: A<number> | B<number>;
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
 // CHECK-NEXT:                            Id 'z' [D:E:%d.4 'z']
-// CHECK-NEXT:            ObjectExpression : %object.5
+// CHECK-NEXT:            ObjectExpression : %object.3

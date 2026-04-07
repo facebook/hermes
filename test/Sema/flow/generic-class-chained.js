@@ -25,29 +25,29 @@ class C<T> {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%class.2 = class(A {
-// CHECK-NEXT:  %homeObject: %class.3
-// CHECK-NEXT:  x: %class.4
-// CHECK-NEXT:})
-// CHECK-NEXT:%class_constructor.5 = class_constructor(%class.2)
-// CHECK-NEXT:%class.4 = class(B {
-// CHECK-NEXT:  %homeObject: %class.6
-// CHECK-NEXT:})
-// CHECK-NEXT:%class_constructor.7 = class_constructor(%class.4)
-// CHECK-NEXT:%class.3 = class( {
-// CHECK-NEXT:})
-// CHECK-NEXT:%class.6 = class( {
-// CHECK-NEXT:  foo [final]: %untyped_function.1
-// CHECK-NEXT:})
-// CHECK-NEXT:%object.8 = object({
-// CHECK-NEXT:})
-// CHECK-NEXT:%class.9 = class(C {
+// CHECK-NEXT:%class_constructor.2 = class_constructor(%class.9)
+// CHECK-NEXT:%class.3 = class(B {
 // CHECK-NEXT:  %homeObject: %class.10
 // CHECK-NEXT:})
-// CHECK-NEXT:%class_constructor.11 = class_constructor(%class.9)
-// CHECK-NEXT:%function.12 = function(this: %class.9): void
+// CHECK-NEXT:%class_constructor.4 = class_constructor(%class.3)
+// CHECK-NEXT:%object.5 = object({
+// CHECK-NEXT:})
+// CHECK-NEXT:%class.6 = class(C {
+// CHECK-NEXT:  %homeObject: %class.11
+// CHECK-NEXT:})
+// CHECK-NEXT:%class_constructor.7 = class_constructor(%class.6)
+// CHECK-NEXT:%function.8 = function(this: %class.6): void
+// CHECK-NEXT:%class.9 = class(A {
+// CHECK-NEXT:  %homeObject: %class.12
+// CHECK-NEXT:  x: %class.3
+// CHECK-NEXT:})
 // CHECK-NEXT:%class.10 = class( {
-// CHECK-NEXT:  run [final]: %function.12
+// CHECK-NEXT:  foo [final]: %untyped_function.1
+// CHECK-NEXT:})
+// CHECK-NEXT:%class.11 = class( {
+// CHECK-NEXT:  run [final]: %function.8
+// CHECK-NEXT:})
+// CHECK-NEXT:%class.12 = class( {
 // CHECK-NEXT:})
 
 // CHECK:SemContext
@@ -56,12 +56,12 @@ class C<T> {
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:            Decl %d.2 'A' Class : %class_constructor.5
+// CHECK-NEXT:            Decl %d.2 'A' Class : %class_constructor.2
 // CHECK-NEXT:            Decl %d.3 'B' Class
 // CHECK-NEXT:            Decl %d.4 'C' Class
 // CHECK-NEXT:            Decl %d.5 'arguments' Var Arguments
-// CHECK-NEXT:            Decl %d.6 'B' Class : %class_constructor.7
-// CHECK-NEXT:            Decl %d.7 'C' Class : %class_constructor.11
+// CHECK-NEXT:            Decl %d.6 'B' Class : %class_constructor.4
+// CHECK-NEXT:            Decl %d.7 'C' Class : %class_constructor.7
 // CHECK-NEXT:            Scope %s.3
 // CHECK-NEXT:            Scope %s.4
 // CHECK-NEXT:            Scope %s.5
@@ -82,7 +82,7 @@ class C<T> {
 // CHECK-NEXT:            Scope %s.12
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.13
-// CHECK-NEXT:                Decl %d.11 'c' Let : %class.9
+// CHECK-NEXT:                Decl %d.11 'c' Let : %class.6
 // CHECK-NEXT:                Decl %d.12 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.14
@@ -101,7 +101,7 @@ class C<T> {
 // CHECK-NEXT:                    ClassDeclaration Scope %s.3
 // CHECK-NEXT:                        Id 'A' [D:E:%d.2 'A']
 // CHECK-NEXT:                        ClassBody
-// CHECK-NEXT:                            ClassProperty : %class.4
+// CHECK-NEXT:                            ClassProperty : %class.3
 // CHECK-NEXT:                                Id 'x'
 // CHECK-NEXT:                    ClassDeclaration Scope %s.6
 // CHECK-NEXT:                        Id 'B' [D:E:%d.6 'B']
@@ -114,15 +114,15 @@ class C<T> {
 // CHECK-NEXT:                                    BlockStatement
 // CHECK-NEXT:                                        VariableDeclaration
 // CHECK-NEXT:                                            VariableDeclarator
-// CHECK-NEXT:                                                NewExpression : %class.9
-// CHECK-NEXT:                                                    Id 'C' [D:E:%d.7 'C'] : %class_constructor.11
+// CHECK-NEXT:                                                NewExpression : %class.6
+// CHECK-NEXT:                                                    Id 'C' [D:E:%d.7 'C'] : %class_constructor.7
 // CHECK-NEXT:                                                    TypeParameterInstantiation
 // CHECK-NEXT:                                                        NumberTypeAnnotation
 // CHECK-NEXT:                                                Id 'c' [D:E:%d.11 'c']
 // CHECK-NEXT:                                        ExpressionStatement
 // CHECK-NEXT:                                            CallExpression : void
-// CHECK-NEXT:                                                MemberExpression : %function.12
-// CHECK-NEXT:                                                    Id 'c' [D:E:%d.11 'c'] : %class.9
+// CHECK-NEXT:                                                MemberExpression : %function.8
+// CHECK-NEXT:                                                    Id 'c' [D:E:%d.11 'c'] : %class.6
 // CHECK-NEXT:                                                    Id 'run'
 // CHECK-NEXT:                    ClassDeclaration Scope %s.4
 // CHECK-NEXT:                        Id 'B' [D:E:%d.3 'B']
@@ -150,9 +150,9 @@ class C<T> {
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter
 // CHECK-NEXT:                        ClassBody
-// CHECK-NEXT:                            MethodDefinition : %function.12
+// CHECK-NEXT:                            MethodDefinition : %function.8
 // CHECK-NEXT:                                Id 'run'
-// CHECK-NEXT:                                FunctionExpression : %function.12
+// CHECK-NEXT:                                FunctionExpression : %function.8
 // CHECK-NEXT:                                    BlockStatement
 // CHECK-NEXT:                    ClassDeclaration Scope %s.5
 // CHECK-NEXT:                        Id 'C' [D:E:%d.4 'C']
@@ -163,4 +163,4 @@ class C<T> {
 // CHECK-NEXT:                                Id 'run'
 // CHECK-NEXT:                                FunctionExpression
 // CHECK-NEXT:                                    BlockStatement
-// CHECK-NEXT:            ObjectExpression : %object.8
+// CHECK-NEXT:            ObjectExpression : %object.5

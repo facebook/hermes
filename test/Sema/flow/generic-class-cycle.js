@@ -28,25 +28,25 @@ class BBB<T> {
 
 // CHECK:%untyped_function.1 = untyped_function()
 // CHECK-NEXT:%class.2 = class(AAA {
-// CHECK-NEXT:  %constructor: %function.3
-// CHECK-NEXT:  %homeObject: %class.4
+// CHECK-NEXT:  %constructor: %function.6
+// CHECK-NEXT:  %homeObject: %class.9
 // CHECK-NEXT:  x: %union.5
 // CHECK-NEXT:})
-// CHECK-NEXT:%class_constructor.6 = class_constructor(%class.2)
-// CHECK-NEXT:%class.7 = class(BBB {
-// CHECK-NEXT:  %constructor: %function.8
-// CHECK-NEXT:  %homeObject: %class.9
-// CHECK-NEXT:  root: %class.2
+// CHECK-NEXT:%class_constructor.3 = class_constructor(%class.2)
+// CHECK-NEXT:%class_constructor.4 = class_constructor(%class.10)
+// CHECK-NEXT:%union.5 = union(null | %class.10)
+// CHECK-NEXT:%function.6 = function(this: %class.2): void
+// CHECK-NEXT:%function.7 = function(this: %class.10, root: %class.2, val: number): void
+// CHECK-NEXT:%object.8 = object({
 // CHECK-NEXT:})
-// CHECK-NEXT:%class_constructor.10 = class_constructor(%class.7)
-// CHECK-NEXT:%union.5 = union(null | %class.7)
-// CHECK-NEXT:%function.3 = function(this: %class.2): void
-// CHECK-NEXT:%class.4 = class( {
-// CHECK-NEXT:})
-// CHECK-NEXT:%function.8 = function(this: %class.7, root: %class.2, val: number): void
 // CHECK-NEXT:%class.9 = class( {
 // CHECK-NEXT:})
-// CHECK-NEXT:%object.11 = object({
+// CHECK-NEXT:%class.10 = class(BBB {
+// CHECK-NEXT:  %constructor: %function.7
+// CHECK-NEXT:  %homeObject: %class.11
+// CHECK-NEXT:  root: %class.2
+// CHECK-NEXT:})
+// CHECK-NEXT:%class.11 = class( {
 // CHECK-NEXT:})
 
 // CHECK:SemContext
@@ -55,10 +55,10 @@ class BBB<T> {
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:            Decl %d.2 'AAA' Class : %class_constructor.6
+// CHECK-NEXT:            Decl %d.2 'AAA' Class : %class_constructor.3
 // CHECK-NEXT:            Decl %d.3 'BBB' Class
 // CHECK-NEXT:            Decl %d.4 'arguments' Var Arguments
-// CHECK-NEXT:            Decl %d.5 'BBB' Class : %class_constructor.10
+// CHECK-NEXT:            Decl %d.5 'BBB' Class : %class_constructor.4
 // CHECK-NEXT:            Scope %s.3
 // CHECK-NEXT:            Scope %s.4
 // CHECK-NEXT:            Scope %s.5
@@ -87,9 +87,9 @@ class BBB<T> {
 // CHECK-NEXT:                        ClassBody
 // CHECK-NEXT:                            ClassProperty : %union.5
 // CHECK-NEXT:                                Id 'x'
-// CHECK-NEXT:                            MethodDefinition : %function.3
+// CHECK-NEXT:                            MethodDefinition : %function.6
 // CHECK-NEXT:                                Id 'constructor'
-// CHECK-NEXT:                                FunctionExpression : %function.3
+// CHECK-NEXT:                                FunctionExpression : %function.6
 // CHECK-NEXT:                                    BlockStatement
 // CHECK-NEXT:                                        ExpressionStatement
 // CHECK-NEXT:                                            AssignmentExpression : null
@@ -104,9 +104,9 @@ class BBB<T> {
 // CHECK-NEXT:                        ClassBody
 // CHECK-NEXT:                            ClassProperty : %class.2
 // CHECK-NEXT:                                Id 'root'
-// CHECK-NEXT:                            MethodDefinition : %function.8
+// CHECK-NEXT:                            MethodDefinition : %function.7
 // CHECK-NEXT:                                Id 'constructor'
-// CHECK-NEXT:                                FunctionExpression : %function.8
+// CHECK-NEXT:                                FunctionExpression : %function.7
 // CHECK-NEXT:                                    Id 'root' [D:E:%d.10 'root']
 // CHECK-NEXT:                                    Id 'val' [D:E:%d.11 'val']
 // CHECK-NEXT:                                    BlockStatement
@@ -131,4 +131,4 @@ class BBB<T> {
 // CHECK-NEXT:                                            MemberExpression
 // CHECK-NEXT:                                                Id 'root' [D:E:%d.7 'root']
 // CHECK-NEXT:                                                Id 'x'
-// CHECK-NEXT:            ObjectExpression : %object.11
+// CHECK-NEXT:            ObjectExpression : %object.8

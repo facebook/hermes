@@ -24,33 +24,33 @@ class C<Props> {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%class.2 = class(A {
-// CHECK-NEXT:  %homeObject: %class.3
-// CHECK-NEXT:  c: %union.4
+// CHECK-NEXT:%class_constructor.2 = class_constructor(%class.12)
+// CHECK-NEXT:%class.3 = class(B {
+// CHECK-NEXT:  %homeObject: %class.13
 // CHECK-NEXT:})
-// CHECK-NEXT:%class_constructor.5 = class_constructor(%class.2)
-// CHECK-NEXT:%class.6 = class(B {
-// CHECK-NEXT:  %homeObject: %class.7
+// CHECK-NEXT:%class_constructor.4 = class_constructor(%class.3)
+// CHECK-NEXT:%class.5 = class(C {
+// CHECK-NEXT:  %homeObject: %class.14
+// CHECK-NEXT:  vals: %tuple.9
 // CHECK-NEXT:})
-// CHECK-NEXT:%class_constructor.8 = class_constructor(%class.6)
-// CHECK-NEXT:%class.9 = class(C {
-// CHECK-NEXT:  %homeObject: %class.10
-// CHECK-NEXT:  vals: %tuple.11
+// CHECK-NEXT:%class_constructor.6 = class_constructor(%class.5)
+// CHECK-NEXT:%union.7 = union(null | %class.5)
+// CHECK-NEXT:%function.8 = function(this: %class.3): void
+// CHECK-NEXT:%tuple.9 = tuple(%class.3)
+// CHECK-NEXT:%function.10 = function(this: %class.5): void
+// CHECK-NEXT:%object.11 = object({
 // CHECK-NEXT:})
-// CHECK-NEXT:%class_constructor.12 = class_constructor(%class.9)
-// CHECK-NEXT:%union.4 = union(null | %class.9)
-// CHECK-NEXT:%class.3 = class( {
+// CHECK-NEXT:%class.12 = class(A {
+// CHECK-NEXT:  %homeObject: %class.15
+// CHECK-NEXT:  c: %union.7
 // CHECK-NEXT:})
-// CHECK-NEXT:%function.13 = function(this: %class.6): void
-// CHECK-NEXT:%class.7 = class( {
-// CHECK-NEXT:  func [final]: %function.13
+// CHECK-NEXT:%class.13 = class( {
+// CHECK-NEXT:  func [final]: %function.8
 // CHECK-NEXT:})
-// CHECK-NEXT:%tuple.11 = tuple(%class.6)
-// CHECK-NEXT:%function.14 = function(this: %class.9): void
-// CHECK-NEXT:%class.10 = class( {
-// CHECK-NEXT:  foo [final]: %function.14
+// CHECK-NEXT:%class.14 = class( {
+// CHECK-NEXT:  foo [final]: %function.10
 // CHECK-NEXT:})
-// CHECK-NEXT:%object.15 = object({
+// CHECK-NEXT:%class.15 = class( {
 // CHECK-NEXT:})
 
 // CHECK:SemContext
@@ -59,11 +59,11 @@ class C<Props> {
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:            Decl %d.2 'A' Class : %class_constructor.5
-// CHECK-NEXT:            Decl %d.3 'B' Class : %class_constructor.8
+// CHECK-NEXT:            Decl %d.2 'A' Class : %class_constructor.2
+// CHECK-NEXT:            Decl %d.3 'B' Class : %class_constructor.4
 // CHECK-NEXT:            Decl %d.4 'C' Class
 // CHECK-NEXT:            Decl %d.5 'arguments' Var Arguments
-// CHECK-NEXT:            Decl %d.6 'C' Class : %class_constructor.12
+// CHECK-NEXT:            Decl %d.6 'C' Class : %class_constructor.6
 // CHECK-NEXT:            Scope %s.3
 // CHECK-NEXT:            Scope %s.4
 // CHECK-NEXT:            Scope %s.5
@@ -83,7 +83,7 @@ class C<Props> {
 // CHECK-NEXT:            Scope %s.11
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.12
-// CHECK-NEXT:                Decl %d.10 'b' Let : %class.6
+// CHECK-NEXT:                Decl %d.10 'b' Let : %class.3
 // CHECK-NEXT:                Decl %d.11 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.13
@@ -97,38 +97,38 @@ class C<Props> {
 // CHECK-NEXT:                    ClassDeclaration Scope %s.3
 // CHECK-NEXT:                        Id 'A' [D:E:%d.2 'A']
 // CHECK-NEXT:                        ClassBody
-// CHECK-NEXT:                            ClassProperty : %union.4
+// CHECK-NEXT:                            ClassProperty : %union.7
 // CHECK-NEXT:                                Id 'c'
 // CHECK-NEXT:                    ClassDeclaration Scope %s.4
 // CHECK-NEXT:                        Id 'B' [D:E:%d.3 'B']
 // CHECK-NEXT:                        ClassBody
-// CHECK-NEXT:                            MethodDefinition : %function.13
+// CHECK-NEXT:                            MethodDefinition : %function.8
 // CHECK-NEXT:                                Id 'func'
-// CHECK-NEXT:                                FunctionExpression : %function.13
+// CHECK-NEXT:                                FunctionExpression : %function.8
 // CHECK-NEXT:                                    BlockStatement
 // CHECK-NEXT:                    ClassDeclaration Scope %s.6
 // CHECK-NEXT:                        Id 'C' [D:E:%d.6 'C']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter
 // CHECK-NEXT:                        ClassBody
-// CHECK-NEXT:                            ClassProperty : %tuple.11
+// CHECK-NEXT:                            ClassProperty : %tuple.9
 // CHECK-NEXT:                                Id 'vals'
-// CHECK-NEXT:                            MethodDefinition : %function.14
+// CHECK-NEXT:                            MethodDefinition : %function.10
 // CHECK-NEXT:                                Id 'foo'
-// CHECK-NEXT:                                FunctionExpression : %function.14
+// CHECK-NEXT:                                FunctionExpression : %function.10
 // CHECK-NEXT:                                    BlockStatement
 // CHECK-NEXT:                                        VariableDeclaration
 // CHECK-NEXT:                                            VariableDeclarator
-// CHECK-NEXT:                                                MemberExpression : %class.6
-// CHECK-NEXT:                                                    MemberExpression : %tuple.11
-// CHECK-NEXT:                                                        ThisExpression : %class.9
+// CHECK-NEXT:                                                MemberExpression : %class.3
+// CHECK-NEXT:                                                    MemberExpression : %tuple.9
+// CHECK-NEXT:                                                        ThisExpression : %class.5
 // CHECK-NEXT:                                                        Id 'vals'
 // CHECK-NEXT:                                                    NumericLiteral : number
 // CHECK-NEXT:                                                Id 'b' [D:E:%d.10 'b']
 // CHECK-NEXT:                                        ExpressionStatement
 // CHECK-NEXT:                                            CallExpression : void
-// CHECK-NEXT:                                                MemberExpression : %function.13
-// CHECK-NEXT:                                                    Id 'b' [D:E:%d.10 'b'] : %class.6
+// CHECK-NEXT:                                                MemberExpression : %function.8
+// CHECK-NEXT:                                                    Id 'b' [D:E:%d.10 'b'] : %class.3
 // CHECK-NEXT:                                                    Id 'func'
 // CHECK-NEXT:                    ClassDeclaration Scope %s.5
 // CHECK-NEXT:                        Id 'C' [D:E:%d.4 'C']
@@ -154,4 +154,4 @@ class C<Props> {
 // CHECK-NEXT:                                                MemberExpression
 // CHECK-NEXT:                                                    Id 'b' [D:E:%d.8 'b']
 // CHECK-NEXT:                                                    Id 'func'
-// CHECK-NEXT:            ObjectExpression : %object.15
+// CHECK-NEXT:            ObjectExpression : %object.11

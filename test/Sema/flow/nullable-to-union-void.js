@@ -25,18 +25,18 @@ const v: Foo | void = maybeFoo("a");
 
 // CHECK:%untyped_function.1 = untyped_function()
 // CHECK-NEXT:%class.2 = class(Foo {
-// CHECK-NEXT:  %constructor: %function.3
-// CHECK-NEXT:  %homeObject: %class.4
+// CHECK-NEXT:  %constructor: %function.4
+// CHECK-NEXT:  %homeObject: %class.9
 // CHECK-NEXT:  key: string
 // CHECK-NEXT:})
-// CHECK-NEXT:%class_constructor.5 = class_constructor(%class.2)
-// CHECK-NEXT:%function.3 = function(this: %class.2, key: string): void
-// CHECK-NEXT:%class.4 = class( {
+// CHECK-NEXT:%class_constructor.3 = class_constructor(%class.2)
+// CHECK-NEXT:%function.4 = function(this: %class.2, key: string): void
+// CHECK-NEXT:%union.5 = union(void | %class.2)
+// CHECK-NEXT:%union.6 = union(void | null | %class.2)
+// CHECK-NEXT:%function.7 = function(s: string): %union.6
+// CHECK-NEXT:%object.8 = object({
 // CHECK-NEXT:})
-// CHECK-NEXT:%union.6 = union(void | %class.2)
-// CHECK-NEXT:%union.7 = union(void | null | %class.2)
-// CHECK-NEXT:%function.8 = function(s: string): %union.7
-// CHECK-NEXT:%object.9 = object({
+// CHECK-NEXT:%class.9 = class( {
 // CHECK-NEXT:})
 
 // CHECK:SemContext
@@ -45,9 +45,9 @@ const v: Foo | void = maybeFoo("a");
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:            Decl %d.2 'Foo' Class : %class_constructor.5
-// CHECK-NEXT:            Decl %d.3 'maybeFoo' Var : %function.8
-// CHECK-NEXT:            Decl %d.4 'v' Const : %union.6
+// CHECK-NEXT:            Decl %d.2 'Foo' Class : %class_constructor.3
+// CHECK-NEXT:            Decl %d.3 'maybeFoo' Var : %function.7
+// CHECK-NEXT:            Decl %d.4 'v' Const : %union.5
 // CHECK-NEXT:            Decl %d.5 'arguments' Var Arguments
 // CHECK-NEXT:            hoistedFunction maybeFoo
 // CHECK-NEXT:            Scope %s.3
@@ -71,9 +71,9 @@ const v: Foo | void = maybeFoo("a");
 // CHECK-NEXT:                        ClassBody
 // CHECK-NEXT:                            ClassProperty : string
 // CHECK-NEXT:                                Id 'key'
-// CHECK-NEXT:                            MethodDefinition : %function.3
+// CHECK-NEXT:                            MethodDefinition : %function.4
 // CHECK-NEXT:                                Id 'constructor'
-// CHECK-NEXT:                                FunctionExpression : %function.3
+// CHECK-NEXT:                                FunctionExpression : %function.4
 // CHECK-NEXT:                                    Id 'key' [D:E:%d.6 'key']
 // CHECK-NEXT:                                    BlockStatement
 // CHECK-NEXT:                                        ExpressionStatement
@@ -82,7 +82,7 @@ const v: Foo | void = maybeFoo("a");
 // CHECK-NEXT:                                                    ThisExpression : %class.2
 // CHECK-NEXT:                                                    Id 'key'
 // CHECK-NEXT:                                                Id 'key' [D:E:%d.6 'key'] : string
-// CHECK-NEXT:                    FunctionDeclaration : %function.8
+// CHECK-NEXT:                    FunctionDeclaration : %function.7
 // CHECK-NEXT:                        Id 'maybeFoo' [D:E:%d.3 'maybeFoo']
 // CHECK-NEXT:                        Id 's' [D:E:%d.8 's']
 // CHECK-NEXT:                        BlockStatement
@@ -92,14 +92,14 @@ const v: Foo | void = maybeFoo("a");
 // CHECK-NEXT:                                    StringLiteral : string
 // CHECK-NEXT:                                ReturnStatement
 // CHECK-NEXT:                                    NewExpression : %class.2
-// CHECK-NEXT:                                        Id 'Foo' [D:E:%d.2 'Foo'] : %class_constructor.5
+// CHECK-NEXT:                                        Id 'Foo' [D:E:%d.2 'Foo'] : %class_constructor.3
 // CHECK-NEXT:                                        StringLiteral : string
 // CHECK-NEXT:                            ReturnStatement
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
-// CHECK-NEXT:                            ImplicitCheckedCast : %union.6
-// CHECK-NEXT:                                CallExpression : %union.7
-// CHECK-NEXT:                                    Id 'maybeFoo' [D:E:%d.3 'maybeFoo'] : %function.8
+// CHECK-NEXT:                            ImplicitCheckedCast : %union.5
+// CHECK-NEXT:                                CallExpression : %union.6
+// CHECK-NEXT:                                    Id 'maybeFoo' [D:E:%d.3 'maybeFoo'] : %function.7
 // CHECK-NEXT:                                    StringLiteral : string
 // CHECK-NEXT:                            Id 'v' [D:E:%d.4 'v']
-// CHECK-NEXT:            ObjectExpression : %object.9
+// CHECK-NEXT:            ObjectExpression : %object.8

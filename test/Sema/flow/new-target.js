@@ -21,17 +21,17 @@ class A {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%class.2 = class(A {
+// CHECK-NEXT:%class_constructor.2 = class_constructor(%class.5)
+// CHECK-NEXT:%function.3 = function(this: %class.5): void
+// CHECK-NEXT:%object.4 = object({
+// CHECK-NEXT:})
+// CHECK-NEXT:%class.5 = class(A {
 // CHECK-NEXT:  %constructor: %function.3
-// CHECK-NEXT:  %homeObject: %class.4
+// CHECK-NEXT:  %homeObject: %class.6
 // CHECK-NEXT:  x: any
 // CHECK-NEXT:})
-// CHECK-NEXT:%class_constructor.5 = class_constructor(%class.2)
-// CHECK-NEXT:%function.3 = function(this: %class.2): void
-// CHECK-NEXT:%class.4 = class( {
+// CHECK-NEXT:%class.6 = class( {
 // CHECK-NEXT:  foo [final]: %untyped_function.1
-// CHECK-NEXT:})
-// CHECK-NEXT:%object.6 = object({
 // CHECK-NEXT:})
 
 // CHECK:SemContext
@@ -40,7 +40,7 @@ class A {
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:            Decl %d.2 'A' Class : %class_constructor.5
+// CHECK-NEXT:            Decl %d.2 'A' Class : %class_constructor.2
 // CHECK-NEXT:            Decl %d.3 'arguments' Var Arguments
 // CHECK-NEXT:            Scope %s.3
 // CHECK-NEXT:        Func strict
@@ -92,4 +92,4 @@ class A {
 // CHECK-NEXT:                                            MetaProperty : void
 // CHECK-NEXT:                                                Id 'new'
 // CHECK-NEXT:                                                Id 'target'
-// CHECK-NEXT:            ObjectExpression : %object.6
+// CHECK-NEXT:            ObjectExpression : %object.4

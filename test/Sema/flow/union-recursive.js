@@ -20,11 +20,11 @@ let c: C;
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%union.2 = union(number | %array.3)
-// CHECK-NEXT:%union.4 = union(string | number | %array.3)
-// CHECK-NEXT:%array.3 = array(%union.2)
-// CHECK-NEXT:%object.5 = object({
+// CHECK-NEXT:%union.2 = union(number | %array.5)
+// CHECK-NEXT:%union.3 = union(string | number | %array.5)
+// CHECK-NEXT:%object.4 = object({
 // CHECK-NEXT:})
+// CHECK-NEXT:%array.5 = array(%union.2)
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -34,7 +34,7 @@ let c: C;
 // CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:            Decl %d.2 'a' Let : %union.2
 // CHECK-NEXT:            Decl %d.3 'b' Let : %union.2
-// CHECK-NEXT:            Decl %d.4 'c' Let : %union.4
+// CHECK-NEXT:            Decl %d.4 'c' Let : %union.3
 // CHECK-NEXT:            Decl %d.5 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
@@ -77,4 +77,4 @@ let c: C;
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
 // CHECK-NEXT:                            Id 'c' [D:E:%d.4 'c']
-// CHECK-NEXT:            ObjectExpression : %object.5
+// CHECK-NEXT:            ObjectExpression : %object.4

@@ -24,9 +24,9 @@ var r2: boolean[] = map(arr, elem => !elem);
 // CHECK:%untyped_function.1 = untyped_function()
 // CHECK-NEXT:%array.2 = array(number)
 // CHECK-NEXT:%array.3 = array(boolean)
-// CHECK-NEXT:%function.4 = function(number): number
+// CHECK-NEXT:%function.4 = function(elem: number): number
 // CHECK-NEXT:%function.5 = function(x: %array.2, f: %function.4): %array.2
-// CHECK-NEXT:%function.6 = function(number): boolean
+// CHECK-NEXT:%function.6 = function(elem: number): boolean
 // CHECK-NEXT:%function.7 = function(x: %array.2, f: %function.6): %array.3
 // CHECK-NEXT:%object.8 = object({
 // CHECK-NEXT:})

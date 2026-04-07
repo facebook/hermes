@@ -18,21 +18,20 @@ var c2: C_crazy;
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%class.2 = class(Foo {
-// CHECK-NEXT:  %homeObject: %class.3
+// CHECK-NEXT:%class_constructor.2 = class_constructor(%class.6)
+// CHECK-NEXT:%class_constructor.3 = class_constructor(%class.7)
+// CHECK-NEXT:%union.4 = union(null | number | %class.6 | %class.7)
+// CHECK-NEXT:%object.5 = object({
 // CHECK-NEXT:})
-// CHECK-NEXT:%class_constructor.4 = class_constructor(%class.2)
-// CHECK-NEXT:%class.5 = class(Bar {
-// CHECK-NEXT:  %homeObject: %class.6
+// CHECK-NEXT:%class.6 = class(Foo {
+// CHECK-NEXT:  %homeObject: %class.8
 // CHECK-NEXT:})
-// CHECK-NEXT:%class_constructor.7 = class_constructor(%class.5)
-// CHECK-NEXT:%union.8 = union(null | number | %class.2 | %class.5)
-// CHECK-NEXT:%union.9 = union(number | %class.2 | %class.5)
-// CHECK-NEXT:%class.3 = class( {
+// CHECK-NEXT:%class.7 = class(Bar {
+// CHECK-NEXT:  %homeObject: %class.9
 // CHECK-NEXT:})
-// CHECK-NEXT:%class.6 = class( {
+// CHECK-NEXT:%class.8 = class( {
 // CHECK-NEXT:})
-// CHECK-NEXT:%object.10 = object({
+// CHECK-NEXT:%class.9 = class( {
 // CHECK-NEXT:})
 
 // CHECK:SemContext
@@ -41,9 +40,9 @@ var c2: C_crazy;
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:            Decl %d.2 'Foo' Class : %class_constructor.4
-// CHECK-NEXT:            Decl %d.3 'Bar' Class : %class_constructor.7
-// CHECK-NEXT:            Decl %d.4 'c2' Var : %union.8
+// CHECK-NEXT:            Decl %d.2 'Foo' Class : %class_constructor.2
+// CHECK-NEXT:            Decl %d.3 'Bar' Class : %class_constructor.3
+// CHECK-NEXT:            Decl %d.4 'c2' Var : %union.4
 // CHECK-NEXT:            Decl %d.5 'arguments' Var Arguments
 // CHECK-NEXT:            Scope %s.3
 // CHECK-NEXT:            Scope %s.4
@@ -93,4 +92,4 @@ var c2: C_crazy;
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
 // CHECK-NEXT:                            Id 'c2' [D:E:%d.4 'c2']
-// CHECK-NEXT:            ObjectExpression : %object.10
+// CHECK-NEXT:            ObjectExpression : %object.5

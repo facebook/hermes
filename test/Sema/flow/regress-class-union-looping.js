@@ -14,16 +14,13 @@ type D = [B<D>] | C<number>;
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%union.2 = union(%tuple.3 | %array.4)
-// CHECK-NEXT:%class.5 = class(B {
-// CHECK-NEXT:  %homeObject: %class.6
+// CHECK-NEXT:%class_constructor.2 = class_constructor(%class.4)
+// CHECK-NEXT:%object.3 = object({
 // CHECK-NEXT:})
-// CHECK-NEXT:%tuple.3 = tuple(%class.5)
-// CHECK-NEXT:%array.4 = array(%class.5)
-// CHECK-NEXT:%class_constructor.7 = class_constructor(%class.5)
-// CHECK-NEXT:%class.6 = class( {
+// CHECK-NEXT:%class.4 = class(B {
+// CHECK-NEXT:  %homeObject: %class.5
 // CHECK-NEXT:})
-// CHECK-NEXT:%object.8 = object({
+// CHECK-NEXT:%class.5 = class( {
 // CHECK-NEXT:})
 
 // CHECK:SemContext
@@ -34,7 +31,7 @@ type D = [B<D>] | C<number>;
 // CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:            Decl %d.2 'B' Class
 // CHECK-NEXT:            Decl %d.3 'arguments' Var Arguments
-// CHECK-NEXT:            Decl %d.4 'B' Class : %class_constructor.7
+// CHECK-NEXT:            Decl %d.4 'B' Class : %class_constructor.2
 // CHECK-NEXT:            Scope %s.3
 // CHECK-NEXT:            Scope %s.4
 // CHECK-NEXT:        Func strict
@@ -81,4 +78,4 @@ type D = [B<D>] | C<number>;
 // CHECK-NEXT:                                Id 'C'
 // CHECK-NEXT:                                TypeParameterInstantiation
 // CHECK-NEXT:                                    NumberTypeAnnotation
-// CHECK-NEXT:            ObjectExpression : %object.8
+// CHECK-NEXT:            ObjectExpression : %object.3

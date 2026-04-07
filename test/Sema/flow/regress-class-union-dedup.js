@@ -17,15 +17,15 @@ var d2: B<D>[];
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%array.2 = array(%class.3)
-// CHECK-NEXT:%class.3 = class(B {
-// CHECK-NEXT:  %homeObject: %class.4
+// CHECK-NEXT:%array.2 = array(%class.5)
+// CHECK-NEXT:%class_constructor.3 = class_constructor(%class.5)
+// CHECK-NEXT:%object.4 = object({
+// CHECK-NEXT:})
+// CHECK-NEXT:%class.5 = class(B {
+// CHECK-NEXT:  %homeObject: %class.6
 // CHECK-NEXT:  x: %array.2
 // CHECK-NEXT:})
-// CHECK-NEXT:%class_constructor.5 = class_constructor(%class.3)
-// CHECK-NEXT:%class.4 = class( {
-// CHECK-NEXT:})
-// CHECK-NEXT:%object.6 = object({
+// CHECK-NEXT:%class.6 = class( {
 // CHECK-NEXT:})
 
 // CHECK:SemContext
@@ -38,7 +38,7 @@ var d2: B<D>[];
 // CHECK-NEXT:            Decl %d.3 'd1' Var : %array.2
 // CHECK-NEXT:            Decl %d.4 'd2' Var : %array.2
 // CHECK-NEXT:            Decl %d.5 'arguments' Var Arguments
-// CHECK-NEXT:            Decl %d.6 'B' Class : %class_constructor.5
+// CHECK-NEXT:            Decl %d.6 'B' Class : %class_constructor.3
 // CHECK-NEXT:            Scope %s.3
 // CHECK-NEXT:            Scope %s.4
 // CHECK-NEXT:        Func strict
@@ -95,4 +95,4 @@ var d2: B<D>[];
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
 // CHECK-NEXT:                            Id 'd2' [D:E:%d.4 'd2']
-// CHECK-NEXT:            ObjectExpression : %object.6
+// CHECK-NEXT:            ObjectExpression : %object.4
