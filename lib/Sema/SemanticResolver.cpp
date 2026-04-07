@@ -1094,7 +1094,7 @@ void SemanticResolver::visit(ESTree::SuperNode *node, ESTree::Node *parent) {
 void SemanticResolver::visit(
     ESTree::MethodDefinitionNode *node,
     ESTree::Node *parent) {
-  if (compile_ && !node->_decorators.empty()) {
+  if (compile_ && !typed_ && !node->_decorators.empty()) {
     sm_.error(node->getSourceRange(), "decorators are not supported");
   }
 

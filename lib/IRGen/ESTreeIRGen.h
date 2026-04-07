@@ -607,9 +607,19 @@ class ESTreeIRGen {
   /// the class.
   llvh::DenseMap<flow::ClassType *, ClassFieldInitInfo> classFieldInitInfo_{};
 
+  /// Handles any methods that were not overridden on typed classes.
+  /// This includes @Hermes.final annotated methods, as well as methods that
+  /// simply have no known overrides.
+  ///
   /// Map from a field on the home object to the IR function that it is
   /// guaranteed to be, if any.
-  llvh::DenseMap<const flow::ClassType::Field *, Function *> finalMethods_{};
+  llvh::DenseMap<const flow::ClassType::Field *, Function *>
+      nonOverriddenMethods_{};
+
+  /// Map from a @Hermes.final method Decl to the Function.
+  /// Used for direct call optimization, because closures will not live on the
+  /// home object and will instead have an associated Variable and Decl.
+  llvh::DenseMap<sema::Decl *, Function *> declFunctions_{};
 
   /// Internal variables created during legacy class compilation.
   /// These need to be cached so they can be reused when the same class

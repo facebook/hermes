@@ -471,9 +471,25 @@ class FlowChecker::ExprVisitor {
           if (optMethod) {
             resType = optMethod->getField()->type;
             found = true;
+            // For non-generic final methods, propagate the Decl from the
+            // method definition key to the call-site property so IRGen
+            // can look it up.
+            // Generic final methods get their Decls set through
+            // specializedMethodDecls_.
+            const auto *field = optMethod->getField();
+            if (field->finalMethod && !llvh::isa<GenericType>(resType->info)) {
+              auto *methodKey =
+                  ESTree::getPropertyIdentifier(field->method->_key);
+              if (auto *decl =
+                      outer_.semContext_.getExpressionDecl(methodKey)) {
+                auto *propId = ESTree::getPropertyIdentifier(node->_property);
+                outer_.semContext_.setExpressionDecl(propId, decl);
+              }
+            }
             assert(
-                llvh::isa<BaseFunctionType>(resType->info) &&
-                "methods must be functions");
+                (llvh::isa<BaseFunctionType>(resType->info) ||
+                 llvh::isa<GenericType>(resType->info)) &&
+                "methods must be functions or generic");
           }
         }
         if (!found) {
@@ -1504,6 +1520,11 @@ class FlowChecker::ExprVisitor {
     // Whether we have to visit the arguments or not depends on whether we
     // visited them during generic type argument inference.
     bool shouldVisitArguments = true;
+    // Whether we need to visit the callee. Set to false for generic method
+    // calls where we've already set the type.
+    bool shouldVisitCallee = true;
+
+    // Handle generic calls and method calls.
 
     if (auto *identCallee =
             llvh::dyn_cast<ESTree::IdentifierNode>(node->_callee)) {
@@ -1529,18 +1550,85 @@ class FlowChecker::ExprVisitor {
               node, identCallee, typeArgs, decl);
         }
       }
+    } else if (auto *memCallee =
+                   llvh::dyn_cast<ESTree::MemberExpressionNode>(node->_callee);
+               memCallee && node->_typeArguments && !memCallee->_computed &&
+               llvh::isa<ESTree::IdentifierNode>(memCallee->_property)) {
+      // Handle explicit type arguments on generic method calls.
+      // Visit the object early to determine the class type.
+      visitESTreeNode(*this, memCallee->_object, memCallee, nullptr);
+      shouldVisitCallee = false;
+      Type *objType = outer_.getNodeTypeOrAny(memCallee->_object);
+
+      if (auto *classType = llvh::dyn_cast<ClassType>(objType->info)) {
+        auto *propId = llvh::cast<ESTree::IdentifierNode>(memCallee->_property);
+        auto optMethod = classType->getHomeObjectTypeInfo()->findPublicField(
+            Identifier::getFromPointer(propId->_name));
+
+        if (optMethod &&
+            llvh::isa<GenericType>(optMethod->getField()->type->info)) {
+          outer_.resolveCallToGenericMethodSpecialization(
+              node, memCallee, optMethod->getField()->method);
+        } else {
+          // Method is not generic but type arguments were provided.
+          outer_.sm_.error(
+              node->_typeArguments->getSourceRange(),
+              "ft: type arguments provided for non-generic method");
+          return;
+        }
+      } else {
+        outer_.sm_.error(
+            node->_callee->getSourceRange(),
+            "ft: invalid generic function call");
+        return;
+      }
     } else if (node->_typeArguments) {
       // Generics handled above.
       outer_.sm_.error(
-          node->_callee->getSourceRange(),
-          "ft: generic call only works on identifiers");
+          node->_callee->getSourceRange(), "ft: invalid generic function call");
       return;
     }
 
     // Don't visit the arguments yet, since we may be able to constrain their
     // types using the type of the function.
-    visitESTreeNode(*this, node->_callee, node, nullptr);
+    if (shouldVisitCallee) {
+      visitESTreeNode(*this, node->_callee, node, nullptr);
+    }
     Type *calleeType = outer_.getNodeTypeOrAny(node->_callee);
+
+    // Handle generic method inference (no explicit type arguments).
+    // After visiting the callee, if the type is GenericType, attempt to
+    // infer the type arguments from the call arguments.
+    if (llvh::isa<GenericType>(calleeType->info)) {
+      if (auto *memCallee =
+              llvh::dyn_cast<ESTree::MemberExpressionNode>(node->_callee);
+          memCallee && !memCallee->_computed &&
+          llvh::isa<ESTree::IdentifierNode>(memCallee->_property)) {
+        Type *objType = outer_.getNodeTypeOrAny(memCallee->_object);
+        if (auto *classType = llvh::dyn_cast<ClassType>(objType->info)) {
+          auto *propId =
+              llvh::cast<ESTree::IdentifierNode>(memCallee->_property);
+          auto optMethod = classType->getHomeObjectTypeInfo()->findPublicField(
+              Identifier::getFromPointer(propId->_name));
+          if (optMethod && optMethod->getField()->method) {
+            auto [didVisitArgs, typeArgs] =
+                outer_.inferTypeArgumentsForGenericMethodCall(
+                    node, memCallee, optMethod->getField()->method);
+            if (didVisitArgs)
+              shouldVisitArguments = false;
+            if (typeArgs.empty()) {
+              outer_.sm_.error(
+                  node->getStartLoc(),
+                  "ft: could not infer type arguments for generic method");
+              return;
+            }
+            outer_.resolveCallToGenericMethodSpecializationWithParsedTypes(
+                node, memCallee, typeArgs, optMethod->getField()->method);
+            calleeType = outer_.getNodeTypeOrAny(node->_callee);
+          }
+        }
+      }
+    }
 
     // If the callee has no type, we have nothing to do/check.
     if (llvh::isa<AnyType>(calleeType->info)) {

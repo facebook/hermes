@@ -1370,6 +1370,10 @@ ClassBodyNode *getClassBody(ClassLikeNode *node);
 /// \return the body node of \p node.
 ESTree::NodeList &getDecorators(ClassLikeNode *node);
 
+/// Extract the IdentifierNode from a property key node.
+/// \p node must be an IdentifierNode or a PrivateNameNode.
+IdentifierNode *getPropertyIdentifier(Node *node);
+
 /// Allow using \p NodeKind in \p llvh::DenseMaps.
 struct NodeKindInfo : llvh::DenseMapInfo<NodeKind> {
   static inline NodeKind getEmptyKey() {

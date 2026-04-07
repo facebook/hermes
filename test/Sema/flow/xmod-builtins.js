@@ -72,75 +72,76 @@
 // CHECK-NEXT:        Decl %d.20 'WeakMap' UndeclaredGlobalProperty
 // CHECK-NEXT:        Decl %d.21 'WeakSet' UndeclaredGlobalProperty
 // CHECK-NEXT:        Decl %d.22 '$SHBuiltin' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.23 'Infinity' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.24 'NaN' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.25 'globalThis' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.26 'undefined' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.27 'AggregateError' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.28 'EvalError' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.29 'RangeError' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.30 'ReferenceError' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.31 'SyntaxError' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.32 'TypeError' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.33 'URIError' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.34 'ArrayBuffer' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.35 'DataView' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.36 'TextEncoder' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.37 'Uint8Array' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.38 'Int8Array' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.39 'Uint8ClampedArray' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.40 'Uint16Array' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.41 'Int16Array' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.42 'Uint32Array' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.43 'Int32Array' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.44 'Float32Array' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.45 'Float64Array' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.46 'BigUint64Array' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.47 'BigInt64Array' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.48 'print' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.49 'eval' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.50 'parseInt' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.51 'parseFloat' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.52 'isNaN' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.53 'isFinite' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.54 'escape' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.55 'unescape' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.56 'decodeURI' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.57 'decodeURIComponent' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.58 'encodeURI' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.59 'encodeURIComponent' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.60 'gc' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.23 'Hermes' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.24 'Infinity' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.25 'NaN' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.26 'globalThis' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.27 'undefined' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.28 'AggregateError' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.29 'EvalError' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.30 'RangeError' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.31 'ReferenceError' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.32 'SyntaxError' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.33 'TypeError' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.34 'URIError' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.35 'ArrayBuffer' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.36 'DataView' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.37 'TextEncoder' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.38 'Uint8Array' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.39 'Int8Array' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.40 'Uint8ClampedArray' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.41 'Uint16Array' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.42 'Int16Array' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.43 'Uint32Array' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.44 'Int32Array' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.45 'Float32Array' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.46 'Float64Array' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.47 'BigUint64Array' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.48 'BigInt64Array' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.49 'print' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.50 'eval' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.51 'parseInt' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.52 'parseFloat' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.53 'isNaN' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.54 'isFinite' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.55 'escape' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.56 'unescape' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.57 'decodeURI' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.58 'decodeURIComponent' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.59 'encodeURI' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.60 'encodeURIComponent' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.61 'gc' UndeclaredGlobalProperty
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.2
-// CHECK-NEXT:            Decl %d.61 'exports' Parameter : any
-// CHECK-NEXT:            Decl %d.62 'arguments' Var Arguments
+// CHECK-NEXT:            Decl %d.62 'exports' Parameter : any
+// CHECK-NEXT:            Decl %d.63 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:                Decl %d.63 'arguments' Var Arguments
+// CHECK-NEXT:                Decl %d.64 'arguments' Var Arguments
 // CHECK-NEXT:            Func strict
 // CHECK-NEXT:                Scope %s.4
-// CHECK-NEXT:                    Decl %d.64 'global' Parameter : any
-// CHECK-NEXT:                    Decl %d.65 'require' Parameter : any
-// CHECK-NEXT:                    Decl %d.66 's' Parameter : string
-// CHECK-NEXT:                    Decl %d.67 'arguments' Var Arguments
+// CHECK-NEXT:                    Decl %d.65 'global' Parameter : any
+// CHECK-NEXT:                    Decl %d.66 'require' Parameter : any
+// CHECK-NEXT:                    Decl %d.67 's' Parameter : string
+// CHECK-NEXT:                    Decl %d.68 'arguments' Var Arguments
 // CHECK-NEXT:            Func strict
 // CHECK-NEXT:                Scope %s.5
-// CHECK-NEXT:                    Decl %d.68 'global' Parameter : any
-// CHECK-NEXT:                    Decl %d.69 'require' Parameter : any
-// CHECK-NEXT:                    Decl %d.70 'n' Var : number
-// CHECK-NEXT:                    Decl %d.71 'arguments' Var Arguments
+// CHECK-NEXT:                    Decl %d.69 'global' Parameter : any
+// CHECK-NEXT:                    Decl %d.70 'require' Parameter : any
+// CHECK-NEXT:                    Decl %d.71 'n' Var : number
+// CHECK-NEXT:                    Decl %d.72 'arguments' Var Arguments
 // CHECK-NEXT:            Func strict
 // CHECK-NEXT:                Scope %s.6
-// CHECK-NEXT:                    Decl %d.72 'global' Parameter : any
-// CHECK-NEXT:                    Decl %d.73 'require' Parameter : any
-// CHECK-NEXT:                    Decl %d.74 'n2' Var : number
-// CHECK-NEXT:                    Decl %d.75 'arguments' Var Arguments
+// CHECK-NEXT:                    Decl %d.73 'global' Parameter : any
+// CHECK-NEXT:                    Decl %d.74 'require' Parameter : any
+// CHECK-NEXT:                    Decl %d.75 'n2' Var : number
+// CHECK-NEXT:                    Decl %d.76 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
 // CHECK-NEXT:        CallExpression : any
 // CHECK-NEXT:            FunctionExpression : %untyped_function.1
-// CHECK-NEXT:                Id 'exports' [D:E:%d.61 'exports']
+// CHECK-NEXT:                Id 'exports' [D:E:%d.62 'exports']
 // CHECK-NEXT:                BlockStatement
 // CHECK-NEXT:                    ExpressionStatement
 // CHECK-NEXT:                        FunctionExpression : %untyped_function.1
@@ -152,9 +153,9 @@
 // CHECK-NEXT:                                            Id 'moduleFactory'
 // CHECK-NEXT:                                        NumericLiteral : number
 // CHECK-NEXT:                                        FunctionExpression : %function.2
-// CHECK-NEXT:                                            Id 'global' [D:E:%d.64 'global']
-// CHECK-NEXT:                                            Id 'require' [D:E:%d.65 'require']
-// CHECK-NEXT:                                            Id 's' [D:E:%d.66 's']
+// CHECK-NEXT:                                            Id 'global' [D:E:%d.65 'global']
+// CHECK-NEXT:                                            Id 'require' [D:E:%d.66 'require']
+// CHECK-NEXT:                                            Id 's' [D:E:%d.67 's']
 // CHECK-NEXT:                                            BlockStatement
 // CHECK-NEXT:                                                ReturnStatement
 // CHECK-NEXT:                                                    ImplicitCheckedCast : number
@@ -163,7 +164,7 @@
 // CHECK-NEXT:                                                            BinOp +
 // CHECK-NEXT:                                                            MemberExpression : any
 // CHECK-NEXT:                                                                AsExpression : any
-// CHECK-NEXT:                                                                    Id 's' [D:E:%d.66 's'] : string
+// CHECK-NEXT:                                                                    Id 's' [D:E:%d.67 's'] : string
 // CHECK-NEXT:                                                                    AnyTypeAnnotation
 // CHECK-NEXT:                                                                Id 'length'
 // CHECK-NEXT:                                ExpressionStatement
@@ -173,20 +174,20 @@
 // CHECK-NEXT:                                            Id 'moduleFactory'
 // CHECK-NEXT:                                        NumericLiteral : number
 // CHECK-NEXT:                                        FunctionExpression : %function.3
-// CHECK-NEXT:                                            Id 'global' [D:E:%d.68 'global']
-// CHECK-NEXT:                                            Id 'require' [D:E:%d.69 'require']
+// CHECK-NEXT:                                            Id 'global' [D:E:%d.69 'global']
+// CHECK-NEXT:                                            Id 'require' [D:E:%d.70 'require']
 // CHECK-NEXT:                                            BlockStatement
 // CHECK-NEXT:                                                VariableDeclaration
 // CHECK-NEXT:                                                    VariableDeclarator
 // CHECK-NEXT:                                                        NumericLiteral : number
-// CHECK-NEXT:                                                        Id 'n' [D:E:%d.70 'n']
+// CHECK-NEXT:                                                        Id 'n' [D:E:%d.71 'n']
 // CHECK-NEXT:                                                ExpressionStatement
 // CHECK-NEXT:                                                    CallExpression : void
 // CHECK-NEXT:                                                        MemberExpression : any
 // CHECK-NEXT:                                                            SHBuiltin
 // CHECK-NEXT:                                                            Id 'export'
 // CHECK-NEXT:                                                        StringLiteral : string
-// CHECK-NEXT:                                                        Id 'n' [D:E:%d.70 'n'] : number
+// CHECK-NEXT:                                                        Id 'n' [D:E:%d.71 'n'] : number
 // CHECK-NEXT:                                                ReturnStatement
 // CHECK-NEXT:                                                    NumericLiteral : number
 // CHECK-NEXT:                                ExpressionStatement
@@ -196,8 +197,8 @@
 // CHECK-NEXT:                                            Id 'moduleFactory'
 // CHECK-NEXT:                                        NumericLiteral : number
 // CHECK-NEXT:                                        FunctionExpression : %function.3
-// CHECK-NEXT:                                            Id 'global' [D:E:%d.72 'global']
-// CHECK-NEXT:                                            Id 'require' [D:E:%d.73 'require']
+// CHECK-NEXT:                                            Id 'global' [D:E:%d.73 'global']
+// CHECK-NEXT:                                            Id 'require' [D:E:%d.74 'require']
 // CHECK-NEXT:                                            BlockStatement
 // CHECK-NEXT:                                                VariableDeclaration
 // CHECK-NEXT:                                                    VariableDeclarator
@@ -216,7 +217,7 @@
 // CHECK-NEXT:                                                                    Id 'length'
 // CHECK-NEXT:                                                                BinOp +
 // CHECK-NEXT:                                                                NumericLiteral : number
-// CHECK-NEXT:                                                        Id 'n2' [D:E:%d.74 'n2']
+// CHECK-NEXT:                                                        Id 'n2' [D:E:%d.75 'n2']
 // CHECK-NEXT:                                                ReturnStatement
 // CHECK-NEXT:                                                    NumericLiteral : number
 // CHECK-NEXT:            ObjectExpression : %object.4

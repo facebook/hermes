@@ -692,13 +692,15 @@ void ClassType::init(
     llvh::ArrayRef<Field> fields,
     Type *constructorType,
     Type *homeObjectType,
-    Type *superClass) {
+    Type *superClass,
+    size_t numLayoutSlots) {
   fields_.reserve(fields.size());
   fields_.append(fields.begin(), fields.end());
 
   constructorType_ = constructorType;
   homeObjectType_ = homeObjectType;
   superClass_ = superClass;
+  numLayoutSlots_ = numLayoutSlots;
 
   if (superClass) {
     auto *superClassInfo = llvh::cast_or_null<ClassType>(superClass_->info);

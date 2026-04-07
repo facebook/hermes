@@ -93,6 +93,7 @@
 #include "FlowChecker.h"
 
 #include "ESTreeClone.h"
+#include "hermes/AST/ASTUtils.h"
 #include "hermes/Support/Conversions.h"
 
 #include "llvh/ADT/MapVector.h"
@@ -280,6 +281,7 @@ void FlowChecker::visit(ESTree::ArrowFunctionExpressionNode *node) {
 
 class FlowChecker::ParseClassType {
   FlowChecker &outer_;
+  sema::LexicalScope *classScope_;
 
   llvh::SmallDenseMap<UniqueString *, ESTree::Node *> fieldNames{};
   llvh::SmallVector<ClassType::Field, 4> fields{};
@@ -299,8 +301,10 @@ class FlowChecker::ParseClassType {
       ESTree::Node *superClass,
       ESTree::Node *superTypeArguments,
       ESTree::Node *body,
-      Type *classType)
+      Type *classType,
+      sema::LexicalScope *classScope)
       : outer_(outer),
+        classScope_(classScope),
         superClassType(
             resolveSuperClass(outer, superClass, superTypeArguments)) {
     LLVM_DEBUG(
@@ -317,15 +321,13 @@ class FlowChecker::ParseClassType {
       assert(
           superClassTypeInfo->isInitialized() &&
           "superClass must be initialized");
-      nextFieldLayoutSlotIR = superClassTypeInfo->getFieldNameMap().size();
+      // Private instance fields already have real layoutSlotIR values and
+      // are counted in getNumLayoutSlots(). Private methods have
+      // layoutSlotIR=None and are stored in Variables, not on the home object,
+      // so they don't need layout slots either.
+      nextFieldLayoutSlotIR = superClassTypeInfo->getNumLayoutSlots();
       nextMethodLayoutSlotIR =
-          superClassTypeInfo->getHomeObjectTypeInfo()->getFieldNameMap().size();
-      for (auto *cur = superClassTypeInfo; cur;
-           cur = cur->getSuperClassInfo()) {
-        nextFieldLayoutSlotIR += cur->getPrivateFieldNameMap().size();
-        nextMethodLayoutSlotIR +=
-            cur->getHomeObjectTypeInfo()->getPrivateFieldNameMap().size();
-      }
+          superClassTypeInfo->getHomeObjectTypeInfo()->getNumLayoutSlots();
     }
 
     auto *classBody = llvh::cast<ESTree::ClassBodyNode>(body);
@@ -340,7 +342,7 @@ class FlowChecker::ParseClassType {
         outer_.setNodeType(&node, fieldType);
       } else if (
           auto *method = llvh::dyn_cast<ESTree::MethodDefinitionNode>(&node)) {
-        Type *methodType = parseMethodDefinition(classType, method);
+        Type *methodType = parseMethodDefinition(classType, classBody, method);
         // Methods have FunctionExpression values.
         // Associate the same type with both the outer and inner nodes.
         outer_.setNodeType(method, methodType);
@@ -360,9 +362,15 @@ class FlowChecker::ParseClassType {
             /* constructorType */ nullptr,
             /* homeObjectType */ nullptr,
             superClassTypeInfo ? superClassTypeInfo->getHomeObjectType()
-                               : nullptr);
+                               : nullptr,
+            nextMethodLayoutSlotIR);
     llvh::cast<ClassType>(classType->info)
-        ->init(fields, constructorType, homeObjectType, superClassType);
+        ->init(
+            fields,
+            constructorType,
+            homeObjectType,
+            superClassType,
+            nextFieldLayoutSlotIR);
   }
 
  private:
@@ -537,20 +545,29 @@ class FlowChecker::ParseClassType {
 
   Type *parseMethodDefinition(
       Type *classType,
+      ESTree::ClassBodyNode *classBody,
       ESTree::MethodDefinitionNode *method) {
     auto *fe = llvh::cast<ESTree::FunctionExpressionNode>(method->_value);
-
-    if (fe->_typeParameters) {
-      outer_.sm_.error(
-          fe->_typeParameters->getSourceRange(),
-          "ft: type parameters not supported directly on methods");
-      return outer_.flowContext_.getAny();
-    }
 
     ESTree::PrivateNameNode *privateNameNode =
         llvh::dyn_cast<ESTree::PrivateNameNode>(method->_key);
 
     if (method->_kind == outer_.kw_.identConstructor) {
+      if (fe->_typeParameters) {
+        outer_.sm_.error(
+            fe->_typeParameters->getSourceRange(),
+            "ft: type parameters not supported directly on constructor");
+        return outer_.flowContext_.getAny();
+      }
+      if (hermes::findDecorator(
+              method->_decorators,
+              {outer_.kw_.identHermes, outer_.kw_.identFinal})) {
+        outer_.sm_.error(
+            method->getStartLoc(),
+            "ft: @Hermes.final cannot be applied to a constructor");
+        return outer_.flowContext_.getAny();
+      }
+
       // Constructor
       if (fe->_returnType) {
         outer_.sm_.error(
@@ -577,6 +594,21 @@ class FlowChecker::ParseClassType {
     } else {
       // Non-constructor method
 
+      bool finalMethod = hermes::findDecorator(
+          method->_decorators, {outer_.kw_.identHermes, outer_.kw_.identFinal});
+      if (fe->_typeParameters && privateNameNode) {
+        outer_.sm_.error(
+            fe->_typeParameters->getSourceRange(),
+            "ft: generic private methods are not supported");
+        return outer_.flowContext_.getAny();
+      }
+      if (fe->_typeParameters && !finalMethod) {
+        outer_.sm_.error(
+            fe->_typeParameters->getSourceRange(),
+            "ft: generic methods must be marked as final with @Hermes.final");
+        return outer_.flowContext_.getAny();
+      }
+
       if (method->_computed) {
         outer_.sm_.error(
             method->getStartLoc(),
@@ -591,21 +623,43 @@ class FlowChecker::ParseClassType {
       }
 
       Identifier name;
+      ESTree::IdentifierNode *id = nullptr;
       if (privateNameNode) {
         name = outer_.astContext_.getPrivateNameIdentifier(
             llvh::cast<ESTree::IdentifierNode>(privateNameNode->_id)->_name);
       } else {
-        name = Identifier::getFromPointer(
-            llvh::cast<ESTree::IdentifierNode>(method->_key)->_name);
+        id = llvh::cast<ESTree::IdentifierNode>(method->_key);
+        name = Identifier::getFromPointer(id->_name);
       }
 
-      Type *methodType = outer_.parseFunctionType(
-          fe->_params,
-          fe->_returnType,
-          fe->_async,
-          fe->_generator,
-          nullptr,
-          classType);
+      Type *methodType;
+      if (fe->_typeParameters) {
+        methodType = outer_.flowContext_.getGeneric();
+        outer_.registerGenericMethod(
+            method,
+            classBody,
+            outer_.bindingTable_.getCurrentScope(),
+            classScope_,
+            llvh::cast<ClassType>(classType->info));
+      } else {
+        // Create a Decl for non-generic final methods and store it on the
+        // method key IdentifierNode. Generic final methods get Decls
+        // through specializedMethodDecls_.
+        if (finalMethod) {
+          auto *keyId = ESTree::getPropertyIdentifier(method->_key);
+          auto *decl = outer_.semContext_.newDeclInScope(
+              keyId->_name, sema::Decl::Kind::Const, classScope_);
+          outer_.semContext_.setExpressionDecl(keyId, decl);
+        }
+
+        methodType = outer_.parseFunctionType(
+            fe->_params,
+            fe->_returnType,
+            fe->_async,
+            fe->_generator,
+            nullptr,
+            classType);
+      }
 
       // Check if the method is inherited, and reuse the index.
       // Private fields are never inherited.
@@ -615,8 +669,25 @@ class FlowChecker::ParseClassType {
         auto superIt =
             superClassTypeInfo->getHomeObjectTypeInfo()->findPublicField(name);
         if (superIt) {
+          if (fe->_typeParameters) {
+            outer_.sm_.error(
+                id->getSourceRange(),
+                "ft: cannot override with generic method");
+            return outer_.flowContext_.getAny();
+          }
           // Field is inherited.
           superMethod = superIt->getField();
+          if (superMethod->finalMethod) {
+            outer_.sm_.error(
+                id->getSourceRange(), "ft: cannot override final method");
+            return outer_.flowContext_.getAny();
+          }
+          if (finalMethod) {
+            outer_.sm_.error(
+                id->getSourceRange(),
+                "ft: cannot mark override as @Hermes.final");
+            return outer_.flowContext_.getAny();
+          }
           // Mark the super field as overridden.
           superIt->getFieldMut()->overridden = true;
           // Actually check the type of the method later,
@@ -644,14 +715,23 @@ class FlowChecker::ParseClassType {
             methodType,
             superMethod->layoutSlotIR,
             /* isPrivate */ false,
-            method);
+            method,
+            finalMethod);
       } else {
-        // Private methods are not stored in the object,
-        // so they don't use a layout slot.
-        auto layoutSlotIR =
-            privateNameNode != nullptr ? 0 : nextMethodLayoutSlotIR++;
+        // Private methods are not stored in the public field map,
+        // and final methods don't get a layout slot in the home object
+        // because they are accessed through Variables, not the home object.
+        OptValue<size_t> layoutSlotIR =
+            (privateNameNode != nullptr || finalMethod)
+            ? OptValue<size_t>(llvh::None)
+            : OptValue<size_t>(nextMethodLayoutSlotIR++);
         methods.emplace_back(
-            name, methodType, layoutSlotIR, privateNameNode != nullptr, method);
+            name,
+            methodType,
+            layoutSlotIR,
+            privateNameNode != nullptr,
+            method,
+            finalMethod);
       }
 
       return methodType;
@@ -663,8 +743,10 @@ void FlowChecker::parseClassType(
     ESTree::Node *superClass,
     ESTree::Node *superTypeArguments,
     ESTree::Node *body,
-    Type *classType) {
-  ParseClassType(*this, superClass, superTypeArguments, body, classType);
+    Type *classType,
+    sema::LexicalScope *classScope) {
+  ParseClassType(
+      *this, superClass, superTypeArguments, body, classType, classScope);
 }
 
 void FlowChecker::visitClassNode(
@@ -687,7 +769,11 @@ void FlowChecker::visit(ESTree::ClassExpressionNode *node) {
 
   unsigned errorsBefore = sm_.getErrorCount();
   parseClassType(
-      node->_superClass, node->_superTypeArguments, node->_body, classType);
+      node->_superClass,
+      node->_superTypeArguments,
+      node->_body,
+      classType,
+      node->getScope());
   if (sm_.getErrorCount() != errorsBefore) {
     // Failed to parse class.
     return;
@@ -738,10 +824,20 @@ void FlowChecker::visit(ESTree::ClassDeclarationNode *node) {
 void FlowChecker::visit(ESTree::MethodDefinitionNode *node) {
   auto *fe = llvh::cast<ESTree::FunctionExpressionNode>(node->_value);
 
+  // Visit decorators to validate them.
+  for (auto &decorator : node->_decorators) {
+    visit(llvh::cast<ESTree::DecoratorNode>(&decorator), node);
+  }
+
+  // If it has type parameters, it's either a generic declaration
+  // or a specialization which should be typechecked directly at clone time
+  // by calling visitNonGenericFunctionDeclaration.
+  // e.g.
+  //   foo() { this.bar<number>() }
+  //   bar<T>() {}
+  // will create bar<number> in after bar<T>, but we don't want to visit after
+  // visiting foo.
   if (fe->_typeParameters) {
-    sm_.error(
-        fe->_typeParameters->getSourceRange(),
-        "ft: type parameters not supported directly on methods");
     return;
   }
 
@@ -810,6 +906,42 @@ void FlowChecker::visit(ESTree::MethodDefinitionNode *node) {
         curClassContext_->classType,
         /* newTargetType */ flowContext_.getVoid());
     visitFunctionLike(fe, fe->_body, fe->_params);
+  }
+}
+
+void FlowChecker::visit(ESTree::DecoratorNode *node, ESTree::Node *parent) {
+  // Check for the allowed @Hermes decorators.
+  auto *mem = llvh::dyn_cast<ESTree::MemberExpressionNode>(node->_expression);
+  if (!mem) {
+    sm_.error(
+        node->getSourceRange(),
+        "ft: unknown decorator: must be a @Hermes decorator");
+    return;
+  }
+
+  auto *objID = llvh::dyn_cast<ESTree::IdentifierNode>(mem->_object);
+  auto *propID = llvh::dyn_cast<ESTree::IdentifierNode>(mem->_property);
+  if (!objID || !propID) {
+    sm_.error(
+        node->getSourceRange(),
+        "ft: unknown decorator: must be a @Hermes decorator");
+    return;
+  }
+
+  if (objID->_name != kw_.identHermes) {
+    sm_.error(
+        node->getSourceRange(),
+        "ft: unknown decorator: must be a @Hermes decorator");
+    return;
+  }
+
+  if (propID->_name == kw_.identFinal) {
+    if (!llvh::isa<ESTree::MethodDefinitionNode>(parent)) {
+      sm_.error(node->getSourceRange(), "ft: invalid @Hermes.final");
+      return;
+    }
+  } else {
+    sm_.error(node->getSourceRange(), "ft: unknown @Hermes decorator");
   }
 }
 
@@ -2164,12 +2296,27 @@ sema::Decl *FlowChecker::specializeGeneric(
       .first;
 }
 
-std::pair<sema::Decl *, ESTree::Node *>
-FlowChecker::specializeGenericWithParsedTypes(
-    sema::Decl *oldDecl,
+/// Get the NodeList from a parent node for inserting specializations.
+static ESTree::NodeList &getParentNodeList(ESTree::Node *parent) {
+  switch (parent->getKind()) {
+    case ESTree::NodeKind::Program:
+      return llvh::cast<ESTree::ProgramNode>(parent)->_body;
+    case ESTree::NodeKind::BlockStatement:
+      return llvh::cast<ESTree::BlockStatementNode>(parent)->_body;
+    case ESTree::NodeKind::ClassBody:
+      return llvh::cast<ESTree::ClassBodyNode>(parent)->_body;
+    default:
+      hermes_fatal("invalid parent node for generic specialization");
+  }
+}
+
+std::pair<ESTree::Node *, bool> FlowChecker::specializeGenericImpl(
+    GenericInfo<ESTree::Node> &generic,
+    sema::LexicalScope *cloneScope,
     SMRange errorRange,
-    llvh::ArrayRef<Type *> typeArgTypes,
-    sema::LexicalScope *scope) {
+    llvh::ArrayRef<Type *> typeArgTypes) {
+  assert(cloneScope && "must have cloneScope");
+
   // Extract info from types.
   GenericInfo<ESTree::Node>::TypeArgsVector typeArgs{};
   for (Type *type : typeArgTypes) {
@@ -2177,80 +2324,71 @@ FlowChecker::specializeGenericWithParsedTypes(
     typeArgs.push_back(type->info);
   }
 
-  // Retrieve generic info and specialization if it exists.
-  GenericInfo<ESTree::Node> &generic = getGenericInfoMustExist(oldDecl);
+  // Retrieve specialization if it exists.
   GenericInfo<ESTree::Node>::TypeArgsRef typeArgsRef = typeArgs;
   ESTree::Node *specialization = generic.getSpecialization(typeArgsRef);
 
-  // Whether to clone a new specialization in this run of the function.
-  bool doClone = !specialization;
-
-  /// \return the NodeList in which to insert new nodes into \p n.
-  auto getNodeList = [](ESTree::Node *n) -> ESTree::NodeList & {
-    switch (n->getKind()) {
-      case ESTree::NodeKind::Program:
-        return llvh::cast<ESTree::ProgramNode>(n)->_body;
-      case ESTree::NodeKind::BlockStatement:
-        return llvh::cast<ESTree::BlockStatementNode>(n)->_body;
-      default:
-        hermes_fatal("invalid node list");
-    }
-  };
+  bool wasNewlyCreated = !specialization;
 
   // Create specialization if it doesn't exist.
-  if (doClone) {
-    LLVM_DEBUG(
-        llvh::dbgs() << "Creating specialization for: " << oldDecl->name.str()
-                     << "\n");
+  if (wasNewlyCreated) {
+    LLVM_DEBUG(llvh::dbgs() << "Creating specialization for generic\n");
     // Avoid stack overflow in the clone by executing in a separate stack.
     executeInStack(
-        *stackExecutor_, [this, &generic, scope, &specialization]() -> void {
+        *stackExecutor_, [this, &generic, cloneScope, &specialization]() {
           specialization = cloneNode(
               astContext_,
               semContext_,
               declCollectorMap_,
               generic.originalNode,
-              scope->parentFunction,
-              scope);
+              cloneScope->parentFunction,
+              cloneScope);
         });
     if (!specialization) {
-      sm_.error(
-          errorRange, "failed to create specialization for generic function");
-      return {nullptr, nullptr};
+      sm_.error(errorRange, "failed to create specialization for generic");
+      return {nullptr, false};
     }
-    auto &nodeList = getNodeList(generic.parent);
+    auto &nodeList = getParentNodeList(generic.parent);
     nodeList.insert(generic.originalNode->getIterator(), *specialization);
     typeArgsRef =
         generic.addSpecialization(*this, std::move(typeArgs), specialization);
   }
 
-  // The new Decl for the specialization of the function declaration.
-  sema::Decl *newDecl = nullptr;
-  if (llvh::isa<ESTree::FunctionDeclarationNode>(specialization)) {
-    newDecl = getDecl(
-        llvh::cast<ESTree::IdentifierNode>(
-            llvh::cast<ESTree::FunctionDeclarationNode>(specialization)->_id));
-  } else if (
+  return {specialization, wasNewlyCreated};
+}
 
-      llvh::isa<ESTree::ClassDeclarationNode>(specialization)) {
-    newDecl = getDecl(
-        llvh::cast<ESTree::IdentifierNode>(
-            llvh::cast<ESTree::ClassDeclarationNode>(specialization)->_id));
+std::pair<sema::Decl *, ESTree::Node *>
+FlowChecker::specializeGenericWithParsedTypes(
+    sema::Decl *oldDecl,
+    SMRange errorRange,
+    llvh::ArrayRef<Type *> typeArgTypes,
+    sema::LexicalScope *scope) {
+  GenericInfo<ESTree::Node> &generic = getGenericInfoMustExist(oldDecl);
+
+  auto [specialization, wasNewlyCreated] =
+      specializeGenericImpl(generic, scope, errorRange, typeArgTypes);
+  if (!specialization) {
+    return {nullptr, nullptr};
   }
 
+  // Get the new Decl for the specialization.
+  sema::Decl *newDecl = nullptr;
+  if (auto *func =
+          llvh::dyn_cast<ESTree::FunctionDeclarationNode>(specialization)) {
+    newDecl = getDecl(llvh::cast<ESTree::IdentifierNode>(func->_id));
+  } else if (
+      auto *classDecl =
+          llvh::dyn_cast<ESTree::ClassDeclarationNode>(specialization)) {
+    newDecl = getDecl(llvh::cast<ESTree::IdentifierNode>(classDecl->_id));
+  }
   newDecl->generic = false;
 
-  // Perform the typechecking of the specialization if it was newly created.
-  if (doClone) {
+  // Typecheck the specialization if newly created.
+  if (wasNewlyCreated) {
     TypeBindingTableScopePtrTy savedScope = bindingTable_.getCurrentScope();
-
-    // Activate the scope of the specialization..
     bindingTable_.activateScope(generic.bindingTableScope);
-
-    auto onExit = llvh::make_scope_exit([this, &savedScope]() {
-      // Restore the previous scope.
-      bindingTable_.activateScope(savedScope);
-    });
+    auto onExit = llvh::make_scope_exit(
+        [this, &savedScope]() { bindingTable_.activateScope(savedScope); });
 
     {
       // Put the parameter types in the binding table.
@@ -2287,7 +2425,6 @@ FlowChecker::specializeGenericWithParsedTypes(
             classDecl, typeArgTypes, oldDecl, newDecl);
       }
     }
-
     assert(flowContext_.findDeclType(newDecl) && "expected valid type");
   }
 
@@ -2318,10 +2455,10 @@ void FlowChecker::resolveCallToGenericFunctionSpecializationWithParsedTypes(
     sema::Decl *oldDecl) {
   assert(oldDecl && "expected valid oldDecl");
 
-  sema::Decl *newDecl = nullptr;
-  newDecl = specializeGenericWithParsedTypes(
-                oldDecl, node->getSourceRange(), typeArgTypes, oldDecl->scope)
-                .first;
+  sema::Decl *newDecl =
+      specializeGenericWithParsedTypes(
+          oldDecl, node->getSourceRange(), typeArgTypes, oldDecl->scope)
+          .first;
 
   if (newDecl) {
     semContext_.setExpressionDecl(callee, newDecl);
@@ -2336,9 +2473,20 @@ bool FlowChecker::inferPlaceholdersFromCallArgs(
     llvh::ArrayRef<Type *> typeArgs,
     sema::LexicalScope *bindScope,
     ESTree::Node *callNode,
-    Type *receiverType) {
+    Type *receiverType,
+    TypeBindingTableScopePtrTy paramParsingScope) {
   // Build argument constraints by binding type params and parsing param types.
   llvh::SmallVector<Type *, 2> callArgConstraints{};
+
+  // If a separate scope is needed for parsing param types (e.g., FlowLib
+  // methods where class type params like T in Array<T> are in a different
+  // scope), activate it for the duration of param type parsing only.
+  TypeBindingTableScopePtrTy savedScope;
+  if (paramParsingScope) {
+    savedScope = bindingTable_.getCurrentScope();
+    bindingTable_.activateScope(paramParsingScope);
+  }
+
   {
     ScopeRAII paramScope{*this};
     // Bind type parameters to our type arguments.
@@ -2385,6 +2533,12 @@ bool FlowChecker::inferPlaceholdersFromCallArgs(
           llvh::cast<ESTree::TypeAnnotationNode>(ident->_typeAnnotation)
               ->_typeAnnotation));
     }
+  }
+
+  // Restore the caller's scope before visiting call arguments, so
+  // user-defined types are visible in callbacks.
+  if (savedScope) {
+    bindingTable_.activateScope(savedScope);
   }
 
   // Visit arguments with constraints to infer remaining type params.
@@ -2495,15 +2649,22 @@ void FlowChecker::typecheckGenericClassSpecialization(
         llvh::dbgs() << "Deferring parsing of generic class specialization: "
                      << newDecl->name.str() << "\n");
     deferredParseGenerics_->emplace_back(
-        specialization, bindingTable_.getCurrentScope(), classType);
+        specialization,
+        bindingTable_.getCurrentScope(),
+        classType,
+        specialization->getScope());
   } else {
     parseClassType(
         specialization->_superClass,
         specialization->_superTypeArguments,
         specialization->_body,
-        classType);
+        classType,
+        specialization->getScope());
     typecheckQueue_.emplace_back(
-        specialization, bindingTable_.getCurrentScope(), classType);
+        specialization,
+        bindingTable_.getCurrentScope(),
+        classType,
+        specialization->getScope());
   }
 }
 
@@ -2583,6 +2744,215 @@ FlowChecker::GenericInfo<Type> &FlowChecker::getGenericAliasInfoMustExist(
   auto it = genericAliasesMap_.find(decl);
   assert(it != genericAliasesMap_.end() && "generic was never registered");
   return *it->second;
+}
+
+void FlowChecker::registerGenericMethod(
+    ESTree::MethodDefinitionNode *method,
+    ESTree::ClassBodyNode *classBody,
+    const TypeBindingTableScopePtrTy &bindingScope,
+    sema::LexicalScope *classScope,
+    flow::ClassType *classTypeInfo) {
+  assert(classScope && "expected class scope");
+  assert(
+      llvh::cast<ESTree::FunctionExpressionNode>(method->_value)
+          ->_typeParameters &&
+      "expected generic method");
+  GenericInfo<ESTree::Node> &info =
+      generics_.emplace_back(method, classBody, bindingScope);
+  info.classScope = classScope;
+  info.containingClassType = classTypeInfo;
+  [[maybe_unused]] auto [it, inserted] =
+      genericMethodsMap_.try_emplace(method, &info);
+  assert(inserted && "duplicate generic method");
+}
+
+FlowChecker::GenericInfo<ESTree::Node> &
+FlowChecker::getGenericMethodInfoMustExist(
+    const ESTree::MethodDefinitionNode *method) {
+  auto it = genericMethodsMap_.find(method);
+  assert(
+      it != genericMethodsMap_.end() && "generic method was never registered");
+  return *it->second;
+}
+
+void FlowChecker::resolveCallToGenericMethodSpecialization(
+    ESTree::CallExpressionNode *node,
+    ESTree::MemberExpressionNode *callee,
+    ESTree::MethodDefinitionNode *method) {
+  assert(method && "expected valid method");
+
+  // Parse the type arguments.
+  auto *typeArgsNode =
+      llvh::cast<ESTree::TypeParameterInstantiationNode>(node->_typeArguments);
+  llvh::SmallVector<Type *, 2> typeArgTypes{};
+  for (ESTree::Node &arg : typeArgsNode->_params) {
+    Type *type = parseTypeAnnotation(&arg);
+    typeArgTypes.push_back(type);
+  }
+
+  // Get the object type to use as the 'this' type.
+  Type *objType = getNodeTypeOrAny(callee->_object);
+
+  auto result = specializeGenericMethodWithParsedTypes(
+      method, node->getSourceRange(), typeArgTypes, objType);
+
+  if (result.type) {
+    setNodeType(callee, result.type);
+    // Record the specialized method's Decl on the property IdentifierNode so
+    // IRGen can look it up.
+    semContext_.setExpressionDecl(
+        llvh::cast<ESTree::IdentifierNode>(callee->_property), result.decl);
+  }
+}
+
+void FlowChecker::resolveCallToGenericMethodSpecializationWithParsedTypes(
+    ESTree::CallExpressionNode *node,
+    ESTree::MemberExpressionNode *callee,
+    llvh::ArrayRef<Type *> typeArgTypes,
+    ESTree::MethodDefinitionNode *method) {
+  assert(method && "expected valid method");
+
+  // Get the object type to use as the 'this' type.
+  Type *objType = getNodeTypeOrAny(callee->_object);
+
+  auto result = specializeGenericMethodWithParsedTypes(
+      method, node->getSourceRange(), typeArgTypes, objType);
+
+  if (result.type) {
+    setNodeType(callee, result.type);
+    // Record the specialized method's Decl on the property IdentifierNode so
+    // IRGen can look it up.
+    semContext_.setExpressionDecl(
+        llvh::cast<ESTree::IdentifierNode>(callee->_property), result.decl);
+  }
+}
+
+std::pair<bool, llvh::SmallVector<Type *, 2>>
+FlowChecker::inferTypeArgumentsForGenericMethodCall(
+    ESTree::CallExpressionNode *node,
+    ESTree::MemberExpressionNode *callee,
+    ESTree::MethodDefinitionNode *method) {
+  // Retrieve generic info.
+  GenericInfo<ESTree::Node> &generic = getGenericMethodInfoMustExist(method);
+  auto *methodNode =
+      llvh::cast<ESTree::MethodDefinitionNode>(generic.originalNode);
+  auto *fe = llvh::cast<ESTree::FunctionExpressionNode>(methodNode->_value);
+
+  auto *typeParams =
+      llvh::cast<ESTree::TypeParameterDeclarationNode>(fe->_typeParameters);
+  size_t numTypeParams = typeParams->_params.size();
+  assert(numTypeParams > 0 && "expected at least one type parameter");
+
+  // Keep pointers to all the placeholder types.
+  llvh::SmallVector<Type *, 2> typeArgs{};
+  for (size_t i = 0; i < numTypeParams; ++i) {
+    typeArgs.push_back(
+        flowContext_.createType(flowContext_.getInferencePlaceholderInfo()));
+  }
+
+  // Get the object type to use for receiver type inference.
+  Type *objType = getNodeTypeOrAny(callee->_object);
+
+  // Pass the binding table scope from when the generic method was registered,
+  // so that class type parameters (e.g. T in Array<T>) are visible when
+  // parsing the method's parameter type annotations. The scope is only
+  // activated during param type parsing and restored before visiting call
+  // arguments, so user-defined types remain visible in callbacks.
+
+  // Infer placeholders from call arguments.
+  if (!inferPlaceholdersFromCallArgs(
+          typeParams,
+          fe->_params,
+          node->_arguments,
+          typeArgs,
+          generic.classScope,
+          node,
+          objType,
+          generic.bindingTableScope)) {
+    // Failed to infer.
+    return {true, {}};
+  }
+
+  return {true, std::move(typeArgs)};
+}
+
+FlowChecker::GenericMethodSpecializationResult
+FlowChecker::specializeGenericMethodWithParsedTypes(
+    ESTree::MethodDefinitionNode *method,
+    SMRange errorRange,
+    llvh::ArrayRef<Type *> typeArgTypes,
+    Type *classType) {
+  GenericInfo<ESTree::Node> &generic = getGenericMethodInfoMustExist(method);
+
+  auto [specialization, wasNewlyCreated] = specializeGenericImpl(
+      generic, generic.classScope, errorRange, typeArgTypes);
+  if (!specialization) {
+    return {};
+  }
+
+  auto *specializedMethod =
+      llvh::cast<ESTree::MethodDefinitionNode>(specialization);
+  auto *specializedFE =
+      llvh::cast<ESTree::FunctionExpressionNode>(specializedMethod->_value);
+
+  Type *ftype = nullptr;
+  sema::Decl *decl = nullptr;
+  if (wasNewlyCreated) {
+    TypeBindingTableScopePtrTy savedScope = bindingTable_.getCurrentScope();
+    bindingTable_.activateScope(generic.bindingTableScope);
+    auto onExit = llvh::make_scope_exit(
+        [this, &savedScope]() { bindingTable_.activateScope(savedScope); });
+
+    auto *typeParamsNode = llvh::cast<ESTree::TypeParameterDeclarationNode>(
+        specializedFE->_typeParameters);
+
+    ScopeRAII paramScope{*this};
+    if (!validateAndBindTypeParameters(
+            typeParamsNode, errorRange, typeArgTypes, generic.classScope)) {
+      LLVM_DEBUG(llvh::dbgs() << "Failed to bind type parameters\n");
+      return {};
+    }
+
+    ftype = parseFunctionType(
+        specializedFE->_params,
+        specializedFE->_returnType,
+        specializedFE->_async,
+        specializedFE->_generator,
+        nullptr,
+        classType);
+    setNodeType(specializedMethod, ftype);
+    setNodeType(specializedFE, ftype);
+
+    // Create a Decl for the specialized method and register it with the
+    // containing ClassType. This allows IRGen to store the compiled Function
+    // in the Decl's customData.
+    if (generic.containingClassType) {
+      auto *methodId =
+          llvh::cast<ESTree::IdentifierNode>(specializedMethod->_key);
+      decl = semContext_.newDeclInScope(
+          methodId->_name, sema::Decl::Kind::Const, generic.classScope);
+      generic.containingClassType->addSpecializedMethodDecl(
+          specializedMethod, decl);
+    }
+
+    // Establish a ClassContext so that references to 'this', 'super',
+    // and class type information are available during typechecking of the
+    // specialized method body.
+    ClassContext classContext(*this, classType, nullptr);
+    FunctionContext functionContext(
+        *this, specializedFE, ftype, classType, flowContext_.getVoid());
+    visitFunctionLike(
+        specializedFE, specializedFE->_body, specializedFE->_params);
+  } else {
+    ftype = getNodeTypeOrAny(specializedMethod);
+    // Look up the existing Decl for this specialization.
+    if (generic.containingClassType) {
+      decl = generic.containingClassType->findSpecializedMethodDecl(
+          specializedMethod);
+    }
+  }
+
+  return {ftype, decl};
 }
 
 UniqueString *FlowChecker::propertyKeyAsIdentifier(ESTree::Node *Key) {

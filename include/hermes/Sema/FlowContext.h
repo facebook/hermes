@@ -688,9 +688,16 @@ class ClassType : public TypeWithId {
     /// The slot for PrLoad and PrStore, used during IRGen.
     /// This ideally should be computed during conversion to IR Type,
     /// but we don't have that yet.
-    const size_t layoutSlotIR;
+    /// None for fields that don't have a layout slot (e.g. final methods,
+    /// private methods).
+    const OptValue<size_t> layoutSlotIR;
     /// If the field is a method, AST for the method.
     ESTree::MethodDefinitionNode *const method;
+    /// Whether the field is a final method (non-virtual, cannot be overridden).
+    /// Required for generic methods on either generic or non-generic classes.
+    /// Final methods will not be stored in the home object, they will only be
+    /// stored in variables.
+    const bool finalMethod;
 
     /// Whether this field is a method that has been overridden by a subclass.
     /// This is the only field that can be modified after initialization, as
@@ -703,13 +710,15 @@ class ClassType : public TypeWithId {
     Field(
         Identifier name,
         Type *type,
-        size_t layoutSlotIR,
+        OptValue<size_t> layoutSlotIR,
         bool isPrivate,
-        ESTree::MethodDefinitionNode *method = nullptr)
+        ESTree::MethodDefinitionNode *method = nullptr,
+        bool finalMethod = false)
         : name(name),
           type(type),
           layoutSlotIR(layoutSlotIR),
           method(method),
+          finalMethod(finalMethod),
           isPrivate(isPrivate) {}
 
     bool isMethod() const {
@@ -765,9 +774,18 @@ class ClassType : public TypeWithId {
   /// superclasses and counting all private fields).
   /// Use a MapVector to make sure it's deterministic to iterate.
   llvh::SmallMapVector<Identifier, size_t, 4> privateFieldNameMap_{};
+  /// Map from specialized MethodDefinitionNode to its Decl.
+  /// Used by IRGen to emit specialized methods and store Function* in the Decl.
+  llvh::SmallMapVector<ESTree::MethodDefinitionNode *, sema::Decl *, 4>
+      specializedMethodDecls_{};
 
   /// Super class, nullptr if this class doesn't extend anything.
   Type *superClass_ = nullptr;
+
+  /// Number of fields that have IR layout slots.
+  /// Final methods don't get layout slots, so this may be less than
+  /// fieldNameMap_.size().
+  size_t numLayoutSlots_ = 0;
 
  public:
   explicit ClassType(size_t id, Identifier className);
@@ -777,15 +795,20 @@ class ClassType : public TypeWithId {
       llvh::ArrayRef<Field> fields,
       Type *constructorType,
       Type *homeObjectType,
-      Type *superClass);
+      Type *superClass,
+      size_t numLayoutSlots);
 
   /// Initialize an empty (freshly created) instance. Note that fields are
   /// immutable after this.
+  /// \p numLayoutSlots is the number of fields that have layout slots in IR,
+  /// which may be less than the number of fields in the field name map
+  /// (e.g. final methods don't get layout slots).
   void init(
       llvh::ArrayRef<Field> fields,
       Type *constructorType,
       Type *homeObjectType,
-      Type *superClass);
+      Type *superClass,
+      size_t numLayoutSlots);
 
   static bool classof(const TypeInfo *t) {
     return t->getKind() == TypeKind::Class;
@@ -839,6 +862,12 @@ class ClassType : public TypeWithId {
   /// \return the lookup entry of a field, None if it doesn't exist.
   hermes::OptValue<FieldLookupEntry> findPrivateField(Identifier id);
 
+  /// Return the number of fields that have IR layout slots.
+  size_t getNumLayoutSlots() const {
+    assert(isInitialized());
+    return numLayoutSlots_;
+  }
+
   Type *getSuperClass() const {
     assert(isInitialized());
     return superClass_;
@@ -847,6 +876,33 @@ class ClassType : public TypeWithId {
     assert(isInitialized());
     return llvh::cast_or_null<ClassType>(
         superClass_ ? superClass_->info : nullptr);
+  }
+
+  /// Add a specialized method with its Decl.
+  /// \param specializedMethod the specialized MethodDefinitionNode.
+  /// \param decl the Decl created for this specialization.
+  void addSpecializedMethodDecl(
+      ESTree::MethodDefinitionNode *specializedMethod,
+      sema::Decl *decl) {
+    [[maybe_unused]] auto [it, inserted] =
+        specializedMethodDecls_.insert({specializedMethod, decl});
+    assert(inserted && "specialized method already exists");
+  }
+
+  /// Find the Decl for a specialized method.
+  /// \return the Decl, or nullptr if not found.
+  sema::Decl *findSpecializedMethodDecl(
+      ESTree::MethodDefinitionNode *specializedMethod) const {
+    auto it = specializedMethodDecls_.find(specializedMethod);
+    if (it == specializedMethodDecls_.end())
+      return nullptr;
+    return it->second;
+  }
+
+  /// \return the map of specialized method decls for iteration.
+  const llvh::SmallMapVector<ESTree::MethodDefinitionNode *, sema::Decl *, 4> &
+  getSpecializedMethodDecls() const {
+    return specializedMethodDecls_;
   }
 };
 

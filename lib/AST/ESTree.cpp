@@ -274,5 +274,18 @@ ESTree::NodeList &getDecorators(ClassLikeNode *node) {
   llvm_unreachable("invalid ClassLikeNode");
 }
 
+IdentifierNode *getPropertyIdentifier(Node *node) {
+  switch (node->getKind()) {
+    case NodeKind::Identifier:
+      return cast<IdentifierNode>(node);
+    case NodeKind::PrivateName:
+      return cast<IdentifierNode>(cast<PrivateNameNode>(node)->_id);
+    default:
+      break;
+  }
+  llvm_unreachable(
+      "invalid property key node, expected Identifier or PrivateName");
+}
+
 } // namespace ESTree
 } // namespace hermes

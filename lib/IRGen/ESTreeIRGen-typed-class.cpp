@@ -152,6 +152,29 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
       /* skipPrivateFields */ true,
       /* propertiesEnumerable */ false);
 
+  // Handle generic method specializations.
+  // Compile each specialization, create a Variable, and store the closure.
+  for (const auto &[specializedMethod, decl] :
+       classType->getSpecializedMethodDecls()) {
+    auto *specializedFE =
+        llvh::cast<ESTree::FunctionExpressionNode>(specializedMethod->_value);
+    auto *methodId =
+        llvh::cast<ESTree::IdentifierNode>(specializedMethod->_key);
+    Value *function = genFunctionExpression(
+        specializedFE, Identifier::getFromPointer(methodId->_name));
+    // Create a variable to hold the specialized closure.
+    Variable *var = Builder.createVariable(
+        curFunction()->curScope()->getVariableScope(),
+        decl->name,
+        Type::createObject(),
+        /* hidden */ true);
+    Builder.createStoreFrameInst(curFunction()->curScope(), function, var);
+    setDeclData(decl, var);
+    if (auto *CFI = llvh::dyn_cast<CreateFunctionInst>(function)) {
+      declFunctions_.try_emplace(decl, CFI->getFunctionCode());
+    }
+  }
+
   // Store the home object in a variable so that we can reference it later,
   // e.g. when we emit method calls. Check if we already have a cached entry
   // (e.g., when recompiling a finally block) and reuse it.
@@ -282,40 +305,69 @@ Value *ESTreeIRGen::emitTypedClassAllocation(
   // TODO: should create a sealed object, etc.
   AllocTypedObjectInst::ObjectPropertyMap propMap{};
 
-  // Number of fields: the number of public properties as well as the number of
-  // private properties of this class and all ancestors combined.
-  size_t numFields = classType->getFieldNameMap().size();
-  if (!skipPrivateFields) {
-    for (auto *cur = classType; cur; cur = cur->getSuperClassInfo()) {
-      numFields += cur->getPrivateFieldNameMap().size();
-    }
-  }
+  // Number of layout slots, which includes both public and private fields.
+  // Final methods don't get layout slots (they are stored in Variables),
+  // so we use getNumLayoutSlots() instead of getFieldNameMap().size().
+  size_t numFields = classType->getNumLayoutSlots();
   propMap.resize(numFields);
 
   auto addField = [this, &propMap, classType, parent](
                       const flow::ClassType::FieldLookupEntry &entry) {
     const flow::ClassType::Field &field = *entry.getField();
+
+    // Verify that each layout slot is filled exactly once.
     assert(
-        propMap[field.layoutSlotIR].first == nullptr &&
-        "every entry must be filled exactly once");
+        (!field.layoutSlotIR.hasValue() ||
+         propMap[*field.layoutSlotIR].first == nullptr) &&
+        "every layout slot must be filled exactly once");
 
     Literal *name = field.isPrivate
         ? Builder.getLiteralPrivateName(field.name)
         : static_cast<Literal *>(Builder.getLiteralString(field.name));
 
     if (field.isMethod()) {
-      // Create the code for the method.
-      if (entry.classType == classType) {
+      // Final methods don't get a layout slot in the home object.
+      // They are accessed through Variables instead.
+      if (field.finalMethod) {
+        if (llvh::isa<flow::GenericType>(field.type->info)) {
+          // Generic final method - no codegen needed here.
+          return;
+        }
+        if (entry.classType == classType) {
+          // Non-generic final method defined in this class.
+          // Create the code for the method.
+          Value *function = genFunctionExpression(
+              llvh::cast<ESTree::FunctionExpressionNode>(field.method->_value),
+              field.name);
+          auto *methodId = ESTree::getPropertyIdentifier(field.method->_key);
+          sema::Decl *decl = semCtx_.getExpressionDecl(methodId);
+          Variable *var = Builder.createVariable(
+              curFunction()->curScope()->getVariableScope(),
+              decl->name,
+              Type::createObject(),
+              /* hidden */ true);
+          Builder.createStoreFrameInst(
+              curFunction()->curScope(), function, var);
+          setDeclData(decl, var);
+          // Also record the Function* for direct call optimization.
+          if (auto *CFI = llvh::dyn_cast<CreateFunctionInst>(function)) {
+            nonOverriddenMethods_.try_emplace(&field, CFI->getFunctionCode());
+            declFunctions_.try_emplace(decl, CFI->getFunctionCode());
+          }
+        }
+      } else if (entry.classType == classType) {
+        // Not declared as a final method.
+        // Create the code for the method.
         Value *function = genFunctionExpression(
             llvh::cast<ESTree::FunctionExpressionNode>(field.method->_value),
             field.name);
-        propMap[field.layoutSlotIR] = {name, function};
+        propMap[*field.layoutSlotIR] = {name, function};
         if (auto *CFI = llvh::dyn_cast<CreateFunctionInst>(function)) {
-          // If this field represents a final method, record the IR function
-          // so we can use it to populate the target of calls.
+          // If this field represents a non-overridden method, record the
+          // IR function so we can populate the target of calls.
           if (!field.overridden) {
-            auto [it, success] =
-                finalMethods_.try_emplace(&field, CFI->getFunctionCode());
+            auto [it, success] = nonOverriddenMethods_.try_emplace(
+                &field, CFI->getFunctionCode());
             (void)it;
             (void)success;
             // On recompilation (e.g., finally blocks), the entry may already
@@ -328,14 +380,13 @@ Value *ESTreeIRGen::emitTypedClassAllocation(
       } else {
         assert(parent && "inherited field without parent ClassType");
         // Method is inherited. Read it from the parent.
-        propMap[field.layoutSlotIR] = {
+        propMap[*field.layoutSlotIR] = {
             name,
             Builder.createPrLoadInst(
                 parent,
-                field.layoutSlotIR,
+                *field.layoutSlotIR,
                 name,
                 flowTypeToIRType(field.type))};
-        return;
       }
     } else {
       // Class element is a field.
@@ -344,7 +395,7 @@ Value *ESTreeIRGen::emitTypedClassAllocation(
       Value *initValue = flowTypeToIRType(field.type).canBePrimitive()
           ? getDefaultInitValue(field.type)
           : Builder.getLiteralUninit();
-      propMap[field.layoutSlotIR] = {name, initValue};
+      propMap[*field.layoutSlotIR] = {name, initValue};
     }
   };
 

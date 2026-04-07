@@ -161,6 +161,14 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
     /// Activated when the generic is instantiated.
     TypeBindingTableScopePtrTy bindingTableScope;
 
+    /// The lexical scope of the class containing this generic method.
+    /// Null for non-method generics.
+    sema::LexicalScope *classScope = nullptr;
+
+    /// The ClassType containing this generic method.
+    /// Null for non-method generics.
+    flow::ClassType *containingClassType = nullptr;
+
     /// Map from the list of type arguments to the specialization.
     llvh::DenseMap<TypeArgsRef, Spec *, TypeArrayDenseMapInfo>
         specializations{};
@@ -178,7 +186,8 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
       // We need to insert into the parent.
       assert(
           (llvh::isa<ESTree::ProgramNode>(parent) ||
-           llvh::isa<ESTree::BlockStatementNode>(parent)) &&
+           llvh::isa<ESTree::BlockStatementNode>(parent) ||
+           llvh::isa<ESTree::ClassBodyNode>(parent)) &&
           "Invalid parent");
     }
 
@@ -240,6 +249,14 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// Store a pointer to allow for empty/tombstone values in DenseMap.
   llvh::DenseMap<const sema::Decl *, GenericInfo<ESTree::Node> *> genericsMap_;
 
+  /// Maps from MethodDefinitionNode to GenericInfo for generic methods.
+  /// Generic methods don't have a sema::Decl, so they are keyed by the
+  /// MethodDefinitionNode instead.
+  llvh::DenseMap<
+      const ESTree::MethodDefinitionNode *,
+      GenericInfo<ESTree::Node> *>
+      genericMethodsMap_;
+
   /// Stable storage for the GenericInfo.
   std::deque<GenericInfo<Type>> genericAliases_;
 
@@ -258,12 +275,18 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
     TypeBindingTableScopePtrTy scope;
     /// The type for the deferred generic.
     Type *classType;
+    /// The class's own lexical scope (where private names are declared).
+    sema::LexicalScope *classScope;
 
     DeferredGenericClass(
         ESTree::ClassDeclarationNode *specialization,
         TypeBindingTableScopePtrTy scope,
-        Type *declType)
-        : specialization(specialization), scope(scope), classType(declType) {}
+        Type *declType,
+        sema::LexicalScope *classScope)
+        : specialization(specialization),
+          scope(scope),
+          classType(declType),
+          classScope(classScope) {}
   };
 
   /// List of generics that we haven't parsed yet because they might
@@ -321,6 +344,8 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   void visit(ESTree::ClassExpressionNode *node);
   void visit(ESTree::ClassDeclarationNode *node);
   void visit(ESTree::MethodDefinitionNode *node);
+
+  void visit(ESTree::DecoratorNode *node, ESTree::Node *parent);
 
   void visit(ESTree::TypeAnnotationNode *node);
   void visit(ESTree::IdentifierNode *identifierNode);
@@ -482,11 +507,13 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   class ParseClassType;
 
   /// Parse a class type into an already created (but empty) class.
+  /// \param classScope the lexical scope of the class.
   void parseClassType(
       ESTree::Node *superClass,
       ESTree::Node *superTypeParameters,
       ESTree::Node *body,
-      Type *classType);
+      Type *classType,
+      sema::LexicalScope *classScope);
 
   /// Visit the \p node for either resolution or parsing and call \p cb on each
   /// of the type annotations in it.
@@ -693,6 +720,10 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// \param bindScope scope for type parameter bindings.
   /// \param callNode parent node for visiting expressions.
   /// \param receiverType optional receiver type for inferring 'this' param.
+  /// \param paramParsingScope Optional scope to activate while parsing the
+  ///   method's parameter types (e.g. to make class type params visible for
+  ///   FlowLib methods). Restored before visiting call arguments so
+  ///   user-defined types remain visible in callbacks.
   /// \return true if all placeholders were resolved.
   bool inferPlaceholdersFromCallArgs(
       ESTree::TypeParameterDeclarationNode *typeParams,
@@ -701,7 +732,9 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
       llvh::ArrayRef<Type *> typeArgs,
       sema::LexicalScope *bindScope,
       ESTree::Node *callNode,
-      Type *receiverType = nullptr);
+      Type *receiverType = nullptr,
+      TypeBindingTableScopePtrTy paramParsingScope =
+          TypeBindingTableScopePtrTy{});
 
   /// Run the typechecker on a newly created specialization of a generic
   /// function.
@@ -773,6 +806,92 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// \return the generic info associated with \p decl.
   GenericInfo<Type> &getGenericAliasInfoMustExist(
       const ESTree::TypeAliasNode *decl);
+
+  /// Register a generic method with its original AST node.
+  /// \param method the MethodDefinitionNode for the generic method.
+  /// \param classBody the ClassBodyNode containing the method.
+  /// \param classScope the lexical scope of the containing class.
+  /// \param classTypeInfo the ClassType containing this method.
+  void registerGenericMethod(
+      ESTree::MethodDefinitionNode *method,
+      ESTree::ClassBodyNode *classBody,
+      const TypeBindingTableScopePtrTy &bindingTableScope,
+      sema::LexicalScope *classScope,
+      flow::ClassType *classTypeInfo);
+
+  /// \pre \p method is a generic method that has been registered.
+  /// \return the generic info associated with \p method.
+  GenericInfo<ESTree::Node> &getGenericMethodInfoMustExist(
+      const ESTree::MethodDefinitionNode *method);
+
+  /// Specialize a generic method call with explicit type arguments.
+  /// Set the type of the callee to the specialized version of the method.
+  /// \param node the call expression passing the type arguments.
+  /// \param callee the member expression for the method call.
+  /// \param method the MethodDefinitionNode for the generic method.
+  void resolveCallToGenericMethodSpecialization(
+      ESTree::CallExpressionNode *node,
+      ESTree::MemberExpressionNode *callee,
+      ESTree::MethodDefinitionNode *method);
+
+  /// Specialize a generic method call with pre-parsed type arguments.
+  /// Set the type of the callee to the specialized version of the method.
+  /// \param node the call expression.
+  /// \param callee the member expression for the method call.
+  /// \param typeArgTypes the parsed type arguments.
+  /// \param method the MethodDefinitionNode for the generic method.
+  void resolveCallToGenericMethodSpecializationWithParsedTypes(
+      ESTree::CallExpressionNode *node,
+      ESTree::MemberExpressionNode *callee,
+      llvh::ArrayRef<Type *> typeArgTypes,
+      ESTree::MethodDefinitionNode *method);
+
+  /// Try to infer type arguments for a generic method call.
+  /// \param node the call expression.
+  /// \param callee the member expression for the method call.
+  /// \param method the MethodDefinitionNode for the generic method.
+  /// \return (didVisitArgs, typeArgs) where didVisitArgs is true when the
+  /// arguments were visited. If inference was possible, typeArgs is non-empty.
+  std::pair<bool, llvh::SmallVector<Type *, 2>>
+  inferTypeArgumentsForGenericMethodCall(
+      ESTree::CallExpressionNode *node,
+      ESTree::MemberExpressionNode *callee,
+      ESTree::MethodDefinitionNode *method);
+
+  /// Result of specializing a generic method.
+  struct GenericMethodSpecializationResult {
+    /// The specialized function type, or nullptr on error.
+    Type *type = nullptr;
+    /// The Decl for the specialized method, or nullptr on error.
+    sema::Decl *decl = nullptr;
+  };
+
+  /// Specialize and typecheck a generic method with the given type arguments.
+  /// \param method the MethodDefinitionNode for the generic method.
+  /// \param errorRange used for reporting errors.
+  /// \param typeArgTypes the type arguments to specialize with.
+  /// \param classType the ClassType containing this method.
+  /// \return the specialized result containing type and method node.
+  GenericMethodSpecializationResult specializeGenericMethodWithParsedTypes(
+      ESTree::MethodDefinitionNode *method,
+      SMRange errorRange,
+      llvh::ArrayRef<Type *> typeArgTypes,
+      Type *classType);
+
+  /// Implementation for specializing generics: handles cloning, caching,
+  /// and insertion. Caller handles scope management and typechecking.
+  /// \param generic the GenericInfo containing original node, parent, and
+  /// cache.
+  /// \param cloneScope scope for cloning (passed to cloneNode).
+  /// \param errorRange for error reporting.
+  /// \param typeArgTypes the type arguments to specialize with.
+  /// \return {specialization node, wasNewlyCreated}, or {nullptr, false} on
+  /// error.
+  std::pair<ESTree::Node *, bool> specializeGenericImpl(
+      GenericInfo<ESTree::Node> &generic,
+      sema::LexicalScope *cloneScope,
+      SMRange errorRange,
+      llvh::ArrayRef<Type *> typeArgTypes);
 
   /// \param key the property key to attempt to convert to an identifier,
   ///   e.g. StringLiteralNode, IdentifierNode, or NumericLiteralNode.

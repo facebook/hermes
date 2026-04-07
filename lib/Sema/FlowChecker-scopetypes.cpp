@@ -713,7 +713,8 @@ class FlowChecker::DeclareScopeTypes {
           classNode->_superClass,
           classNode->_superTypeArguments,
           classNode->_body,
-          type);
+          type,
+          scope);
     }
 
     return outer.sm_.getErrorCount() == errorsBefore;
@@ -1148,7 +1149,8 @@ class FlowChecker::DeclareScopeTypes {
           specialization->_superClass,
           specialization->_superTypeArguments,
           specialization->_body,
-          deferred.classType);
+          deferred.classType,
+          deferred.classScope);
 
       // Don't typecheck right now, because we need to parse everything in
       // current scope before descending into child functions.

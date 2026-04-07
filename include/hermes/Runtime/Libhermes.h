@@ -34,6 +34,7 @@ const char libhermes[] =
 "var WeakSet;"
 ""
 "var $SHBuiltin;"
+"var Hermes;"
 ""
 "var Infinity;"
 "var NaN;"

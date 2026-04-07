@@ -966,6 +966,19 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
     ESTree::MemberExpressionNode *mem,
     Value *baseValue,
     Value *propValue) {
+  // Final methods (both generic specializations and non-generic) have a
+  // Decl set on the call-site property by the FlowChecker. Load the
+  // closure from the Variable stored in the Decl's data.
+  if (!mem->_computed) {
+    auto *propId = ESTree::getPropertyIdentifier(mem->_property);
+    if (auto *decl = semCtx_.getExpressionDecl(propId);
+        decl && !sema::Decl::isKindPrivateName(decl->kind)) {
+      Value *closure = emitLoad(getDeclData(decl), false);
+      return MemberExpressionResult{
+          closure, declFunctions_.lookup(decl), baseValue};
+    }
+  }
+
   if (auto *classType = llvh::dyn_cast<flow::ClassType>(
           flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
     if (!mem->_computed) {
@@ -989,7 +1002,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
         propName = Builder.getLiteralString(propIdent);
       }
       if (optFieldLookup) {
-        size_t fieldIndex = optFieldLookup->getField()->layoutSlotIR;
+        size_t fieldIndex = *optFieldLookup->getField()->layoutSlotIR;
         Type irType = flowTypeToIRType(optFieldLookup->getField()->type);
         Instruction *inst;
         if (irType.canBePrimitive()) {
@@ -1021,7 +1034,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
         Instruction *scope = emitResolveScopeInstIfNeeded(var->getParent());
         return MemberExpressionResult{
             Builder.createLoadFrameInst(scope, var),
-            finalMethods_.lookup(optMethodLookup->getField()),
+            nonOverriddenMethods_.lookup(optMethodLookup->getField()),
             baseValue};
       }
 
@@ -1029,7 +1042,13 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
           classType->getHomeObjectTypeInfo()->findPublicField(propIdent);
       assert(
           optMethodLookup && "must have typechecked as either method or field");
-      size_t methodIndex = optMethodLookup->getField()->layoutSlotIR;
+      const auto *field = optMethodLookup->getField();
+      // Final methods are handled by the early return above, which
+      // loads the closure from the Decl set on the call-site property.
+      assert(
+          !field->finalMethod &&
+          "final methods should be handled by the Decl early return");
+      size_t methodIndex = *field->layoutSlotIR;
       // Lookup method on the parent, return baseValue in the result to
       // correctly populate 'this' argument.
       return MemberExpressionResult{
@@ -1037,8 +1056,8 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
               Builder.createTypedLoadParentInst(baseValue),
               methodIndex,
               propName,
-              flowTypeToIRType(optMethodLookup->getField()->type)),
-          finalMethods_.lookup(optMethodLookup->getField()),
+              flowTypeToIRType(field->type)),
+          nonOverriddenMethods_.lookup(field),
           baseValue};
     }
   }
@@ -1123,9 +1142,19 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitTypedSuperLoad(
   auto propName = Identifier::getFromPointer(
       llvh::cast<ESTree::IdentifierNode>(property)->_name);
   Value *thisValue = genThisExpression();
+
+  // Final methods (both generic specializations and non-generic) have a
+  // Decl set on the call-site property by the FlowChecker. Load the
+  // closure from the Variable stored in the Decl's data.
+  if (auto *decl = semCtx_.getExpressionDecl(property)) {
+    Value *closure = emitLoad(getDeclData(decl), false);
+    return MemberExpressionResult{
+        closure, declFunctions_.lookup(decl), thisValue};
+  }
+
   if (auto optFieldLookup = classType->findPublicField(propName)) {
     // Found the field on the class, so load it directly from 'this'.
-    size_t fieldIndex = optFieldLookup->getField()->layoutSlotIR;
+    size_t fieldIndex = *optFieldLookup->getField()->layoutSlotIR;
     return MemberExpressionResult{
         Builder.createPrLoadInst(
             thisValue,
@@ -1139,7 +1168,12 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitTypedSuperLoad(
   auto optMethodLookup =
       classType->getHomeObjectTypeInfo()->findPublicField(propName);
   assert(optMethodLookup && "must have typechecked as either method or field");
-  size_t methodIndex = optMethodLookup->getField()->layoutSlotIR;
+  const auto *field = optMethodLookup->getField();
+  // Final methods are handled by the Decl early return above.
+  assert(
+      !field->finalMethod &&
+      "final methods should be handled by the Decl early return");
+  size_t methodIndex = *field->layoutSlotIR;
   // Lookup method on the parent, return thisValue in the result to
   // correctly populate 'this' argument.
   auto it = classConstructors_.find(classType);
@@ -1152,7 +1186,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitTypedSuperLoad(
           superHomeObject,
           methodIndex,
           Builder.getLiteralString(propName),
-          flowTypeToIRType(optMethodLookup->getField()->type)),
+          flowTypeToIRType(field->type)),
       nullptr,
       thisValue};
 }
@@ -1175,7 +1209,7 @@ void ESTreeIRGen::emitTypedFieldStore(
     propName = Builder.getLiteralString(name);
   }
   assert(optFieldLookup && "field lookup must succeed after typechecking");
-  size_t fieldIndex = optFieldLookup->getField()->layoutSlotIR;
+  size_t fieldIndex = *optFieldLookup->getField()->layoutSlotIR;
   Builder.createPrStoreInst(
       value,
       object,
