@@ -116,7 +116,7 @@
     /// Very simple hack to ensure safety.
     let handles: c_ptr[] = [];
     // FIXME: fast array doesn't support .pop() yet.
-    let closedHandles = Array();
+    let closedHandles = globalThis.Array();
 
     function fopen(path: string, mode: string): number {
         "use unsafe";

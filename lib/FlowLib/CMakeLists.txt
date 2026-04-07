@@ -13,6 +13,8 @@ endif()
 # The concatenation order is specified by numeric prefixes in filenames.
 set(flowlib_sources
   "00-prelude.js"
+  "01-array.js"
+  "02-string.js"
 )
 list(SORT flowlib_sources)
 
