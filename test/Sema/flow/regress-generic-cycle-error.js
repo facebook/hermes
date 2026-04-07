@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (! %shermes --typed --dump-sema %s 2>&1 ) | %FileCheckOrRegen --match-full-lines %s
+// RUN: (! %shermes --typed --dump-sema -fno-std-globals %s 2>&1 ) | %FileCheckOrRegen --match-full-lines %s
 
-type A<T> = B<T>[];
+type A<T> = [B<T>];
 type B<T> = A<B<T>>;
 type C = A<number>;
 

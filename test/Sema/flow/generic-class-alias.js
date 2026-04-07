@@ -8,7 +8,7 @@
 // RUN: %shermes -fno-std-globals -typed -dump-sema %s | %FileCheckOrRegen %s --match-full-lines
 
 type A = number|string;
-type X = string | B<number> | B<string> | B<number> | B<number>[] | B<A> | B<number|string>;
+type X = string | B<number> | B<string> | B<number> | [B<number>] | B<A> | B<number|string>;
 
 class B<T> {
   bval: T;
@@ -30,7 +30,7 @@ let z: Z;
 
 // CHECK:%untyped_function.1 = untyped_function()
 // CHECK-NEXT:%union.2 = union(string | number)
-// CHECK-NEXT:%union.3 = union(string | %array.14 | %class.15 | %class.16 | %class.17)
+// CHECK-NEXT:%union.3 = union(string | %tuple.14 | %class.15 | %class.16 | %class.17)
 // CHECK-NEXT:%union.4 = union(%class.5 | %class.18 | %class.19)
 // CHECK-NEXT:%class.5 = class(C {
 // CHECK-NEXT:  %homeObject: %class.20
@@ -47,7 +47,7 @@ let z: Z;
 // CHECK-NEXT:%class_constructor.11 = class_constructor(%class.18)
 // CHECK-NEXT:%class_constructor.12 = class_constructor(%class.6)
 // CHECK-NEXT:%class_constructor.13 = class_constructor(%class.19)
-// CHECK-NEXT:%array.14 = array(%class.15)
+// CHECK-NEXT:%tuple.14 = tuple(%class.15)
 // CHECK-NEXT:%class.15 = class(B {
 // CHECK-NEXT:  %homeObject: %class.22
 // CHECK-NEXT:  bval: number
@@ -154,7 +154,7 @@ let z: Z;
 // CHECK-NEXT:                    Id 'B'
 // CHECK-NEXT:                    TypeParameterInstantiation
 // CHECK-NEXT:                        NumberTypeAnnotation
-// CHECK-NEXT:                ArrayTypeAnnotation
+// CHECK-NEXT:                TupleTypeAnnotation
 // CHECK-NEXT:                    GenericTypeAnnotation
 // CHECK-NEXT:                        Id 'B'
 // CHECK-NEXT:                        TypeParameterInstantiation

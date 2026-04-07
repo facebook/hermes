@@ -7,10 +7,10 @@
 
 // RUN: %shermes -Werror --typed --dump-sema -fno-std-globals %s | %FileCheckOrRegen %s --match-full-lines
 
-type A = B[] | B[];
+type A = [B] | [B];
 type B = A;
 
-type X = Y[];
+type X = [Y];
 type Y = X | X;
 
 type U = A | X;
@@ -24,14 +24,14 @@ let u: U;
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%array.2 = array(%array.2)
+// CHECK-NEXT:%tuple.2 = tuple(%tuple.2)
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:        Decl %d.2 'a' Let : %array.2
-// CHECK-NEXT:        Decl %d.3 'u' Let : %array.2
+// CHECK-NEXT:        Decl %d.2 'a' Let : %tuple.2
+// CHECK-NEXT:        Decl %d.3 'u' Let : %tuple.2
 // CHECK-NEXT:        Decl %d.4 'arguments' Var Arguments
 
 // CHECK:FunctionExpression : %untyped_function.1
@@ -40,10 +40,10 @@ let u: U;
 // CHECK-NEXT:        TypeAlias
 // CHECK-NEXT:            Id 'A'
 // CHECK-NEXT:            UnionTypeAnnotation
-// CHECK-NEXT:                ArrayTypeAnnotation
+// CHECK-NEXT:                TupleTypeAnnotation
 // CHECK-NEXT:                    GenericTypeAnnotation
 // CHECK-NEXT:                        Id 'B'
-// CHECK-NEXT:                ArrayTypeAnnotation
+// CHECK-NEXT:                TupleTypeAnnotation
 // CHECK-NEXT:                    GenericTypeAnnotation
 // CHECK-NEXT:                        Id 'B'
 // CHECK-NEXT:        TypeAlias
@@ -52,7 +52,7 @@ let u: U;
 // CHECK-NEXT:                Id 'A'
 // CHECK-NEXT:        TypeAlias
 // CHECK-NEXT:            Id 'X'
-// CHECK-NEXT:            ArrayTypeAnnotation
+// CHECK-NEXT:            TupleTypeAnnotation
 // CHECK-NEXT:                GenericTypeAnnotation
 // CHECK-NEXT:                    Id 'Y'
 // CHECK-NEXT:        TypeAlias

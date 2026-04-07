@@ -7,18 +7,18 @@
 
 // RUN: %shermes -fno-std-globals --typed --dump-sema %s | %FileCheckOrRegen %s --match-full-lines
 
-type B<T> = (B<string> | number)[] | (string | number)[];
+type B<T> = [B<string> | number] | [string | number];
 type C = B<number>;
 var c: C;
 
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%union.2 = union(%array.3 | %array.4)
-// CHECK-NEXT:%array.3 = array(%union.5)
-// CHECK-NEXT:%array.4 = array(%union.6)
+// CHECK-NEXT:%union.2 = union(%tuple.3 | %tuple.4)
+// CHECK-NEXT:%tuple.3 = tuple(%union.5)
+// CHECK-NEXT:%tuple.4 = tuple(%union.6)
 // CHECK-NEXT:%union.5 = union(string | number)
-// CHECK-NEXT:%union.6 = union(number | %array.3 | %array.4)
+// CHECK-NEXT:%union.6 = union(number | %tuple.3 | %tuple.4)
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -35,14 +35,14 @@ var c: C;
 // CHECK-NEXT:            TypeParameterDeclaration
 // CHECK-NEXT:                TypeParameter
 // CHECK-NEXT:            UnionTypeAnnotation
-// CHECK-NEXT:                ArrayTypeAnnotation
+// CHECK-NEXT:                TupleTypeAnnotation
 // CHECK-NEXT:                    UnionTypeAnnotation
 // CHECK-NEXT:                        GenericTypeAnnotation
 // CHECK-NEXT:                            Id 'B'
 // CHECK-NEXT:                            TypeParameterInstantiation
 // CHECK-NEXT:                                StringTypeAnnotation
 // CHECK-NEXT:                        NumberTypeAnnotation
-// CHECK-NEXT:                ArrayTypeAnnotation
+// CHECK-NEXT:                TupleTypeAnnotation
 // CHECK-NEXT:                    UnionTypeAnnotation
 // CHECK-NEXT:                        StringTypeAnnotation
 // CHECK-NEXT:                        NumberTypeAnnotation

@@ -7,20 +7,20 @@
 
 // RUN: %shermes -fno-std-globals --typed --dump-sema %s | %FileCheckOrRegen %s --match-full-lines
 
-type A<T> = (void|void)[] | (void|void)[];
+type A<T> = [void|void] | [void|void];
 type B = A<void>;
 var b: B;
 
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%array.2 = array(void)
+// CHECK-NEXT:%tuple.2 = tuple(void)
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:        Decl %d.2 'b' Var : %array.2
+// CHECK-NEXT:        Decl %d.2 'b' Var : %tuple.2
 // CHECK-NEXT:        Decl %d.3 'arguments' Var Arguments
 
 // CHECK:FunctionExpression : %untyped_function.1
@@ -31,11 +31,11 @@ var b: B;
 // CHECK-NEXT:            TypeParameterDeclaration
 // CHECK-NEXT:                TypeParameter
 // CHECK-NEXT:            UnionTypeAnnotation
-// CHECK-NEXT:                ArrayTypeAnnotation
+// CHECK-NEXT:                TupleTypeAnnotation
 // CHECK-NEXT:                    UnionTypeAnnotation
 // CHECK-NEXT:                        VoidTypeAnnotation
 // CHECK-NEXT:                        VoidTypeAnnotation
-// CHECK-NEXT:                ArrayTypeAnnotation
+// CHECK-NEXT:                TupleTypeAnnotation
 // CHECK-NEXT:                    UnionTypeAnnotation
 // CHECK-NEXT:                        VoidTypeAnnotation
 // CHECK-NEXT:                        VoidTypeAnnotation

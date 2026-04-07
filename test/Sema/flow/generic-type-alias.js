@@ -7,11 +7,11 @@
 
 // RUN: %shermes -fno-std-globals -typed -dump-sema %s | %FileCheckOrRegen %s --match-full-lines
 
-type Array<T> = T[];
+type Array<T> = [T];
 var arr: Array<number>;
 
-type A<T> = B<T>[] | T | Cls<T>;
-type B<T> = A<T>[] | T;
+type A<T> = [B<T>] | T | Cls<T>;
+type B<T> = [A<T>] | T;
 
 class Cls<T> {
   x: T;
@@ -25,37 +25,37 @@ var d: A<string>;
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%union.2 = union(number | %class.7 | %array.8)
+// CHECK-NEXT:%union.2 = union(number | %class.7 | %tuple.8)
 // CHECK-NEXT:%class_constructor.3 = class_constructor(%class.7)
-// CHECK-NEXT:%array.4 = array(number)
-// CHECK-NEXT:%union.5 = union(string | %class.9 | %array.10)
+// CHECK-NEXT:%tuple.4 = tuple(number)
+// CHECK-NEXT:%union.5 = union(string | %class.9 | %tuple.10)
 // CHECK-NEXT:%class_constructor.6 = class_constructor(%class.9)
 // CHECK-NEXT:%class.7 = class(Cls {
 // CHECK-NEXT:  %homeObject: %class.11
 // CHECK-NEXT:  x: number
 // CHECK-NEXT:  y: %union.2
 // CHECK-NEXT:})
-// CHECK-NEXT:%array.8 = array(%union.12)
+// CHECK-NEXT:%tuple.8 = tuple(%union.12)
 // CHECK-NEXT:%class.9 = class(Cls {
 // CHECK-NEXT:  %homeObject: %class.13
 // CHECK-NEXT:  x: string
 // CHECK-NEXT:  y: %union.5
 // CHECK-NEXT:})
-// CHECK-NEXT:%array.10 = array(%union.14)
+// CHECK-NEXT:%tuple.10 = tuple(%union.14)
 // CHECK-NEXT:%class.11 = class( {
 // CHECK-NEXT:})
-// CHECK-NEXT:%union.12 = union(number | %array.15)
+// CHECK-NEXT:%union.12 = union(number | %tuple.15)
 // CHECK-NEXT:%class.13 = class( {
 // CHECK-NEXT:})
-// CHECK-NEXT:%union.14 = union(string | %array.16)
-// CHECK-NEXT:%array.15 = array(%union.2)
-// CHECK-NEXT:%array.16 = array(%union.5)
+// CHECK-NEXT:%union.14 = union(string | %tuple.16)
+// CHECK-NEXT:%tuple.15 = tuple(%union.2)
+// CHECK-NEXT:%tuple.16 = tuple(%union.5)
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:        Decl %d.2 'arr' Var : %array.4
+// CHECK-NEXT:        Decl %d.2 'arr' Var : %tuple.4
 // CHECK-NEXT:        Decl %d.3 'Cls' Class
 // CHECK-NEXT:        Decl %d.4 'c' Var : %union.2
 // CHECK-NEXT:        Decl %d.5 'd' Var : %union.5
@@ -79,7 +79,7 @@ var d: A<string>;
 // CHECK-NEXT:            Id 'Array'
 // CHECK-NEXT:            TypeParameterDeclaration
 // CHECK-NEXT:                TypeParameter
-// CHECK-NEXT:            ArrayTypeAnnotation
+// CHECK-NEXT:            TupleTypeAnnotation
 // CHECK-NEXT:                GenericTypeAnnotation
 // CHECK-NEXT:                    Id 'T'
 // CHECK-NEXT:        VariableDeclaration
@@ -90,7 +90,7 @@ var d: A<string>;
 // CHECK-NEXT:            TypeParameterDeclaration
 // CHECK-NEXT:                TypeParameter
 // CHECK-NEXT:            UnionTypeAnnotation
-// CHECK-NEXT:                ArrayTypeAnnotation
+// CHECK-NEXT:                TupleTypeAnnotation
 // CHECK-NEXT:                    GenericTypeAnnotation
 // CHECK-NEXT:                        Id 'B'
 // CHECK-NEXT:                        TypeParameterInstantiation
@@ -108,7 +108,7 @@ var d: A<string>;
 // CHECK-NEXT:            TypeParameterDeclaration
 // CHECK-NEXT:                TypeParameter
 // CHECK-NEXT:            UnionTypeAnnotation
-// CHECK-NEXT:                ArrayTypeAnnotation
+// CHECK-NEXT:                TupleTypeAnnotation
 // CHECK-NEXT:                    GenericTypeAnnotation
 // CHECK-NEXT:                        Id 'A'
 // CHECK-NEXT:                        TypeParameterInstantiation

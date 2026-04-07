@@ -7,8 +7,8 @@
 
 // RUN: %shermes -fno-std-globals --typed --dump-sema %s | %FileCheckOrRegen %s --match-full-lines
 
-type A = [A[] | number];
-type B = [A[] | number];
+type A = [[A] | number];
+type B = [[A] | number];
 var a: A;
 var b: B;
 var z: A | B;
@@ -17,8 +17,8 @@ var z: A | B;
 
 // CHECK:%untyped_function.1 = untyped_function()
 // CHECK-NEXT:%tuple.2 = tuple(%union.3)
-// CHECK-NEXT:%union.3 = union(number | %array.4)
-// CHECK-NEXT:%array.4 = array(%tuple.2)
+// CHECK-NEXT:%union.3 = union(number | %tuple.4)
+// CHECK-NEXT:%tuple.4 = tuple(%tuple.2)
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -36,7 +36,7 @@ var z: A | B;
 // CHECK-NEXT:            Id 'A'
 // CHECK-NEXT:            TupleTypeAnnotation
 // CHECK-NEXT:                UnionTypeAnnotation
-// CHECK-NEXT:                    ArrayTypeAnnotation
+// CHECK-NEXT:                    TupleTypeAnnotation
 // CHECK-NEXT:                        GenericTypeAnnotation
 // CHECK-NEXT:                            Id 'A'
 // CHECK-NEXT:                    NumberTypeAnnotation
@@ -44,7 +44,7 @@ var z: A | B;
 // CHECK-NEXT:            Id 'B'
 // CHECK-NEXT:            TupleTypeAnnotation
 // CHECK-NEXT:                UnionTypeAnnotation
-// CHECK-NEXT:                    ArrayTypeAnnotation
+// CHECK-NEXT:                    TupleTypeAnnotation
 // CHECK-NEXT:                        GenericTypeAnnotation
 // CHECK-NEXT:                            Id 'A'
 // CHECK-NEXT:                    NumberTypeAnnotation

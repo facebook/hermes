@@ -8,7 +8,7 @@
 // RUN: %shermes -fno-std-globals --typed --dump-sema %s | %FileCheckOrRegen %s --match-full-lines
 
 class B<T> {}
-type C<T> = B<D>[];
+type C<T> = [B<D>];
 type D = [B<D>] | C<number>;
 
 // Auto-generated content below. Please do not modify manually.
@@ -52,7 +52,7 @@ type D = [B<D>] | C<number>;
 // CHECK-NEXT:            Id 'C'
 // CHECK-NEXT:            TypeParameterDeclaration
 // CHECK-NEXT:                TypeParameter
-// CHECK-NEXT:            ArrayTypeAnnotation
+// CHECK-NEXT:            TupleTypeAnnotation
 // CHECK-NEXT:                GenericTypeAnnotation
 // CHECK-NEXT:                    Id 'B'
 // CHECK-NEXT:                    TypeParameterInstantiation

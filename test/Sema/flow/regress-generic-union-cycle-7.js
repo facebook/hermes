@@ -8,20 +8,20 @@
 // RUN: %shermes -fno-std-globals --typed --dump-sema %s | %FileCheckOrRegen %s --match-full-lines
 
 type B<T> = number;
-type C<T> = B<D>[];
-type D = B<D>[] | C<number>;
+type C<T> = [B<D>];
+type D = [B<D>] | C<number>;
 var d: D;
 
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%array.2 = array(number)
+// CHECK-NEXT:%tuple.2 = tuple(number)
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:        Decl %d.2 'd' Var : %array.2
+// CHECK-NEXT:        Decl %d.2 'd' Var : %tuple.2
 // CHECK-NEXT:        Decl %d.3 'arguments' Var Arguments
 
 // CHECK:FunctionExpression : %untyped_function.1
@@ -36,7 +36,7 @@ var d: D;
 // CHECK-NEXT:            Id 'C'
 // CHECK-NEXT:            TypeParameterDeclaration
 // CHECK-NEXT:                TypeParameter
-// CHECK-NEXT:            ArrayTypeAnnotation
+// CHECK-NEXT:            TupleTypeAnnotation
 // CHECK-NEXT:                GenericTypeAnnotation
 // CHECK-NEXT:                    Id 'B'
 // CHECK-NEXT:                    TypeParameterInstantiation
@@ -45,7 +45,7 @@ var d: D;
 // CHECK-NEXT:        TypeAlias
 // CHECK-NEXT:            Id 'D'
 // CHECK-NEXT:            UnionTypeAnnotation
-// CHECK-NEXT:                ArrayTypeAnnotation
+// CHECK-NEXT:                TupleTypeAnnotation
 // CHECK-NEXT:                    GenericTypeAnnotation
 // CHECK-NEXT:                        Id 'B'
 // CHECK-NEXT:                        TypeParameterInstantiation

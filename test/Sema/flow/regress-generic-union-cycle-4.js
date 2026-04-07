@@ -7,16 +7,16 @@
 
 // RUN: %shermes -fno-std-globals --typed --dump-sema %s | %FileCheckOrRegen %s --match-full-lines
 
-type A<T> = A<T>[] | (void|void)[];
+type A<T> = [A<T>] | [void|void];
 type B = A<void>;
 var b: B;
 
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%union.2 = union(%array.3 | %array.4)
-// CHECK-NEXT:%array.3 = array(void)
-// CHECK-NEXT:%array.4 = array(%union.2)
+// CHECK-NEXT:%union.2 = union(%tuple.3 | %tuple.4)
+// CHECK-NEXT:%tuple.3 = tuple(void)
+// CHECK-NEXT:%tuple.4 = tuple(%union.2)
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -33,13 +33,13 @@ var b: B;
 // CHECK-NEXT:            TypeParameterDeclaration
 // CHECK-NEXT:                TypeParameter
 // CHECK-NEXT:            UnionTypeAnnotation
-// CHECK-NEXT:                ArrayTypeAnnotation
+// CHECK-NEXT:                TupleTypeAnnotation
 // CHECK-NEXT:                    GenericTypeAnnotation
 // CHECK-NEXT:                        Id 'A'
 // CHECK-NEXT:                        TypeParameterInstantiation
 // CHECK-NEXT:                            GenericTypeAnnotation
 // CHECK-NEXT:                                Id 'T'
-// CHECK-NEXT:                ArrayTypeAnnotation
+// CHECK-NEXT:                TupleTypeAnnotation
 // CHECK-NEXT:                    UnionTypeAnnotation
 // CHECK-NEXT:                        VoidTypeAnnotation
 // CHECK-NEXT:                        VoidTypeAnnotation

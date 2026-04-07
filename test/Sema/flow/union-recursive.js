@@ -7,11 +7,11 @@
 
 // RUN: %shermes -Werror --typed --dump-sema -fno-std-globals %s | %FileCheckOrRegen %s --match-full-lines
 
-// Make sure B[] gets deduplicated here even though it's recursive.
-type A = B[] | B[] | number;
-type B = A[] | number;
+// Make sure [B] gets deduplicated here even though it's recursive.
+type A = [B] | [B] | number;
+type B = [A] | number;
 // Ensure sorting works.
-type C = number | A[] | string;
+type C = number | [A] | string;
 
 let a: A;
 let b: B;
@@ -20,9 +20,9 @@ let c: C;
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%union.2 = union(number | %array.4)
-// CHECK-NEXT:%union.3 = union(string | number | %array.4)
-// CHECK-NEXT:%array.4 = array(%union.2)
+// CHECK-NEXT:%union.2 = union(number | %tuple.4)
+// CHECK-NEXT:%union.3 = union(string | number | %tuple.4)
+// CHECK-NEXT:%tuple.4 = tuple(%union.2)
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
@@ -39,17 +39,17 @@ let c: C;
 // CHECK-NEXT:        TypeAlias
 // CHECK-NEXT:            Id 'A'
 // CHECK-NEXT:            UnionTypeAnnotation
-// CHECK-NEXT:                ArrayTypeAnnotation
+// CHECK-NEXT:                TupleTypeAnnotation
 // CHECK-NEXT:                    GenericTypeAnnotation
 // CHECK-NEXT:                        Id 'B'
-// CHECK-NEXT:                ArrayTypeAnnotation
+// CHECK-NEXT:                TupleTypeAnnotation
 // CHECK-NEXT:                    GenericTypeAnnotation
 // CHECK-NEXT:                        Id 'B'
 // CHECK-NEXT:                NumberTypeAnnotation
 // CHECK-NEXT:        TypeAlias
 // CHECK-NEXT:            Id 'B'
 // CHECK-NEXT:            UnionTypeAnnotation
-// CHECK-NEXT:                ArrayTypeAnnotation
+// CHECK-NEXT:                TupleTypeAnnotation
 // CHECK-NEXT:                    GenericTypeAnnotation
 // CHECK-NEXT:                        Id 'A'
 // CHECK-NEXT:                NumberTypeAnnotation
@@ -57,7 +57,7 @@ let c: C;
 // CHECK-NEXT:            Id 'C'
 // CHECK-NEXT:            UnionTypeAnnotation
 // CHECK-NEXT:                NumberTypeAnnotation
-// CHECK-NEXT:                ArrayTypeAnnotation
+// CHECK-NEXT:                TupleTypeAnnotation
 // CHECK-NEXT:                    GenericTypeAnnotation
 // CHECK-NEXT:                        Id 'A'
 // CHECK-NEXT:                StringTypeAnnotation
