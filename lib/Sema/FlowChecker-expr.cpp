@@ -453,7 +453,9 @@ class FlowChecker::ExprVisitor {
     Type *type = outer_.flowContext_.findDeclType(decl);
 
     // Generic decls don't have types set because they aren't real values.
-    if (!type && !sema::Decl::isKindGlobal(decl->kind) && !decl->generic) {
+    // 'arguments' is implicitly typed as 'any' since it's a runtime object.
+    if (!type && !sema::Decl::isKindGlobal(decl->kind) && !decl->generic &&
+        decl->special != sema::Decl::Special::Arguments) {
       // Assume "any" during the call to setNodeType below.
       // If we're in the same function as decl was declared,
       // then IRGen can report TDZ violations early when applicable.
