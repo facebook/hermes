@@ -17,8 +17,8 @@ SHERMES=$2
 cd "$SRCDIR"
 
 $SHERMES -typed -dump-ir --source-map=prog1.js.map prog1.js 2>&1 || true
-# CHECK:      prog1/mod1.js:9:5: [original] error: ft: return value incompatible with return type
-# CHECK-NEXT: prog1.js:15:3: [transpiled] error: ft: return value incompatible with return type
+# CHECK:      prog1/mod1.js:9:5: [original] error: ft: return value incompatible with return type: cannot return number as string
+# CHECK-NEXT: prog1.js:15:3: [transpiled] error: ft: return value incompatible with return type: cannot return number as string
 # CHECK-NEXT:   return 10;
 # CHECK-NEXT:   ^~~~~~~~~~
 # CHECK-NEXT: prog1/index.js:10:7: [original] error: ft: incompatible binary operation: + cannot be applied to string and number

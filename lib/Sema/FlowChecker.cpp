@@ -1219,10 +1219,12 @@ void FlowChecker::visit(ESTree::ReturnStatementNode *node) {
 
   auto [retTypeNarrow, cf] = tryNarrowType(argType, ftype->getReturnType());
   if (!cf.canFlow) {
-    // TODO: pretty print types.
     sm_.error(
         node->getSourceRange(),
-        "ft: return value incompatible with return type");
+        llvh::Twine(
+            "ft: return value incompatible with return type: cannot return ") +
+            argType->messageString() + " as " +
+            ftype->getReturnType()->messageString());
   }
   node->_argument = implicitCheckedCast(node->_argument, retTypeNarrow, cf);
 }

@@ -22,7 +22,7 @@ function testMap(arr: number[]): number[] {
 // CHECK:{{.*}}builtin-argument-error.js:12:19: error: ft: function parameter 'pos' type mismatch
 // CHECK-NEXT:  return s.charAt('b');
 // CHECK-NEXT:                  ^~~
-// CHECK-NEXT:{{.*}}builtin-argument-error.js:17:3: error: ft: return value incompatible with return type
+// CHECK-NEXT:{{.*}}builtin-argument-error.js:17:3: error: ft: return value incompatible with return type: cannot return class Array as class Array
 // CHECK-NEXT:  return arr.map((n: number): string => 'x', undefined);
 // CHECK-NEXT:  ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // CHECK-NEXT:{{.*}}builtin-argument-error.js:17:10: error: ft: function expects at most 1 arguments, but 2 supplied
