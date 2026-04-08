@@ -1295,6 +1295,10 @@ Function *ESTreeIRGen::genFieldInitFunction() {
         llvh::cast<ESTree::ClassBodyNode>(typedClassContext.node->_body);
     for (ESTree::Node &it : classBody->_body) {
       if (auto *prop = llvh::dyn_cast<ESTree::ClassPropertyNode>(&it)) {
+        // Skip static fields.
+        // They are initialized in genClassDeclaration.
+        if (prop->_static)
+          continue;
         if (prop->_value) {
           Value *value = genExpression(prop->_value);
           emitTypedFieldStore(

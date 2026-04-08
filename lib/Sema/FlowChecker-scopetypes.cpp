@@ -739,12 +739,18 @@ class FlowChecker::DeclareScopeTypes {
       //     type D = number;
       auto *classNode = llvh::cast<ESTree::ClassDeclarationNode>(type->node);
       outer.visitExpression(classNode->_superClass, classNode, nullptr);
+      // Get the ClassConstructorType for the class declaration to use as
+      // the 'this' type for static methods.
+      sema::Decl *classDecl =
+          outer.getDecl(llvh::cast<ESTree::IdentifierNode>(classNode->_id));
+      Type *classConsType = outer.getDeclType(classDecl);
       outer.parseClassType(
           classNode->_superClass,
           classNode->_superTypeArguments,
           classNode->_body,
           type,
-          scope);
+          classNode->getScope(),
+          classConsType);
     }
 
     return outer.sm_.getErrorCount() == errorsBefore;
@@ -1189,7 +1195,8 @@ class FlowChecker::DeclareScopeTypes {
           specialization->_superTypeArguments,
           specialization->_body,
           deferred.classType,
-          deferred.classScope);
+          deferred.classScope,
+          deferred.classConsType);
 
       // Don't typecheck right now, because we need to parse everything in
       // current scope before descending into child functions.

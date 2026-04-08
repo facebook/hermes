@@ -722,6 +722,12 @@ class ClassType : public TypeWithId {
     const OptValue<size_t> layoutSlotIR;
     /// If the field is a method, AST for the method.
     ESTree::MethodDefinitionNode *const method;
+    /// The key AST node for static fields/methods that use variables instead
+    /// of layout slots. Used to propagate the Decl to member access sites.
+    /// For methods this is redundant with method->_key but is set for static
+    /// properties (which have no MethodDefinitionNode) and works uniformly
+    /// for both public and private statics.
+    ESTree::IdentifierNode *const staticKeyNode;
     /// Whether the field is a final method (non-virtual, cannot be overridden).
     /// Required for generic methods on either generic or non-generic classes.
     /// Final methods will not be stored in the home object, they will only be
@@ -742,11 +748,13 @@ class ClassType : public TypeWithId {
         OptValue<size_t> layoutSlotIR,
         bool isPrivate,
         ESTree::MethodDefinitionNode *method = nullptr,
-        bool finalMethod = false)
+        bool finalMethod = false,
+        ESTree::IdentifierNode *staticKeyNode = nullptr)
         : name(name),
           type(type),
           layoutSlotIR(layoutSlotIR),
           method(method),
+          staticKeyNode(staticKeyNode),
           finalMethod(finalMethod),
           isPrivate(isPrivate) {}
 
@@ -789,6 +797,9 @@ class ClassType : public TypeWithId {
   /// This class encodes those methods.
   /// ClassTypes which represent home objects have null homeObjectType_.
   Type *homeObjectType_ = nullptr;
+  /// The type encoding static properties and methods of the class.
+  /// Null if the class has no static elements.
+  Type *staticObjectType_ = nullptr;
   /// Map from field name to field lookup entry.
   /// Contains all fields in this class and all superClasses.
   /// This allows us to quickly check how many fields to allocate for the class,
@@ -824,6 +835,7 @@ class ClassType : public TypeWithId {
       llvh::ArrayRef<Field> fields,
       Type *constructorType,
       Type *homeObjectType,
+      Type *staticObjectType,
       Type *superClass,
       size_t numLayoutSlots);
 
@@ -836,6 +848,7 @@ class ClassType : public TypeWithId {
       llvh::ArrayRef<Field> fields,
       Type *constructorType,
       Type *homeObjectType,
+      Type *staticObjectType,
       Type *superClass,
       size_t numLayoutSlots);
 
@@ -870,6 +883,15 @@ class ClassType : public TypeWithId {
     assert(isInitialized());
     return llvh::cast_or_null<ClassType>(
         homeObjectType_ ? homeObjectType_->info : nullptr);
+  }
+  Type *getStaticObjectType() const {
+    assert(isInitialized());
+    return staticObjectType_;
+  }
+  ClassType *getStaticObjectTypeInfo() const {
+    assert(isInitialized());
+    return llvh::cast_or_null<ClassType>(
+        staticObjectType_ ? staticObjectType_->info : nullptr);
   }
   /// \return the public field name lookup table.
   const llvh::SmallMapVector<Identifier, FieldLookupEntry, 4> &getFieldNameMap()

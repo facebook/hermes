@@ -581,6 +581,59 @@ class FlowChecker::ExprVisitor {
         }
       }
     } else if (
+        auto *consType = llvh::dyn_cast<ClassConstructorType>(objType->info)) {
+      // Static member access via ClassName.property or ClassName.#property.
+      if (node->_computed) {
+        outer_.sm_.error(
+            node->_property->getSourceRange(),
+            "ft: computed access to class statics not supported");
+        return;
+      }
+      auto *classTypeInfo =
+          llvh::cast<ClassType>(consType->getClassType()->info);
+      bool isPrivate = false;
+      Identifier name;
+      ESTree::IdentifierNode *propId;
+      if (auto *privateName =
+              llvh::dyn_cast<ESTree::PrivateNameNode>(node->_property)) {
+        isPrivate = true;
+        propId = llvh::cast<ESTree::IdentifierNode>(privateName->_id);
+        name = outer_.astContext_.getPrivateNameIdentifier(propId->_name);
+        if (!outer_.classTypeIsEnclosing(classTypeInfo)) {
+          outer_.sm_.error(
+              node->_property->getSourceRange(),
+              "ft: private static " + name.str() +
+                  " not visible outside class " +
+                  classTypeInfo->getClassNameOrDefault());
+        }
+      } else {
+        propId = llvh::cast<ESTree::IdentifierNode>(node->_property);
+        name = Identifier::getFromPointer(propId->_name);
+      }
+      bool found = false;
+      if (auto *staticInfo = classTypeInfo->getStaticObjectTypeInfo()) {
+        if (auto optStaticField = isPrivate
+                ? staticInfo->findPrivateField(name)
+                : staticInfo->findPublicField(name)) {
+          resType = optStaticField->getField()->type;
+          found = true;
+          // Propagate the Decl from the definition key to the
+          // call-site property so IRGen can look it up.
+          if (ESTree::IdentifierNode *keyNode =
+                  optStaticField->getField()->staticKeyNode) {
+            if (auto *decl = outer_.semContext_.getExpressionDecl(keyNode))
+              outer_.semContext_.setExpressionDecl(propId, decl);
+          }
+        }
+      }
+      if (!found) {
+        outer_.sm_.error(
+            node->_property->getSourceRange(),
+            llvh::Twine("ft: static property ") + name.str() +
+                " not defined in class " +
+                classTypeInfo->getClassNameOrDefault());
+      }
+    } else if (
         auto *exactObjType = llvh::dyn_cast<ExactObjectType>(objType->info)) {
       if (node->_computed) {
         // TODO: determine what this should do for real.
@@ -1656,26 +1709,31 @@ class FlowChecker::ExprVisitor {
       shouldVisitCallee = false;
       Type *objType = outer_.getNodeTypeOrAny(memCallee->_object);
 
-      if (auto *classType = llvh::dyn_cast<ClassType>(objType->info)) {
-        auto *propId = llvh::cast<ESTree::IdentifierNode>(memCallee->_property);
-        auto optMethod = classType->getHomeObjectTypeInfo()->findPublicField(
-            Identifier::getFromPointer(propId->_name));
+      // Look up the method in the appropriate type.
+      auto *propId = llvh::cast<ESTree::IdentifierNode>(memCallee->_property);
+      Identifier name = Identifier::getFromPointer(propId->_name);
 
-        if (optMethod &&
-            llvh::isa<GenericType>(optMethod->getField()->type->info)) {
-          outer_.resolveCallToGenericMethodSpecialization(
-              node, memCallee, optMethod->getField()->method);
-        } else {
-          // Method is not generic but type arguments were provided.
-          outer_.sm_.error(
-              node->_typeArguments->getSourceRange(),
-              "ft: type arguments provided for non-generic method");
-          return;
-        }
+      OptValue<ClassType::FieldLookupEntry> optMethod;
+      if (auto *classType = llvh::dyn_cast<ClassType>(objType->info)) {
+        optMethod = classType->getHomeObjectTypeInfo()->findPublicField(name);
+      } else if (
+          auto *consType =
+              llvh::dyn_cast<ClassConstructorType>(objType->info)) {
+        auto *classTypeInfo =
+            llvh::cast<ClassType>(consType->getClassType()->info);
+        if (auto *staticInfo = classTypeInfo->getStaticObjectTypeInfo())
+          optMethod = staticInfo->findPublicField(name);
+      }
+
+      if (optMethod &&
+          llvh::isa<GenericType>(optMethod->getField()->type->info)) {
+        outer_.resolveCallToGenericMethodSpecialization(
+            node, memCallee, optMethod->getField()->method);
       } else {
+        // Method is not generic but type arguments were provided.
         outer_.sm_.error(
-            node->_callee->getSourceRange(),
-            "ft: invalid generic function call");
+            node->_typeArguments->getSourceRange(),
+            "ft: type arguments provided for non-generic method");
         return;
       }
     } else if (node->_typeArguments) {
@@ -1701,27 +1759,36 @@ class FlowChecker::ExprVisitor {
           memCallee && !memCallee->_computed &&
           llvh::isa<ESTree::IdentifierNode>(memCallee->_property)) {
         Type *objType = outer_.getNodeTypeOrAny(memCallee->_object);
+        auto *propId = llvh::cast<ESTree::IdentifierNode>(memCallee->_property);
+        Identifier name = Identifier::getFromPointer(propId->_name);
+
+        OptValue<ClassType::FieldLookupEntry> optMethod;
         if (auto *classType = llvh::dyn_cast<ClassType>(objType->info)) {
-          auto *propId =
-              llvh::cast<ESTree::IdentifierNode>(memCallee->_property);
-          auto optMethod = classType->getHomeObjectTypeInfo()->findPublicField(
-              Identifier::getFromPointer(propId->_name));
-          if (optMethod && optMethod->getField()->method) {
-            auto [didVisitArgs, typeArgs] =
-                outer_.inferTypeArgumentsForGenericMethodCall(
-                    node, memCallee, optMethod->getField()->method);
-            if (didVisitArgs)
-              shouldVisitArguments = false;
-            if (typeArgs.empty()) {
-              outer_.sm_.error(
-                  node->getStartLoc(),
-                  "ft: could not infer type arguments for generic method");
-              return;
-            }
-            outer_.resolveCallToGenericMethodSpecializationWithParsedTypes(
-                node, memCallee, typeArgs, optMethod->getField()->method);
-            calleeType = outer_.getNodeTypeOrAny(node->_callee);
+          optMethod = classType->getHomeObjectTypeInfo()->findPublicField(name);
+        } else if (
+            auto *consType =
+                llvh::dyn_cast<ClassConstructorType>(objType->info)) {
+          auto *classTypeInfo =
+              llvh::cast<ClassType>(consType->getClassType()->info);
+          if (auto *staticInfo = classTypeInfo->getStaticObjectTypeInfo())
+            optMethod = staticInfo->findPublicField(name);
+        }
+
+        if (optMethod && optMethod->getField()->method) {
+          auto [didVisitArgs, typeArgs] =
+              outer_.inferTypeArgumentsForGenericMethodCall(
+                  node, memCallee, optMethod->getField()->method);
+          if (didVisitArgs)
+            shouldVisitArguments = false;
+          if (typeArgs.empty()) {
+            outer_.sm_.error(
+                node->getStartLoc(),
+                "ft: could not infer type arguments for generic method");
+            return;
           }
+          outer_.resolveCallToGenericMethodSpecializationWithParsedTypes(
+              node, memCallee, typeArgs, optMethod->getField()->method);
+          calleeType = outer_.getNodeTypeOrAny(node->_callee);
         }
       }
     }

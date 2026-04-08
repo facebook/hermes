@@ -68,10 +68,10 @@ let e: number = box.pair<number, string>(10, "test");
 // CHECK-NEXT:        Decl %d.7 'd' Let : string
 // CHECK-NEXT:        Decl %d.8 'e' Let : number
 // CHECK-NEXT:        Decl %d.9 'arguments' Var Arguments
-// CHECK-NEXT:        Decl %d.10 'identity' Const
-// CHECK-NEXT:        Decl %d.11 'identity' Const
-// CHECK-NEXT:        Decl %d.12 'pair' Const
 // CHECK-NEXT:        Scope %s.2
+// CHECK-NEXT:            Decl %d.10 'identity' Const
+// CHECK-NEXT:            Decl %d.11 'identity' Const
+// CHECK-NEXT:            Decl %d.12 'pair' Const
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.3
 // CHECK-NEXT:            Decl %d.13 'arguments' Var Arguments

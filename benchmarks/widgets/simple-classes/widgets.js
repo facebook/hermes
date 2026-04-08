@@ -52,7 +52,7 @@ class Button extends Widget {
 
   reduce(ctx: Context): RenderNode {
     const component: Component = new NumberComponent(this.num);
-    return RenderNode_create(ctx, [component], null);
+    return RenderNode.create(ctx, [component], null);
   }
 }
 
@@ -66,7 +66,7 @@ class Floater extends Widget {
 
   reduce(ctx: Context): RenderNode {
     const component: Component = new NumberComponent(this.num);
-    return RenderNode_create(ctx, [component], null);
+    return RenderNode.create(ctx, [component], null);
   }
 }
 
@@ -80,7 +80,7 @@ class Gltf extends Widget {
 
   reduce(ctx: Context): RenderNode {
     const component: Component = new StringComponent(this.path);
-    return RenderNode_create(ctx, [component], null);
+    return RenderNode.create(ctx, [component], null);
   }
 }
 
@@ -95,9 +95,9 @@ class Container extends Widget {
   reduce(ctx: Context): RenderNode {
     const component: Component = new NumberComponent(13);
     const children = this.children.map(child =>
-      RenderNode_createForChild(ctx, child),
+      RenderNode.createForChild(ctx, child),
     );
-    return RenderNode_create(ctx, [component], children);
+    return RenderNode.create(ctx, [component], children);
   }
 }
 
@@ -300,16 +300,6 @@ type Component = NumberComponent | StringComponent;
 
 // ==> context.js <==
 
-function Context_createForChild(parentCtx: Context, child: Widget): Context {
-  const widgetKey = child.key;
-  const childKey =
-    widgetKey !== null && widgetKey !== undefined
-      ? widgetKey
-      : `_${parentCtx.childCounter++}`;
-  const newKey = `${parentCtx.key}_${childKey}`;
-  return new Context(newKey);
-}
-
 class Context {
   key: string;
   childCounter: number;
@@ -318,6 +308,16 @@ class Context {
     'inline'
     this.key = key;
     this.childCounter = 0;
+  }
+
+  static createForChild(parentCtx: Context, child: Widget): Context {
+    const widgetKey = child.key;
+    const childKey =
+      widgetKey !== null && widgetKey !== undefined
+        ? widgetKey
+        : `_${parentCtx.childCounter++}`;
+    const newKey = `${parentCtx.key}_${childKey}`;
+    return new Context(newKey);
   }
 }
 
@@ -335,26 +335,12 @@ class VirtualEntity {
   }
 }
 
-let RenderNode_idCounter: number = 0;
-
-function RenderNode_create(
-  ctx: Context,
-  components: Component[],
-  children: ?(RenderNode[]),
-): RenderNode {
-  return new RenderNode(ctx.key, RenderNode_idCounter++, components, children);
-}
-
-function RenderNode_createForChild(ctx: Context, child: Widget): RenderNode {
-  const childCtx = Context_createForChild(ctx, child);
-  return child.reduce(childCtx);
-}
-
 class RenderNode {
   key: string;
   id: number;
   components: Component[];
   children: RenderNode[];
+  static idCounter: number = 0;
 
   constructor(
     key: string,
@@ -375,6 +361,19 @@ class RenderNode {
       child => { childrenEntities = childrenEntities.concat(child.reduce()); },
     );
     return [new VirtualEntity(this.id, this.components)].concat(childrenEntities);
+  }
+
+  static create(
+    ctx: Context,
+    components: Component[],
+    children: ?(RenderNode[]),
+  ): RenderNode {
+    return new RenderNode(ctx.key, RenderNode.idCounter++, components, children);
+  }
+
+  static createForChild(ctx: Context, child: Widget): RenderNode {
+    const childCtx = Context.createForChild(ctx, child);
+    return child.reduce(childCtx);
   }
 }
 

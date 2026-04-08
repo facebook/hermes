@@ -711,6 +711,7 @@ void ClassType::init(
     llvh::ArrayRef<Field> fields,
     Type *constructorType,
     Type *homeObjectType,
+    Type *staticObjectType,
     Type *superClass,
     size_t numLayoutSlots) {
   fields_.reserve(fields.size());
@@ -718,6 +719,7 @@ void ClassType::init(
 
   constructorType_ = constructorType;
   homeObjectType_ = homeObjectType;
+  staticObjectType_ = staticObjectType;
   superClass_ = superClass;
   numLayoutSlots_ = numLayoutSlots;
 

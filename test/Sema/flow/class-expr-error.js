@@ -8,10 +8,10 @@
 // RUN: (! %shermes -Werror -typed -dump-sema -ferror-limit=0 %s 2>&1 ) | %FileCheck --match-full-lines %s
 
 (class C {
-  static tryParse(text) {
+  async tryParse(text) {
   }
 });
 
-// CHECK-LABEL: {{.*}}class-expr-error.js:11:3: error: ft: static/async/generator methods unsupported
-// CHECK-NEXT:   static tryParse(text) {
+// CHECK-LABEL: {{.*}}class-expr-error.js:11:3: error: ft: async/generator methods unsupported
+// CHECK-NEXT:   async tryParse(text) {
 // CHECK-NEXT:   ^

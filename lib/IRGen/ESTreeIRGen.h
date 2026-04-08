@@ -1027,6 +1027,13 @@ class ESTreeIRGen {
       ESTree::MemberExpressionNode *Mem,
       MemberExpressionOperation op);
 
+  /// If the member expression on a typed class refers to a final method,
+  /// static field/method, or private method that has been lowered to a scope
+  /// variable, return the Decl for it. Only applies to typed classes
+  /// (ClassType and ClassConstructorType), returns null for legacy classes.
+  sema::Decl *getTypedMemberExpressionDeclIfExists(
+      ESTree::MemberExpressionNode *mem);
+
   /// Try to perform a typed member access, if the information is available.
   MemberExpressionResult emitMemberLoad(
       ESTree::MemberExpressionNode *mem,

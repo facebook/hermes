@@ -166,6 +166,11 @@ void FlowTypesDumper::printTypeDescription(
         printTypeRef(os, homeObject);
         os << '\n';
       }
+      if (auto *staticObject = classType->getStaticObjectType()) {
+        os << "  %staticObject: ";
+        printTypeRef(os, staticObject);
+        os << '\n';
+      }
       for (const ClassType::Field &field : classType->getFields()) {
         os << "  " << field.name;
         if (field.isMethod())

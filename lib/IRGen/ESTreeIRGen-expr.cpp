@@ -1005,9 +1005,10 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genMemberExpression(
 
   Value *baseValue = genExpression(mem->_object);
   Value *prop;
-  if (auto *classType = llvh::dyn_cast<flow::ClassType>(
-          flowContext_.getNodeTypeOrAny(mem->_object)->info);
-      classType && !mem->_computed) {
+  auto *objTypeInfo = flowContext_.getNodeTypeOrAny(mem->_object)->info;
+  if ((llvh::isa<flow::ClassType>(objTypeInfo) ||
+       llvh::isa<flow::ClassConstructorType>(objTypeInfo)) &&
+      !mem->_computed) {
     // Named types for typed fields with known layout shouldn't bother
     // with genMemberExpressionProperty, which is intended for untyped code.
     if (auto *privateName =
@@ -1035,21 +1036,40 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genMemberExpression(
   llvm_unreachable("No other kind of member expression");
 }
 
+sema::Decl *ESTreeIRGen::getTypedMemberExpressionDeclIfExists(
+    ESTree::MemberExpressionNode *mem) {
+  if (mem->_computed)
+    return nullptr;
+  // Only applies to typed classes (ClassType for instance access,
+  // ClassConstructorType for static access). Legacy classes use different
+  // mechanisms for private names.
+  auto *objTypeInfo = flowContext_.getNodeTypeOrAny(mem->_object)->info;
+  if (!llvh::isa<flow::ClassType>(objTypeInfo) &&
+      !llvh::isa<flow::ClassConstructorType>(objTypeInfo))
+    return nullptr;
+
+  sema::Decl *decl = nullptr;
+  if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(mem->_property)) {
+    decl = semCtx_.getExpressionDecl(id);
+  } else if (
+      auto *pn = llvh::dyn_cast<ESTree::PrivateNameNode>(mem->_property)) {
+    decl =
+        semCtx_.getExpressionDecl(llvh::cast<ESTree::IdentifierNode>(pn->_id));
+  }
+
+  // Only return the Decl if it has customData set (indicating that the field is
+  // stored in a Variable instead of on the object).
+  return decl && decl->customData ? decl : nullptr;
+}
+
 ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
     ESTree::MemberExpressionNode *mem,
     Value *baseValue,
     Value *propValue) {
-  // Final methods (both generic specializations and non-generic) have a
-  // Decl set on the call-site property by the FlowChecker. Load the
-  // closure from the Variable stored in the Decl's data.
-  if (!mem->_computed) {
-    auto *propId = ESTree::getPropertyIdentifier(mem->_property);
-    if (auto *decl = semCtx_.getExpressionDecl(propId);
-        decl && !sema::Decl::isKindPrivateName(decl->kind)) {
-      Value *closure = emitLoad(getDeclData(decl), false);
-      return MemberExpressionResult{
-          closure, declFunctions_.lookup(decl), baseValue};
-    }
+  // Final methods and static fields/methods are lowered to scope variables.
+  if (sema::Decl *decl = getTypedMemberExpressionDeclIfExists(mem)) {
+    Value *val = emitLoad(getDeclData(decl), false);
+    return MemberExpressionResult{val, declFunctions_.lookup(decl), baseValue};
   }
 
   // Check if we are loading from a FastArray, and generate the typed IR.
@@ -1323,6 +1343,12 @@ void ESTreeIRGen::emitMemberStore(
     Value *baseValue,
     Value *propValue,
     Value *thisValue) {
+  // Static fields/methods are stored in scope variables, not object properties.
+  if (auto *decl = getTypedMemberExpressionDeclIfExists(mem)) {
+    emitStore(storedValue, getDeclData(decl), false);
+    return;
+  }
+
   // If \p thisValue is set, this is a store to `super`, so we must set up the
   // receiver correctly.
   if (thisValue) {

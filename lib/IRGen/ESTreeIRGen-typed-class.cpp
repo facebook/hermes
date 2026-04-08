@@ -67,6 +67,89 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
     }
   }
 
+  // Emit static methods and fields as variables.
+  auto *staticType = classType->getStaticObjectTypeInfo();
+  auto *classBody = llvh::cast<ESTree::ClassBodyNode>(node->_body);
+  for (ESTree::Node &elem : classBody->_body) {
+    if (auto *method = llvh::dyn_cast<ESTree::MethodDefinitionNode>(&elem)) {
+      if (!method->_static)
+        continue;
+      assert(staticType && "must have a staticType if there are static fields");
+      ESTree::IdentifierNode *id;
+      Identifier name;
+      bool isPrivate;
+      if (auto *pn = llvh::dyn_cast<ESTree::PrivateNameNode>(method->_key)) {
+        id = llvh::cast<ESTree::IdentifierNode>(pn->_id);
+        name = Mod->getContext().getPrivateNameIdentifier(id->_name);
+        isPrivate = true;
+      } else {
+        id = llvh::cast<ESTree::IdentifierNode>(method->_key);
+        name = Identifier::getFromPointer(id->_name);
+        isPrivate = false;
+      }
+      auto *funcExpr =
+          llvh::cast<ESTree::FunctionExpressionNode>(method->_value);
+      // Generic static methods are emitted through their specializations.
+      if (funcExpr->_typeParameters)
+        continue;
+      Value *function = genFunctionExpression(funcExpr, name);
+      auto optField = isPrivate ? staticType->findPrivateField(name)
+                                : staticType->findPublicField(name);
+      Variable *var = Builder.createVariable(
+          curFunction()->curScope()->getVariableScope(),
+          name,
+          flowTypeToIRType(optField->getField()->type),
+          /* hidden */ true);
+      Builder.createStoreFrameInst(curFunction()->curScope(), function, var);
+      sema::Decl *decl = semCtx_.getExpressionDecl(id);
+      setDeclData(decl, var);
+      if (auto *CFI = llvh::dyn_cast<CreateFunctionInst>(function)) {
+        declFunctions_.try_emplace(decl, CFI->getFunctionCode());
+      }
+    } else if (auto *prop = llvh::dyn_cast<ESTree::ClassPropertyNode>(&elem)) {
+      if (!prop->_static)
+        continue;
+      assert(staticType && "must have a staticType if there are static fields");
+      auto *id = llvh::cast<ESTree::IdentifierNode>(prop->_key);
+      Identifier name = Identifier::getFromPointer(id->_name);
+      auto optField = staticType->findPublicField(name);
+      assert(optField && "static field must exist in staticObjectType");
+      Type irType = flowTypeToIRType(optField->getField()->type);
+      Variable *var = Builder.createVariable(
+          curFunction()->curScope()->getVariableScope(),
+          name,
+          irType,
+          /* hidden */ true);
+      Value *initValue = prop->_value
+          ? genExpression(prop->_value)
+          : getDefaultInitValue(optField->getField()->type);
+      Builder.createStoreFrameInst(curFunction()->curScope(), initValue, var);
+      sema::Decl *decl = semCtx_.getExpressionDecl(id);
+      setDeclData(decl, var);
+    } else if (
+        auto *prop = llvh::dyn_cast<ESTree::ClassPrivatePropertyNode>(&elem)) {
+      if (!prop->_static)
+        continue;
+      assert(staticType && "must have a staticType if there are static fields");
+      auto *id = llvh::cast<ESTree::IdentifierNode>(prop->_key);
+      Identifier name = Mod->getContext().getPrivateNameIdentifier(id->_name);
+      auto optField = staticType->findPrivateField(name);
+      assert(optField && "private static field must exist in staticObjectType");
+      Type irType = flowTypeToIRType(optField->getField()->type);
+      Variable *var = Builder.createVariable(
+          curFunction()->curScope()->getVariableScope(),
+          name,
+          irType,
+          /* hidden */ true);
+      Value *initValue = prop->_value
+          ? genExpression(prop->_value)
+          : getDefaultInitValue(optField->getField()->type);
+      Builder.createStoreFrameInst(curFunction()->curScope(), initValue, var);
+      sema::Decl *decl = semCtx_.getExpressionDecl(id);
+      setDeclData(decl, var);
+    }
+  }
+
   // Create the implicit field initializer function; store the closure
   // for it in a variable, and save that variable in a table indexed by
   // the ClassDeclarationNode.

@@ -362,7 +362,13 @@ class FlowChecker::ParseClassType {
   llvh::SmallDenseMap<UniqueString *, ESTree::Node *> methodNames{};
   llvh::SmallVector<ClassType::Field, 4> methods{};
 
+  llvh::SmallDenseMap<UniqueString *, ESTree::Node *> staticNames{};
+  llvh::SmallVector<ClassType::Field, 4> statics{};
+
   Type *constructorType = nullptr;
+  /// The ClassConstructorType wrapping the class, used as the 'this' type for
+  /// static methods. May be nullptr.
+  Type *classConsType_ = nullptr;
   Type *superClassType;
 
   size_t nextFieldLayoutSlotIR = 0;
@@ -375,9 +381,11 @@ class FlowChecker::ParseClassType {
       ESTree::Node *superTypeArguments,
       ESTree::Node *body,
       Type *classType,
-      sema::LexicalScope *classScope)
+      sema::LexicalScope *classScope,
+      Type *classConsType)
       : outer_(outer),
         classScope_(classScope),
+        classConsType_(classConsType),
         superClassType(
             resolveSuperClass(outer, superClass, superTypeArguments)) {
     LLVM_DEBUG(
@@ -434,14 +442,35 @@ class FlowChecker::ParseClassType {
             methods,
             /* constructorType */ nullptr,
             /* homeObjectType */ nullptr,
+            /* staticObjectType */ nullptr,
             superClassTypeInfo ? superClassTypeInfo->getHomeObjectType()
                                : nullptr,
             nextMethodLayoutSlotIR);
+
+    // Create the staticObjectType if there are static elements or the
+    // superclass has one (to preserve the inheritance chain).
+    Type *staticObjectType = nullptr;
+    if (!statics.empty() ||
+        (superClassTypeInfo && superClassTypeInfo->getStaticObjectTypeInfo())) {
+      staticObjectType = outer_.flowContext_.createType(
+          outer_.flowContext_.createClass(Identifier{}));
+      llvh::cast<ClassType>(staticObjectType->info)
+          ->init(
+              statics,
+              /* constructorType */ nullptr,
+              /* homeObjectType */ nullptr,
+              /* staticObjectType */ nullptr,
+              superClassTypeInfo ? superClassTypeInfo->getStaticObjectType()
+                                 : nullptr,
+              0);
+    }
+
     llvh::cast<ClassType>(classType->info)
         ->init(
             fields,
             constructorType,
             homeObjectType,
+            staticObjectType,
             superClassType,
             nextFieldLayoutSlotIR);
   }
@@ -531,12 +560,6 @@ class FlowChecker::ParseClassType {
       ESTree::Node *value,
       bool isStatic,
       ESTree::Node *typeAnnotation) {
-    if (isStatic) {
-      outer_.sm_.error(
-          prop->getSourceRange(), "ft: unsupported property attributes");
-      return outer_.flowContext_.getAny();
-    }
-
     bool isPrivate = llvh::isa<ESTree::ClassPrivatePropertyNode>(prop);
 
     if (!llvh::isa<ESTree::IdentifierNode>(key)) {
@@ -575,24 +598,40 @@ class FlowChecker::ParseClassType {
 
     // Check if the field is inherited, and reuse the index.
     // Private fields are never inherited.
+    // Static fields look up in the super's staticObjectType.
     const ClassType::Field *superField = nullptr;
     if (!isPrivate && superClassType) {
       auto *superClassTypeInfo = llvh::cast<ClassType>(superClassType->info);
-      auto superIt = superClassTypeInfo->findPublicField(name);
-      if (superIt) {
-        // Field is inherited.
-        superField = superIt->getField();
-        // Fields must be the same for class properties.
-        if (!fieldType->info->equals(superField->type->info)) {
-          outer_.sm_.error(
-              prop->getStartLoc(), "ft: incompatible field type for override");
+      if (isStatic) {
+        if (auto *superStaticInfo =
+                superClassTypeInfo->getStaticObjectTypeInfo()) {
+          auto superIt = superStaticInfo->findPublicField(name);
+          if (superIt) {
+            superField = superIt->getField();
+            if (!fieldType->info->equals(superField->type->info)) {
+              outer_.sm_.error(
+                  prop->getStartLoc(),
+                  "ft: incompatible field type for override");
+            }
+          }
+        }
+      } else {
+        auto superIt = superClassTypeInfo->findPublicField(name);
+        if (superIt) {
+          superField = superIt->getField();
+          if (!fieldType->info->equals(superField->type->info)) {
+            outer_.sm_.error(
+                prop->getStartLoc(),
+                "ft: incompatible field type for override");
+          }
         }
       }
     }
 
     // Check if the field is already declared.
+    auto &nameMap = isStatic ? staticNames : fieldNames;
     auto [it, inserted] =
-        fieldNames.try_emplace(name.getUnderlyingPointer(), prop);
+        nameMap.try_emplace(name.getUnderlyingPointer(), prop);
     if (!inserted) {
       outer_.sm_.error(
           id->getStartLoc(), "ft: field " + name.str() + " already declared");
@@ -602,7 +641,22 @@ class FlowChecker::ParseClassType {
       return outer_.flowContext_.getAny();
     }
 
-    if (superField) {
+    if (isStatic) {
+      // Static fields use layoutSlotIR = None because they will use
+      // Variables, not object property slots.
+      // Create a Decl so IRGen can associate a Variable with it.
+      auto *decl = outer_.semContext_.newDeclInScope(
+          id->_name, sema::Decl::Kind::Const, classScope_);
+      outer_.semContext_.setExpressionDecl(id, decl);
+      statics.emplace_back(
+          name,
+          fieldType,
+          OptValue<size_t>(llvh::None),
+          isPrivate,
+          nullptr,
+          false,
+          id);
+    } else if (superField) {
       assert(!isPrivate);
       fields.emplace_back(
           name,
@@ -688,18 +742,16 @@ class FlowChecker::ParseClassType {
             "ft: computed property names in classes are unsupported");
         return outer_.flowContext_.getAny();
       }
-      if (method->_static || fe->_async || fe->_generator) {
+      if (fe->_async || fe->_generator) {
         outer_.sm_.error(
-            method->getStartLoc(),
-            "ft: static/async/generator methods unsupported");
+            method->getStartLoc(), "ft: async/generator methods unsupported");
         return outer_.flowContext_.getAny();
       }
-
       Identifier name;
-      ESTree::IdentifierNode *id = nullptr;
+      ESTree::IdentifierNode *id;
       if (privateNameNode) {
-        name = outer_.astContext_.getPrivateNameIdentifier(
-            llvh::cast<ESTree::IdentifierNode>(privateNameNode->_id)->_name);
+        id = llvh::cast<ESTree::IdentifierNode>(privateNameNode->_id);
+        name = outer_.astContext_.getPrivateNameIdentifier(id->_name);
       } else {
         id = llvh::cast<ESTree::IdentifierNode>(method->_key);
         name = Identifier::getFromPointer(id->_name);
@@ -715,10 +767,12 @@ class FlowChecker::ParseClassType {
             classScope_,
             llvh::cast<ClassType>(classType->info));
       } else {
-        // Create a Decl for non-generic final methods and store it on the
-        // method key IdentifierNode. Generic final methods get Decls
-        // through specializedMethodDecls_.
-        if (finalMethod) {
+        // Create a Decl for non-generic final methods and all static
+        // methods, and store it on the method key IdentifierNode.
+        // Generic final methods get Decls through
+        // specializedMethodDecls_.
+        // Static methods always use Variables (no layout slots).
+        if (finalMethod || method->_static) {
           auto *keyId = ESTree::getPropertyIdentifier(method->_key);
           auto *decl = outer_.semContext_.newDeclInScope(
               keyId->_name, sema::Decl::Kind::Const, classScope_);
@@ -731,16 +785,26 @@ class FlowChecker::ParseClassType {
             fe->_async,
             fe->_generator,
             nullptr,
-            classType);
+            method->_static && classConsType_ ? classConsType_ : classType);
       }
 
       // Check if the method is inherited, and reuse the index.
       // Private fields are never inherited.
+      // Static methods look up in the super's staticObjectType.
       const ClassType::Field *superMethod = nullptr;
       if (!privateNameNode && superClassType) {
         auto *superClassTypeInfo = llvh::cast<ClassType>(superClassType->info);
-        auto superIt =
-            superClassTypeInfo->getHomeObjectTypeInfo()->findPublicField(name);
+        hermes::OptValue<ClassType::FieldLookupEntry> superIt;
+        if (method->_static) {
+          if (auto *superStaticInfo =
+                  superClassTypeInfo->getStaticObjectTypeInfo()) {
+            superIt = superStaticInfo->findPublicField(name);
+          }
+        } else {
+          superIt =
+              superClassTypeInfo->getHomeObjectTypeInfo()->findPublicField(
+                  name);
+        }
         if (superIt) {
           if (fe->_typeParameters) {
             outer_.sm_.error(
@@ -769,8 +833,9 @@ class FlowChecker::ParseClassType {
       }
 
       // Check if the method is already declared.
+      auto &nameMap = method->_static ? staticNames : methodNames;
       auto [it, inserted] =
-          methodNames.try_emplace(name.getUnderlyingPointer(), method);
+          nameMap.try_emplace(name.getUnderlyingPointer(), method);
       if (!inserted) {
         outer_.sm_.error(
             method->_key->getStartLoc(),
@@ -781,7 +846,30 @@ class FlowChecker::ParseClassType {
         return outer_.flowContext_.getAny();
       }
 
-      if (superMethod) {
+      if (method->_static) {
+        // Static methods use layoutSlotIR = None because they will use
+        // Variables, not object property slots.
+        if (superMethod) {
+          assert(privateNameNode == nullptr);
+          statics.emplace_back(
+              name,
+              methodType,
+              superMethod->layoutSlotIR,
+              /* isPrivate */ false,
+              method,
+              finalMethod,
+              id);
+        } else {
+          statics.emplace_back(
+              name,
+              methodType,
+              OptValue<size_t>(llvh::None),
+              privateNameNode != nullptr,
+              method,
+              finalMethod,
+              id);
+        }
+      } else if (superMethod) {
         assert(privateNameNode == nullptr);
         methods.emplace_back(
             name,
@@ -817,9 +905,16 @@ void FlowChecker::parseClassType(
     ESTree::Node *superTypeArguments,
     ESTree::Node *body,
     Type *classType,
-    sema::LexicalScope *classScope) {
+    sema::LexicalScope *classScope,
+    Type *classConsType) {
   ParseClassType(
-      *this, superClass, superTypeArguments, body, classType, classScope);
+      *this,
+      superClass,
+      superTypeArguments,
+      body,
+      classType,
+      classScope,
+      classConsType);
 }
 
 void FlowChecker::visitClassNode(
@@ -840,20 +935,21 @@ void FlowChecker::visit(ESTree::ClassExpressionNode *node) {
   Type *classType = flowContext_.createType(flowContext_.createClass(
       id ? Identifier::getFromPointer(id->_name) : Identifier{}));
 
+  Type *consType =
+      flowContext_.createType(flowContext_.createClassConstructor(classType));
+
   unsigned errorsBefore = sm_.getErrorCount();
   parseClassType(
       node->_superClass,
       node->_superTypeArguments,
       node->_body,
       classType,
-      node->getScope());
+      node->getScope(),
+      consType);
   if (sm_.getErrorCount() != errorsBefore) {
     // Failed to parse class.
     return;
   }
-
-  Type *consType =
-      flowContext_.createType(flowContext_.createClassConstructor(classType));
 
   setNodeType(node, consType);
 
@@ -930,9 +1026,23 @@ void FlowChecker::visit(ESTree::MethodDefinitionNode *node) {
             llvh::dyn_cast<ESTree::PrivateNameNode>(node->_key)) {
       name = astContext_.getPrivateNameIdentifier(
           llvh::cast<ESTree::IdentifierNode>(privateName->_id)->_name);
-      optField = curClassContext_->getClassTypeInfo()
-                     ->getHomeObjectTypeInfo()
-                     ->findPrivateField(name);
+      if (node->_static) {
+        if (auto *staticInfo = curClassContext_->getClassTypeInfo()
+                                   ->getStaticObjectTypeInfo()) {
+          optField = staticInfo->findPrivateField(name);
+        }
+      } else {
+        optField = curClassContext_->getClassTypeInfo()
+                       ->getHomeObjectTypeInfo()
+                       ->findPrivateField(name);
+      }
+    } else if (node->_static) {
+      name = Identifier::getFromPointer(
+          llvh::cast<ESTree::IdentifierNode>(node->_key)->_name);
+      if (auto *staticInfo =
+              curClassContext_->getClassTypeInfo()->getStaticObjectTypeInfo()) {
+        optField = staticInfo->findPublicField(name);
+      }
     } else {
       name = Identifier::getFromPointer(
           llvh::cast<ESTree::IdentifierNode>(node->_key)->_name);
@@ -956,8 +1066,16 @@ void FlowChecker::visit(ESTree::MethodDefinitionNode *node) {
         curClassContext_->getClassTypeInfo()->getSuperClass();
     if (!optField->getField()->isPrivate && superClassType) {
       auto *superClassTypeInfo = llvh::cast<ClassType>(superClassType->info);
-      auto superIt =
-          superClassTypeInfo->getHomeObjectTypeInfo()->findPublicField(name);
+      OptValue<ClassType::FieldLookupEntry> superIt;
+      if (node->_static) {
+        if (auto *superStaticInfo =
+                superClassTypeInfo->getStaticObjectTypeInfo()) {
+          superIt = superStaticInfo->findPublicField(name);
+        }
+      } else {
+        superIt =
+            superClassTypeInfo->getHomeObjectTypeInfo()->findPublicField(name);
+      }
       if (superIt) {
         auto *superMethod = superIt->getField();
         // Overriding method's function type must flow into the overridden
@@ -2107,6 +2225,16 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     return canAFlowIntoB(classA, classB);
   }
 
+  if (auto *consA = llvh::dyn_cast<ClassConstructorType>(a)) {
+    auto *consB = llvh::dyn_cast<ClassConstructorType>(b);
+    if (!consB)
+      return {};
+    // Delegate to the underlying ClassType comparison.
+    return canAFlowIntoB(
+        llvh::cast<ClassType>(consA->getClassType()->info),
+        llvh::cast<ClassType>(consB->getClassType()->info));
+  }
+
   if (BaseFunctionType *funcA = llvh::dyn_cast<BaseFunctionType>(a)) {
     BaseFunctionType *funcB = llvh::dyn_cast<BaseFunctionType>(b);
     if (!funcB)
@@ -2861,6 +2989,7 @@ void FlowChecker::typecheckGenericClassSpecialization(
         specialization,
         bindingTable_.getCurrentScope(),
         classType,
+        classConsType,
         specialization->getScope());
   } else {
     parseClassType(
@@ -2868,11 +2997,13 @@ void FlowChecker::typecheckGenericClassSpecialization(
         specialization->_superTypeArguments,
         specialization->_body,
         classType,
-        specialization->getScope());
+        specialization->getScope(),
+        classConsType);
     typecheckQueue_.emplace_back(
         specialization,
         bindingTable_.getCurrentScope(),
         classType,
+        classConsType,
         specialization->getScope());
   }
 }
@@ -3147,9 +3278,18 @@ FlowChecker::specializeGenericMethodWithParsedTypes(
     // Establish a ClassContext so that references to 'this', 'super',
     // and class type information are available during typechecking of the
     // specialized method body.
-    ClassContext classContext(*this, classType, nullptr);
+    // Unwrap ClassConstructorType for class/function context since they
+    // expect the underlying ClassType.
+    Type *classTypeForContext = classType;
+    if (auto *ct = llvh::dyn_cast<ClassConstructorType>(classType->info))
+      classTypeForContext = ct->getClassType();
+    ClassContext classContext(*this, classTypeForContext, nullptr);
     FunctionContext functionContext(
-        *this, specializedFE, ftype, classType, flowContext_.getVoid());
+        *this,
+        specializedFE,
+        ftype,
+        classTypeForContext,
+        flowContext_.getVoid());
     visitFunctionLike(
         specializedFE, specializedFE->_body, specializedFE->_params);
   } else {

@@ -275,6 +275,8 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
     TypeBindingTableScopePtrTy scope;
     /// The type for the deferred generic.
     Type *classType;
+    /// The ClassConstructorType wrapping classType.
+    Type *classConsType;
     /// The class's own lexical scope (where private names are declared).
     sema::LexicalScope *classScope;
 
@@ -282,10 +284,12 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
         ESTree::ClassDeclarationNode *specialization,
         TypeBindingTableScopePtrTy scope,
         Type *declType,
+        Type *classConsType,
         sema::LexicalScope *classScope)
         : specialization(specialization),
           scope(scope),
           classType(declType),
+          classConsType(classConsType),
           classScope(classScope) {}
   };
 
@@ -542,12 +546,16 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
 
   /// Parse a class type into an already created (but empty) class.
   /// \param classScope the lexical scope of the class.
+  /// \param classConsType the ClassConstructorType wrapping classType, used as
+  ///   the 'this' type for static methods. May be nullptr if the constructor
+  ///   type is not yet available (e.g., for class expressions).
   void parseClassType(
       ESTree::Node *superClass,
       ESTree::Node *superTypeParameters,
       ESTree::Node *body,
       Type *classType,
-      sema::LexicalScope *classScope);
+      sema::LexicalScope *classScope,
+      Type *classConsType = nullptr);
 
   /// Visit the \p node for either resolution or parsing and call \p cb on each
   /// of the type annotations in it.
