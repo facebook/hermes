@@ -2462,21 +2462,25 @@ class FlowChecker::ExprVisitor {
 
     outer_.setNodeType(node, classType);
 
-    // Does the class have an explicit constructor?
-    if (Type *consFType = classTypeInfo->getConstructorType()) {
+    // Find the effective constructor type by walking up the class chain.
+    // An implicit constructor forwards to the nearest ancestor's constructor.
+    Type *consFType = nullptr;
+    for (ClassType *cur = classTypeInfo; cur; cur = cur->getSuperClassInfo()) {
+      if ((consFType = cur->getConstructorType()))
+        break;
+    }
+    if (consFType) {
       checkArgumentTypes(
           llvh::cast<TypedFunctionType>(consFType->info)->getParams(),
           node,
           node->_arguments,
           "class " + classTypeInfo->getClassNameOrDefault() + " constructor");
-    } else {
-      if (!node->_arguments.empty()) {
-        outer_.sm_.error(
-            node->getSourceRange(),
-            "ft: class " + classTypeInfo->getClassNameOrDefault() +
-                " does not have an explicit constructor");
-        return;
-      }
+    } else if (!node->_arguments.empty()) {
+      outer_.sm_.error(
+          node->getSourceRange(),
+          "ft: class " + classTypeInfo->getClassNameOrDefault() +
+              " does not have an explicit constructor");
+      return;
     }
   }
 

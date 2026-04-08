@@ -163,10 +163,7 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
   Identifier consName = classType->getClassName().isValid()
       ? classType->getClassName()
       : Identifier();
-  if (classType->getConstructorType()) {
-    ESTree::MethodDefinitionNode *consMethod = semCtx_.getConstructor(node);
-    assert(consMethod && "constructor must exist");
-
+  if (ESTree::MethodDefinitionNode *consMethod = semCtx_.getConstructor(node)) {
     // Check that 'super()' call is the first statement in SH for derived
     // classes.
     // TODO: This is intentionally overly restrictive. In the future, we can
@@ -316,15 +313,6 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
 CreateFunctionInst *ESTreeIRGen::genTypedImplicitConstructor(
     const Identifier &consName,
     Value *superClass) {
-  // Create an empty constructor.
-  if (superClass) {
-    // TODO: An implicit constructor has to pass all arguments along to the
-    // parent class.
-    Mod->getContext().getSourceErrorManager().error(
-        curFunction()->typedClassContext.node->getStartLoc(),
-        "inherited classes implicit constructor unsupported, "
-        "add an explicit constructor");
-  }
   Function *func;
 
   // Use the compiledEntities_ cache even though we're not enqueuing a
@@ -347,20 +335,45 @@ CreateFunctionInst *ESTreeIRGen::genTypedImplicitConstructor(
         funcInfo &&
         "Semantic resolver failed to decorate class with implicit ctor");
 
+    // AST Node for the superClass, null if no superclass.
+    ESTree::Node *superClassNode = superClass
+        ? curFunction()->typedClassContext.node->_superClass
+        : nullptr;
+
+    // Determine if the implicit constructor needs to emit a super() call.
+    // This is needed only if some ancestor has an explicit constructor or
+    // field initializers that must be triggered.
+    bool needsSuperCall = false;
+    if (superClassNode) {
+      for (auto *cur =
+               curFunction()->typedClassContext.type->getSuperClassInfo();
+           cur;
+           cur = cur->getSuperClassInfo()) {
+        if (cur->getConstructorType() || classFieldInitInfo_.count(cur)) {
+          needsSuperCall = true;
+          break;
+        }
+      }
+    }
+
     func = Builder.createFunction(
         consName,
-        Function::DefinitionKind::ES5Function,
+        needsSuperCall ? Function::DefinitionKind::ES6DerivedConstructor
+                       : Function::DefinitionKind::ES5Function,
         true,
         funcInfo->customDirectives);
 
     auto compileFunc = [this,
                         func,
                         funcInfo,
+                        superClassNode,
+                        needsSuperCall,
                         typedClassContext = curFunction()->typedClassContext,
                         parentScope =
                             curFunction()->curScope()->getVariableScope()] {
       FunctionContext newFunctionContext{this, func, funcInfo};
       newFunctionContext.typedClassContext = typedClassContext;
+      newFunctionContext.superClassNode_ = superClassNode;
 
       auto *prologueBB = Builder.createBasicBlock(func);
       Builder.setInsertionBlock(prologueBB);
@@ -371,6 +384,49 @@ CreateFunctionInst *ESTreeIRGen::genTypedImplicitConstructor(
           InitES5CaptureState::No,
           DoEmitDeclarations::No,
           parentScope);
+
+      if (needsSuperCall) {
+        // Generate implicit super call forwarding the parameters.
+        // Walk up the class chain to find the nearest explicit constructor.
+        flow::TypedFunctionType *superCtorTypeInfo = nullptr;
+        for (auto *cur = typedClassContext.type->getSuperClassInfo(); cur;
+             cur = cur->getSuperClassInfo()) {
+          if (cur->getConstructorType()) {
+            superCtorTypeInfo = cur->getConstructorTypeInfo();
+            break;
+          }
+        }
+
+        // Forward the super constructor's parameters, if any.
+        CallInst::ArgumentList args;
+        if (superCtorTypeInfo) {
+          auto params = superCtorTypeInfo->getParams();
+          for (const flow::TypedFunctionType::Param &param : params) {
+            auto *jsParam = Builder.createJSDynamicParam(func, param.name);
+            jsParam->setType(flowTypeToIRType(param.type));
+            auto *loadParam = Builder.createLoadParamInst(jsParam);
+            curFunction()->jsParams.push_back(loadParam);
+            args.push_back(loadParam);
+          }
+          // +1 for 'this'.
+          func->setExpectedParamCountIncludingThis(params.size() + 1);
+        }
+
+        // Load the super class callee and call it.
+        Value *callee = genExpression(superClassNode);
+        Value *thisVal = curFunction()->jsParams[0];
+        Value *newTarget =
+            Builder.createGetNewTargetInst(func->getNewTargetParam());
+
+        Builder.createCallInst(
+            callee,
+            /* target */ Builder.getEmptySentinel(),
+            /* calleeIsAlwaysClosure */ true,
+            Builder.getEmptySentinel(),
+            newTarget,
+            thisVal,
+            args);
+      }
 
       emitTypedFieldInitCall(curFunction()->typedClassContext.type);
 

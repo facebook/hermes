@@ -2874,12 +2874,11 @@ Value *ESTreeIRGen::genNewExpr(ESTree::NewExpressionNode *N) {
         /* skipPrivateFields */ false,
         /* propertiesEnumerable */ true);
 
-    // Call the constructor, if necessary.  There is always a constructor,
-    // either explicit or implicit.  We will load an implicit ctor (for
-    // TDZ), but there is no need to invoke it unless it performs field
-    // initializations (which is true iff it is present in the
-    // classFieldInitInfo_ table).
-    if (classType->getConstructorType() ||
+    // Call the constructor, if necessary. There is always a constructor,
+    // either explicit or implicit. We must invoke it if it has an explicit
+    // type, performs field initializations, or has a super class to forward
+    // to.
+    if (classType->getConstructorType() || classType->getSuperClass() ||
         (classFieldInitInfo_.find(classType) != classFieldInitInfo_.end())) {
       CallInst::ArgumentList args;
       for (auto &arg : N->_arguments)
