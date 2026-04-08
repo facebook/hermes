@@ -940,6 +940,428 @@ describe('TupleTypeAnnotation', () => {
     });
   });
 
+  describe('Readonly variance on TupleTypeLabeledElement', () => {
+    const testCase: AlignmentCase = {
+      code: `
+        type T1 = [readonly a: number];
+      `,
+      espree: {
+        expectToFail: 'espree-exception',
+        expectedExceptionMessage: 'Unexpected token T1',
+      },
+      babel: {
+        expectToFail: 'babel-exception',
+        expectedExceptionMessage: 'Unexpected token',
+      },
+    };
+
+    test('ESTree', () => {
+      expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
+{
+  "body": [
+    {
+      "id": {
+        "name": "T1",
+        "optional": false,
+        "type": "Identifier",
+        "typeAnnotation": null,
+      },
+      "right": {
+        "elementTypes": [
+          {
+            "elementType": {
+              "type": "NumberTypeAnnotation",
+            },
+            "label": {
+              "name": "a",
+              "optional": false,
+              "type": "Identifier",
+              "typeAnnotation": null,
+            },
+            "optional": false,
+            "type": "TupleTypeLabeledElement",
+            "variance": {
+              "kind": "readonly",
+              "type": "Variance",
+            },
+          },
+        ],
+        "inexact": false,
+        "type": "TupleTypeAnnotation",
+      },
+      "type": "TypeAlias",
+      "typeParameters": null,
+    },
+  ],
+  "type": "Program",
+}
+`);
+      expectEspreeAlignment(testCase);
+    });
+
+    test('Babel', () => {
+      expect(parseForSnapshot(testCase.code, {babel: true}))
+        .toMatchInlineSnapshot(`
+{
+  "body": [
+    {
+      "id": {
+        "name": "T1",
+        "type": "Identifier",
+      },
+      "right": {
+        "type": "TupleTypeAnnotation",
+        "types": [
+          {
+            "type": "AnyTypeAnnotation",
+          },
+        ],
+      },
+      "type": "TypeAlias",
+      "typeParameters": null,
+    },
+  ],
+  "type": "Program",
+}
+`);
+      expectBabelAlignment(testCase);
+    });
+  });
+
+  describe('Readonly variance on ObjectTypeProperty', () => {
+    const testCase: AlignmentCase = {
+      code: `
+        type T1 = {readonly foo: string};
+      `,
+      espree: {
+        expectToFail: 'espree-exception',
+        expectedExceptionMessage: 'Unexpected token T1',
+      },
+      babel: {
+        expectToFail: 'babel-exception',
+        expectedExceptionMessage: 'Unexpected token',
+      },
+    };
+
+    test('ESTree', () => {
+      expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
+{
+  "body": [
+    {
+      "id": {
+        "name": "T1",
+        "optional": false,
+        "type": "Identifier",
+        "typeAnnotation": null,
+      },
+      "right": {
+        "callProperties": [],
+        "exact": false,
+        "indexers": [],
+        "inexact": false,
+        "internalSlots": [],
+        "properties": [
+          {
+            "key": {
+              "name": "foo",
+              "optional": false,
+              "type": "Identifier",
+              "typeAnnotation": null,
+            },
+            "kind": "init",
+            "method": false,
+            "optional": false,
+            "proto": false,
+            "static": false,
+            "type": "ObjectTypeProperty",
+            "value": {
+              "type": "StringTypeAnnotation",
+            },
+            "variance": {
+              "kind": "readonly",
+              "type": "Variance",
+            },
+          },
+        ],
+        "type": "ObjectTypeAnnotation",
+      },
+      "type": "TypeAlias",
+      "typeParameters": null,
+    },
+  ],
+  "type": "Program",
+}
+`);
+      expectEspreeAlignment(testCase);
+    });
+
+    test('Babel', () => {
+      expect(parseForSnapshot(testCase.code, {babel: true}))
+        .toMatchInlineSnapshot(`
+{
+  "body": [
+    {
+      "id": {
+        "name": "T1",
+        "type": "Identifier",
+      },
+      "right": {
+        "callProperties": [],
+        "exact": false,
+        "indexers": [],
+        "inexact": false,
+        "internalSlots": [],
+        "properties": [
+          {
+            "key": {
+              "name": "foo",
+              "type": "Identifier",
+            },
+            "kind": "init",
+            "method": false,
+            "optional": false,
+            "proto": false,
+            "static": false,
+            "type": "ObjectTypeProperty",
+            "value": {
+              "type": "StringTypeAnnotation",
+            },
+            "variance": {
+              "kind": "readonly",
+              "type": "Variance",
+            },
+          },
+        ],
+        "type": "ObjectTypeAnnotation",
+      },
+      "type": "TypeAlias",
+      "typeParameters": null,
+    },
+  ],
+  "type": "Program",
+}
+`);
+      expectBabelAlignment(testCase);
+    });
+  });
+
+  describe('Readonly variance on ObjectTypeIndexer', () => {
+    const testCase: AlignmentCase = {
+      code: `
+        type T1 = {readonly [string]: mixed};
+      `,
+      espree: {
+        expectToFail: 'espree-exception',
+        expectedExceptionMessage: 'Unexpected token T1',
+      },
+      babel: {
+        expectToFail: 'babel-exception',
+        expectedExceptionMessage: 'Unexpected token',
+      },
+    };
+
+    test('ESTree', () => {
+      expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
+{
+  "body": [
+    {
+      "id": {
+        "name": "T1",
+        "optional": false,
+        "type": "Identifier",
+        "typeAnnotation": null,
+      },
+      "right": {
+        "callProperties": [],
+        "exact": false,
+        "indexers": [
+          {
+            "id": null,
+            "key": {
+              "type": "StringTypeAnnotation",
+            },
+            "static": false,
+            "type": "ObjectTypeIndexer",
+            "value": {
+              "type": "MixedTypeAnnotation",
+            },
+            "variance": {
+              "kind": "readonly",
+              "type": "Variance",
+            },
+          },
+        ],
+        "inexact": false,
+        "internalSlots": [],
+        "properties": [],
+        "type": "ObjectTypeAnnotation",
+      },
+      "type": "TypeAlias",
+      "typeParameters": null,
+    },
+  ],
+  "type": "Program",
+}
+`);
+      expectEspreeAlignment(testCase);
+    });
+
+    test('Babel', () => {
+      expect(parseForSnapshot(testCase.code, {babel: true}))
+        .toMatchInlineSnapshot(`
+{
+  "body": [
+    {
+      "id": {
+        "name": "T1",
+        "type": "Identifier",
+      },
+      "right": {
+        "callProperties": [],
+        "exact": false,
+        "indexers": [
+          {
+            "id": null,
+            "key": {
+              "type": "StringTypeAnnotation",
+            },
+            "static": false,
+            "type": "ObjectTypeIndexer",
+            "value": {
+              "type": "MixedTypeAnnotation",
+            },
+            "variance": {
+              "kind": "readonly",
+              "type": "Variance",
+            },
+          },
+        ],
+        "inexact": false,
+        "internalSlots": [],
+        "properties": [],
+        "type": "ObjectTypeAnnotation",
+      },
+      "type": "TypeAlias",
+      "typeParameters": null,
+    },
+  ],
+  "type": "Program",
+}
+`);
+      expectBabelAlignment(testCase);
+    });
+  });
+
+  describe('Readonly as property name (not variance)', () => {
+    const testCase: AlignmentCase = {
+      code: `
+        type T1 = {readonly: string};
+      `,
+      espree: {
+        expectToFail: 'espree-exception',
+        expectedExceptionMessage: 'Unexpected token T1',
+      },
+      babel: {
+        expectToFail: false,
+      },
+    };
+
+    test('ESTree', () => {
+      expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
+{
+  "body": [
+    {
+      "id": {
+        "name": "T1",
+        "optional": false,
+        "type": "Identifier",
+        "typeAnnotation": null,
+      },
+      "right": {
+        "callProperties": [],
+        "exact": false,
+        "indexers": [],
+        "inexact": false,
+        "internalSlots": [],
+        "properties": [
+          {
+            "key": {
+              "name": "readonly",
+              "optional": false,
+              "type": "Identifier",
+              "typeAnnotation": null,
+            },
+            "kind": "init",
+            "method": false,
+            "optional": false,
+            "proto": false,
+            "static": false,
+            "type": "ObjectTypeProperty",
+            "value": {
+              "type": "StringTypeAnnotation",
+            },
+            "variance": null,
+          },
+        ],
+        "type": "ObjectTypeAnnotation",
+      },
+      "type": "TypeAlias",
+      "typeParameters": null,
+    },
+  ],
+  "type": "Program",
+}
+`);
+      expectEspreeAlignment(testCase);
+    });
+
+    test('Babel', () => {
+      expect(parseForSnapshot(testCase.code, {babel: true}))
+        .toMatchInlineSnapshot(`
+{
+  "body": [
+    {
+      "id": {
+        "name": "T1",
+        "type": "Identifier",
+      },
+      "right": {
+        "callProperties": [],
+        "exact": false,
+        "indexers": [],
+        "inexact": false,
+        "internalSlots": [],
+        "properties": [
+          {
+            "key": {
+              "name": "readonly",
+              "type": "Identifier",
+            },
+            "kind": "init",
+            "method": false,
+            "optional": false,
+            "proto": false,
+            "static": false,
+            "type": "ObjectTypeProperty",
+            "value": {
+              "type": "StringTypeAnnotation",
+            },
+            "variance": null,
+          },
+        ],
+        "type": "ObjectTypeAnnotation",
+      },
+      "type": "TypeAlias",
+      "typeParameters": null,
+    },
+  ],
+  "type": "Program",
+}
+`);
+      expectBabelAlignment(testCase);
+    });
+  });
+
   describe('inexact TupleTypeAnnotation', () => {
     const testCase: AlignmentCase = {
       code: `
