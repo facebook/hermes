@@ -713,15 +713,17 @@ class ClassType : public TypeWithId {
   /// Represents either a class field or a method.
   struct Field {
     const Identifier name;
-    Type *const type;
+    /// The type of the field. For accessor fields, this is the getter's
+    /// return type (or Void for setter-only).
+    Type *type;
     /// The slot for PrLoad and PrStore, used during IRGen.
     /// This ideally should be computed during conversion to IR Type,
     /// but we don't have that yet.
     /// None for fields that don't have a layout slot (e.g. final methods,
     /// private methods).
     const OptValue<size_t> layoutSlotIR;
-    /// If the field is a method, AST for the method.
-    ESTree::MethodDefinitionNode *const method;
+    /// If the field is a method, AST for the method (getter for accessors).
+    ESTree::MethodDefinitionNode *method;
     /// The key AST node for static fields/methods that use variables instead
     /// of layout slots. Used to propagate the Decl to member access sites.
     /// For methods this is redundant with method->_key but is set for static
@@ -733,6 +735,13 @@ class ClassType : public TypeWithId {
     /// Final methods will not be stored in the home object, they will only be
     /// stored in variables.
     const bool finalMethod;
+
+    /// Function type of the getter accessor, or nullptr.
+    Type *getterType = nullptr;
+    /// Function type of the setter accessor, or nullptr.
+    Type *setterType = nullptr;
+    /// AST for the setter method. The getter uses the existing \c method field.
+    ESTree::MethodDefinitionNode *setterMethod = nullptr;
 
     /// Whether this field is a method that has been overridden by a subclass.
     /// This is the only field that can be modified after initialization, as
@@ -749,17 +758,36 @@ class ClassType : public TypeWithId {
         bool isPrivate,
         ESTree::MethodDefinitionNode *method = nullptr,
         bool finalMethod = false,
-        ESTree::IdentifierNode *staticKeyNode = nullptr)
+        ESTree::IdentifierNode *staticKeyNode = nullptr,
+        Type *getterType = nullptr,
+        Type *setterType = nullptr,
+        ESTree::MethodDefinitionNode *setterMethod = nullptr)
         : name(name),
           type(type),
           layoutSlotIR(layoutSlotIR),
           method(method),
           staticKeyNode(staticKeyNode),
           finalMethod(finalMethod),
+          getterType(getterType),
+          setterType(setterType),
+          setterMethod(setterMethod),
           isPrivate(isPrivate) {}
 
     bool isMethod() const {
-      return method != nullptr;
+      return method != nullptr || setterMethod != nullptr;
+    }
+
+    /// Whether this field is an accessor (getter and/or setter).
+    bool isAccessor() const {
+      return getterType || setterType;
+    }
+    /// Whether this accessor has a getter.
+    bool hasGetter() const {
+      return getterType != nullptr;
+    }
+    /// Whether this accessor has a setter.
+    bool hasSetter() const {
+      return setterType != nullptr;
     }
   };
 

@@ -54,19 +54,33 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
       // Skip generic private methods - emitted through specializations.
       if (llvh::isa<flow::GenericType>(field.type->info))
         continue;
-      auto *funcExpr =
-          llvh::cast<ESTree::FunctionExpressionNode>(field.method->_value);
-      Value *function = genFunctionExpression(funcExpr, field.name);
-      Variable *var = Builder.createVariable(
-          curFunction()->curScope()->getVariableScope(),
-          field.name,
-          flowTypeToIRType(field.type),
-          /* hidden */ true);
-      Builder.createStoreFrameInst(curFunction()->curScope(), function, var);
-      sema::Decl *decl = getIDDecl(
-          llvh::cast<ESTree::IdentifierNode>(
-              llvh::cast<ESTree::PrivateNameNode>(field.method->_key)->_id));
-      setDeclData(decl, var);
+
+      if (field.isAccessor()) {
+        if (field.method) {
+          sema::Decl *decl = semCtx_.getExpressionDecl(
+              ESTree::getPropertyIdentifier(field.method->_key));
+          emitTypedFinalMethodClosureStore(field, field.method, decl);
+        }
+        if (field.setterMethod) {
+          sema::Decl *decl = semCtx_.getExpressionDecl(
+              ESTree::getPropertyIdentifier(field.setterMethod->_key));
+          emitTypedFinalMethodClosureStore(field, field.setterMethod, decl);
+        }
+      } else {
+        auto *funcExpr =
+            llvh::cast<ESTree::FunctionExpressionNode>(field.method->_value);
+        Value *function = genFunctionExpression(funcExpr, field.name);
+        Variable *var = Builder.createVariable(
+            curFunction()->curScope()->getVariableScope(),
+            field.name,
+            flowTypeToIRType(field.type),
+            /* hidden */ true);
+        Builder.createStoreFrameInst(curFunction()->curScope(), function, var);
+        sema::Decl *decl = getIDDecl(
+            llvh::cast<ESTree::IdentifierNode>(
+                llvh::cast<ESTree::PrivateNameNode>(field.method->_key)->_id));
+        setDeclData(decl, var);
+      }
     }
   }
 
@@ -98,10 +112,20 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
       Value *function = genFunctionExpression(funcExpr, name);
       auto optField = isPrivate ? staticType->findPrivateField(name)
                                 : staticType->findPublicField(name);
+      // For accessor methods, use the accessor function type, not the
+      // field type (which is the getter return type or void).
+      const auto *fieldPtr = optField->getField();
+      flow::Type *flowVarType;
+      if (method->_kind == kw_.identGet && fieldPtr->getterType)
+        flowVarType = fieldPtr->getterType;
+      else if (method->_kind == kw_.identSet && fieldPtr->setterType)
+        flowVarType = fieldPtr->setterType;
+      else
+        flowVarType = fieldPtr->type;
       Variable *var = Builder.createVariable(
           curFunction()->curScope()->getVariableScope(),
           name,
-          flowTypeToIRType(optField->getField()->type),
+          flowTypeToIRType(flowVarType),
           /* hidden */ true);
       Builder.createStoreFrameInst(curFunction()->curScope(), function, var);
       sema::Decl *decl = semCtx_.getExpressionDecl(id);
@@ -480,24 +504,17 @@ Value *ESTreeIRGen::emitTypedClassAllocation(
         }
         if (entry.classType == classType) {
           // Non-generic final method defined in this class.
-          // Create the code for the method.
-          Value *function = genFunctionExpression(
-              llvh::cast<ESTree::FunctionExpressionNode>(field.method->_value),
-              field.name);
-          auto *methodId = ESTree::getPropertyIdentifier(field.method->_key);
-          sema::Decl *decl = semCtx_.getExpressionDecl(methodId);
-          Variable *var = Builder.createVariable(
-              curFunction()->curScope()->getVariableScope(),
-              decl->name,
-              Type::createObject(),
-              /* hidden */ true);
-          Builder.createStoreFrameInst(
-              curFunction()->curScope(), function, var);
-          setDeclData(decl, var);
-          // Also record the Function* for direct call optimization.
-          if (auto *CFI = llvh::dyn_cast<CreateFunctionInst>(function)) {
-            nonOverriddenMethods_.try_emplace(&field, CFI->getFunctionCode());
-            declFunctions_.try_emplace(decl, CFI->getFunctionCode());
+          auto getFinalDecl = [&](ESTree::MethodDefinitionNode *m) {
+            return semCtx_.getExpressionDecl(
+                ESTree::getPropertyIdentifier(m->_key));
+          };
+          if (field.method) {
+            emitTypedFinalMethodClosureStore(
+                field, field.method, getFinalDecl(field.method));
+          }
+          if (field.setterMethod) {
+            emitTypedFinalMethodClosureStore(
+                field, field.setterMethod, getFinalDecl(field.setterMethod));
           }
         }
       } else if (entry.classType == classType) {

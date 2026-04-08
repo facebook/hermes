@@ -723,6 +723,27 @@ class FlowChecker::ParseClassType {
 
       bool finalMethod = hermes::findDecorator(
           method->_decorators, {outer_.kw_.identHermes, outer_.kw_.identFinal});
+
+      // Detect getter/setter kind.
+      bool isGetter = (method->_kind == outer_.kw_.identGet);
+      bool isSetter = (method->_kind == outer_.kw_.identSet);
+      if (isGetter || isSetter) {
+        if (!finalMethod) {
+          outer_.sm_.error(
+              method->getStartLoc(),
+              isGetter ? "ft: getters must be marked as @Hermes.final"
+                       : "ft: setters must be marked as @Hermes.final");
+          return outer_.flowContext_.getAny();
+        }
+        if (fe->_typeParameters) {
+          outer_.sm_.error(
+              fe->_typeParameters->getSourceRange(),
+              isGetter ? "ft: generic getter not supported"
+                       : "ft: generic setter not supported");
+          return outer_.flowContext_.getAny();
+        }
+      }
+
       if (fe->_typeParameters && !finalMethod) {
         outer_.sm_.error(
             fe->_typeParameters->getSourceRange(),
@@ -782,6 +803,30 @@ class FlowChecker::ParseClassType {
             method->_static && classConsType_ ? classConsType_ : classType);
       }
 
+      // Validate setter has exactly 1 parameter.
+      if (isSetter) {
+        auto *fnType = llvh::dyn_cast<TypedFunctionType>(methodType->info);
+        if (fnType && fnType->getParams().size() != 1) {
+          outer_.sm_.error(
+              method->getStartLoc(),
+              "ft: setter must have exactly one parameter");
+          return outer_.flowContext_.getAny();
+        }
+      }
+
+      // Compute the field type and accessor function types.
+      Type *getterFnType = nullptr;
+      Type *setterFnType = nullptr;
+      Type *fieldType = methodType;
+      if (isGetter) {
+        getterFnType = methodType;
+        auto *fnType = llvh::cast<TypedFunctionType>(methodType->info);
+        fieldType = fnType->getReturnType();
+      } else if (isSetter) {
+        setterFnType = methodType;
+        fieldType = outer_.flowContext_.getVoid();
+      }
+
       // Check if the method is inherited, and reuse the index.
       // Private fields are never inherited.
       // Static methods look up in the super's staticObjectType.
@@ -827,18 +872,74 @@ class FlowChecker::ParseClassType {
       }
 
       // Check if the method is already declared.
+      // Allow getter+setter pairs with the same name.
       auto &nameMap = method->_static ? staticNames : methodNames;
+      auto &fieldVec = method->_static ? statics : methods;
       auto [it, inserted] =
           nameMap.try_emplace(name.getUnderlyingPointer(), method);
       if (!inserted) {
-        outer_.sm_.error(
-            method->_key->getStartLoc(),
-            "ft: method " + name.str() + " already declared");
-        outer_.sm_.note(
-            it->second->getSourceRange(),
-            "ft: previous declaration of " + name.str());
-        return outer_.flowContext_.getAny();
+        // Try to merge getter+setter pair. Find the existing field.
+        ClassType::Field *existingField = nullptr;
+        for (auto &f : fieldVec) {
+          if (f.name == name) {
+            existingField = &f;
+            break;
+          }
+        }
+        bool canMerge = existingField &&
+            ((isGetter && existingField->hasSetter() &&
+              !existingField->hasGetter()) ||
+             (isSetter && existingField->hasGetter() &&
+              !existingField->hasSetter()));
+        if (!canMerge) {
+          outer_.sm_.error(
+              method->_key->getStartLoc(),
+              "ft: method " + name.str() + " already declared");
+          outer_.sm_.note(
+              it->second->getSourceRange(),
+              "ft: previous declaration of " + name.str());
+          return outer_.flowContext_.getAny();
+        }
+
+        // Merge the pair.
+        if (isGetter) {
+          // Adding getter to existing setter.
+          auto *fnType = llvh::cast<TypedFunctionType>(methodType->info);
+          Type *getterRetType = fnType->getReturnType();
+          // Validate getter return type matches setter param type.
+          auto *setterFn =
+              llvh::cast<TypedFunctionType>(existingField->setterType->info);
+          Type *setterParamType = setterFn->getParams()[0].type;
+          if (getterRetType != setterParamType) {
+            outer_.sm_.error(
+                method->_key->getStartLoc(),
+                "ft: getter return type must match setter parameter type");
+            return outer_.flowContext_.getAny();
+          }
+          existingField->getterType = methodType;
+          existingField->method = method;
+          existingField->type = getterRetType;
+        } else {
+          // Adding setter to existing getter.
+          auto *setterFn = llvh::cast<TypedFunctionType>(methodType->info);
+          Type *setterParamType = setterFn->getParams()[0].type;
+          // Validate setter param type matches getter return type.
+          if (existingField->type != setterParamType) {
+            outer_.sm_.error(
+                method->_key->getStartLoc(),
+                "ft: setter parameter type must match getter return type");
+            return outer_.flowContext_.getAny();
+          }
+          existingField->setterType = methodType;
+          existingField->setterMethod = method;
+        }
+        return methodType;
       }
+
+      // For setters, the getter's method is null and setterMethod is set.
+      // For getters/regular methods, method is set and setterMethod is null.
+      ESTree::MethodDefinitionNode *getterMethod = isSetter ? nullptr : method;
+      ESTree::MethodDefinitionNode *setMethod = isSetter ? method : nullptr;
 
       if (method->_static) {
         // Static methods use layoutSlotIR = None because they will use
@@ -847,31 +948,41 @@ class FlowChecker::ParseClassType {
           assert(privateNameNode == nullptr);
           statics.emplace_back(
               name,
-              methodType,
+              fieldType,
               superMethod->layoutSlotIR,
               /* isPrivate */ false,
-              method,
+              getterMethod,
               finalMethod,
-              id);
+              id,
+              getterFnType,
+              setterFnType,
+              setMethod);
         } else {
           statics.emplace_back(
               name,
-              methodType,
+              fieldType,
               OptValue<size_t>(llvh::None),
               privateNameNode != nullptr,
-              method,
+              getterMethod,
               finalMethod,
-              id);
+              id,
+              getterFnType,
+              setterFnType,
+              setMethod);
         }
       } else if (superMethod) {
         assert(privateNameNode == nullptr);
         methods.emplace_back(
             name,
-            methodType,
+            fieldType,
             superMethod->layoutSlotIR,
             /* isPrivate */ false,
-            method,
-            finalMethod);
+            getterMethod,
+            finalMethod,
+            /* staticKeyNode */ nullptr,
+            getterFnType,
+            setterFnType,
+            setMethod);
       } else {
         // Private methods are not stored in the public field map,
         // and final methods don't get a layout slot in the home object
@@ -882,11 +993,15 @@ class FlowChecker::ParseClassType {
             : OptValue<size_t>(nextMethodLayoutSlotIR++);
         methods.emplace_back(
             name,
-            methodType,
+            fieldType,
             layoutSlotIR,
             privateNameNode != nullptr,
-            method,
-            finalMethod);
+            getterMethod,
+            finalMethod,
+            /* staticKeyNode */ nullptr,
+            getterFnType,
+            setterFnType,
+            setMethod);
       }
 
       return methodType;
@@ -3024,24 +3139,32 @@ Type *FlowChecker::getSpecializedArrayClassType(
   return classType;
 }
 
-Type *FlowChecker::lookupPropertyOnClass(
+std::pair<Type *, const ClassType::Field *> FlowChecker::lookupPropertyOnClass(
     ClassType *classType,
     Identifier propName,
     ESTree::Node *propNode) {
   auto optField = classType->findPublicField(propName);
   if (optField)
-    return optField->getField()->type;
+    return {optField->getField()->type, optField->getField()};
   auto *homeObj = classType->getHomeObjectTypeInfo();
   if (!homeObj)
-    return nullptr;
+    return {nullptr, nullptr};
   auto optMethod = homeObj->findPublicField(propName);
   if (optMethod) {
-    Type *type = optMethod->getField()->type;
+    const auto *field = optMethod->getField();
+    Type *type = field->type;
+
+    if (field->isAccessor()) {
+      // Accessor: result type is the field type (getter return type, or
+      // void for setter-only). Do NOT propagate the Decl — IRGen handles
+      // accessor calls via the Field directly.
+      return {type, field};
+    }
+
     // For non-generic final methods, propagate the Decl from the
     // method definition key to the call-site property so IRGen
     // can look it up. Generic final methods get their Decls set
     // on the call-site property through specializedMethodDecls_.
-    const auto *field = optMethod->getField();
     if (propNode && field->finalMethod && !llvh::isa<GenericType>(type->info)) {
       auto *methodKey = llvh::cast<ESTree::IdentifierNode>(field->method->_key);
       if (auto *decl = semContext_.getExpressionDecl(methodKey)) {
@@ -3053,9 +3176,9 @@ Type *FlowChecker::lookupPropertyOnClass(
         (llvh::isa<BaseFunctionType>(type->info) ||
          llvh::isa<GenericType>(type->info)) &&
         "methods must be functions or generic");
-    return type;
+    return {type, field};
   }
-  return nullptr;
+  return {nullptr, nullptr};
 }
 
 bool FlowChecker::resolveBuiltinMethodCall(

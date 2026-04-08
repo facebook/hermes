@@ -1062,14 +1062,117 @@ sema::Decl *ESTreeIRGen::getTypedMemberExpressionDeclIfExists(
   return decl && decl->customData ? decl : nullptr;
 }
 
+OptValue<flow::ClassType::FieldLookupEntry> ESTreeIRGen::findFieldForMemberProp(
+    ESTree::MemberExpressionNode *mem,
+    flow::ClassType *classType) {
+  assert(!mem->_computed && "expected non-computed member expression");
+  if (auto *pn = llvh::dyn_cast<ESTree::PrivateNameNode>(mem->_property)) {
+    Identifier propIdent = Mod->getContext().getPrivateNameIdentifier(
+        getNameFieldFromID(pn->_id).getUnderlyingPointer());
+    return classType->findPrivateField(propIdent);
+  }
+  Identifier propIdent = getNameFieldFromID(mem->_property);
+  return classType->findPublicField(propIdent);
+}
+
+Value *ESTreeIRGen::emitTypedGetterCall(
+    sema::Decl *decl,
+    Value *thisArg,
+    flow::Type *resultType) {
+  Variable *var = llvh::cast<Variable>(getDeclData(decl));
+  auto *scope = emitResolveScopeInstIfNeeded(var->getParent());
+  Value *closure = Builder.createLoadFrameInst(scope, var);
+  Value *target = closure;
+  if (auto *func = declFunctions_.lookup(decl))
+    target = func;
+  auto *callInst = Builder.createCallInst(
+      closure,
+      target,
+      /* calleeIsAlwaysClosure */ true,
+      Builder.getEmptySentinel(),
+      Builder.getLiteralUndefined(),
+      thisArg,
+      {});
+  callInst->setType(flowTypeToIRType(resultType));
+  callInst->getAttributesRef(Mod).isNativeJSFunction = true;
+  return callInst;
+}
+
+void ESTreeIRGen::emitTypedSetterCall(
+    sema::Decl *decl,
+    Value *thisArg,
+    Value *storedValue) {
+  Variable *var = llvh::cast<Variable>(getDeclData(decl));
+  auto *scope = emitResolveScopeInstIfNeeded(var->getParent());
+  Value *closure = Builder.createLoadFrameInst(scope, var);
+  Value *target = closure;
+  if (auto *func = declFunctions_.lookup(decl))
+    target = func;
+  auto *callInst = Builder.createCallInst(
+      closure,
+      target,
+      /* calleeIsAlwaysClosure */ true,
+      Builder.getEmptySentinel(),
+      Builder.getLiteralUndefined(),
+      thisArg,
+      {storedValue});
+  callInst->setType(Type::createUndefined());
+  callInst->getAttributesRef(Mod).isNativeJSFunction = true;
+}
+
+void ESTreeIRGen::emitTypedFinalMethodClosureStore(
+    const flow::ClassType::Field &field,
+    ESTree::MethodDefinitionNode *method,
+    sema::Decl *decl) {
+  auto *funcExpr = llvh::cast<ESTree::FunctionExpressionNode>(method->_value);
+  Value *function = genFunctionExpression(funcExpr, field.name);
+  Variable *var = Builder.createVariable(
+      curFunction()->curScope()->getVariableScope(),
+      field.name,
+      Type::createObject(),
+      /* hidden */ true);
+  Builder.createStoreFrameInst(curFunction()->curScope(), function, var);
+  setDeclData(decl, var);
+  if (auto *CFI = llvh::dyn_cast<CreateFunctionInst>(function)) {
+    nonOverriddenMethods_.try_emplace(&field, CFI->getFunctionCode());
+    declFunctions_.try_emplace(decl, CFI->getFunctionCode());
+  }
+}
+
 ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
     ESTree::MemberExpressionNode *mem,
     Value *baseValue,
     Value *propValue) {
   // Final methods and static fields/methods are lowered to scope variables.
+  // Getters never have their Decl propagated to the call-site, so they
+  // won't be caught here — they are handled below.
   if (sema::Decl *decl = getTypedMemberExpressionDeclIfExists(mem)) {
     Value *val = emitLoad(getDeclData(decl), false);
     return MemberExpressionResult{val, declFunctions_.lookup(decl), baseValue};
+  }
+
+  // Static getter: the Decl is not propagated to the call-site, so
+  // look up the getter on the static type and emit the call.
+  if (auto *consType = llvh::dyn_cast<flow::ClassConstructorType>(
+          flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
+    if (!mem->_computed) {
+      auto *classTypeInfo =
+          llvh::cast<flow::ClassType>(consType->getClassType()->info);
+      if (auto *staticInfo = classTypeInfo->getStaticObjectTypeInfo()) {
+        auto optField = findFieldForMemberProp(mem, staticInfo);
+        if (optField && optField->getField()->hasGetter()) {
+          const auto *field = optField->getField();
+          assert(
+              field->staticKeyNode && "static getter must have staticKeyNode");
+          sema::Decl *decl = semCtx_.getExpressionDecl(field->staticKeyNode);
+          Value *call = emitTypedGetterCall(
+              decl,
+              Builder.getLiteralUndefined(),
+              flowContext_.getNodeTypeOrAny(mem));
+          return MemberExpressionResult{call, nullptr, baseValue};
+        }
+      }
+    }
   }
 
   // Check if we are loading from a FastArray, and generate the typed IR.
@@ -1149,12 +1252,24 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
         OptValue<flow::ClassType::FieldLookupEntry> optMethodLookup =
             classType->getHomeObjectTypeInfo()->findPrivateField(propIdent);
         auto *privateName = llvh::cast<ESTree::PrivateNameNode>(mem->_property);
+        // Getter: use the definition key's Decl (the usage site's Decl
+        // is the SemanticResolver's PrivateGetterSetter Decl, which
+        // doesn't have the Variable stored on it).
+        if (optMethodLookup->getField()->hasGetter()) {
+          auto *methodKey = ESTree::getPropertyIdentifier(
+              optMethodLookup->getField()->method->_key);
+          sema::Decl *getterDecl = semCtx_.getExpressionDecl(methodKey);
+          Value *call = emitTypedGetterCall(
+              getterDecl, baseValue, flowContext_.getNodeTypeOrAny(mem));
+          return MemberExpressionResult{call, nullptr, baseValue};
+        }
         sema::Decl *decl =
             getIDDecl(llvh::cast<ESTree::IdentifierNode>(privateName->_id));
         Variable *var = llvh::cast<Variable>(getDeclData(decl));
         Instruction *scope = emitResolveScopeInstIfNeeded(var->getParent());
+        Value *closure = Builder.createLoadFrameInst(scope, var);
         return MemberExpressionResult{
-            Builder.createLoadFrameInst(scope, var),
+            closure,
             nonOverriddenMethods_.lookup(optMethodLookup->getField()),
             baseValue};
       }
@@ -1164,6 +1279,16 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
       assert(
           optMethodLookup && "must have typechecked as either method or field");
       const auto *field = optMethodLookup->getField();
+
+      // Getter: load closure from Variable, call it, return result.
+      if (field->hasGetter()) {
+        auto *methodKey = ESTree::getPropertyIdentifier(field->method->_key);
+        sema::Decl *decl = semCtx_.getExpressionDecl(methodKey);
+        Value *call = emitTypedGetterCall(
+            decl, baseValue, flowContext_.getNodeTypeOrAny(mem));
+        return MemberExpressionResult{call, nullptr, baseValue};
+      }
+
       // Final methods are handled by the early return above, which
       // loads the closure from the Decl set on the call-site property.
       assert(
@@ -1288,6 +1413,15 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitTypedSuperLoad(
       classType->getHomeObjectTypeInfo()->findPublicField(propName);
   assert(optMethodLookup && "must have typechecked as either method or field");
   const auto *field = optMethodLookup->getField();
+
+  // Getter: load closure from Variable, call it, return result.
+  if (field->hasGetter()) {
+    auto *methodKey = ESTree::getPropertyIdentifier(field->method->_key);
+    sema::Decl *decl = semCtx_.getExpressionDecl(methodKey);
+    Value *call = emitTypedGetterCall(decl, thisValue, field->type);
+    return MemberExpressionResult{call, nullptr, thisValue};
+  }
+
   // Final methods are handled by the Decl early return above.
   assert(
       !field->finalMethod &&
@@ -1328,13 +1462,14 @@ void ESTreeIRGen::emitTypedFieldStore(
     propName = Builder.getLiteralString(name);
   }
   assert(optFieldLookup && "field lookup must succeed after typechecking");
-  size_t fieldIndex = *optFieldLookup->getField()->layoutSlotIR;
+  const auto *field = optFieldLookup->getField();
+  size_t fieldIndex = *field->layoutSlotIR;
   Builder.createPrStoreInst(
       value,
       object,
       fieldIndex,
       propName,
-      flowTypeToIRType(optFieldLookup->getField()->type).isNonPtr());
+      flowTypeToIRType(field->type).isNonPtr());
 }
 
 void ESTreeIRGen::emitMemberStore(
@@ -1349,9 +1484,24 @@ void ESTreeIRGen::emitMemberStore(
     return;
   }
 
-  // If \p thisValue is set, this is a store to `super`, so we must set up the
-  // receiver correctly.
+  // If \p thisValue is set, this is a store to `super`.
   if (thisValue) {
+    // Check for typed accessor setter on super.
+    if (auto *classType = llvh::dyn_cast<flow::ClassType>(
+            flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
+      if (!mem->_computed) {
+        auto optMethod =
+            findFieldForMemberProp(mem, classType->getHomeObjectTypeInfo());
+        if (optMethod && optMethod->getField()->hasSetter()) {
+          const auto *field = optMethod->getField();
+          auto *setterKeyId =
+              ESTree::getPropertyIdentifier(field->setterMethod->_key);
+          sema::Decl *decl = semCtx_.getExpressionDecl(setterKeyId);
+          emitTypedSetterCall(decl, thisValue, storedValue);
+          return;
+        }
+      }
+    }
     Builder.createStorePropertyWithReceiverInst(
         storedValue,
         baseValue,
@@ -1375,9 +1525,41 @@ void ESTreeIRGen::emitMemberStore(
     }
   }
 
+  // Static setter: the Decl is not propagated to the call-site, so
+  // look up the setter on the static type and emit the call.
+  if (auto *consType = llvh::dyn_cast<flow::ClassConstructorType>(
+          flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
+    if (!mem->_computed) {
+      auto *classTypeInfo =
+          llvh::cast<flow::ClassType>(consType->getClassType()->info);
+      if (auto *staticInfo = classTypeInfo->getStaticObjectTypeInfo()) {
+        auto optField = findFieldForMemberProp(mem, staticInfo);
+        if (optField && optField->getField()->hasSetter()) {
+          const auto *field = optField->getField();
+          auto *setterKeyId =
+              ESTree::getPropertyIdentifier(field->setterMethod->_key);
+          sema::Decl *decl = semCtx_.getExpressionDecl(setterKeyId);
+          emitTypedSetterCall(decl, Builder.getLiteralUndefined(), storedValue);
+          return;
+        }
+      }
+    }
+  }
+
   if (auto *classType = llvh::dyn_cast<flow::ClassType>(
           flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
     if (!mem->_computed) {
+      // Accessor setters are stored as methods in the home object.
+      auto optMethod =
+          findFieldForMemberProp(mem, classType->getHomeObjectTypeInfo());
+      if (optMethod && optMethod->getField()->hasSetter()) {
+        const auto *field = optMethod->getField();
+        auto *setterKeyId =
+            ESTree::getPropertyIdentifier(field->setterMethod->_key);
+        sema::Decl *decl = semCtx_.getExpressionDecl(setterKeyId);
+        emitTypedSetterCall(decl, baseValue, storedValue);
+        return;
+      }
       emitTypedFieldStore(classType, mem->_property, baseValue, storedValue);
       return;
     }

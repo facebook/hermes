@@ -795,8 +795,9 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// Look up a named property on a ClassType (fields + home object methods).
   /// If \p propNode is provided, propagate the Decl from final method
   /// definitions to the property node for IRGen.
-  /// \return the type of the found property, or nullptr if not found.
-  Type *lookupPropertyOnClass(
+  /// \return a pair of (type, field) for the found property, or (nullptr,
+  /// nullptr) if not found.
+  std::pair<Type *, const flow::ClassType::Field *> lookupPropertyOnClass(
       flow::ClassType *classType,
       Identifier propName,
       ESTree::Node *propNode = nullptr);

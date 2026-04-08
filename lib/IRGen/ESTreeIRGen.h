@@ -1060,6 +1060,30 @@ class ESTreeIRGen {
       Value *object,
       Value *value);
 
+  /// Look up a field for the given (non-computed) member expression property
+  /// in \p classType. Handles both public and private names.
+  OptValue<flow::ClassType::FieldLookupEntry> findFieldForMemberProp(
+      ESTree::MemberExpressionNode *mem,
+      flow::ClassType *classType);
+
+  /// Emit a call to a typed getter method. Loads the closure from \p decl,
+  /// calls it with \p thisArg, and sets the result type to \p resultType.
+  Value *
+  emitTypedGetterCall(sema::Decl *decl, Value *thisArg, flow::Type *resultType);
+
+  /// Emit a call to a typed setter method. Loads the closure from \p decl,
+  /// calls it with \p thisArg and \p storedValue.
+  void
+  emitTypedSetterCall(sema::Decl *decl, Value *thisArg, Value *storedValue);
+
+  /// Emit a final method closure, create a hidden Variable for it, store it,
+  /// and register for direct call optimization. Used for both accessor
+  /// (getter/setter) and non-accessor final methods.
+  void emitTypedFinalMethodClosureStore(
+      const flow::ClassType::Field &field,
+      ESTree::MethodDefinitionNode *method,
+      sema::Decl *decl);
+
   /// Load a member property from a super.property expression inside a typed
   /// class method.
   MemberExpressionResult emitTypedSuperLoad(

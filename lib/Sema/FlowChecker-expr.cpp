@@ -30,6 +30,26 @@
 namespace hermes {
 namespace flow {
 
+/// Find an accessor field for \p property in \p classInfo, or return nullptr.
+static const ClassType::Field *findAccessorField(
+    Context &astContext,
+    ESTree::Node *property,
+    ClassType *classInfo) {
+  OptValue<ClassType::FieldLookupEntry> opt;
+  if (auto *pn = llvh::dyn_cast<ESTree::PrivateNameNode>(property)) {
+    Identifier name = astContext.getPrivateNameIdentifier(
+        llvh::cast<ESTree::IdentifierNode>(pn->_id)->_name);
+    opt = classInfo->findPrivateField(name);
+  } else {
+    Identifier name = Identifier::getFromPointer(
+        llvh::cast<ESTree::IdentifierNode>(property)->_name);
+    opt = classInfo->findPublicField(name);
+  }
+  if (opt && opt->getField()->isAccessor())
+    return opt->getField();
+  return nullptr;
+}
+
 void FlowChecker::matchConstraintToType(
     Type *startConstraint,
     const Type *startType) {
@@ -508,8 +528,11 @@ class FlowChecker::ExprVisitor {
         } else {
           // Look up the property on the Array<T> class.
           auto *classInfo = llvh::cast<ClassType>(objType->info);
-          resType = outer_.lookupPropertyOnClass(
-              classInfo, Identifier::getFromPointer(id->_name), id);
+          resType =
+              outer_
+                  .lookupPropertyOnClass(
+                      classInfo, Identifier::getFromPointer(id->_name), id)
+                  .first;
           if (!resType) {
             outer_.sm_.error(
                 node->_property->getSourceRange(),
@@ -544,21 +567,48 @@ class FlowChecker::ExprVisitor {
           if (homeObj)
             optMethod = homeObj->findPrivateField(name);
           if (optMethod) {
-            resType = optMethod->getField()->type;
             const auto *field = optMethod->getField();
-            if (field->finalMethod && !llvh::isa<GenericType>(resType->info)) {
-              auto *methodKey =
-                  ESTree::getPropertyIdentifier(field->method->_key);
-              if (auto *decl =
-                      outer_.semContext_.getExpressionDecl(methodKey)) {
-                auto *propId = ESTree::getPropertyIdentifier(node->_property);
-                outer_.semContext_.setExpressionDecl(propId, decl);
+            resType = field->type;
+
+            if (field->isAccessor()) {
+              // Accessor: result type is still the field type (getter return
+              // type if it exists).
+              // Do NOT propagate the Decl — IRGen handles the call
+              // via the Field.
+              if (!field->hasGetter()) {
+                // Setter-only: error unless this is the LHS of an assignment
+                // using '='.
+                if (auto *assignParent =
+                        llvh::dyn_cast<ESTree::AssignmentExpressionNode>(
+                            parent);
+                    !assignParent || node != assignParent->_left ||
+                    assignParent->_operator != outer_.kw_.identEqual) {
+                  outer_.sm_.error(
+                      node->_property->getSourceRange(),
+                      "ft: cannot read setter-only property");
+                }
               }
+            } else {
+              // For non-generic final methods, propagate the Decl from the
+              // method definition key to the call-site property so IRGen
+              // can look it up.
+              // Generic final methods get their Decls set through
+              // specializedMethodDecls_.
+              if (field->finalMethod &&
+                  !llvh::isa<GenericType>(resType->info)) {
+                auto *methodKey =
+                    ESTree::getPropertyIdentifier(field->method->_key);
+                if (auto *decl =
+                        outer_.semContext_.getExpressionDecl(methodKey)) {
+                  auto *propId = ESTree::getPropertyIdentifier(node->_property);
+                  outer_.semContext_.setExpressionDecl(propId, decl);
+                }
+              }
+              assert(
+                  (llvh::isa<BaseFunctionType>(resType->info) ||
+                   llvh::isa<GenericType>(resType->info)) &&
+                  "methods must be functions or generic");
             }
-            assert(
-                (llvh::isa<BaseFunctionType>(resType->info) ||
-                 llvh::isa<GenericType>(resType->info)) &&
-                "methods must be functions or generic");
           } else {
             // TODO: class declaration location.
             outer_.sm_.error(
@@ -571,13 +621,25 @@ class FlowChecker::ExprVisitor {
         // Public field/method access.
         auto *id = llvh::cast<ESTree::IdentifierNode>(node->_property);
         Identifier name = Identifier::getFromPointer(id->_name);
-        resType = outer_.lookupPropertyOnClass(classType, name, id);
+        auto [type, field] = outer_.lookupPropertyOnClass(classType, name, id);
+        resType = type;
         if (!resType) {
           // TODO: class declaration location.
           outer_.sm_.error(
               node->_property->getSourceRange(),
               "ft: property " + name.str() + " not defined in class " +
                   classType->getClassNameOrDefault());
+        } else if (field && field->isAccessor() && !field->hasGetter()) {
+          // Setter-only: error unless this is the LHS of a simple
+          // assignment.
+          if (auto *assignParent =
+                  llvh::dyn_cast<ESTree::AssignmentExpressionNode>(parent);
+              !assignParent || node != assignParent->_left ||
+              assignParent->_operator != outer_.kw_.identEqual) {
+            outer_.sm_.error(
+                node->_property->getSourceRange(),
+                "ft: cannot read setter-only property");
+          }
         }
       }
     } else if (
@@ -615,14 +677,33 @@ class FlowChecker::ExprVisitor {
         if (auto optStaticField = isPrivate
                 ? staticInfo->findPrivateField(name)
                 : staticInfo->findPublicField(name)) {
-          resType = optStaticField->getField()->type;
+          const auto *field = optStaticField->getField();
           found = true;
-          // Propagate the Decl from the definition key to the
-          // call-site property so IRGen can look it up.
-          if (ESTree::IdentifierNode *keyNode =
-                  optStaticField->getField()->staticKeyNode) {
-            if (auto *decl = outer_.semContext_.getExpressionDecl(keyNode))
-              outer_.semContext_.setExpressionDecl(propId, decl);
+          if (field->isAccessor()) {
+            // Static accessor: result type is the field type.
+            // Do NOT propagate Decl — IRGen handles the call.
+            if (!field->hasGetter()) {
+              bool isSimpleAssignTarget = false;
+              if (auto *assign =
+                      llvh::dyn_cast<ESTree::AssignmentExpressionNode>(parent))
+                isSimpleAssignTarget =
+                    (assign->_left == node &&
+                     assign->_operator == outer_.kw_.identEqual);
+              if (!isSimpleAssignTarget) {
+                outer_.sm_.error(
+                    node->_property->getSourceRange(),
+                    "ft: cannot read setter-only property");
+              }
+            }
+            resType = field->type;
+          } else {
+            resType = field->type;
+            // Propagate the Decl from the definition key to the
+            // call-site property so IRGen can look it up.
+            if (ESTree::IdentifierNode *keyNode = field->staticKeyNode) {
+              if (auto *decl = outer_.semContext_.getExpressionDecl(keyNode))
+                outer_.semContext_.setExpressionDecl(propId, decl);
+            }
           }
         }
       }
@@ -1527,6 +1608,42 @@ class FlowChecker::ExprVisitor {
 
     // No constraint provided for the LHS.
     visitESTreeNode(*this, node->_left, node, nullptr);
+
+    // Check if the LHS is an accessor property.
+    if (auto *mem = llvh::dyn_cast<ESTree::MemberExpressionNode>(node->_left)) {
+      if (!mem->_computed) {
+        auto *objType = outer_.getNodeTypeOrAny(mem->_object);
+        const ClassType::Field *accessorField = nullptr;
+        if (auto *classType = llvh::dyn_cast<ClassType>(objType->info)) {
+          accessorField = findAccessorField(
+              outer_.astContext_,
+              mem->_property,
+              classType->getHomeObjectTypeInfo());
+        } else if (
+            auto *consType =
+                llvh::dyn_cast<ClassConstructorType>(objType->info)) {
+          auto *classTypeInfo =
+              llvh::cast<ClassType>(consType->getClassType()->info);
+          if (auto *staticInfo = classTypeInfo->getStaticObjectTypeInfo())
+            accessorField = findAccessorField(
+                outer_.astContext_, mem->_property, staticInfo);
+        }
+        if (accessorField) {
+          if (!accessorField->hasSetter()) {
+            outer_.sm_.error(
+                node->getSourceRange(),
+                "ft: cannot assign to getter-only property");
+            return;
+          }
+          // Override the LHS type to the setter parameter type so the
+          // RHS is checked against it.
+          auto *setterFn =
+              llvh::cast<TypedFunctionType>(accessorField->setterType->info);
+          outer_.setNodeType(node->_left, setterFn->getParams()[0].type);
+        }
+      }
+    }
+
     Type *lt = outer_.getNodeTypeOrAny(node->_left);
 
     Type *res;
