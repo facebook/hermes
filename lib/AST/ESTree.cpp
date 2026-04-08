@@ -287,5 +287,17 @@ IdentifierNode *getPropertyIdentifier(Node *node) {
       "invalid property key node, expected Identifier or PrivateName");
 }
 
+Node *getPatternTypeAnnotation(Node *node) {
+  switch (node->getKind()) {
+    case NodeKind::ObjectPattern:
+      return cast<ObjectPatternNode>(node)->_typeAnnotation;
+    case NodeKind::ArrayPattern:
+      return cast<ArrayPatternNode>(node)->_typeAnnotation;
+    default:
+      break;
+  }
+  llvm_unreachable("invalid Pattern node");
+}
+
 } // namespace ESTree
 } // namespace hermes

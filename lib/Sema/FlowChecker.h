@@ -488,6 +488,33 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
       ESTree::IdentifierNode *id,
       ESTree::Node *astDeclNode);
 
+  /// Walk a destructuring pattern for a function parameter, assigning types
+  /// to each leaf identifier and recording them in declTypes_.
+  /// \param funcNode the enclosing function (unused for now, but ensures the
+  ///     caller passes the right context).
+  void assignDestructuringParamTypes(
+      ESTree::FunctionLikeNode *funcNode,
+      ESTree::Node *pattern,
+      Type *paramType);
+
+  /// Expand a tuple destructuring pattern: validate element count and call
+  /// \p onChild for each (element, type) pair.
+  /// \return false if there was a size mismatch error.
+  template <typename OnChildCB>
+  LLVM_NODISCARD bool expandTupleDestructuring(
+      ESTree::ArrayPatternNode *arr,
+      TupleType *tuple,
+      OnChildCB onChild);
+
+  /// Expand an object destructuring pattern: resolve field types and call
+  /// \p onChild for each (propertyValue, type) pair.
+  /// \return false on error.
+  template <typename OnChildCB>
+  LLVM_NODISCARD bool expandObjectDestructuring(
+      ESTree::ObjectPatternNode *obj,
+      ExactObjectType *objType,
+      OnChildCB onChild);
+
   /// Return the type associated with a sema::Decl. The association must
   /// exist.
   Type *getDeclType(sema::Decl *decl) const {

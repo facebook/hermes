@@ -1342,6 +1342,11 @@ Node *getProperty(MemberExpressionLikeNode *node);
 /// \return whether the member expression node is computed.
 NodeBoolean getComputed(MemberExpressionLikeNode *node);
 
+/// \return the type annotation of a destructuring pattern node
+/// (ObjectPatternNode or ArrayPatternNode), or nullptr if none or if \p node
+/// is not a pattern node.
+Node *getPatternTypeAnnotation(Node *node);
+
 /// \return the callee of the call.
 Node *getCallee(CallExpressionLikeNode *node);
 

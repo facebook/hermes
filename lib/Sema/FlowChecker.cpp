@@ -1389,7 +1389,47 @@ void FlowChecker::visitFunctionLike(
         } else if (cf.needCheckedCast && compile_) {
           assign->_right = implicitCheckedCast(assign->_right, paramType, cf);
         }
+      } else if (
+          llvh::isa<ESTree::ObjectPatternNode>(assign->_left) ||
+          llvh::isa<ESTree::ArrayPatternNode>(assign->_left)) {
+        // Error already emitted in parseFunctionType if no annotation.
+        if (!ESTree::getPatternTypeAnnotation(assign->_left))
+          continue;
+
+        // Destructuring param with default value.
+        assignDestructuringParamTypes(node, assign->_left, paramType);
+
+        // Typecheck the default value against the parameter type.
+        visitExpression(assign->_right, assign, paramType);
+        Type *initType = getNodeTypeOrAny(assign->_right);
+        CanFlowResult cf = canAFlowIntoB(initType, paramType);
+        if (!cf.canFlow) {
+          sm_.error(
+              assign->_right->getSourceRange(),
+              "ft: incompatible default argument type");
+        } else if (cf.needCheckedCast && compile_) {
+          assign->_right = implicitCheckedCast(assign->_right, paramType, cf);
+        }
       }
+    } else if (
+        llvh::isa<ESTree::ObjectPatternNode>(&param) ||
+        llvh::isa<ESTree::ArrayPatternNode>(&param)) {
+      // Error already emitted in parseFunctionType if no annotation.
+      if (!ESTree::getPatternTypeAnnotation(&param))
+        continue;
+
+      // Destructuring param without default value.
+      Type *paramType;
+      auto *typedFn = llvh::dyn_cast<TypedFunctionType>(
+          curFunctionContext_->functionType->info);
+      if (typedFn && i < typedFn->getParams().size()) {
+        paramType = typedFn->getParams()[i].type;
+      } else {
+        paramType = flowContext_.getAny();
+      }
+      ++i;
+
+      assignDestructuringParamTypes(node, &param, paramType);
     }
   }
 
@@ -1436,6 +1476,137 @@ void FlowChecker::checkImplicitReturnType(ESTree::FunctionLikeNode *node) {
               ftype->getReturnType()->messageString());
     }
   }
+}
+
+void FlowChecker::assignDestructuringParamTypes(
+    ESTree::FunctionLikeNode *funcNode,
+    ESTree::Node *pattern,
+    Type *paramType) {
+  llvh::SmallVector<std::pair<ESTree::Node *, Type *>, 4> worklist{};
+  worklist.emplace_back(pattern, paramType);
+
+  /// Lambda used for passing as a callback below.
+  auto addToWorklist = [&worklist](ESTree::Node *n, Type *ty) {
+    worklist.emplace_back(n, ty);
+  };
+
+  while (!worklist.empty()) {
+    auto [node, t] = worklist.pop_back_val();
+    if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(node)) {
+      if (id->_typeAnnotation) {
+        setNodeType(id, flowContext_.getAny());
+        sm_.error(
+            id->getSourceRange(),
+            "ft: type annotations not supported inside destructuring, "
+            "annotate the whole pattern instead");
+        continue;
+      }
+      sema::Decl *decl = getDecl(id);
+      setNodeType(id, t);
+      declTypes_.try_emplace(decl, t);
+    } else if (auto *arr = llvh::dyn_cast<ESTree::ArrayPatternNode>(node)) {
+      if (auto *tuple = llvh::dyn_cast<TupleType>(t->info)) {
+        setNodeType(arr, t);
+        if (!expandTupleDestructuring(arr, tuple, addToWorklist))
+          return;
+      } else if (llvh::isa<AnyType>(t->info)) {
+        setNodeType(arr, flowContext_.getAny());
+        for (ESTree::Node &el : arr->_elements)
+          worklist.emplace_back(&el, t);
+      } else {
+        setNodeType(arr, flowContext_.getAny());
+        sm_.error(
+            arr->getSourceRange(),
+            "ft: incompatible type for array pattern, expected tuple");
+      }
+    } else if (auto *obj = llvh::dyn_cast<ESTree::ObjectPatternNode>(node)) {
+      if (auto *objType = llvh::dyn_cast<ExactObjectType>(t->info)) {
+        setNodeType(obj, t);
+        if (!expandObjectDestructuring(obj, objType, addToWorklist))
+          return;
+      } else if (llvh::isa<AnyType>(t->info)) {
+        setNodeType(obj, flowContext_.getAny());
+        for (ESTree::Node &propNode : obj->_properties) {
+          if (auto *prop = llvh::dyn_cast<ESTree::PropertyNode>(&propNode)) {
+            worklist.emplace_back(prop->_value, t);
+          } else {
+            sm_.error(propNode.getSourceRange(), "ft: property not supported");
+          }
+        }
+      } else {
+        setNodeType(obj, flowContext_.getAny());
+        sm_.error(
+            obj->getSourceRange(),
+            "ft: incompatible type for object pattern, "
+            "expected object type");
+      }
+    }
+  }
+}
+
+template <typename OnChildCB>
+bool FlowChecker::expandTupleDestructuring(
+    ESTree::ArrayPatternNode *arr,
+    TupleType *tuple,
+    OnChildCB onChild) {
+  size_t i = 0;
+  bool tooFewTupleElements = false;
+  for (ESTree::Node &element : arr->_elements) {
+    if (i >= tuple->getTypes().size()) {
+      tooFewTupleElements = true;
+      break;
+    }
+    onChild(&element, tuple->getTypes()[i]);
+    ++i;
+  }
+  if (tooFewTupleElements || i != tuple->getTypes().size()) {
+    sm_.error(
+        arr->getSourceRange(),
+        llvh::Twine("ft: cannot destructure tuple, expected ") +
+            llvh::Twine(tuple->getTypes().size()) + " elements, found " +
+            llvh::Twine(arr->_elements.size()));
+    return false;
+  }
+  return true;
+}
+
+template <typename OnChildCB>
+bool FlowChecker::expandObjectDestructuring(
+    ESTree::ObjectPatternNode *obj,
+    ExactObjectType *objType,
+    OnChildCB onChild) {
+  for (ESTree::Node &propNode : obj->_properties) {
+    if (auto *prop = llvh::dyn_cast<ESTree::PropertyNode>(&propNode)) {
+      if (prop->_computed) {
+        sm_.error(
+            prop->_key->getSourceRange(),
+            "ft: computed properties not supported in destructuring");
+        return false;
+      }
+      auto *keyId = llvh::dyn_cast<ESTree::IdentifierNode>(prop->_key);
+      if (!keyId) {
+        sm_.error(
+            prop->_key->getSourceRange(),
+            "ft: property key must be an identifier");
+        return false;
+      }
+      auto propName = Identifier::getFromPointer(keyId->_name);
+      auto optFieldIdx = objType->findField(propName);
+      if (!optFieldIdx) {
+        sm_.error(
+            prop->_key->getSourceRange(),
+            "ft: property '" + propName.str() + "' not found in object type");
+        return false;
+      }
+      Type *fieldType = objType->getFields()[*optFieldIdx].type;
+      onChild(prop->_value, fieldType);
+    } else if (
+        auto *rest = llvh::dyn_cast<ESTree::RestElementNode>(&propNode)) {
+      sm_.error(rest->getSourceRange(), "ft: rest elements not supported");
+      return false;
+    }
+  }
+  return true;
 }
 
 /// AnnotateScopeDecls needs to not report errors when visiting a closure
@@ -1689,6 +1860,11 @@ class FlowChecker::AnnotateScopeDecls {
     llvh::SmallVector<std::pair<ESTree::Node *, Type *>, 4> worklist{};
     worklist.emplace_back(pattern, patternType);
 
+    /// Lambda used for passing as a callback below.
+    auto addToWorklist = [&worklist](ESTree::Node *n, Type *ty) {
+      worklist.emplace_back(n, ty);
+    };
+
     while (!worklist.empty()) {
       auto [node, t] = worklist.pop_back_val();
       if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(node)) {
@@ -1714,25 +1890,8 @@ class FlowChecker::AnnotateScopeDecls {
           // It also allows us to avoid rerunning annotation in subsequent
           // phases of AnnotateScopeDecls.
           outer.setNodeType(arr, t);
-          size_t i = 0;
-          // Whether we had to stop early due to not enough tuple elements.
-          bool tooFewTupleElements = false;
-          for (ESTree::Node &element : arr->_elements) {
-            if (i >= tuple->getTypes().size()) {
-              tooFewTupleElements = true;
-              break;
-            }
-            worklist.emplace_back(&element, tuple->getTypes()[i]);
-            ++i;
-          }
-          if (tooFewTupleElements || i != tuple->getTypes().size()) {
-            outer.sm_.error(
-                pattern->getSourceRange(),
-                llvh::Twine("ft: cannot destructure tuple, expected ") +
-                    llvh::Twine(tuple->getTypes().size()) +
-                    " elements, found " + llvh::Twine(arr->_elements.size()));
+          if (!outer.expandTupleDestructuring(arr, tuple, addToWorklist))
             return;
-          }
         } else if (llvh::isa<AnyType>(t->info)) {
           outer.setNodeType(arr, outer.flowContext_.getAny());
           // Propagate the 'any' type to all children.
@@ -1756,41 +1915,8 @@ class FlowChecker::AnnotateScopeDecls {
         if (auto *objType = llvh::dyn_cast<ExactObjectType>(t->info)) {
           // Setting the type allows IRGen to query the destructuring kind.
           outer.setNodeType(obj, t);
-
-          for (ESTree::Node &propNode : obj->_properties) {
-            if (auto *prop = llvh::dyn_cast<ESTree::PropertyNode>(&propNode)) {
-              if (prop->_computed) {
-                outer.sm_.error(
-                    prop->_key->getSourceRange(),
-                    "ft: computed properties not supported in destructuring");
-                continue;
-              }
-              auto *keyId = llvh::dyn_cast<ESTree::IdentifierNode>(prop->_key);
-              if (!keyId) {
-                outer.sm_.error(
-                    prop->_key->getSourceRange(),
-                    "ft: property key must be an identifier");
-                continue;
-              }
-              auto propName = Identifier::getFromPointer(keyId->_name);
-              auto optFieldIdx = objType->findField(propName);
-              if (!optFieldIdx) {
-                outer.sm_.error(
-                    prop->_key->getSourceRange(),
-                    "ft: property '" + propName.str() +
-                        "' not found in object type");
-                continue;
-              }
-              Type *fieldType = objType->getFields()[*optFieldIdx].type;
-              worklist.emplace_back(prop->_value, fieldType);
-            } else if (
-                auto *rest =
-                    llvh::dyn_cast<ESTree::RestElementNode>(&propNode)) {
-              outer.sm_.error(
-                  rest->getSourceRange(), "ft: rest elements not supported");
-              continue;
-            }
-          }
+          if (!outer.expandObjectDestructuring(obj, objType, addToWorklist))
+            return;
         } else if (llvh::isa<AnyType>(t->info)) {
           outer.setNodeType(obj, outer.flowContext_.getAny());
           // Propagate 'any' to all properties.
@@ -1977,12 +2103,42 @@ Type *FlowChecker::parseFunctionType(
              parseOptionalTypeAnnotation(id->_typeAnnotation),
              /*optional=*/true});
         isTyped |= (id->_typeAnnotation != nullptr);
+      } else if (
+          auto *annot = ESTree::getPatternTypeAnnotation(assign->_left)) {
+        // Destructuring param with default value and type annotation.
+        seenOptional = true;
+        isTyped = true;
+        paramsList.push_back(
+            {Identifier(),
+             parseOptionalTypeAnnotation(annot),
+             /*optional=*/true});
+      } else if (
+          llvh::isa<ESTree::ObjectPatternNode>(assign->_left) ||
+          llvh::isa<ESTree::ArrayPatternNode>(assign->_left)) {
+        // Destructuring param with default value but no annotation.
+        sm_.error(
+            assign->_left->getSourceRange(),
+            "ft: destructuring parameters must have a type annotation");
+        paramsList.push_back({Identifier(), flowContext_.getAny(), true});
       } else {
         sm_.warning(
             n.getSourceRange(),
             "ft: typing of pattern parameters not implemented, :any assumed");
         paramsList.push_back({Identifier(), flowContext_.getAny(), true});
       }
+    } else if (auto *annot = ESTree::getPatternTypeAnnotation(&n)) {
+      // Destructuring param without default value, with type annotation.
+      isTyped = true;
+      paramsList.push_back(
+          {Identifier(), parseOptionalTypeAnnotation(annot), false});
+    } else if (
+        llvh::isa<ESTree::ObjectPatternNode>(&n) ||
+        llvh::isa<ESTree::ArrayPatternNode>(&n)) {
+      // Destructuring param without annotation.
+      sm_.error(
+          n.getSourceRange(),
+          "ft: destructuring parameters must have a type annotation");
+      paramsList.push_back({Identifier(), flowContext_.getAny(), false});
     } else {
       sm_.warning(
           n.getSourceRange(),
