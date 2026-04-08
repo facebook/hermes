@@ -1,3 +1,15 @@
+## 0.35.0
+
+### `hermes-estree`
+- Add `readonly` to variance type
+
+### `hermes-parser`
+- Parse `readonly` as a Flow variance annotation on object type properties, indexers, class properties, and tuple labeled elements
+- Add missing `decorators` to `ClassProperty` and `ClassPrivateProperty` parser visitor keys
+
+### `flow-api-translator`
+- Support `readonly` variance in Flow to TypeScript translation
+
 ## 0.34.0
 
 ### `hermes-parser`
