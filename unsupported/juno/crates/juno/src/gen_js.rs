@@ -3017,6 +3017,7 @@ impl GenJS<'_, '_> {
                     match ctx.str(*kind) {
                         "plus" => "+",
                         "minus" => "-",
+                        "readonly" => "readonly ",
                         _ => unimplemented!("Malformed variance"),
                     }
                 )

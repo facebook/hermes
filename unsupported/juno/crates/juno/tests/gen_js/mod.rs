@@ -544,6 +544,7 @@ fn test_types() {
     test_roundtrip_flow("interface A extends B { }");
     test_roundtrip_flow("interface A extends B, C, D { }");
     test_roundtrip_flow("type A = { x: number }");
+    test_roundtrip_flow("type A = { readonly x: number }");
     test_roundtrip_flow("type A = {| x: number |}");
     test_roundtrip_flow(
         "
