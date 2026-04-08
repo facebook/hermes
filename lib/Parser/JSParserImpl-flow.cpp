@@ -3748,6 +3748,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTupleElementFlow(
 
   /// +Identifier : Type
   /// -Identifier : Type
+  /// readonly Identifier : Type
   /// ^
   if (check(TokenKind::plus, TokenKind::minus)) {
     variance = setLocation(
@@ -3755,6 +3756,12 @@ Optional<ESTree::Node *> JSParserImpl::parseTupleElementFlow(
         tok_,
         new (context_) ESTree::VarianceNode(
             check(TokenKind::plus) ? plusIdent_ : minusIdent_));
+    advance(JSLexer::GrammarContext::Type);
+  } else if (
+      check(readonlyIdent_) &&
+      canFollowReadonlyModifierFlow(lexer_.lookahead1(llvh::None))) {
+    variance = setLocation(
+        tok_, tok_, new (context_) ESTree::VarianceNode(readonlyIdent_));
     advance(JSLexer::GrammarContext::Type);
   }
 
@@ -4171,6 +4178,12 @@ bool JSParserImpl::parsePropertyTypeAnnotationFlow(
         tok_,
         new (context_) ESTree::VarianceNode(
             check(TokenKind::plus) ? plusIdent_ : minusIdent_));
+    advance(JSLexer::GrammarContext::Type);
+  } else if (
+      check(readonlyIdent_) &&
+      canFollowReadonlyModifierFlow(lexer_.lookahead1(llvh::None))) {
+    variance = setLocation(
+        tok_, tok_, new (context_) ESTree::VarianceNode(readonlyIdent_));
     advance(JSLexer::GrammarContext::Type);
   }
 

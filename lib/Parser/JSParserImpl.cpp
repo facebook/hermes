@@ -137,13 +137,13 @@ void JSParserImpl::initializeIdentifiers() {
 #endif
 
 #if HERMES_PARSE_TS
-  readonlyIdent_ = kw_.identReadonly;
   neverIdent_ = kw_.identNever;
   undefinedIdent_ = kw_.identUndefined;
   unknownIdent_ = kw_.identUnknown;
 #endif
 
 #if HERMES_PARSE_FLOW || HERMES_PARSE_TS
+  readonlyIdent_ = kw_.identReadonly;
   namespaceIdent_ = kw_.identNamespace;
   isIdent_ = kw_.identIs;
   inferIdent_ = kw_.identInfer;
@@ -5359,6 +5359,12 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
         tok_,
         new (context_) ESTree::VarianceNode(
             check(TokenKind::plus) ? plusIdent_ : minusIdent_));
+    advance(JSLexer::GrammarContext::Type);
+  } else if (
+      context_.getParseFlow() && check(readonlyIdent_) &&
+      canFollowReadonlyModifierFlow(lexer_.lookahead1(llvh::None))) {
+    variance = setLocation(
+        tok_, tok_, new (context_) ESTree::VarianceNode(readonlyIdent_));
     advance(JSLexer::GrammarContext::Type);
   }
 #endif

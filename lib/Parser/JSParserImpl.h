@@ -342,11 +342,8 @@ class JSParserImpl {
   UniqueString *recordIdent_;
 #endif
 
-#if HERMES_PARSE_TS
-  UniqueString *readonlyIdent_;
-#endif
-
 #if HERMES_PARSE_FLOW || HERMES_PARSE_TS
+  UniqueString *readonlyIdent_;
   UniqueString *namespaceIdent_;
   UniqueString *isIdent_;
   UniqueString *inferIdent_;
@@ -1660,6 +1657,26 @@ class JSParserImpl {
     }
   }
 #endif
+
+  /// Check if the given token kind can follow the \c readonly modifier in Flow
+  /// mode. This is used to disambiguate \c readonly as a variance annotation
+  /// from \c readonly as a property name.
+  static bool canFollowReadonlyModifierFlow(OptValue<TokenKind> optTokenKind) {
+    if (!optTokenKind.hasValue()) {
+      return false;
+    }
+    switch (*optTokenKind) {
+      case TokenKind::identifier:
+      case TokenKind::private_identifier:
+      case TokenKind::string_literal:
+      case TokenKind::numeric_literal:
+      case TokenKind::bigint_literal:
+      case TokenKind::l_square:
+        return true;
+      default:
+        return false;
+    }
+  }
 
   /// RAII to save and restore the current setting of fields that are used on a
   /// per-function basis.
