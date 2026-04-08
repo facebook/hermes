@@ -1247,6 +1247,10 @@ void FlowChecker::visit(ESTree::VariableDeclarationNode *node) {
       if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(declarator->_id)) {
         sema::Decl *decl = getDecl(id);
         constraint = flowContext_.findDeclType(decl);
+      } else {
+        // For destructuring, the type annotation was set on the pattern node
+        // during annotation.
+        constraint = flowContext_.findNodeType(declarator->_id);
       }
       visitExpression(declarator->_init, declarator, constraint);
     }
