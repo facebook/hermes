@@ -3422,7 +3422,9 @@ const getTransforms = (
             name: prop.keyTparam.name,
           },
           constraint: transformTypeAnnotationType(prop.sourceType),
-          readonly: prop.variance?.kind === 'plus',
+          readonly:
+            prop.variance?.kind === 'plus' ||
+            prop.variance?.kind === 'readonly',
           optional: prop.optional === 'Optional',
           typeAnnotation: transformTypeAnnotationType(prop.propType),
           nameType: null,
@@ -3699,7 +3701,9 @@ const getTransforms = (
               loc: DUMMY_LOC,
             },
           },
-          readonly: node.variance?.kind === 'plus',
+          readonly:
+            node.variance?.kind === 'plus' ||
+            node.variance?.kind === 'readonly',
           static: node.static,
           typeAnnotation: {
             type: 'TSTypeAnnotation',
@@ -3723,7 +3727,8 @@ const getTransforms = (
             },
           },
         ],
-        readonly: node.variance?.kind === 'plus',
+        readonly:
+          node.variance?.kind === 'plus' || node.variance?.kind === 'readonly',
         static: node.static,
         typeAnnotation: {
           type: 'TSTypeAnnotation',
@@ -3824,7 +3829,8 @@ const getTransforms = (
         computed,
         key,
         optional: node.optional,
-        readonly: node.variance?.kind === 'plus',
+        readonly:
+          node.variance?.kind === 'plus' || node.variance?.kind === 'readonly',
         static: node.static,
         typeAnnotation: {
           type: 'TSTypeAnnotation',
@@ -3965,7 +3971,8 @@ const getTransforms = (
           element =>
             element.type === 'TupleTypeLabeledElement' &&
             element.variance != null &&
-            element.variance.kind === 'plus',
+            (element.variance.kind === 'plus' ||
+              element.variance.kind === 'readonly'),
         );
       const elems = node.elementTypes.map((element): TSESTree.TypeNode => {
         switch (element.type) {
