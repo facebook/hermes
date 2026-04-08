@@ -3158,7 +3158,8 @@ void FlowChecker::typecheckGenericClassSpecialization(
   auto *id = llvh::cast<ESTree::IdentifierNode>(specialization->_id);
   assert(newDecl == getDecl(id) && "expected same decl");
   Type *classType = flowContext_.createType(
-      flowContext_.createClass(Identifier::getFromPointer(id->_name)),
+      flowContext_.createClass(
+          Identifier::getFromPointer(id->_name), typeArgTypes),
       specialization);
   Type *classConsType = flowContext_.createType(
       flowContext_.createClassConstructor(classType), specialization);

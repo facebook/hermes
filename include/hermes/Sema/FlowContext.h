@@ -819,6 +819,11 @@ class ClassType : public TypeWithId {
   llvh::SmallMapVector<ESTree::MethodDefinitionNode *, sema::Decl *, 4>
       specializedMethodDecls_{};
 
+  /// Type arguments for this specialization of a generic class.
+  /// Empty if the class is not a generic specialization.
+  /// Used mostly for error reporting.
+  llvh::SmallVector<Type *, 2> typeArgs_{};
+
   /// Super class, nullptr if this class doesn't extend anything.
   Type *superClass_ = nullptr;
 
@@ -828,7 +833,10 @@ class ClassType : public TypeWithId {
   size_t numLayoutSlots_ = 0;
 
  public:
-  explicit ClassType(size_t id, Identifier className);
+  explicit ClassType(
+      size_t id,
+      Identifier className,
+      llvh::ArrayRef<Type *> typeArgs);
   explicit ClassType(
       size_t id,
       Identifier className,
@@ -917,6 +925,11 @@ class ClassType : public TypeWithId {
   size_t getNumLayoutSlots() const {
     assert(isInitialized());
     return numLayoutSlots_;
+  }
+
+  /// \return the type arguments, empty if not a generic specialization.
+  llvh::ArrayRef<Type *> getTypeArgs() const {
+    return typeArgs_;
   }
 
   Type *getSuperClass() const {
@@ -1151,8 +1164,10 @@ class FlowContext {
   UntypedFunctionType *createUntypedFunction(bool isAsync, bool isGenerator) {
     return &allocUntypedFunction_.emplace_back(isAsync, isGenerator);
   }
-  ClassType *createClass(Identifier name) {
-    return &allocClass_.emplace_back(allocClass_.size(), name);
+  ClassType *createClass(
+      Identifier name,
+      llvh::ArrayRef<Type *> typeArgs = {}) {
+    return &allocClass_.emplace_back(allocClass_.size(), name, typeArgs);
   }
   ClassConstructorType *createClassConstructor(Type *classType) {
     return &allocClassConstructor_.emplace_back(

@@ -104,7 +104,7 @@ static void messageStringImpl(const Type *type, llvh::raw_ostream &os) {
     return;
   }
 
-  if (llvh::isa<ClassType>(type->info)) {
+  if (auto *classType = llvh::dyn_cast<ClassType>(type->info)) {
     // If the class node has a name use that instead.
     if (type->node && llvh::isa<ESTree::ClassDeclarationNode>(type->node)) {
       os << "class "
@@ -113,6 +113,17 @@ static void messageStringImpl(const Type *type, llvh::raw_ostream &os) {
                 ->_name->str();
     } else {
       os << "class";
+    }
+    if (!classType->getTypeArgs().empty()) {
+      os << '<';
+      bool first = true;
+      for (const Type *arg : classType->getTypeArgs()) {
+        if (!first)
+          os << ", ";
+        messageStringImpl(arg, os);
+        first = false;
+      }
+      os << '>';
     }
     return;
   }
@@ -704,8 +715,13 @@ unsigned TypeWithId::_hashImpl() const {
   return (unsigned)llvh::hash_combine((unsigned)getKind(), getId());
 }
 
-ClassType::ClassType(size_t id, Identifier className)
-    : TypeWithId(TypeKind::Class, id), className_(className) {}
+ClassType::ClassType(
+    size_t id,
+    Identifier className,
+    llvh::ArrayRef<Type *> typeArgs)
+    : TypeWithId(TypeKind::Class, id), className_(className) {
+  typeArgs_.append(typeArgs.begin(), typeArgs.end());
+}
 
 void ClassType::init(
     llvh::ArrayRef<Field> fields,
