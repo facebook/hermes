@@ -51,6 +51,9 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
     const flow::ClassType::Field &field =
         classType->getHomeObjectTypeInfo()->getFields()[idx];
     if (field.isMethod() && field.isPrivate) {
+      // Skip generic private methods - emitted through specializations.
+      if (llvh::isa<flow::GenericType>(field.type->info))
+        continue;
       auto *funcExpr =
           llvh::cast<ESTree::FunctionExpressionNode>(field.method->_value);
       Value *function = genFunctionExpression(funcExpr, field.name);
@@ -241,10 +244,14 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
        classType->getSpecializedMethodDecls()) {
     auto *specializedFE =
         llvh::cast<ESTree::FunctionExpressionNode>(specializedMethod->_value);
-    auto *methodId =
-        llvh::cast<ESTree::IdentifierNode>(specializedMethod->_key);
-    Value *function = genFunctionExpression(
-        specializedFE, Identifier::getFromPointer(methodId->_name));
+    auto *methodId = ESTree::getPropertyIdentifier(specializedMethod->_key);
+    Identifier name;
+    if (llvh::isa<ESTree::PrivateNameNode>(specializedMethod->_key)) {
+      name = Mod->getContext().getPrivateNameIdentifier(methodId->_name);
+    } else {
+      name = Identifier::getFromPointer(methodId->_name);
+    }
+    Value *function = genFunctionExpression(specializedFE, name);
     // Create a variable to hold the specialized closure.
     Variable *var = Builder.createVariable(
         curFunction()->curScope()->getVariableScope(),

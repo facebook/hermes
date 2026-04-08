@@ -723,12 +723,6 @@ class FlowChecker::ParseClassType {
 
       bool finalMethod = hermes::findDecorator(
           method->_decorators, {outer_.kw_.identHermes, outer_.kw_.identFinal});
-      if (fe->_typeParameters && privateNameNode) {
-        outer_.sm_.error(
-            fe->_typeParameters->getSourceRange(),
-            "ft: generic private methods are not supported");
-        return outer_.flowContext_.getAny();
-      }
       if (fe->_typeParameters && !finalMethod) {
         outer_.sm_.error(
             fe->_typeParameters->getSourceRange(),
@@ -3141,7 +3135,7 @@ void FlowChecker::resolveCallToGenericMethodSpecialization(
     // Record the specialized method's Decl on the property IdentifierNode so
     // IRGen can look it up.
     semContext_.setExpressionDecl(
-        llvh::cast<ESTree::IdentifierNode>(callee->_property), result.decl);
+        ESTree::getPropertyIdentifier(callee->_property), result.decl);
   }
 }
 
@@ -3163,7 +3157,7 @@ void FlowChecker::resolveCallToGenericMethodSpecializationWithParsedTypes(
     // Record the specialized method's Decl on the property IdentifierNode so
     // IRGen can look it up.
     semContext_.setExpressionDecl(
-        llvh::cast<ESTree::IdentifierNode>(callee->_property), result.decl);
+        ESTree::getPropertyIdentifier(callee->_property), result.decl);
   }
 }
 
@@ -3267,8 +3261,7 @@ FlowChecker::specializeGenericMethodWithParsedTypes(
     // containing ClassType. This allows IRGen to store the compiled Function
     // in the Decl's customData.
     if (generic.containingClassType) {
-      auto *methodId =
-          llvh::cast<ESTree::IdentifierNode>(specializedMethod->_key);
+      auto *methodId = ESTree::getPropertyIdentifier(specializedMethod->_key);
       decl = semContext_.newDeclInScope(
           methodId->_name, sema::Decl::Kind::Const, generic.classScope);
       generic.containingClassType->addSpecializedMethodDecl(

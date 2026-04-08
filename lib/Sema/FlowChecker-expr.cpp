@@ -1701,28 +1701,42 @@ class FlowChecker::ExprVisitor {
       }
     } else if (auto *memCallee =
                    llvh::dyn_cast<ESTree::MemberExpressionNode>(node->_callee);
-               memCallee && node->_typeArguments && !memCallee->_computed &&
-               llvh::isa<ESTree::IdentifierNode>(memCallee->_property)) {
+               memCallee && node->_typeArguments && !memCallee->_computed) {
       // Handle explicit type arguments on generic method calls.
       // Visit the object early to determine the class type.
       visitESTreeNode(*this, memCallee->_object, memCallee, nullptr);
       shouldVisitCallee = false;
       Type *objType = outer_.getNodeTypeOrAny(memCallee->_object);
 
-      // Look up the method in the appropriate type.
-      auto *propId = llvh::cast<ESTree::IdentifierNode>(memCallee->_property);
-      Identifier name = Identifier::getFromPointer(propId->_name);
+      // Determine property name and whether it's private.
+      bool isPrivate;
+      Identifier name;
+      if (auto *pn =
+              llvh::dyn_cast<ESTree::PrivateNameNode>(memCallee->_property)) {
+        isPrivate = true;
+        name = outer_.astContext_.getPrivateNameIdentifier(
+            llvh::cast<ESTree::IdentifierNode>(pn->_id)->_name);
+      } else {
+        auto *id = llvh::cast<ESTree::IdentifierNode>(memCallee->_property);
+        isPrivate = false;
+        name = Identifier::getFromPointer(id->_name);
+      }
 
+      // Look up the method in the appropriate type.
       OptValue<ClassType::FieldLookupEntry> optMethod;
       if (auto *classType = llvh::dyn_cast<ClassType>(objType->info)) {
-        optMethod = classType->getHomeObjectTypeInfo()->findPublicField(name);
+        auto *homeObj = classType->getHomeObjectTypeInfo();
+        optMethod = isPrivate ? homeObj->findPrivateField(name)
+                              : homeObj->findPublicField(name);
       } else if (
           auto *consType =
               llvh::dyn_cast<ClassConstructorType>(objType->info)) {
         auto *classTypeInfo =
             llvh::cast<ClassType>(consType->getClassType()->info);
-        if (auto *staticInfo = classTypeInfo->getStaticObjectTypeInfo())
-          optMethod = staticInfo->findPublicField(name);
+        if (auto *staticInfo = classTypeInfo->getStaticObjectTypeInfo()) {
+          optMethod = isPrivate ? staticInfo->findPrivateField(name)
+                                : staticInfo->findPublicField(name);
+        }
       }
 
       if (optMethod &&
@@ -1756,22 +1770,37 @@ class FlowChecker::ExprVisitor {
     if (llvh::isa<GenericType>(calleeType->info)) {
       if (auto *memCallee =
               llvh::dyn_cast<ESTree::MemberExpressionNode>(node->_callee);
-          memCallee && !memCallee->_computed &&
-          llvh::isa<ESTree::IdentifierNode>(memCallee->_property)) {
+          memCallee && !memCallee->_computed) {
         Type *objType = outer_.getNodeTypeOrAny(memCallee->_object);
-        auto *propId = llvh::cast<ESTree::IdentifierNode>(memCallee->_property);
-        Identifier name = Identifier::getFromPointer(propId->_name);
+
+        // Determine property name and whether it's private.
+        bool isPrivate;
+        Identifier name;
+        if (auto *pn =
+                llvh::dyn_cast<ESTree::PrivateNameNode>(memCallee->_property)) {
+          isPrivate = true;
+          name = outer_.astContext_.getPrivateNameIdentifier(
+              llvh::cast<ESTree::IdentifierNode>(pn->_id)->_name);
+        } else {
+          auto *id = llvh::cast<ESTree::IdentifierNode>(memCallee->_property);
+          isPrivate = false;
+          name = Identifier::getFromPointer(id->_name);
+        }
 
         OptValue<ClassType::FieldLookupEntry> optMethod;
         if (auto *classType = llvh::dyn_cast<ClassType>(objType->info)) {
-          optMethod = classType->getHomeObjectTypeInfo()->findPublicField(name);
+          auto *homeObj = classType->getHomeObjectTypeInfo();
+          optMethod = isPrivate ? homeObj->findPrivateField(name)
+                                : homeObj->findPublicField(name);
         } else if (
             auto *consType =
                 llvh::dyn_cast<ClassConstructorType>(objType->info)) {
           auto *classTypeInfo =
               llvh::cast<ClassType>(consType->getClassType()->info);
-          if (auto *staticInfo = classTypeInfo->getStaticObjectTypeInfo())
-            optMethod = staticInfo->findPublicField(name);
+          if (auto *staticInfo = classTypeInfo->getStaticObjectTypeInfo()) {
+            optMethod = isPrivate ? staticInfo->findPrivateField(name)
+                                  : staticInfo->findPublicField(name);
+          }
         }
 
         if (optMethod && optMethod->getField()->method) {

@@ -12,6 +12,11 @@ class A {
   foo<T>(x: T): T { return x; }
 }
 
+// Generic private method without @Hermes.final.
+class A2 {
+  #foo<T>(x: T): T { return x; }
+}
+
 // Cannot override parent method with generic method.
 class B {
   foo(x: number): number { return x; }
@@ -41,13 +46,16 @@ class F {
 // CHECK:{{.*}}generic-method-error.js:12:6: error: ft: generic methods must be marked as final with @Hermes.final
 // CHECK-NEXT:  foo<T>(x: T): T { return x; }
 // CHECK-NEXT:     ^~~
-// CHECK-NEXT:{{.*}}generic-method-error.js:21:3: error: ft: cannot override with generic method
+// CHECK-NEXT:{{.*}}generic-method-error.js:17:7: error: ft: generic methods must be marked as final with @Hermes.final
+// CHECK-NEXT:  #foo<T>(x: T): T { return x; }
+// CHECK-NEXT:      ^~~
+// CHECK-NEXT:{{.*}}generic-method-error.js:26:3: error: ft: cannot override with generic method
 // CHECK-NEXT:  foo<T>(x: T): T { return x; }
 // CHECK-NEXT:  ^~~
-// CHECK-NEXT:{{.*}}generic-method-error.js:30:3: error: ft: cannot override final method
+// CHECK-NEXT:{{.*}}generic-method-error.js:35:3: error: ft: cannot override final method
 // CHECK-NEXT:  bar(x: number): number { return x; }
 // CHECK-NEXT:  ^~~
-// CHECK-NEXT:{{.*}}generic-method-error.js:35:3: error: ft: @Hermes.final cannot be applied to a constructor
+// CHECK-NEXT:{{.*}}generic-method-error.js:40:3: error: ft: @Hermes.final cannot be applied to a constructor
 // CHECK-NEXT:  @Hermes.final
 // CHECK-NEXT:  ^
-// CHECK-NEXT:Emitted 4 errors. exiting.
+// CHECK-NEXT:Emitted 5 errors. exiting.
