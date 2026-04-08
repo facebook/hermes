@@ -1357,6 +1357,35 @@ void FlowChecker::visitFunctionLike(
         ++i;
       }
       declTypes_.try_emplace(decl, paramType);
+    } else if (
+        auto *assign = llvh::dyn_cast<ESTree::AssignmentPatternNode>(&param)) {
+      Type *paramType;
+      auto *typedFn = llvh::dyn_cast<TypedFunctionType>(
+          curFunctionContext_->functionType->info);
+      if (typedFn && i < typedFn->getParams().size()) {
+        paramType = typedFn->getParams()[i].type;
+      } else {
+        paramType = flowContext_.getAny();
+      }
+      ++i;
+
+      if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(assign->_left)) {
+        sema::Decl *decl = getDecl(id);
+        assert(decl && "unresolved parameter");
+        declTypes_.try_emplace(decl, paramType);
+
+        // Typecheck the default value against the parameter type.
+        visitExpression(assign->_right, assign, paramType);
+        Type *initType = getNodeTypeOrAny(assign->_right);
+        CanFlowResult cf = canAFlowIntoB(initType, paramType);
+        if (!cf.canFlow) {
+          sm_.error(
+              assign->_right->getSourceRange(),
+              "ft: incompatible default argument type");
+        } else if (cf.needCheckedCast && compile_) {
+          assign->_right = implicitCheckedCast(assign->_right, paramType, cf);
+        }
+      }
     }
   }
 
@@ -1935,6 +1964,21 @@ Type *FlowChecker::parseFunctionType(
            parseOptionalTypeAnnotation(id->_typeAnnotation),
            id->_optional});
       isTyped |= (id->_typeAnnotation != nullptr);
+    } else if (
+        auto *assign = llvh::dyn_cast<ESTree::AssignmentPatternNode>(&n)) {
+      if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(assign->_left)) {
+        seenOptional = true;
+        paramsList.push_back(
+            {Identifier::getFromPointer(id->_name),
+             parseOptionalTypeAnnotation(id->_typeAnnotation),
+             /*optional=*/true});
+        isTyped |= (id->_typeAnnotation != nullptr);
+      } else {
+        sm_.warning(
+            n.getSourceRange(),
+            "ft: typing of pattern parameters not implemented, :any assumed");
+        paramsList.push_back({Identifier(), flowContext_.getAny(), true});
+      }
     } else {
       sm_.warning(
           n.getSourceRange(),
@@ -2351,16 +2395,6 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
   bool needCheckedCast = false;
 
   {
-    // TODO: Handle default arguments, which will allow for a changing number of
-    // parameters. Example:
-    //   let funcB : (a: number) => number;
-    //   function funcA(a: number, bType: number = 10) : number {
-    //     return 0;
-    //   }
-    //   funcB = funcA;
-    // funcA flows into funcA here because the default argument allows the
-    // caller to change the number of parameters.
-
     if (aType->getParams().size() < bType->getParams().size()) {
       // It's valid to flow from a function that has no optional parameters to a
       // function that adds them.
