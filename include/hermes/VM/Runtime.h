@@ -1007,7 +1007,7 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// Returns a string representation of the JS stack.  Does no operations
   /// that allocate on the JS heap, so safe to use for an out-of-memory
   /// exception.
-  /// \p ip specifies the the IP of the leaf frame.
+  /// \p ip specifies the IP of the leaf frame.
   std::string getCallStackNoAlloc(const Inst *ip);
 
   /// \return a string representation of the JS stack without knowing the leaf

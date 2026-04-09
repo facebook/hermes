@@ -117,7 +117,7 @@ class LazyCompilationThreadData {
 
 /// Worker function for the compileLazyFunction, intended to be run in a
 /// thread with a fresh stack to prevent stack overflows.
-/// \param argPtr[in/out] pointer to the the LazyCompilationThreadData to use as
+/// \param argPtr[in/out] pointer to the LazyCompilationThreadData to use as
 ///   input/output.
 static void compileLazyFunctionWorker(void *argPtr) {
   LazyCompilationThreadData *data =

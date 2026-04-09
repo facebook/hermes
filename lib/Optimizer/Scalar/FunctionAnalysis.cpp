@@ -77,7 +77,7 @@ bool canEscapeThroughCall(Instruction *C, Function *F, BaseCallInst *CI) {
 /// Check if the variable \p V, which is known to be stored to with closure
 /// \p val, can be analyzed such that a call to a value loaded from \p V is
 /// known to call \p val.
-/// \return a pair of of [storeIsOnlyClosure, noOtherValues]. The first
+/// \return a pair of [storeIsOnlyClosure, noOtherValues]. The first
 /// indicates whether any successful call to a value loaded from \p V is known
 /// to invoke \p val. The second indicates whether \p V has no stores of values
 /// that will throw when called (e.g. undefined, null, etc.). This can be used

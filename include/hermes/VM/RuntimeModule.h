@@ -463,7 +463,7 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   /// the array size will remain unchanged.
   void setModuleExport(Runtime &runtime, uint32_t modIndex, Handle<> modExport);
 
-  /// The \p cases pointer points the the start of the string switch
+  /// The \p cases pointer points to the start of the string switch
   /// table for a StringSwitchImm instruction; \p size is the size of that
   /// table. Initializes \p table, which must be the runtime table dedicated to
   /// this instruction, to map the case labels to the right (bytecode) branch
