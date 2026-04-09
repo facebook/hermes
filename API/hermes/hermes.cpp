@@ -365,7 +365,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
     return make<jsi::WeakObject>(&weakHermesValues_.add(wr));
   }
 
-  // overriden from jsi::Instrumentation
+  // overridden from jsi::Instrumentation
   std::string getRecordedGCStats() override {
     std::string s;
     llvh::raw_string_ostream os(s);

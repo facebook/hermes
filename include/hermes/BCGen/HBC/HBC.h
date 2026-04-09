@@ -103,7 +103,7 @@ void fullOptimizationPipeline(Module &M);
 ///     whether to link all optimizations to the caller.
 /// \param defaultBytecodeGenerationOptions the starting bytecode generation
 ///     options that will be used during the bytecode generation phase.
-///     Some options will be overriden depending on other arguments passed in.
+///     Some options will be overridden depending on other arguments passed in.
 ///
 /// \return a BCProvider and an empty error, or a null BCProvider and an error
 ///     message (if diagHandler was provided, the error message is "error").

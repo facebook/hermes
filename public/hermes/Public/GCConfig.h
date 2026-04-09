@@ -23,7 +23,7 @@
 namespace hermes {
 namespace vm {
 
-/// A type big enough to accomodate the entire allocated address space.
+/// A type big enough to accommodate the entire allocated address space.
 /// Individual allocations are always 'uint32_t', but on a 64-bit machine, when
 /// compressed pointer is OFF, we want to accommodate a larger total heap.
 using gcheapsize_t = size_t;

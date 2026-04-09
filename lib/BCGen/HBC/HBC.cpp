@@ -607,7 +607,7 @@ VariableInfoAtDepth getVariableInfoAtDepth(
   sema::SemContext *semCtx = providerFromSrc->getSemCtx();
   if (!semCtx->customData2) {
     // The lifetime of this cache has to be tied to the lifetime of the
-    // SemContext. A SemContext could be destoryed and allocated again. there's
+    // SemContext. A SemContext could be destroyed and allocated again. there's
     // then a potential for a new LexicalScope in the same place but with
     // different data. Use shared_ptr to make sure it isn't accessible after the
     // SemContext is freed.
