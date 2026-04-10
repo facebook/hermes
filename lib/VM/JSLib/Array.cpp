@@ -12,6 +12,7 @@
 #include "JSLibInternal.h"
 
 #include "hermes/ADT/SafeInt.h"
+#include "hermes/Support/FastArraySearch.h"
 #include "hermes/VM/HandleRootOwner-inline.h"
 #include "hermes/VM/JSLib.h"
 #include "hermes/VM/JSLib/Sorting.h"
@@ -3207,6 +3208,28 @@ CallResult<HermesValue> arrayPrototypeShift(void *, Runtime &runtime) {
   return lv.first.get();
 }
 
+/// SIMD-accelerated linear search for a raw value in an array of
+/// SmallHermesValue elements.
+/// \p reverse when true, search backward returning the last match;
+///   when false, search forward returning the first match.
+/// \return the index of the match, or -1 if not found.
+template <typename T>
+static int64_t fastSearch(
+    llvh::ArrayRef<T> data,
+    size_t start,
+    size_t end,
+    T target,
+    bool reverse) {
+  if constexpr (sizeof(T) == 4) {
+    return reverse ? searchReverseU32(data, start, end, target)
+                   : searchU32(data, start, end, target);
+  } else {
+    static_assert(sizeof(T) == 8, "unexpected element size");
+    return reverse ? searchReverseU64(data, start, end, target)
+                   : searchU64(data, start, end, target);
+  }
+}
+
 /// Used to help with indexOf and lastIndexOf.
 /// \p reverse true if searching in reverse (lastIndexOf), false otherwise.
 static inline CallResult<HermesValue>
@@ -3294,18 +3317,27 @@ indexOfHelper(Runtime &runtime, NativeArgs args, const bool reverse) {
 
   // Search for the element.
   auto searchElement = args.getArgHandle(0);
-  // If the range of Array IndexedStorage is not [0, len), there could be holes
-  // at some indices.
+  // Fast path.
   if (LLVM_LIKELY(
-          arrHandle && (0 == arrHandle->getBeginIndex()) &&
-          (len == arrHandle->getEndIndex()))) {
-    // Fast path: access array storage directly.
+          arrHandle &&
+          arrayFastPathCheck(
+              runtime, arrHandle.get(), nullptr, (uint32_t)len))) {
+    // SmallHermesValue::getRaw() may return uintptr_t, which can be a
+    // different type from uint32_t/uint64_t on some platforms (e.g.
+    // unsigned long vs unsigned long long).
+    using SearchType = std::conditional_t<
+        sizeof(SmallHermesValue::RawType) == 4,
+        uint32_t,
+        uint64_t>;
     auto searchElementVal =
         SmallHermesValue::encodeHermesValue(searchElement.get(), runtime);
     NoAllocScope noAlloc{runtime};
-    bool hasHole = false;
     assert(len != 0 && "we already checked len != 0, so storage can't be null");
     auto *arrStorage = arrHandle->getIndexedStorageUnsafe(runtime);
+
+    llvh::ArrayRef<SearchType> rawData(
+        reinterpret_cast<const SearchType *>(arrStorage->data()), len);
+    auto rawTarget = static_cast<SearchType>(searchElementVal.getRaw());
 
     // Macro for searching the array with given loop initialization, terminating
     // condition and updating rule after each iteration. Note that the macro
@@ -3314,10 +3346,6 @@ indexOfHelper(Runtime &runtime, NativeArgs args, const bool reverse) {
 #define SEARCH_ARRAY_DIRECTED(INIT, LOOP_COND, STEP)   \
   for (INIT; LOOP_COND; STEP) {                        \
     auto element = arrStorage->at(k);                  \
-    if (LLVM_UNLIKELY(element.isEmpty())) {            \
-      hasHole = true;                                  \
-      break;                                           \
-    }                                                  \
     if (COMPARE_EXPR(element))                         \
       return HermesValue::encodeTrustedNumberValue(k); \
   }
@@ -3337,28 +3365,43 @@ indexOfHelper(Runtime &runtime, NativeArgs args, const bool reverse) {
       if (LLVM_UNLIKELY(std::isnan(searchNum))) {
         return HermesValue::encodeTrustedNumberValue(-1);
       }
-      // If it's +0.0/-0.0.
+      assert(
+          SmallHermesValue::canInlineDouble(+0.0) &&
+          SmallHermesValue::canInlineDouble(-0.0) &&
+          "+0.0/-0.0 must not be boxed");
+      auto negativeZeroBits = static_cast<SearchType>(
+          SmallHermesValue::encodeNumberValue(-0.0, runtime).getRaw());
+      auto positiveZeroBits = static_cast<SearchType>(
+          SmallHermesValue::encodeNumberValue(+0.0, runtime).getRaw());
       if (searchNum == 0) {
-        auto negativeZero = SmallHermesValue::encodeNumberValue(-0.0, runtime);
-        auto negativeZeroBits = negativeZero.getRaw();
-        auto positiveZero = SmallHermesValue::encodeNumberValue(+0.0, runtime);
-        auto positiveZeroBits = positiveZero.getRaw();
-        assert(
-            negativeZero.isInlinedDouble() && positiveZero.isInlinedDouble() &&
-            "Both +0.0/-0.0 should be inline double.");
-        // Compare bits with +0.0/-0.0 directly.
-#define COMPARE_EXPR(element) \
-  element.getRaw() == negativeZeroBits || element.getRaw() == positiveZeroBits
-        SEARCH_ARRAY
-#undef COMPARE_EXPR
+        // +0.0/-0.0 must match each other. Run two SIMD searches
+        // and pick the earliest (forward) or latest (reverse) hit.
+        if (reverse) {
+          size_t s = 0, e = k + 1;
+          int64_t r1 = fastSearch(rawData, s, e, negativeZeroBits, true);
+          int64_t r2 = fastSearch(rawData, s, e, positiveZeroBits, true);
+          int64_t result = std::max(r1, r2);
+          if (result >= 0)
+            return HermesValue::encodeTrustedNumberValue(result);
+        } else {
+          size_t s = k, e = len;
+          int64_t r1 = fastSearch(rawData, s, e, negativeZeroBits, false);
+          int64_t r2 = fastSearch(rawData, s, e, positiveZeroBits, false);
+          int64_t result =
+              (r1 < 0 || r2 < 0) ? std::max(r1, r2) : std::min(r1, r2);
+          // If both r1 and r2 are -1, no zero is found.
+          if (result >= 0)
+            return HermesValue::encodeTrustedNumberValue(result);
+        }
       } else {
-        // If it's not +0.0/-0.0/NaN, compare raw bits directly.
-#define COMPARE_EXPR(element) searchElementVal.getRaw() == element.getRaw()
-        SEARCH_ARRAY
-#undef COMPARE_EXPR
+        // Normal number (not 0, not NaN): raw-bit SIMD search.
+        size_t s = reverse ? 0 : (size_t)k;
+        size_t e = reverse ? (size_t)(k + 1) : len;
+        int64_t result = fastSearch(rawData, s, e, rawTarget, reverse);
+        if (result >= 0)
+          return HermesValue::encodeTrustedNumberValue(result);
       }
     } else if (searchElementVal.isBoxedDouble()) {
-      // Only HV32 can have boxed doubles, compare the double value.
       auto searchNum = searchElementVal.getBoxedDouble(runtime);
 #define COMPARE_EXPR(element) \
   element.isBoxedDouble() && searchNum == element.getBoxedDouble(runtime)
@@ -3379,19 +3422,18 @@ indexOfHelper(Runtime &runtime, NativeArgs args, const bool reverse) {
       SEARCH_ARRAY
 #undef COMPARE_EXPR
     } else {
-      // For all other types (e.g., Object), compare the exact bits.
-#define COMPARE_EXPR(element) searchElementVal.getRaw() == element.getRaw()
-      SEARCH_ARRAY
-#undef COMPARE_EXPR
+      // For all other types (e.g., Object), raw-bit SIMD search.
+      size_t s = reverse ? 0 : (size_t)k;
+      size_t e = reverse ? (size_t)(k + 1) : len;
+      int64_t result = fastSearch(rawData, s, e, rawTarget, reverse);
+      if (result >= 0)
+        return HermesValue::encodeTrustedNumberValue(result);
     }
 
 #undef SEARCH_ARRAY_DIRECTED
 #undef SEARCH_ARRAY
 
-    // If array has no hole and target is not found, return -1.
-    if (!hasHole) {
-      return HermesValue::encodeTrustedNumberValue(-1);
-    }
+    return HermesValue::encodeTrustedNumberValue(-1);
   }
 
   // Slow path for non-array objects or arrays with holes.
