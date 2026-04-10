@@ -4365,18 +4365,26 @@ CallResult<HermesValue> arrayPrototypeIncludes(void *, Runtime &runtime) {
   }
   lv.O.castAndSetHermesValue<JSObject>(*oRes);
 
-  // 2. Let len be ? ToLength(? Get(O, "length")).
-  auto lenPropRes = JSObject::getNamed_RJS(
-      lv.O, runtime, Predefined::getSymbolID(Predefined::length));
-  if (LLVM_UNLIKELY(lenPropRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
+  // Fast path: get array length directly for JSArray.
+  uint64_t len;
+  auto arrHandle = vmisa<JSArray>(*lv.O) ? Handle<JSArray>::vmcast(&lv.O)
+                                         : Runtime::makeNullHandle<JSArray>();
+  if (LLVM_LIKELY(arrHandle)) {
+    len = JSArray::getLength(arrHandle.get(), runtime);
+  } else {
+    // 2. Let len be ? ToLength(? Get(O, "length")).
+    auto lenPropRes = JSObject::getNamed_RJS(
+        lv.O, runtime, Predefined::getSymbolID(Predefined::length));
+    if (LLVM_UNLIKELY(lenPropRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    lv.lenProp = std::move(*lenPropRes);
+    auto lenRes = toLengthU64(runtime, lv.lenProp);
+    if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    len = *lenRes;
   }
-  lv.lenProp = std::move(*lenPropRes);
-  auto lenRes = toLengthU64(runtime, lv.lenProp);
-  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  uint64_t len = *lenRes;
 
   // 3. If len is 0, return false.
   if (len == 0) {
@@ -4408,6 +4416,114 @@ CallResult<HermesValue> arrayPrototypeIncludes(void *, Runtime &runtime) {
     if (fk < 0)
       fk = 0;
     k = (uint64_t)fk;
+  }
+
+  // Fast path.
+  if (LLVM_LIKELY(
+          arrHandle &&
+          arrayFastPathCheck(
+              runtime, arrHandle.get(), nullptr, (uint32_t)len))) {
+    using SearchType = std::conditional_t<
+        sizeof(SmallHermesValue::RawType) == 4,
+        uint32_t,
+        uint64_t>;
+    auto searchElementVal =
+        SmallHermesValue::encodeHermesValue(args.getArg(0), runtime);
+    NoAllocScope noAlloc{runtime};
+    assert(len != 0 && "we already checked len != 0");
+    auto *arrStorage = arrHandle->getIndexedStorageUnsafe(runtime);
+
+    llvh::ArrayRef<SearchType> rawData(
+        reinterpret_cast<const SearchType *>(arrStorage->data()), len);
+    auto rawTarget = static_cast<SearchType>(searchElementVal.getRaw());
+
+    if (searchElementVal.isInlinedDouble()) {
+      auto searchNum = searchElementVal.getNumber(runtime);
+      if (LLVM_UNLIKELY(std::isnan(searchNum))) {
+        // SameValueZero: NaN includes NaN. Scan for any NaN element.
+        for (uint64_t i = k; i < len; ++i) {
+          auto element = arrStorage->at(i);
+          if (element.isInlinedDouble() &&
+              std::isnan(element.getNumber(runtime)))
+            return HermesValue::encodeBoolValue(true);
+        }
+      } else if (searchNum == 0) {
+        // +0/-0: SameValueZero treats them as equal. Search for
+        // +0.0 first, fall back to -0.0 if not found.
+        assert(
+            SmallHermesValue::canInlineDouble(+0.0) &&
+            SmallHermesValue::canInlineDouble(-0.0) &&
+            "+0.0/-0.0 must not be boxed");
+        auto posZeroBits = static_cast<SearchType>(
+            SmallHermesValue::encodeNumberValue(+0.0, runtime).getRaw());
+        auto negZeroBits = static_cast<SearchType>(
+            SmallHermesValue::encodeNumberValue(-0.0, runtime).getRaw());
+
+        int64_t result = fastSearch(rawData, k, len, posZeroBits, false);
+        if (result >= 0)
+          return HermesValue::encodeBoolValue(true);
+        result = fastSearch(rawData, k, len, negZeroBits, false);
+        if (result >= 0)
+          return HermesValue::encodeBoolValue(true);
+      } else {
+        // Normal number or NaN: all inlined NaNs share the same
+        // raw encoding (quiet NaN), so raw-bit SIMD search works.
+        int64_t result = fastSearch(rawData, k, len, rawTarget, false);
+        if (result >= 0)
+          return HermesValue::encodeBoolValue(true);
+      }
+    } else if (searchElementVal.isBoxedDouble()) {
+      auto searchNum = searchElementVal.getBoxedDouble(runtime);
+      if (LLVM_UNLIKELY(std::isnan(searchNum))) {
+        // SameValueZero: NaN includes NaN. Scan for any NaN element.
+        for (uint64_t i = k; i < len; ++i) {
+          auto element = arrStorage->at(i);
+          if (element.isBoxedDouble() &&
+              std::isnan(element.getBoxedDouble(runtime)))
+            return HermesValue::encodeBoolValue(true);
+        }
+      } else {
+        for (uint64_t i = k; i < len; ++i) {
+          auto element = arrStorage->at(i);
+          if (element.isBoxedDouble() &&
+              searchNum == element.getBoxedDouble(runtime))
+            return HermesValue::encodeBoolValue(true);
+        }
+      }
+    } else if (searchElementVal.isString()) {
+      auto searchStr = searchElementVal.getString(runtime);
+      for (uint64_t i = k; i < len; ++i) {
+        auto element = arrStorage->at(i);
+        if (element.isString() && searchStr->equals(element.getString(runtime)))
+          return HermesValue::encodeBoolValue(true);
+      }
+    } else if (searchElementVal.isBigInt()) {
+      auto searchBigInt = searchElementVal.getBigInt(runtime);
+      for (uint64_t i = k; i < len; ++i) {
+        auto element = arrStorage->at(i);
+        if (element.isBigInt() &&
+            !searchBigInt->compare(element.getBigInt(runtime)))
+          return HermesValue::encodeBoolValue(true);
+      }
+    } else if (searchElementVal.isUndefined()) {
+      // includes treats empty slots as undefined per spec.
+      // Search for both undefined and empty raw encodings.
+      int64_t result = fastSearch(rawData, k, len, rawTarget, false);
+      if (result >= 0)
+        return HermesValue::encodeBoolValue(true);
+      auto emptyRaw = static_cast<SearchType>(
+          SmallHermesValue::encodeEmptyValue().getRaw());
+      result = fastSearch(rawData, k, len, emptyRaw, false);
+      if (result >= 0)
+        return HermesValue::encodeBoolValue(true);
+    } else {
+      // Objects, symbols, etc., SIMD raw-bit search.
+      int64_t result = fastSearch(rawData, k, len, rawTarget, false);
+      if (result >= 0)
+        return HermesValue::encodeBoolValue(true);
+    }
+
+    return HermesValue::encodeBoolValue(false);
   }
 
   // 7. Repeat, while k < len
