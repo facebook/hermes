@@ -1,15 +1,27 @@
 name: Perf Test on Raspberry Pi 5B
 
 on:
+  push:
+    branches:
+      - static_h
+  pull_request:
+    branches:
+      - static_h
   workflow_dispatch:
     inputs:
       sha:
-        description: 'Git SHA to benchmark'
-        required: true
+        description: 'Git SHA to benchmark (defaults to current commit)'
+        required: false
         type: string
+
+env:
+  BENCH_SHA: ${{ inputs.sha || github.sha }}
 
 jobs:
   build:
+    if: |
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.author_association == 'OWNER'
     runs-on: ubuntu-24.04-arm
     container:
       image: arm64v8/debian:trixie
@@ -20,7 +32,7 @@ jobs:
           apt-get install -y cmake ninja-build clang-19 build-essential libicu-dev zip python3 git
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.sha }}
+          ref: ${{ env.BENCH_SHA }}
       - name: Build Release
         run: |
           export CC=clang-19
@@ -51,17 +63,12 @@ jobs:
 
       - name: Compile benchmark to bytecode
         run: |
-          hermes-bin/hermesc -O -emit-binary \
+          hermes-bin/hermesc -O -w -emit-binary \
             -out synth-bench-simple/index.android.hbc \
             synth-bench-simple/index.android.bundle
 
       - name: Run synth benchmark
         run: |
-          echo "========================================"
-          echo "  Synth Benchmark (5 reps)"
-          echo "========================================"
-          echo ""
-
           hermes-bin/synth \
             -reps 5 \
             synth-bench-simple/synth_trace.json \
@@ -81,7 +88,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.sha }}
+          ref: ${{ env.BENCH_SHA }}
           sparse-checkout: .github/scripts
 
       - name: Download raw output
@@ -92,18 +99,18 @@ jobs:
       - name: Get commit timestamp
         id: commit-info
         run: |
-          echo "timestamp=$(git log -1 --format=%cI ${{ inputs.sha }})" >> "$GITHUB_OUTPUT"
+          echo "timestamp=$(git log -1 --format=%cI)" >> "$GITHUB_OUTPUT"
 
       - name: Extract results
         run: |
           python3 .github/scripts/extract_synth_results.py \
             synth_raw_output.txt \
-            "${{ inputs.sha }}" \
+            "${{ env.BENCH_SHA }}" \
             "${{ steps.commit-info.outputs.timestamp }}" \
             | tee benchmark_results.json
 
       - name: Upload benchmark results
         uses: actions/upload-artifact@v4
         with:
-          name: perf-results-${{ inputs.sha }}
+          name: perf-results-${{ env.BENCH_SHA }}
           path: benchmark_results.json

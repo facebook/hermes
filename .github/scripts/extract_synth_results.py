@@ -45,6 +45,14 @@ def main():
         "maxGCPause": general["maxGCPause"],
         "numCollections": general["numCollections"],
         "peakAllocatedBytes": general["peakAllocatedBytes"],
+        "perfEvent_instructions": general.get("perfEvent_instructions"),
+        "perfEvent_cpu-cycles": general.get("perfEvent_cpu-cycles"),
+        "perfEvent_L1-icache-load-misses": general.get(
+            "perfEvent_L1-icache-load-misses"
+        ),
+        "perfEvent_L1-dcache-load-misses": general.get(
+            "perfEvent_L1-dcache-load-misses"
+        ),
     }
 
     print(json.dumps(results, indent=2))
