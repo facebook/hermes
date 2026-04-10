@@ -46,6 +46,9 @@ jobs:
           name: hermes-bin
           path: hermes-bin
 
+      - name: Prepare binaries
+        run: chmod +x hermes-bin/hermesc hermes-bin/synth
+
       - name: Compile benchmark to bytecode
         run: |
           hermes-bin/hermesc -O -emit-binary \
