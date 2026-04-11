@@ -129,7 +129,7 @@ jobs:
 
       - name: Run Claude
         id: claude
-        uses: anthropics/claude-code-base-action@v1
+        uses: anthropics/claude-code-base-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt_file: /tmp/prompt.txt
