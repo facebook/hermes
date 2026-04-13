@@ -172,11 +172,11 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime>
   /// @}
 
 #ifdef JSI_UNSTABLE
-  std::shared_ptr<jsi::Serialized> serialize(jsi::Value &value) override;
+  std::shared_ptr<jsi::Serialized> serialize(const jsi::Value &value) override;
   jsi::Value deserialize(
       const std::shared_ptr<jsi::Serialized> &serialized) override;
   std::unique_ptr<jsi::Serialized> serializeWithTransfer(
-      jsi::Value &value,
+      const jsi::Value &value,
       const jsi::Array &transferList) override;
   jsi::Array deserializeWithTransfer(
       std::unique_ptr<jsi::Serialized> &serialized) override;

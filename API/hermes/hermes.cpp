@@ -687,12 +687,12 @@ class HermesRuntimeImpl final : public HermesRuntime,
   ICast *castInterface(const jsi::UUID &interfaceUUID) override;
 
 #ifdef JSI_UNSTABLE
-  std::shared_ptr<jsi::Serialized> serialize(jsi::Value &value) override;
+  std::shared_ptr<jsi::Serialized> serialize(const jsi::Value &value) override;
   jsi::Value deserialize(
       const std::shared_ptr<jsi::Serialized> &serialized) override;
 
   std::unique_ptr<jsi::Serialized> serializeWithTransfer(
-      jsi::Value &value,
+      const jsi::Value &value,
       const jsi::Array &transferList) override;
   jsi::Array deserializeWithTransfer(
       std::unique_ptr<jsi::Serialized> &serialized) override;
@@ -1514,7 +1514,7 @@ jsi::ICast *HermesRuntimeImpl::castInterface(const jsi::UUID &interfaceUUID) {
 
 #ifdef JSI_UNSTABLE
 std::shared_ptr<jsi::Serialized> HermesRuntimeImpl::serialize(
-    jsi::Value &value) {
+    const jsi::Value &value) {
   vm::GCScope gcScope(runtime_);
   vm::PinnedHermesValue numberStorage;
   auto serializedRes =
@@ -1545,7 +1545,7 @@ jsi::Value HermesRuntimeImpl::deserialize(
 }
 
 std::unique_ptr<jsi::Serialized> HermesRuntimeImpl::serializeWithTransfer(
-    jsi::Value &value,
+    const jsi::Value &value,
     const jsi::Array &transferList) {
   if (LLVM_UNLIKELY(!vm::vmisa<vm::JSArray>(phv(transferList)))) {
     throw jsi::JSINativeException("Transfer array must not be a Proxy.");
