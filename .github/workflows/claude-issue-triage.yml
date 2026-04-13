@@ -157,15 +157,17 @@ jobs:
               if (resultMessage && resultMessage.result) {
                 body = resultMessage.result;
               } else {
-                body = 'No analysis produced.';
+                console.error('No final result found in execution log');
+                return;
               }
             } catch (error) {
               console.error('Error parsing execution log:', error);
-              body = 'Error parsing Claude response. Check the workflow logs.';
+              return;
             }
 
             if (process.env.CONCLUSION !== 'success') {
-              body = `**Triage completed with status: ${process.env.CONCLUSION}**\n\n${body}`;
+              console.error(`Triage failed with status: ${process.env.CONCLUSION}.`);
+              return;
             }
 
             await github.rest.issues.createComment({
