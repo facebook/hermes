@@ -1112,7 +1112,8 @@ jsi::ICast *TracingRuntime::castInterface(const jsi::UUID &interfaceUUID) {
 }
 
 #ifdef JSI_UNSTABLE
-std::shared_ptr<jsi::Serialized> TracingRuntime::serialize(jsi::Value &value) {
+std::shared_ptr<jsi::Serialized> TracingRuntime::serialize(
+    const jsi::Value &value) {
   auto serializationInterface =
       jsi::dynamicInterfaceCast<ISerialization>(runtime_);
   assert(
@@ -1150,7 +1151,7 @@ jsi::Value TracingRuntime::deserialize(
 }
 
 std::unique_ptr<jsi::Serialized> TracingRuntime::serializeWithTransfer(
-    jsi::Value &value,
+    const jsi::Value &value,
     const jsi::Array &transferList) {
   throw std::logic_error("Cannot transfer JS Values in tracing mode.");
 }
