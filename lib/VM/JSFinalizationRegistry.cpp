@@ -177,6 +177,10 @@ ExecutionStatus JSFinalizationRegistry::cleanup(
 
     if (result == ExecutionStatus::EXCEPTION)
       return ExecutionStatus::EXCEPTION;
+
+    // Re-read cells_ since the callback may have caused reallocation
+    // (e.g., by calling register() which triggers ArrayStorage reallocation).
+    lv.cells = self->cells_.getNonNull(runtime);
   }
   tryShrink(self, runtime);
   return ExecutionStatus::RETURNED;
