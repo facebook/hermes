@@ -23,13 +23,8 @@ function format(code: string) {
   return prettier.format(code, options);
 }
 
-// TODO(marcoww): These tests are expected to fail until the prettier plugin
-// is rebuilt with hermes-parser >= 0.35.0 which supports readonly variance.
-// Remove the .failing and update snapshots once the plugin is rebuilt.
-/* eslint-disable jest/no-standalone-expect */
 describe(`'readonly' variance annotation`, () => {
-  // $FlowFixMe[prop-missing]
-  test.failing('class property', async () => {
+  test('class property', async () => {
     expect(
       await format(`
         class ReadonlyRoute {
@@ -44,8 +39,7 @@ describe(`'readonly' variance annotation`, () => {
     `);
   });
 
-  // $FlowFixMe[prop-missing]
-  test.failing('object type property', async () => {
+  test('object type property', async () => {
     expect(
       await format(`
         type ReadonlyObj = {
@@ -62,8 +56,7 @@ describe(`'readonly' variance annotation`, () => {
     `);
   });
 
-  // $FlowFixMe[prop-missing]
-  test.failing('tuple label', async () => {
+  test('tuple label', async () => {
     expect(
       await format(`
         type ReadonlyTuple = [  readonly   label:   number  ];
@@ -74,8 +67,7 @@ describe(`'readonly' variance annotation`, () => {
     `);
   });
 
-  // $FlowFixMe[prop-missing]
-  test.failing('interface', async () => {
+  test('interface', async () => {
     expect(
       await format(`
         type ReadonlyInterface = interface {
@@ -90,4 +82,3 @@ describe(`'readonly' variance annotation`, () => {
     `);
   });
 });
-/* eslint-enable jest/no-standalone-expect */
