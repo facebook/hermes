@@ -1079,6 +1079,20 @@ void TraceInterpreter::executeRecords() {
                   rt_, awr.index_, traceValueToJSIValue(awr.value_));
           break;
         }
+        case RecordType::ArrayPush: {
+          const auto &record =
+              static_cast<const SynthTrace::ArrayPushRecord &>(*rec);
+          auto arr =
+              getJSIValueForUse(record.objID_).asObject(rt_).asArray(rt_);
+          std::vector<Value> elements;
+          for (const auto &element : record.elements_) {
+            elements.emplace_back(traceValueToJSIValue(element));
+          }
+          const Value *elementPtr = elements.data();
+          size_t retVal = arr.push(rt_, elementPtr, elements.size());
+          TRACE_EXPECT_EQ(retVal, record.length_);
+          break;
+        }
         case RecordType::CallFromNative: {
           const auto &cfnr =
               static_cast<const SynthTrace::CallFromNativeRecord &>(*rec);

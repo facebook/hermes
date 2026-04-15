@@ -520,6 +520,18 @@ void SynthTrace::ArrayWriteRecord::toJSONInternal(JSONEmitter &json) const {
   json.emitKeyValue("value", encode(value_));
 }
 
+void SynthTrace::ArrayPushRecord::toJSONInternal(JSONEmitter &json) const {
+  Record::toJSONInternal(json);
+  json.emitKeyValue("objID", objID_);
+  json.emitKey("elements");
+  json.openArray();
+  for (const TraceValue &elements : elements_) {
+    json.emitValue(encode(elements));
+  }
+  json.closeArray();
+  json.emitKeyValue("length", length_);
+}
+
 void SynthTrace::CallRecord::toJSONInternal(JSONEmitter &json) const {
   Record::toJSONInternal(json);
   json.emitKeyValue("functionID", functionID_);
