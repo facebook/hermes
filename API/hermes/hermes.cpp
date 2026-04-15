@@ -760,6 +760,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   jsi::String createStringFromUtf16(const char16_t *utf16, size_t length)
       override;
   std::string utf8(const jsi::String &) override;
+  size_t length(const jsi::String &) override;
 
   std::u16string utf16(const jsi::String &str) override;
   std::u16string utf16(const jsi::PropNameID &sym) override;
@@ -2352,6 +2353,10 @@ jsi::String HermesRuntimeImpl::createStringFromUtf16(
 std::string HermesRuntimeImpl::utf8(const jsi::String &str) {
   return utf8FromStringView(
       vm::StringPrimitive::createStringView(runtime_, stringHandle(str)));
+}
+
+size_t HermesRuntimeImpl::length(const jsi::String &str) {
+  return stringHandle(str)->getStringLength();
 }
 
 std::u16string HermesRuntimeImpl::utf16(const jsi::String &str) {
