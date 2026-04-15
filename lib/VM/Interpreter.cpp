@@ -2206,7 +2206,7 @@ tailCall:
             SmallHermesValue shv,
             SmallHermesValue::encodeHermesValue(
                 O2REG(DefineOwnByIdLong), runtime));
-        auto *obj = vmcast<JSObject>(O1REG(DefineOwnById));
+        auto *obj = vmcast<JSObject>(O1REG(DefineOwnByIdLong));
         auto cacheIdx = ip->iDefineOwnByIdLong.op3;
         auto *cacheEntry = curCodeBlock->getWriteCacheEntry(cacheIdx);
         CompressedPointer clazzPtr{obj->getClassGCPtr()};
@@ -2777,9 +2777,9 @@ tailCall:
         DISPATCH;
       }
       CASE(FastArrayLoad) {
-        double idx = O3REG(FastArrayStore).getNumber();
+        double idx = O3REG(FastArrayLoad).getNumber();
         uint32_t intIndex = _sh_tryfast_f64_to_u32_cvt(idx);
-        auto *storage = vmcast<FastArray>(O2REG(FastArrayStore))
+        auto *storage = vmcast<FastArray>(O2REG(FastArrayLoad))
                             ->unsafeGetIndexedStorage(runtime);
 
         if (LLVM_UNLIKELY(intIndex >= storage->size() || intIndex != idx)) {
@@ -3357,7 +3357,7 @@ tailCall:
             goto exception;
           }
           gcScope.flushToSmallCount(KEEP_HANDLES);
-          ip = NEXTINST(GetOwnPrivateBySym);
+          ip = NEXTINST(PutOwnPrivateBySym);
           DISPATCH;
         } else {
           CAPTURE_IP(runtime.raiseTypeError(
