@@ -551,6 +551,11 @@ void Runtime::setPropertyValue(
   }
 }
 
+std::shared_ptr<MutableBuffer> Runtime::tryGetMutableBuffer(
+    const jsi::ArrayBuffer&) {
+  return nullptr;
+}
+
 Pointer& Pointer::operator=(Pointer&& other) noexcept {
   if (ptr_) {
     ptr_->invalidate();
