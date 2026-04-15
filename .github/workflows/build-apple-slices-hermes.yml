@@ -47,7 +47,6 @@ jobs:
 
           echo "[HERMES] Building Hermes for $SLICE"
 
-          chmod +x ./utils/build-apple-framework.sh
           BUILD_TYPE="${{ matrix.flavor }}" ./utils/build-apple-framework.sh "$SLICE"
 
           echo "Moving from build_$SLICE to $FINAL_PATH"

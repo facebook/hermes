@@ -8,9 +8,11 @@
 # Mac Catalyst) and combines them into a single universal xcframework.
 #
 # Usage:
-#   ./build-apple-framework.sh              # build all platforms + universal xcframework
-#   ./build-apple-framework.sh <platform>   # build a single platform (e.g. macosx, iphoneos)
-#   ./build-apple-framework.sh build_framework  # combine already-built slices into xcframework
+#   ./build-apple-framework.sh                   # build all platforms + universal xcframework
+#   ./build-apple-framework.sh <platform>        # build a single platform (e.g. macosx, iphoneos)
+#   ./build-apple-framework.sh build_framework   # combine already-built slices into xcframework
+#   ./build-apple-framework.sh build_hermesc     # build host hermesc compiler
+#   ./build-apple-framework.sh prepare_dest_root # assemble destroot from pre-built slices
 
 if [ "$CI" ]; then
   set -x
@@ -75,15 +77,9 @@ function get_release_version {
 # Given a specific target, retrieve the right architecture for it
 # $1 the target you want to build. Allowed values: iphoneos, iphonesimulator, catalyst, macosx, xros, xrsimulator, appletvos, appletvsimulator
 function get_architecture {
-    if [[ $1 == "iphoneos" || $1 == "xros" ]]; then
+    if [[ $1 == "iphoneos" || $1 == "xros" || $1 == "appletvos" ]]; then
       echo "arm64"
-    elif [[ $1 == "iphonesimulator" || $1 == "xrsimulator" ]]; then
-      echo "x86_64;arm64"
-    elif [[ $1 == "appletvos" ]]; then
-      echo "arm64"
-    elif [[ $1 == "appletvsimulator" ]]; then
-      echo "x86_64;arm64"
-    elif [[ $1 == "catalyst" || $1 == "macosx" ]]; then
+    elif [[ $1 == "iphonesimulator" || $1 == "xrsimulator" || $1 == "appletvsimulator" || $1 == "catalyst" || $1 == "macosx" ]]; then
       echo "x86_64;arm64"
     else
       echo "Error: unknown architecture passed $1"
@@ -318,6 +314,10 @@ if [[ -z $1 ]]; then
   create_framework
 elif [[ $1 == "build_framework" ]]; then
   build_universal_framework
+elif [[ $1 == "build_hermesc" ]]; then
+  build_host_hermesc_if_needed
+elif [[ $1 == "prepare_dest_root" ]]; then
+  prepare_dest_root_for_ci
 else
   build_framework "$1"
 fi

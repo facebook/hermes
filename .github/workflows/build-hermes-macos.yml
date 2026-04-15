@@ -53,17 +53,12 @@ jobs:
           mv build_xrsimulator_${{ matrix.flavor }} build_xrsimulator
       - name: Prepare destroot folder
         shell: bash
-        run: |
-          chmod +x ./utils/build-apple-framework.sh
-          source ./utils/build-apple-framework.sh
-          prepare_dest_root_for_ci
+        run: ./utils/build-apple-framework.sh prepare_dest_root
       - name: Create universal xcframework
         shell: bash
         run: |
           echo "[HERMES] Creating the universal framework"
-          chmod +x ./utils/build-apple-framework.sh
           ./utils/build-apple-framework.sh build_framework
-
           chmod +x ./destroot/bin/hermesc
       - name: Package the Hermes Apple frameworks
         shell: bash
