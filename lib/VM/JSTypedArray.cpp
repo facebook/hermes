@@ -493,6 +493,26 @@ struct _getOwnRetEncoder<uint64_t> {
   }
 };
 
+/// Specialization for Float16Array: read uint16_t bits and convert to double.
+template <>
+HermesValue
+JSTypedArray<uint16_t, CellKind::Float16ArrayKind>::_getOwnIndexedImpl(
+    PseudoHandle<JSObject> selfObj,
+    Runtime &runtime,
+    uint32_t index) {
+  NoAllocScope noAllocs{runtime};
+  auto *self = vmcast<JSTypedArray>(selfObj.get());
+
+  if (LLVM_UNLIKELY(!self->attached(runtime))) {
+    return HermesValue::encodeUndefinedValue();
+  }
+  if (LLVM_LIKELY(index < self->getLength())) {
+    uint16_t bits = self->monoAt(runtime, index);
+    return HermesValue::encodeUntrustedNumberValue(float16ToDouble(bits));
+  }
+  return HermesValue::encodeUndefinedValue();
+}
+
 template <typename T, CellKind C>
 HermesValue JSTypedArray<T, C>::_getOwnIndexedImpl(
     PseudoHandle<JSObject> selfObj,

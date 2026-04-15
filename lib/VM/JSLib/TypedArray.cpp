@@ -595,26 +595,33 @@ class TypedArraySortModel : public SortModel {
 
 namespace {
 
-/// ::qsort comparator for typed array elements.
 template <typename T>
+int compareFloat(T va, T vb) {
+  // NaN sorts after everything.
+  bool aNaN = std::isnan(va);
+  bool bNaN = std::isnan(vb);
+  if (LLVM_UNLIKELY(aNaN)) {
+    if (LLVM_UNLIKELY(bNaN))
+      return 0;
+    return 1;
+  } else if (LLVM_UNLIKELY(bNaN)) {
+    return -1;
+  }
+  // -0 < +0.
+  if (LLVM_UNLIKELY(va == 0 && vb == 0))
+    return std::signbit(vb) - std::signbit(va);
+  return (va > vb) - (va < vb);
+}
+
+/// ::qsort comparator for typed array elements.
+template <typename T, CellKind C>
 int qsortComparator(const void *a, const void *b) {
-  if constexpr (std::is_floating_point_v<T>) {
-    T va = *static_cast<const T *>(a);
-    T vb = *static_cast<const T *>(b);
-    // NaN sorts after everything.
-    bool aNaN = std::isnan(va);
-    bool bNaN = std::isnan(vb);
-    if (LLVM_UNLIKELY(aNaN)) {
-      if (LLVM_UNLIKELY(bNaN))
-        return 0;
-      return 1;
-    } else if (LLVM_UNLIKELY(bNaN)) {
-      return -1;
-    }
-    // -0 < +0.
-    if (LLVM_UNLIKELY(va == 0 && vb == 0))
-      return std::signbit(vb) - std::signbit(va);
-    return (va > vb) - (va < vb);
+  if constexpr (C == CellKind::Float16ArrayKind) {
+    return compareFloat(
+        float16ToDouble(*static_cast<const uint16_t *>(a)),
+        float16ToDouble(*static_cast<const uint16_t *>(b)));
+  } else if constexpr (std::is_floating_point_v<T>) {
+    return compareFloat(*static_cast<const T *>(a), *static_cast<const T *>(b));
   } else {
     T va = *static_cast<const T *>(a);
     T vb = *static_cast<const T *>(b);
@@ -629,9 +636,13 @@ void typedArraySortDirect(
     JSTypedArrayBase::size_type len) {
   assert(data && "data must be non-null");
   switch (kind) {
-#define TYPED_ARRAY(name, type)                              \
-  case CellKind::name##ArrayKind:                            \
-    ::qsort(data, len, sizeof(type), qsortComparator<type>); \
+#define TYPED_ARRAY(name, type)                            \
+  case CellKind::name##ArrayKind:                          \
+    ::qsort(                                               \
+        data,                                              \
+        len,                                               \
+        sizeof(type),                                      \
+        qsortComparator<type, CellKind::name##ArrayKind>); \
     break;
 #include "hermes/VM/TypedArrays.def"
     default:
