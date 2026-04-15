@@ -1762,6 +1762,158 @@ TEST_P(HermesRuntimeTest, TryGetMutableBuffer) {
   EXPECT_EQ(arrayBufferData[2], 2);
 }
 
+TEST_P(HermesRuntimeTest, UInt8Array) {
+  // Test creating a UInt8Array with a specific length
+  {
+    Uint8Array uint8Array(*rt, 10);
+
+    EXPECT_EQ(uint8Array.length(*rt), 10);
+    EXPECT_EQ(uint8Array.byteLength(*rt), 10);
+    EXPECT_EQ(uint8Array.byteOffset(*rt), 0);
+  }
+
+  // Test creating a UInt8Array from an ArrayBuffer with offset and length
+  {
+    const auto ab =
+        eval("new ArrayBuffer(20)").getObject(*rt).getArrayBuffer(*rt);
+
+    // Create a Uint8Array starting at offset 5 with length 10
+    Uint8Array uint8Array(*rt, ab, 5, 10);
+
+    EXPECT_EQ(uint8Array.length(*rt), 10);
+    EXPECT_EQ(uint8Array.byteLength(*rt), 10);
+    EXPECT_EQ(uint8Array.byteOffset(*rt), 5);
+
+    // Test buffer returns the correct underlying ArrayBuffer
+    auto buffer = uint8Array.buffer(*rt);
+    EXPECT_EQ(buffer.size(*rt), 20);
+    EXPECT_TRUE(Object::strictEquals(*rt, ab, buffer));
+  }
+}
+
+TEST_F(HermesRuntimeTestMethodsTest, UInt8ArrayDetached) {
+  // Test that byteLength, byteOffset, and length return 0 after detach.
+  {
+    Uint8Array uint8Array(*rt, 10);
+    auto buf = uint8Array.buffer(*rt);
+    // Detach the underlying ArrayBuffer.
+    rt->global().setProperty(*rt, "buf", std::move(buf));
+    eval("HermesInternal.detachArrayBuffer(buf)");
+
+    EXPECT_EQ(uint8Array.length(*rt), 0);
+    EXPECT_EQ(uint8Array.byteLength(*rt), 0);
+    EXPECT_EQ(uint8Array.byteOffset(*rt), 0);
+  }
+
+  // Test with a non-zero byteOffset.
+  {
+    auto ab = eval("new ArrayBuffer(20)").getObject(*rt).getArrayBuffer(*rt);
+    Uint8Array uint8Array(*rt, ab, 5, 10);
+    rt->global().setProperty(*rt, "buf", std::move(ab));
+    eval("HermesInternal.detachArrayBuffer(buf)");
+
+    EXPECT_EQ(uint8Array.byteOffset(*rt), 0);
+    EXPECT_EQ(uint8Array.byteLength(*rt), 0);
+    EXPECT_EQ(uint8Array.length(*rt), 0);
+  }
+
+  // Test that .buffer() still returns a valid (detached) ArrayBuffer.
+  {
+    Uint8Array uint8Array(*rt, 10);
+    auto buf = uint8Array.buffer(*rt);
+    rt->global().setProperty(*rt, "buf", Value(*rt, buf));
+    eval("HermesInternal.detachArrayBuffer(buf)");
+
+    auto detachedBuf = uint8Array.buffer(*rt);
+    EXPECT_TRUE(detachedBuf.detached(*rt));
+    EXPECT_TRUE(Object::strictEquals(*rt, buf, detachedBuf));
+  }
+
+  // Test that multiple Uint8Arrays sharing the same buffer all reflect detach.
+  {
+    auto ab = eval("new ArrayBuffer(20)").getObject(*rt).getArrayBuffer(*rt);
+    Uint8Array ta1(*rt, ab, 0, 10);
+    Uint8Array ta2(*rt, ab, 10, 10);
+    rt->global().setProperty(*rt, "buf", std::move(ab));
+    eval("HermesInternal.detachArrayBuffer(buf)");
+
+    EXPECT_EQ(ta1.length(*rt), 0);
+    EXPECT_EQ(ta1.byteLength(*rt), 0);
+    EXPECT_EQ(ta1.byteOffset(*rt), 0);
+    EXPECT_EQ(ta2.length(*rt), 0);
+    EXPECT_EQ(ta2.byteLength(*rt), 0);
+    EXPECT_EQ(ta2.byteOffset(*rt), 0);
+  }
+}
+
+TEST_P(HermesRuntimeTest, IsTypedArrayTest) {
+  // Test that isTypedArray returns false for a regular object
+  {
+    auto obj = Object(*rt);
+    EXPECT_FALSE(rt->isTypedArray(obj));
+    EXPECT_THROW(obj.asTypedArray(*rt), JSIException);
+  }
+
+  // Test that isTypedArray returns true for a Uint8Array
+  {
+    Uint8Array uint8Array(*rt, 10);
+    EXPECT_TRUE(rt->isTypedArray(uint8Array));
+
+    auto typedArray = uint8Array.getTypedArray(*rt);
+    EXPECT_EQ(typedArray.length(*rt), 10);
+  }
+
+  // Test that isTypedArray returns true for other TypedArray types
+  {
+    auto int32ArrayObj = eval("new Int32Array(5)").getObject(*rt);
+    EXPECT_TRUE(rt->isTypedArray(int32ArrayObj));
+    EXPECT_FALSE(rt->isUint8Array(int32ArrayObj));
+
+    auto typedArray = int32ArrayObj.getTypedArray(*rt);
+    EXPECT_EQ(typedArray.length(*rt), 5);
+  }
+
+  // Test that isTypedArray returns true for Float64Array
+  {
+    auto float64ArrayObj = eval("new Float64Array(3)").getObject(*rt);
+    EXPECT_TRUE(rt->isTypedArray(float64ArrayObj));
+
+    auto typedArray = float64ArrayObj.asTypedArray(*rt);
+    EXPECT_EQ(typedArray.length(*rt), 3);
+  }
+
+  // Test that isTypedArray returns false for ArrayBuffer
+  {
+    auto arrayBufferObj = eval("new ArrayBuffer(10)").getObject(*rt);
+    EXPECT_FALSE(rt->isTypedArray(arrayBufferObj));
+  }
+
+  // Test that isTypedArray returns false for a regular array
+  {
+    auto arrayObj = eval("[1, 2, 3]").getObject(*rt);
+    EXPECT_FALSE(rt->isTypedArray(arrayObj));
+  }
+}
+
+TEST_P(HermesRuntimeTest, IsUint8ArrayTest) {
+  // Test that isUint8Array returns false for a regular object
+  {
+    auto obj = Object(*rt);
+    EXPECT_FALSE(rt->isUint8Array(obj));
+    EXPECT_THROW(obj.asUint8Array(*rt), JSIException);
+  }
+
+  // Test that isUint8Array returns true for a Uint8Array created via JS
+  {
+    auto uint8ArrayObj = eval("new Uint8Array(10)").getObject(*rt);
+    EXPECT_TRUE(rt->isUint8Array(uint8ArrayObj));
+
+    // getUint8Array should succeed.
+    auto uint8Array = uint8ArrayObj.getUint8Array(*rt);
+    EXPECT_EQ(uint8Array.length(*rt), 10);
+  }
+}
+
 INSTANTIATE_TEST_CASE_P(
     Runtimes,
     HermesRuntimeTest,
