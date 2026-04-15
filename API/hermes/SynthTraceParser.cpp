@@ -523,6 +523,31 @@ SynthTrace getTrace(
             objID->getValue(),
             getNumberAs<uint64_t>(obj->get("length")));
         break;
+      case RecordType::CreateUInt8Array: {
+        trace.emplace_back<SynthTrace::CreateUInt8ArrayRecord>(
+            timeFromStart,
+            objID->getValue(),
+            getNumberAs<uint64_t>(obj->get("length")));
+        break;
+      }
+      case RecordType::CreateUInt8ArrayFromArrayBuffer: {
+        auto *objID = llvh::cast<JSONNumber>(obj->get("objID"));
+        auto *bufferID = llvh::cast<JSONNumber>(obj->get("bufferID"));
+        trace.emplace_back<SynthTrace::CreateUInt8ArrayFromArrayBufferRecord>(
+            timeFromStart,
+            objID->getValue(),
+            bufferID->getValue(),
+            getNumberAs<uint64_t>(obj->get("offset")),
+            getNumberAs<uint64_t>(obj->get("length")));
+        break;
+      }
+      case RecordType::GetBufferFromTypedArray: {
+        auto *bufferID = llvh::cast<JSONNumber>(obj->get("bufferID"));
+        auto *typedArrayID = llvh::cast<JSONNumber>(obj->get("typedArrayID"));
+        trace.emplace_back<SynthTrace::GetBufferFromTypedArrayRecord>(
+            timeFromStart, bufferID->getValue(), typedArrayID->getValue());
+        break;
+      }
       case RecordType::ArrayRead: {
         trace.emplace_back<SynthTrace::ArrayReadRecord>(
             timeFromStart, objID->getValue(), arrayIndex->getValue());

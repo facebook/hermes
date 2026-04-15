@@ -685,6 +685,57 @@ TEST_F(SynthTraceTest, CreateArray) {
       SynthTrace::CreateArrayRecord(records[0]->time_, objID, 10), *records[0]);
 }
 
+TEST_F(SynthTraceTest, CreateUInt8Array) {
+  auto arr = rt->createUint8Array(10);
+  const auto &records = rt->trace().records();
+  EXPECT_EQ(1, records.size());
+  EXPECT_EQ(SynthTrace::RecordType::CreateUInt8Array, records[0]->getType());
+  const auto &record =
+      static_cast<const SynthTrace::CreateUInt8ArrayRecord &>(*records[0]);
+  EXPECT_EQ(10, record.length_);
+}
+
+TEST_F(SynthTraceTest, CreateUInt8ArrayFromArrayBuffer) {
+  rt->evaluateJavaScript(
+      std::unique_ptr<jsi::StringBuffer>(
+          new jsi::StringBuffer("var buf = new ArrayBuffer(16)")),
+      "");
+  auto buf =
+      rt->global().getProperty(*rt, "buf").asObject(*rt).getArrayBuffer(*rt);
+  SynthTrace::ObjectID bufID = rt->useObjectID(buf);
+  auto arr = rt->createUint8Array(buf, 4, 8);
+  EXPECT_EQ(arr.length(*rt), 8);
+  const auto &records = rt->trace().records();
+  // Find the CreateUInt8ArrayFromArrayBuffer record (last record)
+  const auto &record =
+      static_cast<const SynthTrace::CreateUInt8ArrayFromArrayBufferRecord &>(
+          *records.back());
+  EXPECT_EQ(
+      SynthTrace::RecordType::CreateUInt8ArrayFromArrayBuffer,
+      records.back()->getType());
+  EXPECT_EQ(bufID, record.bufferID_);
+  EXPECT_EQ(4, record.offset_);
+  EXPECT_EQ(8, record.length_);
+}
+
+TEST_F(SynthTraceTest, GetBufferFromTypedArray) {
+  // Create a Uint8Array and then get its buffer
+  auto arr = rt->createUint8Array(16);
+  SynthTrace::ObjectID arrID = rt->useObjectID(arr);
+  auto buf = arr.buffer(*rt);
+  SynthTrace::ObjectID bufID = rt->useObjectID(buf);
+  const auto &records = rt->trace().records();
+  // Find the GetBufferFromTypedArray record (last record)
+  const auto &record =
+      static_cast<const SynthTrace::GetBufferFromTypedArrayRecord &>(
+          *records.back());
+  EXPECT_EQ(
+      SynthTrace::RecordType::GetBufferFromTypedArray,
+      records.back()->getType());
+  EXPECT_EQ(arrID, record.typedArrayID_);
+  EXPECT_EQ(bufID, record.bufferID_);
+}
+
 TEST_F(SynthTraceTest, ArrayWrite) {
   SynthTrace::ObjectID objID;
   {
@@ -1984,6 +2035,29 @@ x = BigInt("9007199254740991");
     auto str = rt.global().getProperty(rt, "str").asString(rt);
     EXPECT_EQ(bigint.getInt64(rt), 9007199254740991);
     EXPECT_EQ(str.utf8(rt), "9007199254740991");
+  }
+}
+
+TEST_F(SynthTraceReplayTest, GetBufferFromTypedArray) {
+  {
+    auto &rt = *traceRt;
+    // Create a Uint8Array and store it globally
+    auto arr = rt.createUint8Array(16);
+    rt.global().setProperty(rt, "arr", arr);
+    // Get the buffer from the TypedArray
+    auto buf = arr.buffer(rt);
+    rt.global().setProperty(rt, "buf", buf);
+    // Verify the buffer size
+    EXPECT_EQ(buf.size(rt), 16);
+  }
+  replay();
+  {
+    auto &rt = *replayRt;
+    // Verify the replayed Uint8Array and its buffer
+    auto arr =
+        rt.global().getProperty(rt, "arr").asObject(rt).getUint8Array(rt);
+    auto buf = arr.buffer(rt);
+    EXPECT_EQ(buf.size(rt), 16);
   }
 }
 
