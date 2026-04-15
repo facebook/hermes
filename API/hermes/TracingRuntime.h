@@ -146,6 +146,9 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
       size_t i,
       const jsi::Value &value) override;
 
+  size_t push(const jsi::Array &arr, const jsi::Value *elements, size_t count)
+      override;
+
   jsi::Function createFunctionFromHostFunction(
       const jsi::PropNameID &name,
       unsigned int paramCount,

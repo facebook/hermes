@@ -990,6 +990,19 @@ void TracingRuntime::setValueAtIndexImpl(
   return RD::setValueAtIndexImpl(arr, i, value);
 }
 
+size_t TracingRuntime::push(
+    const jsi::Array &arr,
+    const jsi::Value *elements,
+    size_t count) {
+  size_t retVal = RD::push(arr, elements, count);
+  trace_.emplace_back<SynthTrace::ArrayPushRecord>(
+      getTimeSinceStart(),
+      useObjectID(arr),
+      argStringifyer(elements, count),
+      retVal);
+  return retVal;
+}
+
 jsi::Function TracingRuntime::createFunctionFromHostFunction(
     const jsi::PropNameID &name,
     unsigned int paramCount,
