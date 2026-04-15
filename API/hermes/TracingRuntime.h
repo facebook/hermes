@@ -172,6 +172,8 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime>
   void setExternalMemoryPressure(const jsi::Object &obj, size_t amount)
       override;
 
+  std::shared_ptr<jsi::MutableBuffer> tryGetMutableBuffer(
+      const jsi::ArrayBuffer &buffer) override;
   /// @}
 
 #ifdef JSI_UNSTABLE
