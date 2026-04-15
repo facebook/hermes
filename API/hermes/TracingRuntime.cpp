@@ -983,6 +983,76 @@ jsi::ArrayBuffer TracingRuntime::buffer(const jsi::TypedArray &typedArray) {
   return buf;
 }
 
+jsi::Value TracingRuntime::createError(const jsi::String &msg) {
+  auto error = RD::createError(msg);
+  trace_.emplace_back<SynthTrace::CreateJSErrorRecord>(
+      getTimeSinceStart(),
+      defObjectID(error.getObject(*this)),
+      SynthTrace::JSErrorType::Error,
+      useObjectID(msg));
+  return error;
+}
+
+jsi::Value TracingRuntime::createEvalError(const jsi::String &msg) {
+  auto error = RD::createEvalError(msg);
+  trace_.emplace_back<SynthTrace::CreateJSErrorRecord>(
+      getTimeSinceStart(),
+      defObjectID(error.getObject(*this)),
+      SynthTrace::JSErrorType::EvalError,
+      useObjectID(msg));
+  return error;
+}
+
+jsi::Value TracingRuntime::createRangeError(const jsi::String &msg) {
+  auto error = RD::createRangeError(msg);
+  trace_.emplace_back<SynthTrace::CreateJSErrorRecord>(
+      getTimeSinceStart(),
+      defObjectID(error.getObject(*this)),
+      SynthTrace::JSErrorType::RangeError,
+      useObjectID(msg));
+  return error;
+}
+
+jsi::Value TracingRuntime::createReferenceError(const jsi::String &msg) {
+  auto error = RD::createReferenceError(msg);
+  trace_.emplace_back<SynthTrace::CreateJSErrorRecord>(
+      getTimeSinceStart(),
+      defObjectID(error.getObject(*this)),
+      SynthTrace::JSErrorType::ReferenceError,
+      useObjectID(msg));
+  return error;
+}
+
+jsi::Value TracingRuntime::createSyntaxError(const jsi::String &msg) {
+  auto error = RD::createSyntaxError(msg);
+  trace_.emplace_back<SynthTrace::CreateJSErrorRecord>(
+      getTimeSinceStart(),
+      defObjectID(error.getObject(*this)),
+      SynthTrace::JSErrorType::SyntaxError,
+      useObjectID(msg));
+  return error;
+}
+
+jsi::Value TracingRuntime::createTypeError(const jsi::String &msg) {
+  auto error = RD::createTypeError(msg);
+  trace_.emplace_back<SynthTrace::CreateJSErrorRecord>(
+      getTimeSinceStart(),
+      defObjectID(error.getObject(*this)),
+      SynthTrace::JSErrorType::TypeError,
+      useObjectID(msg));
+  return error;
+}
+
+jsi::Value TracingRuntime::createURIError(const jsi::String &msg) {
+  auto error = RD::createURIError(msg);
+  trace_.emplace_back<SynthTrace::CreateJSErrorRecord>(
+      getTimeSinceStart(),
+      defObjectID(error.getObject(*this)),
+      SynthTrace::JSErrorType::URIError,
+      useObjectID(msg));
+  return error;
+}
+
 size_t TracingRuntime::size(const jsi::Array &arr) {
   // Array size inquiries read from the length property, which is
   // non-configurable and thus cannot have side effects.

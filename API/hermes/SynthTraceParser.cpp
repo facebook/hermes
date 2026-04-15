@@ -13,6 +13,7 @@
 #include "hermes/Support/SourceErrorManager.h"
 
 #include <sstream>
+#include <unordered_map>
 
 namespace facebook {
 namespace hermes {
@@ -21,6 +22,17 @@ namespace tracing {
 using namespace ::hermes::parser;
 
 namespace {
+
+static const std::unordered_map<std::string, SynthTrace::JSErrorType>
+    kStringToJSErrorType = {
+        {"Error", SynthTrace::JSErrorType::Error},
+        {"EvalError", SynthTrace::JSErrorType::EvalError},
+        {"RangeError", SynthTrace::JSErrorType::RangeError},
+        {"ReferenceError", SynthTrace::JSErrorType::ReferenceError},
+        {"SyntaxError", SynthTrace::JSErrorType::SyntaxError},
+        {"TypeError", SynthTrace::JSErrorType::TypeError},
+        {"URIError", SynthTrace::JSErrorType::URIError},
+};
 
 SynthTrace::StringEncodingType getStringEncodingType(
     const std::string &encodingStr) {
@@ -528,6 +540,19 @@ SynthTrace getTrace(
         auto *typedArrayID = llvh::cast<JSONNumber>(obj->get("typedArrayID"));
         trace.emplace_back<SynthTrace::GetBufferFromTypedArrayRecord>(
             timeFromStart, bufferID->getValue(), typedArrayID->getValue());
+        break;
+      }
+      case RecordType::CreateJSError: {
+        auto *errorTypeStr = llvh::cast<JSONString>(obj->get("errorType"));
+        auto *messageID = llvh::cast<JSONNumber>(obj->get("messageID"));
+        auto it = kStringToJSErrorType.find(errorTypeStr->str());
+        assert(
+            it != kStringToJSErrorType.end() && "Unknown error type in trace");
+        trace.emplace_back<SynthTrace::CreateJSErrorRecord>(
+            timeFromStart,
+            objID->getValue(),
+            it->second,
+            messageID->getValue());
         break;
       }
       case RecordType::ArrayRead: {

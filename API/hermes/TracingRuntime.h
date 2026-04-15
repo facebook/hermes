@@ -142,6 +142,14 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
 
   jsi::ArrayBuffer buffer(const jsi::TypedArray &typedArray) override;
 
+  jsi::Value createError(const jsi::String &msg) override;
+  jsi::Value createEvalError(const jsi::String &msg) override;
+  jsi::Value createRangeError(const jsi::String &msg) override;
+  jsi::Value createReferenceError(const jsi::String &msg) override;
+  jsi::Value createSyntaxError(const jsi::String &msg) override;
+  jsi::Value createTypeError(const jsi::String &msg) override;
+  jsi::Value createURIError(const jsi::String &msg) override;
+
   size_t size(const jsi::Array &arr) override;
   size_t size(const jsi::ArrayBuffer &buf) override;
 
