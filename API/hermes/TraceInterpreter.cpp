@@ -1057,6 +1057,35 @@ void TraceInterpreter::executeRecords() {
           addToObjectMap(car.objID_, Array(rt_, car.length_), currentExecIndex);
           break;
         }
+        case RecordType::CreateUInt8Array: {
+          const auto &record =
+              static_cast<const SynthTrace::CreateUInt8ArrayRecord &>(*rec);
+          auto arr = rt_.createUint8Array(record.length_);
+          addToObjectMap(record.objID_, jsi::Value(rt_, arr), currentExecIndex);
+          break;
+        }
+        case RecordType::CreateUInt8ArrayFromArrayBuffer: {
+          const auto &record = static_cast<
+              const SynthTrace::CreateUInt8ArrayFromArrayBufferRecord &>(*rec);
+          const auto &buf = getJSIValueForUse(record.bufferID_)
+                                .asObject(rt_)
+                                .getArrayBuffer(rt_);
+          auto arr = rt_.createUint8Array(buf, record.offset_, record.length_);
+          addToObjectMap(record.objID_, jsi::Value(rt_, arr), currentExecIndex);
+          break;
+        }
+        case RecordType::GetBufferFromTypedArray: {
+          const auto &record =
+              static_cast<const SynthTrace::GetBufferFromTypedArrayRecord &>(
+                  *rec);
+          auto typedArray = getJSIValueForUse(record.typedArrayID_)
+                                .asObject(rt_)
+                                .getTypedArray(rt_);
+          auto buf = typedArray.buffer(rt_);
+          addToObjectMap(
+              record.bufferID_, jsi::Value(rt_, buf), currentExecIndex);
+          break;
+        }
         case RecordType::ArrayRead: {
           const auto &arr =
               static_cast<const SynthTrace::ArrayReadRecord &>(*rec);

@@ -221,6 +221,9 @@ class SynthTrace {
   RECORD(GetPrototype)                   \
   RECORD(SetPrototype)                   \
   RECORD(DeleteProperty)                 \
+  RECORD(CreateUInt8Array)               \
+  RECORD(CreateUInt8ArrayFromArrayBuffer) \
+  RECORD(GetBufferFromTypedArray)        \
   RECORD(Global)
 
   /// RecordType is a tag used to differentiate which type of record it is.
@@ -1059,6 +1062,95 @@ class SynthTrace {
     }
     std::vector<ObjectID> defs() const override {
       return {objID_};
+    }
+  };
+
+  /// A CreateUInt8ArrayRecord is an event where a new UInt8Array is created
+  /// with a specific length.
+  struct CreateUInt8ArrayRecord final : public Record {
+    static constexpr RecordType type{RecordType::CreateUInt8Array};
+    /// The ObjectID of the UInt8Array that was created by createUint8Array().
+    const ObjectID objID_;
+    /// The length of the UInt8Array that was passed to createUint8Array().
+    const size_t length_;
+
+    explicit CreateUInt8ArrayRecord(
+        TimeSinceStart time,
+        ObjectID objID,
+        size_t length)
+        : Record(time), objID_(objID), length_(length) {}
+
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
+    RecordType getType() const override {
+      return type;
+    }
+    std::vector<ObjectID> defs() const override {
+      return {objID_};
+    }
+  };
+
+  /// A CreateUInt8ArrayFromArrayBufferRecord is an event where a new UInt8Array
+  /// is created from an existing ArrayBuffer with offset and length.
+  struct CreateUInt8ArrayFromArrayBufferRecord final : public Record {
+    static constexpr RecordType type{
+        RecordType::CreateUInt8ArrayFromArrayBuffer};
+    /// The ObjectID of the UInt8Array that was created by createUint8Array().
+    const ObjectID objID_;
+    /// The ObjectID of the ArrayBuffer used to create the UInt8Array.
+    const ObjectID bufferID_;
+    /// The byte offset into the ArrayBuffer.
+    const size_t offset_;
+    /// The length of the UInt8Array view.
+    const size_t length_;
+
+    explicit CreateUInt8ArrayFromArrayBufferRecord(
+        TimeSinceStart time,
+        ObjectID objID,
+        ObjectID bufferID,
+        size_t offset,
+        size_t length)
+        : Record(time),
+          objID_(objID),
+          bufferID_(bufferID),
+          offset_(offset),
+          length_(length) {}
+
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
+    RecordType getType() const override {
+      return type;
+    }
+    std::vector<ObjectID> defs() const override {
+      return {objID_};
+    }
+    std::vector<ObjectID> uses() const override {
+      return {bufferID_};
+    }
+  };
+
+  /// A GetBufferFromTypedArrayRecord is an event where the underlying
+  /// ArrayBuffer of a TypedArray is retrieved.
+  struct GetBufferFromTypedArrayRecord final : public Record {
+    static constexpr RecordType type{RecordType::GetBufferFromTypedArray};
+    /// The ObjectID of the ArrayBuffer returned by buffer().
+    const ObjectID bufferID_;
+    /// The ObjectID of the TypedArray whose buffer was queried.
+    const ObjectID typedArrayID_;
+
+    explicit GetBufferFromTypedArrayRecord(
+        TimeSinceStart time,
+        ObjectID bufferID,
+        ObjectID typedArrayID)
+        : Record(time), bufferID_(bufferID), typedArrayID_(typedArrayID) {}
+
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
+    RecordType getType() const override {
+      return type;
+    }
+    std::vector<ObjectID> defs() const override {
+      return {bufferID_};
+    }
+    std::vector<ObjectID> uses() const override {
+      return {typedArrayID_};
     }
   };
 
