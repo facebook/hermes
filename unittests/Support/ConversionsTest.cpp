@@ -127,6 +127,183 @@ TEST(ConversionsTest, toArrayIndexTest) {
   ASSERT_FALSE(res.hasValue());
 };
 
+TEST(ConversionsTest, float16ToDoubleTest) {
+  // +0 (0x0000).
+  EXPECT_EQ(0.0, hermes::float16ToDouble(0x0000));
+  EXPECT_FALSE(std::signbit(hermes::float16ToDouble(0x0000)));
+
+  // -0 (0x8000).
+  EXPECT_EQ(0.0, hermes::float16ToDouble(0x8000));
+  EXPECT_TRUE(std::signbit(hermes::float16ToDouble(0x8000)));
+
+  // +1.0 (0x3C00).
+  EXPECT_EQ(1.0, hermes::float16ToDouble(0x3C00));
+
+  // -1.0 (0xBC00).
+  EXPECT_EQ(-1.0, hermes::float16ToDouble(0xBC00));
+
+  // +Infinity (0x7C00).
+  EXPECT_EQ(
+      std::numeric_limits<double>::infinity(), hermes::float16ToDouble(0x7C00));
+
+  // -Infinity (0xFC00).
+  EXPECT_EQ(
+      -std::numeric_limits<double>::infinity(),
+      hermes::float16ToDouble(0xFC00));
+
+  // NaN (0x7E00 = quiet NaN).
+  EXPECT_TRUE(std::isnan(hermes::float16ToDouble(0x7E00)));
+
+  // NaN with sign bit (0xFE00).
+  EXPECT_TRUE(std::isnan(hermes::float16ToDouble(0xFE00)));
+
+  // Signaling NaN (0x7C01 - exponent all 1s, mantissa non-zero low bit).
+  EXPECT_TRUE(std::isnan(hermes::float16ToDouble(0x7C01)));
+
+  // Max normal: 65504.0 (0x7BFF).
+  EXPECT_EQ(65504.0, hermes::float16ToDouble(0x7BFF));
+
+  // Smallest positive normal: 2^-14 (0x0400).
+  EXPECT_EQ(std::ldexp(1.0, -14), hermes::float16ToDouble(0x0400));
+
+  // Smallest positive subnormal: 2^-24 (0x0001).
+  EXPECT_EQ(std::ldexp(1.0, -24), hermes::float16ToDouble(0x0001));
+
+  // Largest subnormal: (1 - 2^-10) * 2^-14 (0x03FF).
+  EXPECT_EQ(
+      std::ldexp(1.0, -14) - std::ldexp(1.0, -24),
+      hermes::float16ToDouble(0x03FF));
+
+  // 0.5 (0x3800).
+  EXPECT_EQ(0.5, hermes::float16ToDouble(0x3800));
+
+  // 2.0 (0x4000).
+  EXPECT_EQ(2.0, hermes::float16ToDouble(0x4000));
+
+  // -2.0 (0xC000).
+  EXPECT_EQ(-2.0, hermes::float16ToDouble(0xC000));
+
+  // 0.1 rounded to float16 (0x2E66 = 0.0999755859375).
+  EXPECT_DOUBLE_EQ(0.0999755859375, hermes::float16ToDouble(0x2E66));
+
+  // Subnormal 0x0200 = 2^-15.
+  EXPECT_EQ(std::ldexp(1.0, -15), hermes::float16ToDouble(0x0200));
+}
+
+TEST(ConversionsTest, doubleToFloat16Test) {
+  // +0.0 -> 0x0000.
+  EXPECT_EQ(0x0000, hermes::doubleToFloat16(0.0));
+
+  // -0.0 -> 0x8000.
+  EXPECT_EQ(0x8000, hermes::doubleToFloat16(-0.0));
+
+  // 1.0 -> 0x3C00.
+  EXPECT_EQ(0x3C00, hermes::doubleToFloat16(1.0));
+
+  // -1.0 -> 0xBC00.
+  EXPECT_EQ(0xBC00, hermes::doubleToFloat16(-1.0));
+
+  // +Infinity -> 0x7C00.
+  EXPECT_EQ(
+      0x7C00, hermes::doubleToFloat16(std::numeric_limits<double>::infinity()));
+
+  // -Infinity -> 0xFC00.
+  EXPECT_EQ(
+      0xFC00,
+      hermes::doubleToFloat16(-std::numeric_limits<double>::infinity()));
+
+  // NaN -> quiet NaN 0x7E00.
+  EXPECT_EQ(
+      0x7E00,
+      hermes::doubleToFloat16(std::numeric_limits<double>::quiet_NaN()));
+
+  // -NaN preserves sign.
+  EXPECT_EQ(
+      0xFE00,
+      hermes::doubleToFloat16(-std::numeric_limits<double>::quiet_NaN()));
+
+  // Max normal float16: 65504.0 -> 0x7BFF.
+  EXPECT_EQ(0x7BFF, hermes::doubleToFloat16(65504.0));
+
+  // Overflow to +Infinity: 65520.0 (exceeds float16 max).
+  EXPECT_EQ(0x7C00, hermes::doubleToFloat16(65520.0));
+
+  // Overflow to -Infinity.
+  EXPECT_EQ(0xFC00, hermes::doubleToFloat16(-65520.0));
+
+  // Large double overflows to infinity.
+  EXPECT_EQ(0x7C00, hermes::doubleToFloat16(1e20));
+
+  // 0.5 -> 0x3800.
+  EXPECT_EQ(0x3800, hermes::doubleToFloat16(0.5));
+
+  // 2.0 -> 0x4000.
+  EXPECT_EQ(0x4000, hermes::doubleToFloat16(2.0));
+
+  // Smallest positive normal: 2^-14 -> 0x0400.
+  EXPECT_EQ(0x0400, hermes::doubleToFloat16(std::ldexp(1.0, -14)));
+
+  // Subnormal: 2^-24 (smallest subnormal) -> 0x0001.
+  EXPECT_EQ(0x0001, hermes::doubleToFloat16(std::ldexp(1.0, -24)));
+
+  // Subnormal: 2^-15 -> 0x0200.
+  EXPECT_EQ(0x0200, hermes::doubleToFloat16(std::ldexp(1.0, -15)));
+
+  // Underflow to zero: 2^-25 is below smallest subnormal.
+  // Halfway between 0 and smallest subnormal (2^-24).
+  // Round-to-even: 0 is even, so stays at 0.
+  EXPECT_EQ(0x0000, hermes::doubleToFloat16(std::ldexp(1.0, -25)));
+
+  // Underflow to zero: very small positive.
+  EXPECT_EQ(0x0000, hermes::doubleToFloat16(1e-20));
+
+  // Negative underflow to -0.
+  EXPECT_EQ(0x8000, hermes::doubleToFloat16(-1e-20));
+
+  // Double subnormal (magnitude < 2^-1022) -> ±0.
+  EXPECT_EQ(
+      0x0000,
+      hermes::doubleToFloat16(std::numeric_limits<double>::denorm_min()));
+  EXPECT_EQ(
+      0x8000,
+      hermes::doubleToFloat16(-std::numeric_limits<double>::denorm_min()));
+
+  // Round-to-nearest-even: 1.0 + 0.5 ULP (in float16).
+  // 1.0 = 0x3C00, next float16 is 1.0009765625 = 0x3C01.
+  // Halfway rounds to even (1.0 = even mantissa), so stays at 0x3C00.
+  // 1.0 in float16 has mantissa=0 (even). 1.0 + half ULP = 1.00048828125.
+  EXPECT_EQ(0x3C00, hermes::doubleToFloat16(1.00048828125));
+
+  // 1.0009765625 + 0.5 ULP: halfway between 0x3C01 (odd) and 0x3C02 (even).
+  // Rounds up to 0x3C02 (even mantissa).
+  // 1.0009765625 + half ULP = 1.001464843750.
+  EXPECT_EQ(0x3C02, hermes::doubleToFloat16(1.00146484375));
+
+  // Just above halfway: should round up.
+  // 1.0005 is above the halfway point (1.00048828125) between 0x3C00 and
+  // 0x3C01, so it rounds up.
+  EXPECT_EQ(0x3C01, hermes::doubleToFloat16(1.0005));
+
+  // Roundtrip: doubleToFloat16 -> float16ToDouble -> doubleToFloat16.
+  auto roundtrip = [](uint16_t bits) {
+    return hermes::doubleToFloat16(hermes::float16ToDouble(bits));
+  };
+  EXPECT_EQ(0x0000, roundtrip(0x0000)); // +0
+  EXPECT_EQ(0x8000, roundtrip(0x8000)); // -0
+  EXPECT_EQ(0x3C00, roundtrip(0x3C00)); // 1.0
+  EXPECT_EQ(0x7BFF, roundtrip(0x7BFF)); // max normal
+  EXPECT_EQ(0x7C00, roundtrip(0x7C00)); // +inf
+  EXPECT_EQ(0xFC00, roundtrip(0xFC00)); // -inf
+  EXPECT_EQ(0x0001, roundtrip(0x0001)); // min subnormal
+  EXPECT_EQ(0x03FF, roundtrip(0x03FF)); // max subnormal
+  EXPECT_EQ(0x0400, roundtrip(0x0400)); // min normal
+
+  // Mantissa overflow rounding: 0x3FFF is max mantissa in exponent range.
+  // float16 1.9990234375 (0x3FFF) + next representable is 2.0 (0x4000).
+  // Verify the boundary value is representable.
+  EXPECT_EQ(0x3FFF, roundtrip(0x3FFF));
+}
+
 TEST(ConversionsTest, numberToStringTest) {
   char buf[NUMBER_TO_STRING_BUF_SIZE];
 

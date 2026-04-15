@@ -137,6 +137,16 @@ inline OptValue<uint32_t> doubleToArrayIndex(double d) {
   return llvh::None;
 }
 
+/// Convert a IEEE 754 half-precision float16 (stored as uint16_t) to double.
+/// NaN inputs always produce a quiet NaN output (the quiet bit is preserved
+/// or set).
+double float16ToDouble(uint16_t bits);
+
+/// Convert a double to IEEE 754 half-precision float16 (stored as uint16_t).
+/// Uses round-to-nearest-even as required by the ECMAScript spec.
+/// NaN inputs always produce a quiet NaN.
+uint16_t doubleToFloat16(double d);
+
 /// Size of buffer that must be passed to numberToString.
 const size_t NUMBER_TO_STRING_BUF_SIZE = 32;
 
