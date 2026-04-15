@@ -67,7 +67,6 @@ Value *IRInstrument::postBinaryExpression(
   return invokeHook(
       "postBinary",
       {getIID(node), undefinedIfNull(cookie), opStr, result, left, right});
-  return result;
 }
 
 Value *IRInstrument::preUnaryExpression(

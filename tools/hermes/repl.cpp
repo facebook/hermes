@@ -486,6 +486,4 @@ int repl(const vm::RuntimeConfig &config) {
         << "\n";
     code.clear();
   }
-
-  return 0;
 }
