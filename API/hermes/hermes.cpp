@@ -852,6 +852,9 @@ class HermesRuntimeImpl final : public HermesRuntime,
       void (*deleter)(const void *data)) override;
   const void *getRuntimeDataImpl(const jsi::UUID &uuid) override;
 
+  std::shared_ptr<jsi::MutableBuffer> tryGetMutableBuffer(
+      const jsi::ArrayBuffer &arrayBuffer) override;
+
   bool strictEquals(const jsi::Symbol &a, const jsi::Symbol &b) const override;
   bool strictEquals(const jsi::BigInt &a, const jsi::BigInt &b) const override;
   bool strictEquals(const jsi::String &a, const jsi::String &b) const override;
@@ -3152,6 +3155,24 @@ void HermesRuntimeImpl::setRuntimeDataImpl(
 const void *HermesRuntimeImpl::getRuntimeDataImpl(const jsi::UUID &uuid) {
   auto entry = dataMap_.lookup(uuid);
   return entry.first;
+}
+
+std::shared_ptr<jsi::MutableBuffer> HermesRuntimeImpl::tryGetMutableBuffer(
+    const jsi::ArrayBuffer &arrayBuffer) {
+  auto abHandle = arrayBufferHandle(arrayBuffer);
+  if (LLVM_UNLIKELY(!abHandle->attached())) {
+    return nullptr;
+  }
+  if (LLVM_UNLIKELY(!abHandle->external())) {
+    return nullptr;
+  }
+
+  // External ArrayBuffers are created using the `createArrayBuffer` API with a
+  // shared pointer of a MutableBuffer. We pass in that shared pointer as the
+  // context when creating a JSArrayBuffer, thus we can assume the type of the
+  // context here.
+  return std::static_pointer_cast<jsi::MutableBuffer>(
+      vm::JSArrayBuffer::getExternalDataContext(runtime_, abHandle));
 }
 
 bool HermesRuntimeImpl::strictEquals(const jsi::Symbol &a, const jsi::Symbol &b)
