@@ -1189,6 +1189,39 @@ void TraceInterpreter::executeRecords() {
               record.bufferID_, jsi::Value(rt_, buf), currentExecIndex);
           break;
         }
+        case RecordType::CreateJSError: {
+          const auto &record =
+              static_cast<const SynthTrace::CreateJSErrorRecord &>(*rec);
+          const auto &msg = getJSIValueForUse(record.messageID_).getString(rt_);
+          jsi::Value error;
+          switch (record.errorType_) {
+            case SynthTrace::JSErrorType::Error:
+              error = rt_.createError(msg);
+              break;
+            case SynthTrace::JSErrorType::EvalError:
+              error = rt_.createEvalError(msg);
+              break;
+            case SynthTrace::JSErrorType::RangeError:
+              error = rt_.createRangeError(msg);
+              break;
+            case SynthTrace::JSErrorType::ReferenceError:
+              error = rt_.createReferenceError(msg);
+              break;
+            case SynthTrace::JSErrorType::SyntaxError:
+              error = rt_.createSyntaxError(msg);
+              break;
+            case SynthTrace::JSErrorType::TypeError:
+              error = rt_.createTypeError(msg);
+              break;
+            case SynthTrace::JSErrorType::URIError:
+              error = rt_.createURIError(msg);
+              break;
+            default:
+              llvm_unreachable("Unexpected JSErrorType.");
+          }
+          addToObjectMap(record.objID_, std::move(error), currentExecIndex);
+          break;
+        }
         case RecordType::ArrayRead: {
           const auto &arr =
               static_cast<const SynthTrace::ArrayReadRecord &>(*rec);
