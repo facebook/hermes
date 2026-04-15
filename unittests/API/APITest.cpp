@@ -210,6 +210,21 @@ TEST_F(HermesRuntimeTestMethodsTest, DetachedArrayBuffer) {
   EXPECT_THROW(ab.data(*rt), JSINativeException);
 }
 
+TEST_F(HermesRuntimeTestMethodsTest, ArrayBufferDetached) {
+  auto ab = eval("new ArrayBuffer(10)").getObject(*rt).getArrayBuffer(*rt);
+  EXPECT_FALSE(ab.detached(*rt));
+
+  auto detachedAb = eval(
+                        R"(
+  var x = new ArrayBuffer(10);
+  HermesInternal.detachArrayBuffer(x);
+  x
+)")
+                        .getObject(*rt)
+                        .getArrayBuffer(*rt);
+  EXPECT_TRUE(detachedAb.detached(*rt));
+}
+
 TEST_P(HermesRuntimeTest, BytecodeTest) {
   auto *api = castInterface<IHermesRootAPI>(makeHermesRootAPI());
   const uint8_t shortBytes[] = {1, 2, 3};
