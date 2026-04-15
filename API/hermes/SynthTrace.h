@@ -199,6 +199,7 @@ class SynthTrace {
   RECORD(CreateArray)                    \
   RECORD(ArrayRead)                      \
   RECORD(ArrayWrite)                     \
+  RECORD(ArrayPush)                      \
   RECORD(CallFromNative)                 \
   RECORD(ConstructFromNative)            \
   RECORD(ReturnFromNative)               \
@@ -1102,6 +1103,37 @@ class SynthTrace {
       pushIfTrackedValue(value_, uses);
       return uses;
     }
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
+  };
+
+  struct ArrayPushRecord final : public Record {
+    static constexpr RecordType type{RecordType::ArrayPush};
+    /// The ObjectID of the array
+    const ObjectID objID_;
+    /// The elements being pushed to the array
+    const std::vector<TraceValue> elements_;
+    /// The returned length from calling Array.push
+    size_t length_;
+
+    explicit ArrayPushRecord(
+        TimeSinceStart time,
+        ObjectID objID,
+        const std::vector<TraceValue> &elements,
+        size_t length)
+        : Record(time), objID_(objID), elements_(elements), length_(length) {}
+
+    RecordType getType() const override {
+      return type;
+    }
+
+    std::vector<ObjectID> uses() const override {
+      std::vector<ObjectID> uses{objID_};
+      for (const auto &val : elements_) {
+        pushIfTrackedValue(val, uses);
+      }
+      return uses;
+    }
+
     void toJSONInternal(::hermes::JSONEmitter &json) const override;
   };
 

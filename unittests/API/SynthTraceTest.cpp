@@ -702,6 +702,31 @@ TEST_F(SynthTraceTest, ArrayWrite) {
       *records[1]);
 }
 
+TEST_F(SynthTraceTest, ArrayPush) {
+  SynthTrace::ObjectID objID;
+  {
+    auto arr = jsi::Array::createWithElements(*rt, 1);
+    objID = rt->useObjectID(arr);
+    arr.push(*rt, 2, 3);
+  }
+  const auto &records = rt->trace().records();
+  EXPECT_EQ(3, records.size());
+  EXPECT_EQ_RECORD(
+      SynthTrace::CreateArrayRecord(records[0]->time_, objID, 1), *records[0]);
+  EXPECT_EQ_RECORD(
+      SynthTrace::ArrayWriteRecord(
+          records[1]->time_, objID, 0, SynthTrace::encodeNumber(1)),
+      *records[1]);
+
+  EXPECT_EQ_RECORD(
+      SynthTrace::ArrayPushRecord(
+          records[2]->time_,
+          objID,
+          {SynthTrace::encodeNumber(2), SynthTrace::encodeNumber(3)},
+          3),
+      *records[2]);
+}
+
 TEST_F(SynthTraceTest, CallObjectGetProp) {
   // Test to see if the GetPropertyRecord properly associates with the passed
   // in object.
@@ -1589,6 +1614,30 @@ TEST_F(SynthTraceReplayTest, CreateObjectReplay) {
 
     auto child2 = rt.global().getProperty(rt, "child2").asObject(rt);
     EXPECT_TRUE(child2.getPrototype(rt).isNull());
+  }
+}
+
+TEST_F(SynthTraceReplayTest, ArrayPush) {
+  {
+    auto &rt = *traceRt;
+    auto arr = jsi::Array::createWithElements(rt, 1);
+    rt.global().setProperty(rt, "arr", arr);
+
+    auto obj = jsi::Object(rt);
+    obj.setProperty(rt, "foo", "bar");
+
+    arr.push(rt, 2, obj);
+  }
+  replay();
+  {
+    auto &rt = *replayRt;
+    auto arr = rt.global().getProperty(rt, "arr").asObject(rt).getArray(rt);
+    EXPECT_EQ(arr.length(rt), 3);
+    EXPECT_EQ(arr.getValueAtIndex(rt, 0).getNumber(), 1);
+    EXPECT_EQ(arr.getValueAtIndex(rt, 1).getNumber(), 2);
+
+    auto obj = arr.getValueAtIndex(rt, 2).getObject(rt);
+    EXPECT_EQ(obj.getProperty(rt, "foo").getString(rt).utf8(rt), "bar");
   }
 }
 
