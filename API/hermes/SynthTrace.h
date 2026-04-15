@@ -176,6 +176,17 @@ class SynthTrace {
   /// Represents the encoding type of a String or PropNameId
   enum class StringEncodingType { ASCII, UTF8, UTF16 };
 
+  /// Represents the type of JavaScript Error being created.
+  enum class JSErrorType {
+    Error,
+    EvalError,
+    RangeError,
+    ReferenceError,
+    SyntaxError,
+    TypeError,
+    URIError,
+  };
+
   /// A TimePoint is a time when some event occurred.
   using TimePoint = std::chrono::steady_clock::time_point;
   using TimeSinceStart = std::chrono::milliseconds;
@@ -224,6 +235,7 @@ class SynthTrace {
   RECORD(CreateUInt8Array)               \
   RECORD(CreateUInt8ArrayFromArrayBuffer) \
   RECORD(GetBufferFromTypedArray)        \
+  RECORD(CreateJSError)                  \
   RECORD(Global)
 
   /// RecordType is a tag used to differentiate which type of record it is.
@@ -1151,6 +1163,39 @@ class SynthTrace {
     }
     std::vector<ObjectID> uses() const override {
       return {typedArrayID_};
+    }
+  };
+
+  /// A CreateJSErrorRecord is an event where a JavaScript Error object is
+  /// created with a specific type and message.
+  struct CreateJSErrorRecord final : public Record {
+    static constexpr RecordType type{RecordType::CreateJSError};
+    /// The ObjectID of the error Value that was created.
+    const ObjectID objID_;
+    /// The type of error being created.
+    const JSErrorType errorType_;
+    /// The ObjectID of the message String passed to create the error.
+    const ObjectID messageID_;
+
+    explicit CreateJSErrorRecord(
+        TimeSinceStart time,
+        ObjectID objID,
+        JSErrorType errorType,
+        ObjectID messageID)
+        : Record(time),
+          objID_(objID),
+          errorType_(errorType),
+          messageID_(messageID) {}
+
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
+    RecordType getType() const override {
+      return type;
+    }
+    std::vector<ObjectID> defs() const override {
+      return {objID_};
+    }
+    std::vector<ObjectID> uses() const override {
+      return {messageID_};
     }
   };
 
