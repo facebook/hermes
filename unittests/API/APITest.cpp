@@ -3144,6 +3144,102 @@ INSTANTIATE_TEST_CASE_P(
     ::testing::ValuesIn(runtimeGenerators()));
 #endif
 
+TEST_P(HermesRuntimeTest, CreateErrorTest) {
+  // Test JSError::createEvalError
+  {
+    try {
+      throw JSError::createEvalError(*rt, "eval error");
+    } catch (const JSError &e) {
+      // getMessage() checks the C++ JSError's cached message.
+      // The "message" property check verifies the JS object was constructed
+      // correctly, since they are populated independently.
+      EXPECT_EQ(e.getMessage(), "eval error");
+      Object caughtObj = e.value().getObject(*rt);
+      EXPECT_EQ(
+          caughtObj.getProperty(*rt, "message").getString(*rt).utf8(*rt),
+          "eval error");
+      EXPECT_TRUE(rt->instanceOf(
+          caughtObj, rt->global().getPropertyAsFunction(*rt, "EvalError")));
+    }
+  }
+
+  // Test JSError::createRangeError
+  {
+    try {
+      throw JSError::createRangeError(*rt, "range error");
+    } catch (const JSError &e) {
+      EXPECT_EQ(e.getMessage(), "range error");
+      Object caughtObj = e.value().getObject(*rt);
+      EXPECT_EQ(
+          caughtObj.getProperty(*rt, "message").getString(*rt).utf8(*rt),
+          "range error");
+      EXPECT_TRUE(rt->instanceOf(
+          caughtObj, rt->global().getPropertyAsFunction(*rt, "RangeError")));
+    }
+  }
+
+  // Test JSError::createReferenceError
+  {
+    try {
+      throw JSError::createReferenceError(*rt, "reference error");
+    } catch (const JSError &e) {
+      EXPECT_EQ(e.getMessage(), "reference error");
+      Object caughtObj = e.value().getObject(*rt);
+      EXPECT_EQ(
+          caughtObj.getProperty(*rt, "message").getString(*rt).utf8(*rt),
+          "reference error");
+      EXPECT_TRUE(rt->instanceOf(
+          caughtObj,
+          rt->global().getPropertyAsFunction(*rt, "ReferenceError")));
+    }
+  }
+
+  // Test JSError::createSyntaxError
+  {
+    try {
+      throw JSError::createSyntaxError(*rt, "syntax error");
+    } catch (const JSError &e) {
+      EXPECT_EQ(e.getMessage(), "syntax error");
+      Object caughtObj = e.value().getObject(*rt);
+      EXPECT_EQ(
+          caughtObj.getProperty(*rt, "message").getString(*rt).utf8(*rt),
+          "syntax error");
+      EXPECT_TRUE(rt->instanceOf(
+          caughtObj, rt->global().getPropertyAsFunction(*rt, "SyntaxError")));
+    }
+  }
+
+  // Test JSError::createTypeError
+  {
+    try {
+      throw JSError::createTypeError(*rt, "type error");
+    } catch (const JSError &e) {
+      EXPECT_EQ(e.getMessage(), "type error");
+      Object caughtObj = e.value().getObject(*rt);
+      EXPECT_EQ(
+          caughtObj.getProperty(*rt, "message").getString(*rt).utf8(*rt),
+          "type error");
+      EXPECT_TRUE(rt->instanceOf(
+          caughtObj, rt->global().getPropertyAsFunction(*rt, "TypeError")));
+    }
+  }
+
+  // Test JSError::createURIError
+  {
+    try {
+      throw JSError::createURIError(*rt, "uri error");
+    } catch (const JSError &e) {
+      EXPECT_EQ(e.getMessage(), "uri error");
+      Object caughtObj = e.value().getObject(*rt);
+      EXPECT_EQ(
+          caughtObj.getProperty(*rt, "message").getString(*rt).utf8(*rt),
+          "uri error");
+      EXPECT_TRUE(rt->instanceOf(
+          caughtObj, rt->global().getPropertyAsFunction(*rt, "URIError")));
+    }
+  }
+}
+
 INSTANTIATE_TEST_CASE_P(
     Runtimes,
     HermesRuntimeTest,

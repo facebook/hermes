@@ -29,6 +29,7 @@
 #include "hermes/VM/HostModel.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSArrayBuffer.h"
+#include "hermes/VM/JSError.h"
 #include "hermes/VM/JSLib.h"
 #include "hermes/VM/JSLib/JSLibStorage.h"
 #include "hermes/VM/JSLib/RuntimeJSONParse.h"
@@ -876,6 +877,14 @@ class HermesRuntimeImpl final : public HermesRuntime,
   size_t length(const jsi::TypedArray &typedArray) override;
 
   bool isUint8Array(const jsi::Object &obj) const override;
+
+  jsi::Value createError(const jsi::String &msg) override;
+  jsi::Value createEvalError(const jsi::String &msg) override;
+  jsi::Value createRangeError(const jsi::String &msg) override;
+  jsi::Value createReferenceError(const jsi::String &msg) override;
+  jsi::Value createSyntaxError(const jsi::String &msg) override;
+  jsi::Value createTypeError(const jsi::String &msg) override;
+  jsi::Value createURIError(const jsi::String &msg) override;
 
   bool strictEquals(const jsi::Symbol &a, const jsi::Symbol &b) const override;
   bool strictEquals(const jsi::BigInt &a, const jsi::BigInt &b) const override;
@@ -3268,6 +3277,104 @@ bool HermesRuntimeImpl::isTypedArray(const jsi::Object &obj) const {
 bool HermesRuntimeImpl::isUint8Array(const jsi::Object &obj) const {
   return vm::vmisa<vm::JSTypedArray<uint8_t, vm::CellKind::Uint8ArrayKind>>(
       phv(obj));
+}
+
+jsi::Value HermesRuntimeImpl::createError(const jsi::String &msg) {
+  vm::GCScope gcScope(runtime_);
+  struct : public vm::Locals {
+    vm::PinnedValue<vm::JSError> errorObj;
+  } lv;
+  vm::LocalsRAII lraii(runtime_, &lv);
+  vm::Handle<vm::JSObject> prototype =
+      vm::Handle<vm::JSObject>::vmcast(&runtime_.ErrorPrototype);
+  lv.errorObj = vm::JSError::create(runtime_, prototype);
+  vm::JSError::recordStackTrace(lv.errorObj, runtime_);
+  vm::JSError::setMessage(lv.errorObj, runtime_, stringHandle(msg));
+  return valueFromHermesValue(lv.errorObj.getHermesValue());
+}
+
+jsi::Value HermesRuntimeImpl::createEvalError(const jsi::String &msg) {
+  vm::GCScope gcScope(runtime_);
+  struct : public vm::Locals {
+    vm::PinnedValue<vm::JSError> errorObj;
+  } lv;
+  vm::LocalsRAII lraii(runtime_, &lv);
+  vm::Handle<vm::JSObject> prototype =
+      vm::Handle<vm::JSObject>::vmcast(&runtime_.EvalErrorPrototype);
+  lv.errorObj = vm::JSError::create(runtime_, prototype);
+  vm::JSError::recordStackTrace(lv.errorObj, runtime_);
+  vm::JSError::setMessage(lv.errorObj, runtime_, stringHandle(msg));
+  return valueFromHermesValue(lv.errorObj.getHermesValue());
+}
+
+jsi::Value HermesRuntimeImpl::createRangeError(const jsi::String &msg) {
+  vm::GCScope gcScope(runtime_);
+  struct : public vm::Locals {
+    vm::PinnedValue<vm::JSError> errorObj;
+  } lv;
+  vm::LocalsRAII lraii(runtime_, &lv);
+  vm::Handle<vm::JSObject> prototype =
+      vm::Handle<vm::JSObject>::vmcast(&runtime_.RangeErrorPrototype);
+  lv.errorObj = vm::JSError::create(runtime_, prototype);
+  vm::JSError::recordStackTrace(lv.errorObj, runtime_);
+  vm::JSError::setMessage(lv.errorObj, runtime_, stringHandle(msg));
+  return valueFromHermesValue(lv.errorObj.getHermesValue());
+}
+
+jsi::Value HermesRuntimeImpl::createReferenceError(const jsi::String &msg) {
+  vm::GCScope gcScope(runtime_);
+  struct : public vm::Locals {
+    vm::PinnedValue<vm::JSError> errorObj;
+  } lv;
+  vm::LocalsRAII lraii(runtime_, &lv);
+  vm::Handle<vm::JSObject> prototype =
+      vm::Handle<vm::JSObject>::vmcast(&runtime_.ReferenceErrorPrototype);
+  lv.errorObj = vm::JSError::create(runtime_, prototype);
+  vm::JSError::recordStackTrace(lv.errorObj, runtime_);
+  vm::JSError::setMessage(lv.errorObj, runtime_, stringHandle(msg));
+  return valueFromHermesValue(lv.errorObj.getHermesValue());
+}
+
+jsi::Value HermesRuntimeImpl::createSyntaxError(const jsi::String &msg) {
+  vm::GCScope gcScope(runtime_);
+  struct : public vm::Locals {
+    vm::PinnedValue<vm::JSError> errorObj;
+  } lv;
+  vm::LocalsRAII lraii(runtime_, &lv);
+  vm::Handle<vm::JSObject> prototype =
+      vm::Handle<vm::JSObject>::vmcast(&runtime_.SyntaxErrorPrototype);
+  lv.errorObj = vm::JSError::create(runtime_, prototype);
+  vm::JSError::recordStackTrace(lv.errorObj, runtime_);
+  vm::JSError::setMessage(lv.errorObj, runtime_, stringHandle(msg));
+  return valueFromHermesValue(lv.errorObj.getHermesValue());
+}
+
+jsi::Value HermesRuntimeImpl::createTypeError(const jsi::String &msg) {
+  vm::GCScope gcScope(runtime_);
+  struct : public vm::Locals {
+    vm::PinnedValue<vm::JSError> errorObj;
+  } lv;
+  vm::LocalsRAII lraii(runtime_, &lv);
+  vm::Handle<vm::JSObject> prototype =
+      vm::Handle<vm::JSObject>::vmcast(&runtime_.TypeErrorPrototype);
+  lv.errorObj = vm::JSError::create(runtime_, prototype);
+  vm::JSError::recordStackTrace(lv.errorObj, runtime_);
+  vm::JSError::setMessage(lv.errorObj, runtime_, stringHandle(msg));
+  return valueFromHermesValue(lv.errorObj.getHermesValue());
+}
+
+jsi::Value HermesRuntimeImpl::createURIError(const jsi::String &msg) {
+  vm::GCScope gcScope(runtime_);
+  struct : public vm::Locals {
+    vm::PinnedValue<vm::JSError> errorObj;
+  } lv;
+  vm::LocalsRAII lraii(runtime_, &lv);
+  vm::Handle<vm::JSObject> prototype =
+      vm::Handle<vm::JSObject>::vmcast(&runtime_.URIErrorPrototype);
+  lv.errorObj = vm::JSError::create(runtime_, prototype);
+  vm::JSError::recordStackTrace(lv.errorObj, runtime_);
+  vm::JSError::setMessage(lv.errorObj, runtime_, stringHandle(msg));
+  return valueFromHermesValue(lv.errorObj.getHermesValue());
 }
 
 bool HermesRuntimeImpl::strictEquals(const jsi::Symbol &a, const jsi::Symbol &b)
