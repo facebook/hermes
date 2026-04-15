@@ -824,6 +824,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   size_t size(const jsi::Array &) override;
   size_t size(const jsi::ArrayBuffer &) override;
   uint8_t *data(const jsi::ArrayBuffer &) override;
+  bool detached(const jsi::ArrayBuffer &) override;
   jsi::Value getValueAtIndex(const jsi::Array &, size_t i) override;
   void setValueAtIndexImpl(
       const jsi::Array &,
@@ -2892,6 +2893,10 @@ uint8_t *HermesRuntimeImpl::data(const jsi::ArrayBuffer &arr) {
   if (LLVM_UNLIKELY(!ab->attached()))
     throw jsi::JSINativeException("ArrayBuffer is detached.");
   return ab->getDataBlock();
+}
+
+bool HermesRuntimeImpl::detached(const jsi::ArrayBuffer &arr) {
+  return !arrayBufferHandle(arr)->attached();
 }
 
 jsi::Value HermesRuntimeImpl::getValueAtIndex(const jsi::Array &arr, size_t i) {
