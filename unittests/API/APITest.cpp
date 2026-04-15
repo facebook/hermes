@@ -1710,6 +1710,43 @@ TEST_P(HermesRuntimeTest, ArrayPush) {
   EXPECT_TRUE(arr.getValueAtIndex(*rt, 3).isUndefined());
 }
 
+TEST_P(HermesRuntimeTest, TryGetMutableBuffer) {
+  auto arrayBuffer =
+      eval("new ArrayBuffer(8);").getObject(*rt).getArrayBuffer(*rt);
+  EXPECT_EQ(arrayBuffer.tryGetMutableBuffer(*rt), nullptr);
+
+  struct TestBuffer : MutableBuffer {
+    size_t size() const override {
+      return sizeof(arr);
+    }
+    uint8_t *data() override {
+      return reinterpret_cast<uint8_t *>(arr.data());
+    }
+
+    std::array<uint8_t, 3> arr;
+  };
+  auto buf = std::make_shared<TestBuffer>();
+  for (uint32_t i = 0; i < buf->arr.size(); i++) {
+    buf->arr[i] = i;
+  }
+  arrayBuffer = ArrayBuffer(*rt, buf);
+
+  auto mutableBuffer = arrayBuffer.tryGetMutableBuffer(*rt);
+  auto *mutableBufferData = mutableBuffer->data();
+  EXPECT_EQ(mutableBuffer->size(), 3);
+  EXPECT_EQ(mutableBufferData[0], 0);
+  EXPECT_EQ(mutableBufferData[1], 1);
+  EXPECT_EQ(mutableBufferData[2], 2);
+
+  // Modifying the returned MutableBuffer data also modifies the ArrayBuffer
+  // data.
+  mutableBufferData[1] = 100;
+  auto *arrayBufferData = arrayBuffer.data(*rt);
+  EXPECT_EQ(arrayBufferData[0], 0);
+  EXPECT_EQ(arrayBufferData[1], 100);
+  EXPECT_EQ(arrayBufferData[2], 2);
+}
+
 INSTANTIATE_TEST_CASE_P(
     Runtimes,
     HermesRuntimeTest,
