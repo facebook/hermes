@@ -735,6 +735,10 @@ class HermesABIRuntimeWrapper : public Runtime {
   }
 
  protected:
+  using IRuntime::getProperty;
+  using IRuntime::hasProperty;
+  using IRuntime::setPropertyValue;
+
   PointerValue *cloneSymbol(const Runtime::PointerValue *pv) override {
     return clone(pv);
   }
