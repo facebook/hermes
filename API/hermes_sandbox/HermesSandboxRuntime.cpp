@@ -1832,6 +1832,10 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
   }
 
  protected:
+  using IRuntime::getProperty;
+  using IRuntime::hasProperty;
+  using IRuntime::setPropertyValue;
+
   PointerValue *cloneSymbol(const Runtime::PointerValue *pv) override {
     return clone(pv);
   }
