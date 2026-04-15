@@ -30,6 +30,7 @@
 #include "hermes/VM/JSLib.h"
 #include "hermes/VM/JSLib/JSLibStorage.h"
 #include "hermes/VM/JSLib/RuntimeJSONUtils.h"
+#include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/NativeState.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/Profiler/CodeCoverageProfiler.h"
@@ -571,6 +572,12 @@ class HermesRuntimeImpl final : public HermesRuntime,
     return ::hermes::vm::Handle<::hermes::vm::JSArrayBuffer>::vmcast(&phv(arr));
   }
 
+  static ::hermes::vm::Handle<::hermes::vm::JSTypedArrayBase> typedArrayHandle(
+      const jsi::TypedArray &arr) {
+    return ::hermes::vm::Handle<::hermes::vm::JSTypedArrayBase>::vmcast(
+        &phv(arr));
+  }
+
   static const ::hermes::vm::WeakRoot<vm::JSObject> &weakRoot(
       const jsi::Pointer &pointer) {
     assert(
@@ -756,6 +763,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
 
   bool isArray(const jsi::Object &) const override;
   bool isArrayBuffer(const jsi::Object &) const override;
+  bool isTypedArray(const jsi::Object &) const override;
   bool isFunction(const jsi::Object &) const override;
   bool isHostObject(const jsi::Object &) const override;
   bool isHostFunction(const jsi::Function &) const override;
@@ -805,6 +813,19 @@ class HermesRuntimeImpl final : public HermesRuntime,
 
   std::shared_ptr<jsi::MutableBuffer> tryGetMutableBuffer(
       const jsi::ArrayBuffer &arrayBuffer) override;
+
+  jsi::Uint8Array createUint8Array(size_t length) override;
+  jsi::Uint8Array createUint8Array(
+      const jsi::ArrayBuffer &buffer,
+      size_t offset,
+      size_t length) override;
+
+  jsi::ArrayBuffer buffer(const jsi::TypedArray &typedArray) override;
+  size_t byteOffset(const jsi::TypedArray &typedArray) override;
+  size_t byteLength(const jsi::TypedArray &typedArray) override;
+  size_t length(const jsi::TypedArray &typedArray) override;
+
+  bool isUint8Array(const jsi::Object &obj) const override;
 
   bool strictEquals(const jsi::Symbol &a, const jsi::Symbol &b) const override;
   bool strictEquals(const jsi::BigInt &a, const jsi::BigInt &b) const override;
@@ -2906,6 +2927,75 @@ std::shared_ptr<jsi::MutableBuffer> HermesRuntimeImpl::tryGetMutableBuffer(
   // context here.
   return std::static_pointer_cast<jsi::MutableBuffer>(
       vm::JSArrayBuffer::getExternalDataContext(runtime_, abHandle));
+}
+
+jsi::Uint8Array HermesRuntimeImpl::createUint8Array(size_t length) {
+  vm::GCScope gcScope(runtime_);
+  auto result =
+      vm::JSTypedArray<uint8_t, vm::CellKind::Uint8ArrayKind>::allocate(
+          runtime_, length);
+  checkStatus(result.getStatus());
+  return add<jsi::Uint8Array>(result->getHermesValue());
+}
+
+jsi::Uint8Array HermesRuntimeImpl::createUint8Array(
+    const jsi::ArrayBuffer &buffer,
+    size_t offset,
+    size_t length) {
+  vm::GCScope gcScope(runtime_);
+  auto abHandle = arrayBufferHandle(buffer);
+
+  auto typedArrayRes =
+      vm::JSTypedArray<uint8_t, vm::CellKind::Uint8ArrayKind>::allocate(
+          runtime_, length);
+  checkStatus(typedArrayRes.getStatus());
+
+  vm::JSTypedArrayBase::setBuffer(
+      runtime_,
+      typedArrayRes->get(),
+      *abHandle,
+      offset,
+      length,
+      sizeof(uint8_t));
+
+  return add<jsi::Uint8Array>(typedArrayRes->getHermesValue());
+}
+
+jsi::ArrayBuffer HermesRuntimeImpl::buffer(const jsi::TypedArray &typedArray) {
+  vm::GCScope gcScope(runtime_);
+  auto taHandle = typedArrayHandle(typedArray);
+  return add<jsi::ArrayBuffer>(
+      vm::HermesValue::encodeObjectValue(taHandle->getBuffer(runtime_)));
+}
+
+size_t HermesRuntimeImpl::byteOffset(const jsi::TypedArray &typedArray) {
+  auto taHandle = typedArrayHandle(typedArray);
+  if (LLVM_UNLIKELY(!taHandle->attached(runtime_)))
+    return 0;
+  return taHandle->getByteOffset();
+}
+
+size_t HermesRuntimeImpl::byteLength(const jsi::TypedArray &typedArray) {
+  auto taHandle = typedArrayHandle(typedArray);
+  if (LLVM_UNLIKELY(!taHandle->attached(runtime_)))
+    return 0;
+  return taHandle->getByteLength();
+}
+
+size_t HermesRuntimeImpl::length(const jsi::TypedArray &typedArray) {
+  auto taHandle = typedArrayHandle(typedArray);
+  if (LLVM_UNLIKELY(!taHandle->attached(runtime_)))
+    return 0;
+  return taHandle->getLength();
+}
+
+bool HermesRuntimeImpl::isTypedArray(const jsi::Object &obj) const {
+  return vm::vmisa<vm::JSTypedArrayBase>(phv(obj));
+}
+
+bool HermesRuntimeImpl::isUint8Array(const jsi::Object &obj) const {
+  return vm::vmisa<vm::JSTypedArray<uint8_t, vm::CellKind::Uint8ArrayKind>>(
+      phv(obj));
 }
 
 bool HermesRuntimeImpl::strictEquals(const jsi::Symbol &a, const jsi::Symbol &b)
