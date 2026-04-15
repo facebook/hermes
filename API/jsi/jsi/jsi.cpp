@@ -601,6 +601,10 @@ Value Runtime::createURIError(const String& msg) {
   return callGlobalFunction(*this, "URIError", Value(*this, msg));
 }
 
+size_t Runtime::length(const String& str) {
+  return utf16(str).size();
+}
+
 bool Runtime::detached(const ArrayBuffer& buffer) {
   Value prop = buffer.getProperty(*this, "detached");
   if (!prop.isBool()) {
