@@ -181,6 +181,12 @@ CallResult<HermesValue> typedArrayConstructorFromLength(
   return self.getHermesValue();
 }
 
+/// \return true if \p kind is a BigInt typed array.
+static bool isBigIntTypedArrayKind(CellKind kind) {
+  return kind == CellKind::BigInt64ArrayKind ||
+      kind == CellKind::BigUint64ArrayKind;
+}
+
 // ES6 22.2.1.3
 template <typename T, CellKind C>
 CallResult<HermesValue> typedArrayConstructorFromTypedArray(
@@ -190,6 +196,12 @@ CallResult<HermesValue> typedArrayConstructorFromTypedArray(
   if (!other->attached(runtime)) {
     return runtime.raiseTypeError(
         "Cannot construct a TypedArray from a detached TypedArray");
+  }
+  // If srcArray.[[ContentType]] is not O.[[ContentType]], throw a TypeError
+  // exception. The internal property [[ContentType]] is defined to be either
+  // BigInt for BigInt64Array/BigUint64Array or Number for all other types.
+  if (isBigIntTypedArrayKind(C) != isBigIntTypedArrayKind(other->getKind())) {
+    return runtime.raiseTypeError("Cannot mix BigInt and other types");
   }
   if (JSTypedArray<T, C>::createBuffer(runtime, self, other->getLength()) ==
       ExecutionStatus::EXCEPTION) {

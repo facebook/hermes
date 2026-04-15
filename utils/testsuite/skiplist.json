@@ -72,20 +72,10 @@
     },
     {
       "paths": [
-        "mjsunit/compiler/float16-array-next.js",
-        "mjsunit/compiler/float16-array.js",
-        "mjsunit/compiler/regress-392660676.js",
-        "mjsunit/compiler/regress-394327270.js",
-        "mjsunit/compiler/typed-array-length-all-kinds.js",
-        "mjsunit/harmony/typedarray-findlast.js",
         "mjsunit/regress/regress-397720949.js",
-        "mjsunit/regress/regress-421294586.js",
-        "mjsunit/typed-array-slice.js",
-        "mjsunit/typedarray-constructor-mixed-bigint.js",
-        "mjsunit/typedarray-helpers.js",
         "mjsunit/value-serializer.js"
       ],
-      "comment": "Float16 Array, which is not supported by Hermes at the time this is updated, but may not be hard to support."
+      "comment": "regress-397720949 requires resizable ArrayBuffer, value-serializer requires d8.serializer"
     },
     {
       "paths": [
@@ -2070,7 +2060,6 @@
     "mjsunit/compiler/regress-crbug-1344965.js",
     "mjsunit/compiler/fast-api-clamp-annotations.js",
     "mjsunit/compiler/fast-api-annotations.js",
-    "mjsunit/compiler/dataview-float16.js",
     "mjsunit/compiler/regress-crbug-1241464.js",
     "mjsunit/compiler/fast-api-deopt.js",
     "mjsunit/compiler/regress-335310000.js",
@@ -4810,7 +4799,6 @@
     "json-parse-with-source",
     "explicit-resource-management",
     "upsert",
-    "Float16Array",
     "RegExp.escape",
     "immutable-arraybuffer",
     "regexp-modifiers",
