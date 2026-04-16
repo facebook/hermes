@@ -168,6 +168,8 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
   void setExternalMemoryPressure(const jsi::Object &obj, size_t amount)
       override;
 
+  std::shared_ptr<jsi::MutableBuffer> tryGetMutableBuffer(
+      const jsi::ArrayBuffer &buffer) override;
   /// @}
 
   void addMarker(const std::string &marker);
