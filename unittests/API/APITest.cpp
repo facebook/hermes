@@ -1596,6 +1596,120 @@ TEST_P(HermesRuntimeTest, ObjectTest) {
   EXPECT_THROW(obj.getProperty(*rt, badObjKey), JSError);
 }
 
+TEST_P(HermesRuntimeTest, ArrayPush) {
+  // Push to an empty array
+  Array arr(*rt, 0);
+  size_t newLength = arr.push(*rt, 1, 2, 3);
+  EXPECT_EQ(newLength, 3);
+  EXPECT_EQ(arr.length(*rt), 3);
+
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 0).getNumber(), 1);
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 1).getNumber(), 2);
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 2).getNumber(), 3);
+
+  // Push to an array already containing elements
+  arr = Array::createWithElements(*rt, 1, true);
+  Object obj(*rt);
+  newLength = arr.push(*rt, "foobar", obj);
+  EXPECT_EQ(newLength, 4);
+  EXPECT_EQ(arr.length(*rt), 4);
+
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 0).getNumber(), 1);
+  EXPECT_TRUE(arr.getValueAtIndex(*rt, 1).getBool());
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 2).getString(*rt).utf8(*rt), "foobar");
+  EXPECT_TRUE(
+      Object::strictEquals(
+          *rt, arr.getValueAtIndex(*rt, 3).getObject(*rt), obj));
+
+  // Modifies the parent of the JSArray, tests the slow path
+  arr = eval(
+            "var arr = ['apple', 'orange'];"
+            "var obj = {foo: 'bar'};"
+            "Object.setPrototypeOf(arr, obj);"
+            "arr;")
+            .getObject(*rt)
+            .getArray(*rt);
+  newLength = arr.push(*rt, 1, 2);
+  EXPECT_EQ(newLength, 4);
+  EXPECT_EQ(arr.length(*rt), 4);
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 0).getString(*rt).utf8(*rt), "apple");
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 1).getString(*rt).utf8(*rt), "orange");
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 2).getNumber(), 1);
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 3).getNumber(), 2);
+
+  // Push to a Proxy of a JS Array
+  arr = eval("new Proxy([1], {})").getObject(*rt).getArray(*rt);
+  EXPECT_EQ(arr.length(*rt), 1);
+
+  newLength = arr.push(*rt, true, "foobar");
+  EXPECT_EQ(newLength, 3);
+  EXPECT_EQ(arr.length(*rt), 3);
+
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 0).getNumber(), 1);
+  EXPECT_TRUE(arr.getValueAtIndex(*rt, 1).getBool());
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 2).getString(*rt).utf8(*rt), "foobar");
+
+  // Push to a Proxy of a JS Array, where getting the length returns a custom
+  // value
+  arr = eval(
+            "var arr = [1];"
+            "var handler = {"
+            "    get(target, property) {"
+            "        if (property == 'length') {"
+            "            return target.length + 1;"
+            "        }"
+            "        return Reflect.get(target, property);"
+            "    }"
+            "};"
+            "var proxy = new Proxy(arr, handler);"
+            "proxy;")
+            .getObject(*rt)
+            .getArray(*rt);
+  // The handler returns the underlying array's length plus 1
+  EXPECT_EQ(arr.length(*rt), 2);
+
+  // The elements will be adding starting at element 2
+  newLength = arr.push(*rt, 3, 4);
+  EXPECT_EQ(newLength, 4);
+
+  EXPECT_EQ(arr.length(*rt), 5);
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 0).getNumber(), 1);
+  EXPECT_TRUE(arr.getValueAtIndex(*rt, 1).isUndefined());
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 2).getNumber(), 3);
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 3).getNumber(), 4);
+
+  // Push to a Proxy of a JS Array, where setting the 'length' property is
+  // customized
+  arr = eval(
+            "var arr = [1];"
+            "var handler = {"
+            "    set(target, property, value) {"
+            "        if (property == 'length') {"
+            "            return Reflect.set(target, property, value + 1);"
+            "        }"
+            "        return Reflect.set(target, property, value);"
+            "    }"
+            "};"
+            "var proxy = new Proxy(arr, handler);"
+            "proxy;")
+            .getObject(*rt)
+            .getArray(*rt);
+
+  EXPECT_EQ(arr.length(*rt), 1);
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 0).getNumber(), 1);
+
+  newLength = arr.push(*rt, 2, 3);
+  EXPECT_EQ(newLength, 3);
+
+  // When setting the 'length' property, the handler will actually set it to 3 +
+  // 1
+  EXPECT_EQ(arr.length(*rt), 4);
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 0).getNumber(), 1);
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 1).getNumber(), 2);
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 2).getNumber(), 3);
+  EXPECT_TRUE(arr.getValueAtIndex(*rt, 3).isUndefined());
+}
+
 INSTANTIATE_TEST_CASE_P(
     Runtimes,
     HermesRuntimeTest,

@@ -779,6 +779,8 @@ class HermesRuntimeImpl final : public HermesRuntime,
       const jsi::Array &,
       size_t i,
       const jsi::Value &value) override;
+  size_t push(const jsi::Array &arr, const jsi::Value *elements, size_t count)
+      override;
 
   jsi::Function createFunctionFromHostFunction(
       const jsi::PropNameID &name,
@@ -2649,6 +2651,71 @@ void HermesRuntimeImpl::setValueAtIndexImpl(
       vm::Handle<>(&indexStorage),
       vmHandleFromValue(value, &valueStorage));
   checkStatus(res.getStatus());
+}
+
+size_t HermesRuntimeImpl::push(
+    const jsi::Array &arr,
+    const jsi::Value *elements,
+    size_t count) {
+  vm::GCScope gcScope(runtime_);
+  size_t oldLen = arr.length(*this);
+  auto newLen = oldLen + count;
+  bool isJSArray = vm::vmisa<vm::JSArray>(phv(arr));
+
+  // Fast-path: If it's a regular JSArray with fast index properties, and its
+  // parents do not have any index properties, we can increase the JSArray size
+  // directly and set the elements.
+  if (LLVM_LIKELY(isJSArray)) {
+    auto arrHandle = vm::Handle<vm::JSArray>::vmcast(&phv(arr));
+    if (LLVM_LIKELY(oldLen < UINT32_MAX - count) &&
+        arrayFastPathCheck(
+            runtime_, *arrHandle, *runtime_.arrayClass, oldLen)) {
+      auto increaseSizeRes =
+          vm::JSArray::increaseStorageEndIndex(arrHandle, runtime_, newLen);
+      checkStatus(increaseSizeRes);
+
+      for (size_t i = 0; i < count; ++i) {
+        auto shv = vm::SmallHermesValue::encodeHermesValue(
+            hvFromValue(elements[i]), runtime_);
+        vm::JSArray::unsafeSetExistingElementAt(
+            *arrHandle, runtime_, oldLen + i, shv);
+      }
+
+      auto newLenShv =
+          vm::SmallHermesValue::encodeNumberValue(newLen, runtime_);
+      vm::JSArray::putLengthUnsafe(*arrHandle, runtime_, newLenShv);
+
+      return newLen;
+    }
+  }
+
+  // Slow-path: Set the property at [oldLen, oldLen + count - 1].
+  vm::PinnedHermesValue numStorage;
+  vm::PinnedHermesValue valStorage;
+  for (size_t i = 0; i < count; i++) {
+    numStorage = vm::HermesValue::encodeTrustedNumberValue(oldLen + i);
+
+    auto res = vm::JSObject::putComputed_RJS(
+        handle(arr),
+        runtime_,
+        vm::Handle<>(&numStorage),
+        vmHandleFromValue(elements[i], &valStorage));
+    checkStatus(res.getStatus());
+  }
+
+  // If it's not a JS Array, we need to update the 'length' property explicitly
+  if (LLVM_UNLIKELY(!isJSArray)) {
+    numStorage = vm::HermesValue::encodeTrustedNumberValue(newLen);
+    auto res = vm::JSObject::putNamed_RJS(
+        handle(arr),
+        runtime_,
+        vm::Predefined::getSymbolID(vm::Predefined::length),
+        vm::Handle<>(&numStorage),
+        vm::PropOpFlags().plusThrowOnError());
+    checkStatus(res.getStatus());
+  }
+
+  return newLen;
 }
 
 jsi::Function HermesRuntimeImpl::createFunctionFromHostFunction(
