@@ -139,6 +139,23 @@ async def run(
 
     stdout_str = stdout.decode("utf-8") if stdout else ""
 
+    # Check async test result regardless of exit code. The $DONE harness
+    # prints "Test262:AsyncTestComplete" on success and
+    # "Test262:AsyncTestFailure:" on failure, both potentially with exit
+    # code 0.
+    if compile_run_args.is_async and (
+        "Test262:AsyncTestFailure" in stdout_str
+        or "Test262:AsyncTestComplete" not in stdout_str
+    ):
+        msg = f"FAIL: Execution of async test failed: {stdout_str}"
+        return TestCaseResult(
+            compile_run_args.test_name,
+            TestResultCode.EXECUTE_FAILED,
+            msg,
+            output,
+            duration,
+        )
+
     # Check if the run succeeded
     if proc.returncode:
         # Negative return code means that the subprocess is terminated with a
@@ -161,22 +178,6 @@ async def run(
             # fail, even in lazy mode. This check is conservative, but may still
             # capture some issues in lazy mode.
             msg = f"FAIL: Execution of {base_file_name} threw unexpected error"
-            return TestCaseResult(
-                compile_run_args.test_name,
-                TestResultCode.EXECUTE_FAILED,
-                msg,
-                output,
-                duration,
-            )
-        elif compile_run_args.is_async and (
-            "Test262:AsyncTestFailure" in stdout_str
-            or "Test262:AsyncTestComplete" not in stdout_str
-        ):
-            # In the event of a passing test run, this function will be invoked
-            # with the string 'Test262:AsyncTestComplete'. If invoked with a
-            # string that is prefixed with the character sequence
-            # Test262:AsyncTestFailure:, the test must be interpreted as failed.
-            msg = f"FAIL: Execution of async test failed: {stdout_str}"
             return TestCaseResult(
                 compile_run_args.test_name,
                 TestResultCode.EXECUTE_FAILED,

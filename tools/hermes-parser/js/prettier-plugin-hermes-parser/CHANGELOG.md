@@ -1,3 +1,7 @@
+## 0.35.0
+- Support `readonly` as a Flow variance annotation, equivalent to `+` (covariant/read-only). See [PR #19022 in prettier](https://github.com/prettier/prettier/pull/19022).
+- Updated hermes-parser to 0.35.0.
+
 ## 0.34.1
 - Fixed a bug that a white space was accidentally removed by autoformatter causing prettier to add unnecessary new lines.
 

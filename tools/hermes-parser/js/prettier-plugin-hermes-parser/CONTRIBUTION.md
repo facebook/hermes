@@ -2,6 +2,8 @@
 
 This directory contains a modified version of prettier v3's Hermes plugin.
 
+For internal Meta release process and detailed development docs, see [facebook/INTERNAL_DEV.md](facebook/INTERNAL_DEV.md).
+
 ## Recreating prettier files
 
 To make changes to our fork of prettier v3:

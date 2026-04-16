@@ -78,7 +78,7 @@ CallResult<HermesValue> dataViewPrototypeGetEncoder(
   return BigIntPrimitive::fromUnsigned(runtime, value);
 }
 
-template <typename T>
+template <typename T, CellKind C>
 CallResult<HermesValue> dataViewPrototypeGet(void *, Runtime &runtime) {
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto self = args.dyncastThis<JSDataView>();
@@ -101,8 +101,12 @@ CallResult<HermesValue> dataViewPrototypeGet(void *, Runtime &runtime) {
         "DataView.prototype.get<Type>(): Cannot "
         "read that many bytes");
   }
-  return dataViewPrototypeGetEncoder(
-      runtime, self->get<T>(runtime, byteOffset, littleEndian));
+  T rawValue = self->get<T>(runtime, byteOffset, littleEndian);
+  if constexpr (C == CellKind::Float16ArrayKind) {
+    return HermesValue::encodeUntrustedNumberValue(float16ToDouble(rawValue));
+  } else {
+    return dataViewPrototypeGetEncoder(runtime, rawValue);
+  }
 }
 
 template <CellKind C>
@@ -149,7 +153,7 @@ CallResult<HermesValue> dataViewPrototypeSet(void *, Runtime &runtime) {
 
 #define TYPED_ARRAY(name, type)                                                \
   CallResult<HermesValue> dataViewPrototypeGet##name(void *ctx, Runtime &rt) { \
-    return dataViewPrototypeGet<type>(ctx, rt);                                \
+    return dataViewPrototypeGet<type, CellKind::name##ArrayKind>(ctx, rt);     \
   }                                                                            \
   CallResult<HermesValue> dataViewPrototypeSet##name(void *ctx, Runtime &rt) { \
     return dataViewPrototypeSet<type, CellKind::name##ArrayKind>(ctx, rt);     \

@@ -28,7 +28,7 @@ component_syntax=false
 experimental.pattern_matching=false
 
 [version]
-^0.308.0
+^0.309.0
 
 [lints]
 untyped-type-import=error
