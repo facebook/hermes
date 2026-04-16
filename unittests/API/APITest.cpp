@@ -799,14 +799,22 @@ TEST_P(HermesRuntimeTest, HostObjectAsParentTest) {
 TEST_P(HermesRuntimeTest, NativeStateTest) {
   class C : public facebook::jsi::NativeState {
    public:
-    int *dtors;
-    C(int *_dtors) : dtors(_dtors) {}
+    std::atomic<int> *dtors;
+    C(std::atomic<int> *_dtors) : dtors(_dtors) {}
     virtual ~C() override {
       ++*dtors;
     }
   };
-  int dtors1 = 0;
-  int dtors2 = 0;
+  // Destructors run on the finalizer thread, so use atomics.
+  std::atomic<int> dtors1 = 0;
+  std::atomic<int> dtors2 = 0;
+  auto waitForDtors = [](std::atomic<int> &dtor, int expected) {
+    for (int i = 0; i < 200; ++i) {
+      if (dtor.load() == expected)
+        return;
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+  };
   {
     Object obj = eval("({one: 1})").getObject(*rt);
     ASSERT_FALSE(obj.hasNativeState<C>(*rt));
@@ -825,10 +833,13 @@ TEST_P(HermesRuntimeTest, NativeStateTest) {
       EXPECT_EQ(ptr->dtors, &dtors2);
     }
   } // closing scope -> obj unreachable
-  // should finalize both
+  // should finalize both. NativeState destructors are cleaned up by the
+  // finalizer thread, not the GC thread, so we need to wait.
   eval("gc()");
-  EXPECT_EQ(1, dtors1);
-  EXPECT_EQ(1, dtors2);
+  waitForDtors(dtors1, 1);
+  waitForDtors(dtors2, 1);
+  EXPECT_EQ(1, dtors1.load());
+  EXPECT_EQ(1, dtors2.load());
 
   // Trying to set native state on frozen object should throw.
   {
@@ -839,40 +850,45 @@ TEST_P(HermesRuntimeTest, NativeStateTest) {
   // Make sure any NativeState cells are finalized before leaving, since they
   // point to local variables. Otherwise ASAN will complain.
   eval("gc()");
+  waitForDtors(dtors1, 2);
 }
 
 TEST_P(HermesRuntimeTest, ExternalMemoryTest) {
-  // Keep track of the number of NativeState instances to make sure they are
-  // being freed by the GC when there is memory pressure associated with the
-  // object. This needs to be atomic because the destructor of NativeState may
-  // be invoked on any thread.
-  static std::atomic<size_t> numAllocs = 0;
+  // Track the number of Counter destructor calls to verify the GC is freeing
+  // objects under external memory pressure. This needs to be atomic because the
+  // destructor of NativeState may be invoked on any thread.
+  std::atomic<size_t> numFinalized = 0;
 
   class Counter : public HostObject, public NativeState {
    public:
-    Counter() {
-      // Check that we haven't accumulated too many CountNativeStates. MallocGC
-      // does not deal with external memory correctly so it is excluded.
-
-#if HERMESVM_GCKIND != _HERMESVM_GCVALUE_MALLOC
-      EXPECT_LT(numAllocs++, 50);
-#endif
-    }
+    std::atomic<size_t> *numFinalized;
+    Counter(std::atomic<size_t> *nf) : numFinalized(nf) {}
     ~Counter() {
-      numAllocs--;
+      ++*numFinalized;
     }
   };
 
-  for (size_t i = 0; i < 200; i++) {
-    auto o = Object::createFromHostObject(*rt, std::make_shared<Counter>());
+  auto waitForFinalized = [&](size_t expected) {
+    for (int i = 0; i < 200; ++i) {
+      if (numFinalized.load() >= expected)
+        return;
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+  };
+
+  constexpr size_t kNumIter = 200;
+
+  for (size_t i = 0; i < kNumIter; i++) {
+    auto o = Object::createFromHostObject(
+        *rt, std::make_shared<Counter>(&numFinalized));
     o.setExternalMemoryPressure(*rt, 1024 * 1024);
   }
 
   // Test that we can adjust memory pressure even on a frozen object.
   auto freeze = eval("Object.freeze").getObject(*rt).getFunction(*rt);
-  for (size_t i = 0; i < 200; i++) {
+  for (size_t i = 0; i < kNumIter; i++) {
     Object o{*rt};
-    o.setNativeState(*rt, std::make_shared<Counter>());
+    o.setNativeState(*rt, std::make_shared<Counter>(&numFinalized));
     freeze.call(*rt, o);
     o.setExternalMemoryPressure(*rt, 1024 * 1024);
   }
@@ -883,6 +899,21 @@ TEST_P(HermesRuntimeTest, ExternalMemoryTest) {
   o.setExternalMemoryPressure(*rt, 5);
   o.setExternalMemoryPressure(*rt, 0);
   o.setExternalMemoryPressure(*rt, 1024 * 1024);
+
+  // Verify the GC collected a reasonable number of objects due to external
+  // memory pressure. MallocGC does not handle external memory correctly, so
+  // skip this check.
+#if HERMESVM_GCKIND != _HERMESVM_GCVALUE_MALLOC
+  // We created 2 * kNumIter Counter objects across both loops. Expect at least
+  // half to have been finalized, proving the GC responded to memory pressure.
+  waitForFinalized(kNumIter);
+  EXPECT_GE(numFinalized.load(), kNumIter);
+#endif
+
+  // Make sure all Counter destructor calls (which runs on the finalizer thread)
+  // complete before leaving, since they point to local variables.
+  eval("gc()");
+  waitForFinalized(2 * kNumIter);
 }
 
 TEST_P(HermesRuntimeTest, PropNameIDFromSymbol) {

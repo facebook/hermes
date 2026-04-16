@@ -20,6 +20,7 @@
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/SourceMap/SourceMapParser.h"
 #include "hermes/Support/Buffer.h"
+#include "hermes/Support/SerialExecutor.h"
 #include "hermes/Support/SimpleDiagHandler.h"
 #include "hermes/Support/UTF16Stream.h"
 #include "hermes/Support/UTF8.h"
@@ -349,6 +350,11 @@ class HermesRuntimeImpl final : public HermesRuntime,
       auto *deleter = entry.second;
       deleter(entry.first);
     }
+
+    // Release the VM runtime. This needs to happen before the
+    // finalizerExecutor_ is destroyed so that the VM runtime has a chance to
+    // queue all clean-up tasks.
+    rt_.reset();
   }
 
   // This should only be called once by the factory.
@@ -916,6 +922,11 @@ class HermesRuntimeImpl final : public HermesRuntime,
     JsiProxy(HermesRuntimeImpl &rt, std::shared_ptr<jsi::HostObject> ho)
         : rt_(rt), ho_(ho) {}
 
+    ~JsiProxy() {
+      rt_.finalizerExecutor_.add(
+          [ho = std::move(ho_)]() mutable { ho.reset(); });
+    }
+
     vm::CallResult<vm::HermesValue> get(vm::SymbolID id) override {
       jsi::PropNameID sym =
           rt_.add<jsi::PropNameID>(vm::HermesValue::encodeSymbolValue(id));
@@ -1075,11 +1086,28 @@ class HermesRuntimeImpl final : public HermesRuntime,
     }
 
     static void finalize(void *context) {
-      delete reinterpret_cast<HFContext *>(context);
+      auto *hfc = reinterpret_cast<HFContext *>(context);
+      hfc->hermesRuntimeImpl.finalizerExecutor_.add([hfc]() { delete hfc; });
     }
 
     jsi::HostFunctionType hostFunction;
     HermesRuntimeImpl &hermesRuntimeImpl;
+  };
+
+  /// Holds the jsi::NativeState shared pointer and the HermesRuntimeImpl.
+  /// This is passed in as the NativeState context to store the NativeState
+  /// object. The static finalize method will be passed in as function pointer
+  /// to the VM.
+  struct NativeStateContext {
+    std::shared_ptr<jsi::NativeState> state;
+    HermesRuntimeImpl &runtime;
+
+    /// Called when the VM tries to
+    /// finalize the NativeState object.
+    static void finalize(vm::GC &, vm::NativeState *ns) {
+      auto *context = reinterpret_cast<NativeStateContext *>(ns->context());
+      context->runtime.finalizerExecutor_.add([context]() { delete context; });
+    }
   };
 
   // A ManagedChunkedList element that indicates whether it's occupied based on
@@ -1316,6 +1344,13 @@ class HermesRuntimeImpl final : public HermesRuntime,
       std::pair<const void *, void (*)(const void *data)>,
       UUIDInfo>
       dataMap_;
+
+  /// Executor used to finalize NativeState, HostFunction, and HostObjects on
+  /// a background thread so that GC collection is not blocked by potentially
+  /// expensive clean-up work. The destructor explicitly calls rt_.reset()
+  /// before this member is destroyed to ensure all clean-up tasks are queued
+  /// before the executor drains and joins.
+  ::hermes::SerialExecutor finalizerExecutor_;
 };
 } // namespace
 
@@ -2471,10 +2506,6 @@ bool HermesRuntimeImpl::hasNativeState(const jsi::Object &obj) {
       desc);
 }
 
-static void deleteShared(vm::GC &, vm::NativeState *ns) {
-  delete reinterpret_cast<std::shared_ptr<jsi::NativeState> *>(ns->context());
-}
-
 void HermesRuntimeImpl::setNativeState(
     const jsi::Object &obj,
     std::shared_ptr<jsi::NativeState> state) {
@@ -2490,10 +2521,12 @@ void HermesRuntimeImpl::setNativeState(
   } else if (h->isHostObject()) {
     throw jsi::JSINativeException("native state unsupported on HostObject");
   }
-  // Allocate a shared_ptr on the C++ heap and use it as context of
-  // NativeState.
-  auto *ptr = new std::shared_ptr<jsi::NativeState>(std::move(state));
-  lv.ns = vm::NativeState::create(runtime_, ptr, deleteShared);
+  // Allocate a NativeStateBox on the C++ heap and use it as context of
+  // NativeState. The box also carries a reference to the runtime so the
+  // Release callback can queue destruction to the finalizer thread.
+  auto *nativeStateCtx = new NativeStateContext{std::move(state), *this};
+  lv.ns = vm::NativeState::create(
+      runtime_, nativeStateCtx, NativeStateContext::finalize);
   auto res = vm::JSObject::defineOwnProperty(
       h,
       runtime_,
@@ -2528,8 +2561,7 @@ std::shared_ptr<jsi::NativeState> HermesRuntimeImpl::getNativeState(
   vm::NativeState *ns = vm::vmcast<vm::NativeState>(
       vm::JSObject::getNamedSlotValueUnsafe(*h, runtime_, desc)
           .getObject(runtime_));
-  return std::shared_ptr(
-      *reinterpret_cast<std::shared_ptr<jsi::NativeState> *>(ns->context()));
+  return reinterpret_cast<NativeStateContext *>(ns->context())->state;
 }
 
 void HermesRuntimeImpl::setExternalMemoryPressure(
