@@ -1107,6 +1107,12 @@ void TracingRuntime::setExternalMemoryPressure(
   RD::setExternalMemoryPressure(obj, amount);
 }
 
+std::shared_ptr<jsi::MutableBuffer> TracingRuntime::tryGetMutableBuffer(
+    const jsi::ArrayBuffer &) {
+  throw std::logic_error(
+      "Cannot retrieve MutableBuffer from ArrayBuffer in trace mode.");
+}
+
 void TracingRuntime::addMarker(const std::string &marker) {
   trace_.emplace_back<SynthTrace::MarkerRecord>(getTimeSinceStart(), marker);
 }
