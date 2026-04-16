@@ -1160,6 +1160,68 @@ void TraceInterpreter::executeRecords() {
           addToObjectMap(car.objID_, Array(rt_, car.length_), currentExecIndex);
           break;
         }
+        case RecordType::CreateUInt8Array: {
+          const auto &record =
+              static_cast<const SynthTrace::CreateUInt8ArrayRecord &>(*rec);
+          auto arr = rt_.createUint8Array(record.length_);
+          addToObjectMap(record.objID_, jsi::Value(rt_, arr), currentExecIndex);
+          break;
+        }
+        case RecordType::CreateUInt8ArrayFromArrayBuffer: {
+          const auto &record = static_cast<
+              const SynthTrace::CreateUInt8ArrayFromArrayBufferRecord &>(*rec);
+          const auto &buf = getJSIValueForUse(record.bufferID_)
+                                .asObject(rt_)
+                                .getArrayBuffer(rt_);
+          auto arr = rt_.createUint8Array(buf, record.offset_, record.length_);
+          addToObjectMap(record.objID_, jsi::Value(rt_, arr), currentExecIndex);
+          break;
+        }
+        case RecordType::GetBufferFromTypedArray: {
+          const auto &record =
+              static_cast<const SynthTrace::GetBufferFromTypedArrayRecord &>(
+                  *rec);
+          auto typedArray = getJSIValueForUse(record.typedArrayID_)
+                                .asObject(rt_)
+                                .getTypedArray(rt_);
+          auto buf = typedArray.buffer(rt_);
+          addToObjectMap(
+              record.bufferID_, jsi::Value(rt_, buf), currentExecIndex);
+          break;
+        }
+        case RecordType::CreateJSError: {
+          const auto &record =
+              static_cast<const SynthTrace::CreateJSErrorRecord &>(*rec);
+          const auto &msg = getJSIValueForUse(record.messageID_).getString(rt_);
+          jsi::Value error;
+          switch (record.errorType_) {
+            case SynthTrace::JSErrorType::Error:
+              error = rt_.createError(msg);
+              break;
+            case SynthTrace::JSErrorType::EvalError:
+              error = rt_.createEvalError(msg);
+              break;
+            case SynthTrace::JSErrorType::RangeError:
+              error = rt_.createRangeError(msg);
+              break;
+            case SynthTrace::JSErrorType::ReferenceError:
+              error = rt_.createReferenceError(msg);
+              break;
+            case SynthTrace::JSErrorType::SyntaxError:
+              error = rt_.createSyntaxError(msg);
+              break;
+            case SynthTrace::JSErrorType::TypeError:
+              error = rt_.createTypeError(msg);
+              break;
+            case SynthTrace::JSErrorType::URIError:
+              error = rt_.createURIError(msg);
+              break;
+            default:
+              llvm_unreachable("Unexpected JSErrorType.");
+          }
+          addToObjectMap(record.objID_, std::move(error), currentExecIndex);
+          break;
+        }
         case RecordType::ArrayRead: {
           const auto &arr =
               static_cast<const SynthTrace::ArrayReadRecord &>(*rec);
@@ -1180,6 +1242,20 @@ void TraceInterpreter::executeRecords() {
               .asArray(rt_)
               .setValueAtIndex(
                   rt_, awr.index_, traceValueToJSIValue(awr.value_));
+          break;
+        }
+        case RecordType::ArrayPush: {
+          const auto &record =
+              static_cast<const SynthTrace::ArrayPushRecord &>(*rec);
+          auto arr =
+              getJSIValueForUse(record.objID_).asObject(rt_).asArray(rt_);
+          std::vector<Value> elements;
+          for (const auto &element : record.elements_) {
+            elements.emplace_back(traceValueToJSIValue(element));
+          }
+          const Value *elementPtr = elements.data();
+          size_t retVal = arr.push(rt_, elementPtr, elements.size());
+          TRACE_EXPECT_EQ(retVal, record.length_);
           break;
         }
         case RecordType::CallFromNative: {

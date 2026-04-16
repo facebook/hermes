@@ -10,6 +10,7 @@
 /// ES7 22.2 TypedArray
 //===----------------------------------------------------------------------===//
 #include "JSLibInternal.h"
+#include "hermes/Support/FastArraySearch.h"
 #include "hermes/VM/JSArrayBuffer.h"
 #include "hermes/VM/JSLib/Base64Util.h"
 #include "hermes/VM/JSLib/Sorting.h"
@@ -17,6 +18,8 @@
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringView.h"
+
+#include <type_traits>
 
 namespace hermes {
 namespace vm {
@@ -178,6 +181,12 @@ CallResult<HermesValue> typedArrayConstructorFromLength(
   return self.getHermesValue();
 }
 
+/// \return true if \p kind is a BigInt typed array.
+static bool isBigIntTypedArrayKind(CellKind kind) {
+  return kind == CellKind::BigInt64ArrayKind ||
+      kind == CellKind::BigUint64ArrayKind;
+}
+
 // ES6 22.2.1.3
 template <typename T, CellKind C>
 CallResult<HermesValue> typedArrayConstructorFromTypedArray(
@@ -187,6 +196,12 @@ CallResult<HermesValue> typedArrayConstructorFromTypedArray(
   if (!other->attached(runtime)) {
     return runtime.raiseTypeError(
         "Cannot construct a TypedArray from a detached TypedArray");
+  }
+  // If srcArray.[[ContentType]] is not O.[[ContentType]], throw a TypeError
+  // exception. The internal property [[ContentType]] is defined to be either
+  // BigInt for BigInt64Array/BigUint64Array or Number for all other types.
+  if (isBigIntTypedArrayKind(C) != isBigIntTypedArrayKind(other->getKind())) {
+    return runtime.raiseTypeError("Cannot mix BigInt and other types");
   }
   if (JSTypedArray<T, C>::createBuffer(runtime, self, other->getLength()) ==
       ExecutionStatus::EXCEPTION) {
@@ -592,26 +607,33 @@ class TypedArraySortModel : public SortModel {
 
 namespace {
 
-/// ::qsort comparator for typed array elements.
 template <typename T>
+int compareFloat(T va, T vb) {
+  // NaN sorts after everything.
+  bool aNaN = std::isnan(va);
+  bool bNaN = std::isnan(vb);
+  if (LLVM_UNLIKELY(aNaN)) {
+    if (LLVM_UNLIKELY(bNaN))
+      return 0;
+    return 1;
+  } else if (LLVM_UNLIKELY(bNaN)) {
+    return -1;
+  }
+  // -0 < +0.
+  if (LLVM_UNLIKELY(va == 0 && vb == 0))
+    return std::signbit(vb) - std::signbit(va);
+  return (va > vb) - (va < vb);
+}
+
+/// ::qsort comparator for typed array elements.
+template <typename T, CellKind C>
 int qsortComparator(const void *a, const void *b) {
-  if constexpr (std::is_floating_point_v<T>) {
-    T va = *static_cast<const T *>(a);
-    T vb = *static_cast<const T *>(b);
-    // NaN sorts after everything.
-    bool aNaN = std::isnan(va);
-    bool bNaN = std::isnan(vb);
-    if (LLVM_UNLIKELY(aNaN)) {
-      if (LLVM_UNLIKELY(bNaN))
-        return 0;
-      return 1;
-    } else if (LLVM_UNLIKELY(bNaN)) {
-      return -1;
-    }
-    // -0 < +0.
-    if (LLVM_UNLIKELY(va == 0 && vb == 0))
-      return std::signbit(vb) - std::signbit(va);
-    return (va > vb) - (va < vb);
+  if constexpr (C == CellKind::Float16ArrayKind) {
+    return compareFloat(
+        float16ToDouble(*static_cast<const uint16_t *>(a)),
+        float16ToDouble(*static_cast<const uint16_t *>(b)));
+  } else if constexpr (std::is_floating_point_v<T>) {
+    return compareFloat(*static_cast<const T *>(a), *static_cast<const T *>(b));
   } else {
     T va = *static_cast<const T *>(a);
     T vb = *static_cast<const T *>(b);
@@ -626,9 +648,13 @@ void typedArraySortDirect(
     JSTypedArrayBase::size_type len) {
   assert(data && "data must be non-null");
   switch (kind) {
-#define TYPED_ARRAY(name, type)                              \
-  case CellKind::name##ArrayKind:                            \
-    ::qsort(data, len, sizeof(type), qsortComparator<type>); \
+#define TYPED_ARRAY(name, type)                            \
+  case CellKind::name##ArrayKind:                          \
+    ::qsort(                                               \
+        data,                                              \
+        len,                                               \
+        sizeof(type),                                      \
+        qsortComparator<type, CellKind::name##ArrayKind>); \
     break;
 #include "hermes/VM/TypedArrays.def"
     default:
@@ -1343,22 +1369,159 @@ CallResult<HermesValue> typedArrayPrototypeForEach(void *, Runtime &runtime) {
   return HermesValue::encodeUndefinedValue();
 }
 
+namespace {
+
 enum class IndexOfMode { includes, indexOf, lastIndexOf };
+
+/// Encode a search result as a HermesValue.
+/// For includes mode, returns a boolean. For indexOf/lastIndexOf, returns
+/// the index (or -1 if not found).
+HermesValue
+indexOfResult(IndexOfMode mode, bool found = false, double index = -1) {
+  if (mode == IndexOfMode::includes)
+    return HermesValue::encodeBoolValue(found);
+  return HermesValue::encodeTrustedNumberValue(index);
+}
+
+/// Dispatch to the correct SIMD search function based on UType.
+/// Uses if constexpr to select the right function, avoiding macro
+/// token-pasting.
+template <typename UType>
+int64_t
+fastSearch(llvh::ArrayRef<UType> arr, size_t start, size_t end, UType target) {
+  if constexpr (std::is_same_v<UType, uint8_t>) {
+    return searchU8(arr, start, end, target);
+  } else if constexpr (std::is_same_v<UType, uint16_t>) {
+    return searchU16(arr, start, end, target);
+  } else if constexpr (std::is_same_v<UType, uint32_t>) {
+    return searchU32(arr, start, end, target);
+  } else {
+    static_assert(std::is_same_v<UType, uint64_t>, "unexpected unsigned type");
+    return searchU64(arr, start, end, target);
+  }
+}
+
+/// Dispatch to the correct reverse SIMD search function.
+template <typename UType>
+int64_t fastSearchReverse(
+    llvh::ArrayRef<UType> arr,
+    size_t start,
+    size_t end,
+    UType target) {
+  if constexpr (std::is_same_v<UType, uint8_t>) {
+    return searchReverseU8(arr, start, end, target);
+  } else if constexpr (std::is_same_v<UType, uint16_t>) {
+    return searchReverseU16(arr, start, end, target);
+  } else if constexpr (std::is_same_v<UType, uint32_t>) {
+    return searchReverseU32(arr, start, end, target);
+  } else {
+    static_assert(std::is_same_v<UType, uint64_t>, "unexpected unsigned type");
+    return searchReverseU64(arr, start, end, target);
+  }
+}
+
+/// Search an integer typed array for \p searchNum using SIMD.
+/// Converts searchNum to element type T, checking that it is exactly
+/// representable, then delegates to the appropriate SIMD search function.
+template <typename T>
+CallResult<HermesValue> tryFastIntSearch(
+    T *typedData,
+    double searchNum,
+    size_t start,
+    size_t end,
+    bool isReverse,
+    IndexOfMode mode) {
+  // Integer arrays cannot contain NaN, so NaN never matches.
+  if (std::isnan(searchNum))
+    return indexOfResult(mode);
+  // Check range before casting to avoid UB for out-of-range values.
+  if (searchNum < static_cast<double>(std::numeric_limits<T>::min()) ||
+      searchNum > static_cast<double>(std::numeric_limits<T>::max())) {
+    return indexOfResult(mode);
+  }
+  T intVal = static_cast<T>(searchNum);
+  if (static_cast<double>(intVal) != searchNum) {
+    // searchNum is not exactly representable as T, so no match.
+    return indexOfResult(mode);
+  }
+
+  // Reinterpret as the corresponding unsigned type for SIMD search.
+  using UType = std::make_unsigned_t<T>;
+  UType raw = static_cast<UType>(intVal);
+  llvh::ArrayRef<UType> arr(reinterpret_cast<const UType *>(typedData), end);
+  int64_t result = isReverse ? fastSearchReverse(arr, 0, start + 1, raw)
+                             : fastSearch(arr, start, end, raw);
+  if (result >= 0)
+    return indexOfResult(mode, true, result);
+  return indexOfResult(mode);
+}
+
+/// Search a floating-point typed array for \p searchNum using SIMD.
+/// Handles NaN (includes vs indexOf), +0/-0, narrowing check,
+/// and SIMD raw-bit search for normal values.
+/// \p FType is float or double. UType is deduced as the same-size unsigned int.
+template <typename FType>
+CallResult<HermesValue> tryFastFloatSearch(
+    uint8_t *data,
+    double searchNum,
+    size_t start,
+    size_t end,
+    bool isReverse,
+    IndexOfMode mode) {
+  using UType = std::conditional_t<sizeof(FType) == 4, uint32_t, uint64_t>;
+  auto *fdata = reinterpret_cast<FType *>(data);
+  if (std::isnan(searchNum)) {
+    // indexOf/lastIndexOf: NaN !== NaN, so no match.
+    if (mode != IndexOfMode::includes)
+      return indexOfResult(mode);
+    // includes: NaN includes NaN, scalar scan.
+    for (size_t i = start; i < end; ++i) {
+      if (std::isnan(fdata[i]))
+        return indexOfResult(mode, true, i);
+    }
+    return indexOfResult(mode);
+  }
+  if (searchNum == 0) {
+    // +0/-0 match each other in JS. Scan for both bit patterns.
+    constexpr UType posZeroBits = 0;
+    constexpr UType negZeroBits = UType(1) << (sizeof(UType) * 8 - 1);
+    auto *rawData = reinterpret_cast<const UType *>(fdata);
+    if (isReverse) {
+      for (size_t i = start + 1; i-- > 0;) {
+        UType bits = rawData[i];
+        if (bits == posZeroBits || bits == negZeroBits)
+          return indexOfResult(mode, true, i);
+      }
+    } else {
+      for (size_t i = start; i < end; ++i) {
+        UType bits = rawData[i];
+        if (bits == posZeroBits || bits == negZeroBits)
+          return indexOfResult(mode, true, i);
+      }
+    }
+    return indexOfResult(mode);
+  }
+  // Convert to FType and verify round-trip (no-op for double).
+  FType fval = static_cast<FType>(searchNum);
+  if (static_cast<double>(fval) != searchNum)
+    return indexOfResult(mode);
+  UType raw;
+  memcpy(&raw, &fval, sizeof(raw));
+  llvh::ArrayRef<UType> arr(reinterpret_cast<const UType *>(fdata), end);
+  int64_t result = isReverse ? fastSearchReverse(arr, 0, start + 1, raw)
+                             : fastSearch(arr, start, end, raw);
+  if (result >= 0)
+    return indexOfResult(mode, true, result);
+  return indexOfResult(mode);
+}
+
+} // namespace
+
 CallResult<HermesValue> typedArrayPrototypeIndexOf(
     void *ctx,
     Runtime &runtime) {
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   const auto indexOfMode = *reinterpret_cast<const IndexOfMode *>(&ctx);
-  // indexOfMode stores Whether this call is "includes", "indexOf", or
-  // "lastIndexOf".
-  auto ret = [indexOfMode](bool x = false, double y = -1) {
-    switch (indexOfMode) {
-      case IndexOfMode::includes:
-        return HermesValue::encodeBoolValue(x);
-      default:
-        return HermesValue::encodeTrustedNumberValue(y);
-    }
-  };
   if (JSTypedArrayBase::validateTypedArray(runtime, args.getThisHandle()) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -1366,7 +1529,7 @@ CallResult<HermesValue> typedArrayPrototypeIndexOf(
   auto self = args.vmcastThis<JSTypedArrayBase>();
   double len = self->getLength();
   if (len == 0) {
-    return ret();
+    return indexOfResult(indexOfMode);
   }
   auto searchElement = args.getArgHandle(0);
   if (indexOfMode != IndexOfMode::includes && !searchElement->isNumber() &&
@@ -1375,7 +1538,7 @@ CallResult<HermesValue> typedArrayPrototypeIndexOf(
     // However, for "includes", ES2026 23.2.3.16 step 11 uses `SameValueZero`
     // for comparison. This means that "undefined" can match if the TypedArray
     // becomes detached while in the loop below.
-    return ret();
+    return indexOfResult(indexOfMode);
   }
   double fromIndex = 0;
   if (args.getArgCount() < 2) {
@@ -1408,6 +1571,83 @@ CallResult<HermesValue> typedArrayPrototypeIndexOf(
       return k < len;
     }
   };
+  // SIMD fast path for numeric typed arrays (not BigInt).
+  // Typed arrays have contiguous raw buffers, so we can search directly.
+  // Check that k is in range before entering the fast path (k can be
+  // out of range when fromIndex is extreme).
+  // Also check that the buffer is still attached, since toIntegerOrInfinity
+  // above can execute user code (e.g. valueOf) that detaches the buffer.
+  if (searchElement->isNumber() && inRange(k, len) && self->attached(runtime)) {
+    const CellKind kind = self->getKind();
+    double searchNum = searchElement->getNumber();
+    NoAllocScope noAllocs{runtime};
+    uint8_t *data = self->data(runtime);
+    size_t start = static_cast<size_t>(k);
+    size_t end = static_cast<size_t>(len);
+    bool isReverse = (indexOfMode == IndexOfMode::lastIndexOf);
+
+    switch (kind) {
+      case CellKind::Int8ArrayKind:
+        return tryFastIntSearch(
+            reinterpret_cast<int8_t *>(data),
+            searchNum,
+            start,
+            end,
+            isReverse,
+            indexOfMode);
+      case CellKind::Uint8ArrayKind:
+      case CellKind::Uint8ClampedArrayKind:
+        return tryFastIntSearch(
+            reinterpret_cast<uint8_t *>(data),
+            searchNum,
+            start,
+            end,
+            isReverse,
+            indexOfMode);
+      case CellKind::Int16ArrayKind:
+        return tryFastIntSearch(
+            reinterpret_cast<int16_t *>(data),
+            searchNum,
+            start,
+            end,
+            isReverse,
+            indexOfMode);
+      case CellKind::Uint16ArrayKind:
+        return tryFastIntSearch(
+            reinterpret_cast<uint16_t *>(data),
+            searchNum,
+            start,
+            end,
+            isReverse,
+            indexOfMode);
+      case CellKind::Int32ArrayKind:
+        return tryFastIntSearch(
+            reinterpret_cast<int32_t *>(data),
+            searchNum,
+            start,
+            end,
+            isReverse,
+            indexOfMode);
+      case CellKind::Uint32ArrayKind:
+        return tryFastIntSearch(
+            reinterpret_cast<uint32_t *>(data),
+            searchNum,
+            start,
+            end,
+            isReverse,
+            indexOfMode);
+      case CellKind::Float32ArrayKind:
+        return tryFastFloatSearch<float>(
+            data, searchNum, start, end, isReverse, indexOfMode);
+      case CellKind::Float64ArrayKind:
+        return tryFastFloatSearch<double>(
+            data, searchNum, start, end, isReverse, indexOfMode);
+      default:
+        // BigInt typed arrays: fall through to slow path.
+        break;
+    }
+  }
+
   for (; inRange(k, len); k += delta) {
     HermesValue curr =
         JSObject::getOwnIndexed(createPseudoHandle(self.get()), runtime, k);
@@ -1417,10 +1657,10 @@ CallResult<HermesValue> typedArrayPrototypeIndexOf(
         ? isSameValueZero(curr, *searchElement)
         : strictEqualityTest(curr, *searchElement);
     if (comp) {
-      return ret(true, k);
+      return indexOfResult(indexOfMode, true, k);
     }
   }
-  return ret();
+  return indexOfResult(indexOfMode);
 }
 
 CallResult<HermesValue> typedArrayPrototypeIterator(

@@ -59,6 +59,8 @@ class SmallHermesValueAdaptor : protected HermesValue {
       delete;
 #endif
 
+  using RawType = HermesValue::RawType;
+
   using HermesValue::getBool;
   using HermesValue::getRaw;
   using HermesValue::getSymbol;
@@ -234,12 +236,10 @@ using SmallHermesValue = SmallHermesValueAdaptor;
 /// Doubles have to be boxed on the heap so that they can then be held as
 /// pointers. Native values are not supported.
 class HermesValue32 {
+ public:
   using RawType = CompressedPointer::RawType;
   using SmiType = std::make_signed<RawType>::type;
 
-  RawType raw_;
-
- public:
   /// Version of the HermesValue32 encoding format.
   /// Changing the format of HermesValue32 requires bumping this version number
   /// and fixing any code that relies on the layout of HermesValue32.
@@ -267,6 +267,8 @@ class HermesValue32 {
   };
 
  private:
+  RawType raw_;
+
   static_assert(
       static_cast<uint8_t>(Tag::_Last) <= (1 << kNumTagBits),
       "Cannot have more enum values than tag bits.");

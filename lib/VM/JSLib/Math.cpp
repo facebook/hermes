@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 #include "JSLibInternal.h"
 
+#include "hermes/Support/Conversions.h"
 #include "hermes/VM/JSLib/JSLibStorage.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/SingleObject.h"
@@ -245,6 +246,35 @@ CallResult<HermesValue> mathFround(void *, Runtime &runtime) {
   return HermesValue::encodeTrustedNumberValue(truncDoubleToFloat(x));
 }
 
+// ES2025 21.3.2.18 Math.f16round ( x )
+CallResult<HermesValue> mathF16round(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  // 1. Let n be ? ToNumber(x).
+  auto nRes = toNumber_RJS(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(nRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  double n = nRes->getNumber();
+  // 2. If n is NaN, return NaN.
+  if (std::isnan(n)) {
+    return HermesValue::encodeNaNValue();
+  }
+  // 3. If n is one of +0, -0, +Infinity, or -Infinity, return n.
+  // Note, -0 compares equal to 0, so no need to have two checks there.
+  if (n == 0 || n == std::numeric_limits<double>::infinity() ||
+      n == -std::numeric_limits<double>::infinity()) {
+    return HermesValue::encodeTrustedNumberValue(n);
+  }
+  // 4. Let n16 be the result of converting n to IEEE 754-2019 binary16 format
+  // using roundTiesToEven mode.
+  uint16_t n16 = doubleToFloat16(n);
+  // 5. Let n64 be the result of converting n16 to IEEE 754-2019 binary64
+  // format.
+  double n64 = float16ToDouble(n16);
+  // 6. Return the ECMAScript Number value corresponding to n64.
+  return HermesValue::encodeTrustedNumberValue(n64);
+}
+
 // ES2022 21.3.2.18
 CallResult<HermesValue> mathHypot(void *, Runtime &runtime) {
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
@@ -464,6 +494,13 @@ HermesValue createMathObject(Runtime &runtime) {
       Predefined::getSymbolID(Predefined::fround),
       nullptr,
       mathFround,
+      1);
+  defineMethod(
+      runtime,
+      lv.math,
+      Predefined::getSymbolID(Predefined::f16round),
+      nullptr,
+      mathF16round,
       1);
   defineMethod(
       runtime,
