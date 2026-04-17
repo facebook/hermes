@@ -2487,6 +2487,9 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
   // any -> _
   if (llvh::isa<AnyType>(a))
     return {.canFlow = true, .needCheckedCast = true};
+  // empty -> _ (bottom type, flows into everything)
+  if (llvh::isa<EmptyType>(a))
+    return {.canFlow = true};
 
   // if `a` is union, all of its arms must be able to flow into `b`.
   if (UnionType *unionA = llvh::dyn_cast<UnionType>(a)) {

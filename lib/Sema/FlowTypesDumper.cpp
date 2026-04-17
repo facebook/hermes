@@ -65,6 +65,7 @@ void FlowTypesDumper::printTypeDescription(
     case TypeKind::Number:
     case TypeKind::BigInt:
     case TypeKind::Any:
+    case TypeKind::Empty:
     case TypeKind::Mixed:
       llvm_unreachable("singletons already handled");
 

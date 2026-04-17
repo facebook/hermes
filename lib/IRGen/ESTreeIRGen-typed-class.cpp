@@ -599,6 +599,7 @@ Value *ESTreeIRGen::getDefaultInitValue(flow::Type *type) {
       return Builder.getLiteralBigInt(
           Mod->getContext().getIdentifier("0").getUnderlyingPointer());
     case flow::TypeKind::Any:
+    case flow::TypeKind::Empty:
     case flow::TypeKind::Mixed:
       return Builder.getLiteralUndefined();
     case flow::TypeKind::Union:
@@ -637,6 +638,7 @@ Type ESTreeIRGen::flowTypeToIRType(flow::TypeInfo *flowType) {
     case flow::TypeKind::BigInt:
       return Type::createBigInt();
     case flow::TypeKind::Any:
+    case flow::TypeKind::Empty:
     case flow::TypeKind::Mixed:
       return Type::createAnyType();
     case flow::TypeKind::Union: {

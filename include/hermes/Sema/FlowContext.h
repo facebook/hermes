@@ -34,6 +34,7 @@ namespace flow {
   _HERMES_SEMA_FLOW_DEFKIND(Number)               \
   _HERMES_SEMA_FLOW_DEFKIND(BigInt)               \
   _HERMES_SEMA_FLOW_DEFKIND(Any)                  \
+  _HERMES_SEMA_FLOW_DEFKIND(Empty)                \
   _HERMES_SEMA_FLOW_DEFKIND(Mixed)
 
 #define _HERMES_SEMA_FLOW_COMPLEX_TYPES       \
@@ -247,6 +248,7 @@ using InferencePlaceholderType =
 
 using AnyType = SingleType<TypeKind::Any, SingletonType>;
 using MixedType = SingleType<TypeKind::Mixed, SingletonType>;
+using EmptyType = SingleType<TypeKind::Empty, SingletonType>;
 
 /// Unions are handled specially because their existence and layout is dependent
 /// on their arms.

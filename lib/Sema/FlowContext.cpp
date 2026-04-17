@@ -192,6 +192,8 @@ llvh::StringRef TypeInfo::getKindName() const {
       return "bigint";
     case TypeKind::Any:
       return "any";
+    case TypeKind::Empty:
+      return "empty";
     case TypeKind::Mixed:
       return "mixed";
     case TypeKind::Union:
