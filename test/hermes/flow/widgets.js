@@ -16,9 +16,6 @@
 
 (function() {
 
-const mapPrototypeGet: any = Map.prototype.get;
-const mapPrototypeSet: any = Map.prototype.set;
-
 // ==> widget.js <==
 
 class Widget {
@@ -162,13 +159,13 @@ function reconcileChildren(
   oldChildren: RenderNode[],
 ): RenderNode[] {
   const outChildren: RenderNode[] = [];
-  const oldChildrenByKey: any = new Map();
-  oldChildren.forEach(child => { $SHBuiltin.call(mapPrototypeSet, oldChildrenByKey, child.key, child); });
+  const oldChildrenByKey = new Map<string, RenderNode>();
+  oldChildren.forEach(child => { oldChildrenByKey.set(child.key, child); });
 
   newChildren.forEach(child => {
     const newKey = child.key;
     const oldChild: RenderNode | void =
-      $SHBuiltin.call(mapPrototypeGet, oldChildrenByKey, newKey);
+      oldChildrenByKey.get(newKey);
     if (oldChild !== undefined) {
       outChildren.push(reconcileRenderNode(child, oldChild));
     } else {
@@ -181,16 +178,16 @@ function reconcileChildren(
 
 function mapEntitiesToComponents(
   entities: VirtualEntity[],
-): any {
-  const map: any = new Map();
+): Map<number, Component[]> {
+  const map = new Map<number, Component[]>();
   entities.forEach(entity => {
     const key: number = entity.key;
     const value: Component[] = entity.value;
-    if ($SHBuiltin.call(mapPrototypeGet, map, key) == undefined) {
-      $SHBuiltin.call(mapPrototypeSet, map, key, ([]: Component[]));
+    if (map.get(key) == undefined) {
+      map.set(key, ([]: Component[]));
     }
 
-    const components: Component[] = $SHBuiltin.call(mapPrototypeGet, map, key);
+    const components: Component[] = map.get(key);
     if (components !== undefined) {
       components.push(...value);
     } else {
@@ -218,12 +215,12 @@ function diffTrees(
     entityId => !newEntityIds.includes(entityId),
   );
 
-  const oldComponents: any = mapEntitiesToComponents(oldEntities);
-  const newComponents: any = mapEntitiesToComponents(newEntities);
+  const oldComponents = mapEntitiesToComponents(oldEntities);
+  const newComponents = mapEntitiesToComponents(newEntities);
 
   createdEntities.forEach(entityId => {
     const comps: Component[] =
-      $SHBuiltin.call(mapPrototypeGet, newComponents, entityId) || ([]: Component[]);
+      newComponents.get(entityId) || ([]: Component[]);
     const components = comps.map(
       it => new ComponentPair(entityId, it),
     );
@@ -231,11 +228,11 @@ function diffTrees(
   });
 
   newComponents.forEach((value: Component[], key: number) => {
-    if ($SHBuiltin.call(mapPrototypeGet, oldComponents, key) == undefined) {
+    if (oldComponents.get(key) == undefined) {
       return;
     }
 
-    const oldComponentsForKey: Component[] = $SHBuiltin.call(mapPrototypeGet, oldComponents, key) || ([]: Component[]);
+    const oldComponentsForKey: Component[] = oldComponents.get(key) || ([]: Component[]);
     const newComponentsForKey: Component[] = value;
 
     const deleted: Component[] = oldComponentsForKey.filter(
