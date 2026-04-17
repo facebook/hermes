@@ -96,6 +96,7 @@
 #include "hermes/AST/ASTUtils.h"
 #include "hermes/Support/Conversions.h"
 
+#include "llvh/ADT/BitVector.h"
 #include "llvh/ADT/MapVector.h"
 #include "llvh/ADT/ScopeExit.h"
 #include "llvh/ADT/SetVector.h"
@@ -3096,14 +3097,46 @@ bool FlowChecker::inferPlaceholdersFromCallArgs(
     bindingTable_.activateScope(savedScope);
   }
 
-  // Visit arguments with constraints to infer remaining type params.
-  size_t argIdx = 0;
-  for (ESTree::Node &arg : callArgs) {
-    Type *constraint = argIdx < callArgConstraints.size()
-        ? callArgConstraints[argIdx]
-        : nullptr;
-    visitExpression(&arg, callNode, constraint);
-    ++argIdx;
+  // Snapshot which constraints are simple (direct InferencePlaceholder),
+  // since pass 1 will mutate them.
+  size_t numCallArgs = callArgs.size();
+  llvh::BitVector isSimple(std::max(numCallArgs, callArgConstraints.size()));
+  for (size_t i = 0, e = callArgConstraints.size(); i < e; ++i) {
+    if (callArgConstraints[i] &&
+        llvh::isa<InferencePlaceholderType>(callArgConstraints[i]->info))
+      isSimple.set(i);
+  }
+
+  // Pass 1: visit arguments with simple placeholder constraints (bare T).
+  // Resolving these first allows complex constraints referencing the same
+  // type params (e.g., T => string) to use the resolved type in pass 2,
+  // even if the simple placeholder comes after the complex constraint.
+  {
+    size_t argIdx = 0;
+    for (ESTree::Node &arg : callArgs) {
+      if (isSimple[argIdx])
+        visitExpression(&arg, callNode, callArgConstraints[argIdx]);
+      ++argIdx;
+    }
+    // Infer void for simple placeholder params with no corresponding arg.
+    for (size_t i = numCallArgs, e = callArgConstraints.size(); i < e; ++i) {
+      if (isSimple[i])
+        callArgConstraints[i]->info = flowContext_.getVoidInfo();
+    }
+  }
+
+  // Pass 2: visit remaining arguments with complex constraints.
+  {
+    size_t argIdx = 0;
+    for (ESTree::Node &arg : callArgs) {
+      if (!isSimple[argIdx]) {
+        Type *constraint = argIdx < callArgConstraints.size()
+            ? callArgConstraints[argIdx]
+            : nullptr;
+        visitExpression(&arg, callNode, constraint);
+      }
+      ++argIdx;
+    }
   }
 
   // Inference succeeded iff none of the typeArgs are still
