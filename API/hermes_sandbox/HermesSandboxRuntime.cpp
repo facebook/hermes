@@ -409,23 +409,26 @@ SandboxPropNameIDListPtrOrError createPropNameIDListPtrOrError(
 }
 
 SandboxValue createUndefinedValue() {
-  SandboxValue val;
+  // Value-initialize so the alignas(8) union 'data' and padding bytes are all
+  // zeroed; these values are written into sandbox-visible memory and would
+  // otherwise leak host stack bytes through uninitialized union padding.
+  SandboxValue val{};
   val.kind = SandboxValueKindUndefined;
   return val;
 }
 SandboxValue createNullValue() {
-  SandboxValue val;
+  SandboxValue val{};
   val.kind = SandboxValueKindNull;
   return val;
 }
 SandboxValue createBoolValue(bool b) {
-  SandboxValue val;
+  SandboxValue val{};
   val.kind = SandboxValueKindBoolean;
   val.data.boolean = b;
   return val;
 }
 SandboxValue createNumberValue(double d) {
-  SandboxValue val;
+  SandboxValue val{};
   val.kind = SandboxValueKindNumber;
   val.data.number = d;
   return val;
@@ -433,25 +436,25 @@ SandboxValue createNumberValue(double d) {
 
 /// Helpers to create a SandboxValue from a pointer to a ManagedPointer.
 SandboxValue createObjectValue(u32 ptr) {
-  SandboxValue val;
+  SandboxValue val{};
   val.kind = SandboxValueKindObject;
   val.data.pointer = ptr;
   return val;
 }
 SandboxValue createStringValue(u32 ptr) {
-  SandboxValue val;
+  SandboxValue val{};
   val.kind = SandboxValueKindString;
   val.data.pointer = ptr;
   return val;
 }
 SandboxValue createBigIntValue(u32 ptr) {
-  SandboxValue val;
+  SandboxValue val{};
   val.kind = SandboxValueKindBigInt;
   val.data.pointer = ptr;
   return val;
 }
 SandboxValue createSymbolValue(u32 ptr) {
-  SandboxValue val;
+  SandboxValue val{};
   val.kind = SandboxValueKindSymbol;
   val.data.pointer = ptr;
   return val;
