@@ -172,25 +172,12 @@ void FlowChecker::matchConstraintToType(
       case TypeKind::TypedFunction: {
         auto *constraintFn = llvh::cast<TypedFunctionType>(constraint->info);
         auto *typeFn = llvh::cast<TypedFunctionType>(type->info);
-        // Allow mismatched param counts when trailing params are optional.
+        // Match the common params and return type to resolve placeholders.
+        // Param count mismatches are allowed here because inference only
+        // needs to extract placeholder bindings; flowing compatibility is
+        // checked separately.
         size_t minParams = std::min(
             constraintFn->getParams().size(), typeFn->getParams().size());
-        if (constraintFn->getParams().size() != typeFn->getParams().size()) {
-          // Verify the extra params are optional.
-          bool ok = true;
-          auto &longer =
-              constraintFn->getParams().size() > typeFn->getParams().size()
-              ? constraintFn->getParams()
-              : typeFn->getParams();
-          for (size_t i = minParams, e = longer.size(); i < e; ++i) {
-            if (!longer[i].optional) {
-              ok = false;
-              break;
-            }
-          }
-          if (!ok)
-            continue;
-        }
 
         worklist.insert({constraintFn->getThisParam(), typeFn->getThisParam()});
         for (size_t i = 0; i < minParams; ++i) {
