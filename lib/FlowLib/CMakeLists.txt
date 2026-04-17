@@ -16,6 +16,7 @@ set(flowlib_sources
   "01-array.js"
   "02-string.js"
   "03-map.js"
+  "04-set.js"
 )
 list(SORT flowlib_sources)
 
