@@ -35,4 +35,15 @@ const none: number[] = nums.filter((n: number): boolean => n > 100);
 print(none.length);
 // CHECK-NEXT: 0
 
+// Filter with thisArg.
+const threshold: number[] = [3];
+const above: number[] = nums.filter(function(
+  this: number[],
+  n: number,
+): boolean {
+  return n > this[0];
+}, threshold);
+print(above.length, above[0], above[1], above[2]);
+// CHECK-NEXT: 3 4 5 6
+
 })();

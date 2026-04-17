@@ -37,4 +37,13 @@ empty.forEach((n: number): void => { called = true; });
 print(called);
 // CHECK-NEXT: false
 
+// forEach with thisArg.
+var ctx: number[] = [100];
+var result: number = 0;
+nums.forEach(function(this: number[], n: number): void {
+  result += this[0] + n;
+}, ctx);
+print(result);
+// CHECK-NEXT: 360
+
 })();
