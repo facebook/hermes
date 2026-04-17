@@ -40,4 +40,12 @@ const b: Foo[] = nums.map((n: number): Foo => new Foo(n * 10));
 print(b.length, b[0].x, b[1].x, b[2].x);
 // CHECK-NEXT: 3 10 20 30
 
+// Map with thisArg.
+const offset: number[] = [100];
+const c: number[] = nums.map(function(this: number[], n: number): number {
+  return n + this[0];
+}, offset);
+print(c.length, c[0], c[1], c[2]);
+// CHECK-NEXT: 3 101 102 103
+
 })();

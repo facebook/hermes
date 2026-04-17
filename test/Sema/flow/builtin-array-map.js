@@ -19,7 +19,8 @@ function test(arr: number[]): number[] {
 // CHECK-NEXT:%class.2 = class(Array<number>)
 // CHECK-NEXT:%function.3 = function(arr: %class.2): %class.2
 // CHECK-NEXT:%function.4 = function(n: number, i: number, a: %class.2): number
-// CHECK-NEXT:%function.5 = function(this: %class.2, callback: %function.4): %class.2
+// CHECK-NEXT:%function.5 = function(this: %class.2, callback: %function.6, thisArg: void): %class.2
+// CHECK-NEXT:%function.6 = function(this: void, t: number, i: number, array: %class.2): number
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict
