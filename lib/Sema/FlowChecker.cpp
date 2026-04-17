@@ -2674,12 +2674,8 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
 
   {
     if (aType->getParams().size() < bType->getParams().size()) {
-      // It's valid to flow from a function that has no optional parameters to a
-      // function that adds them.
-      const auto &extraParam = bType->getParams()[aType->getParams().size()];
-      if (!extraParam.optional) {
-        return {};
-      }
+      // It's valid to flow from a function with fewer parameters to one with
+      // more, but we need a checked cast.
       needCheckedCast = true;
     } else if (aType->getParams().size() > bType->getParams().size()) {
       // Removing optional parameters is always valid.
