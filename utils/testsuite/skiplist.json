@@ -1236,12 +1236,6 @@
     {
       "comment": "TypedArray detached buffer handling is incomplete. Operations on TypedArrays whose ArrayBuffer is detached during callbacks (filter, forEach, map, reduce, includes, indexOf, etc.) throw TypeError instead of handling the detached state per spec. Constructor detach-during-coercion tests crash (SIGABRT) or throw wrong error types. Internal methods don't check for detachment before operating.",
       "paths": [
-        "test262/test/built-ins/TypedArray/prototype/forEach/BigInt/callbackfn-detachbuffer.js",
-        "test262/test/built-ins/TypedArray/prototype/forEach/callbackfn-detachbuffer.js",
-        "test262/test/built-ins/TypedArray/prototype/reduce/BigInt/callbackfn-detachbuffer.js",
-        "test262/test/built-ins/TypedArray/prototype/reduce/callbackfn-detachbuffer.js",
-        "test262/test/built-ins/TypedArray/prototype/reduceRight/BigInt/callbackfn-detachbuffer.js",
-        "test262/test/built-ins/TypedArray/prototype/reduceRight/callbackfn-detachbuffer.js",
         "test262/test/built-ins/TypedArray/prototype/subarray/byteoffset-with-detached-buffer.js",
         "test262/test/built-ins/TypedArrayConstructors/internals/DefineOwnProperty/BigInt/detached-buffer-throws-realm.js",
         "test262/test/built-ins/TypedArrayConstructors/internals/DefineOwnProperty/BigInt/detached-buffer-throws.js",

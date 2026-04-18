@@ -1349,10 +1349,6 @@ CallResult<HermesValue> typedArrayPrototypeForEach(void *, Runtime &runtime) {
   GCScope gcScope(runtime);
   auto marker = gcScope.createMarker();
   for (JSTypedArrayBase::size_type i = 0; i < len; ++i) {
-    // The callback function can detach the TypedArray.
-    if (!self->attached(runtime)) {
-      return runtime.raiseTypeError("Detached the ArrayBuffer in the callback");
-    }
     HermesValue val =
         JSObject::getOwnIndexed(createPseudoHandle(self.get()), runtime, i);
     if (Callable::executeCall3(
@@ -1906,11 +1902,6 @@ CallResult<HermesValue> typedArrayPrototypeReduce(void *ctx, Runtime &runtime) {
   GCScope scope(runtime);
   auto marker = scope.createMarker();
   for (; inRange(i, len); i += right ? -1 : 1) {
-    if (!self->attached(runtime)) {
-      // If the callback detached this TypedArray, raise a TypeError and don't
-      // continue.
-      return runtime.raiseTypeError("Detached the TypedArray in the callback");
-    }
     HermesValue val =
         JSObject::getOwnIndexed(createPseudoHandle(self.get()), runtime, i);
     auto callRes = Callable::executeCall4(
