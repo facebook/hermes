@@ -2168,6 +2168,15 @@ CallResult<HermesValue> typedArrayPrototypeToLocaleString(
   for (JSTypedArrayBase::size_type i = 0; i < len; ++i) {
     lv.storage =
         JSObject::getOwnIndexed(createPseudoHandle(self.get()), runtime, i);
+    if (lv.storage.getHermesValue().isUndefined() ||
+        lv.storage.getHermesValue().isNull()) {
+      if (LLVM_UNLIKELY(
+              JSArray::setElementAt(lv.strings, runtime, i, emptyString) ==
+              ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+      continue;
+    }
+
     auto objRes = toObject(runtime, lv.storage);
     if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
