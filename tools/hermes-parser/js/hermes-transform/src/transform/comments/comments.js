@@ -60,7 +60,7 @@ export function mutateESTreeASTCommentsForPrettier(
   // $FlowExpectedError[cannot-write]
   delete program.comments;
 
-  // The docblock comment is never attached to any AST nodes, since its technically
+  // The docblock comment is never attached to any AST nodes, since it's technically
   // attached to the program. However this is specific to our AST and in order for
   // prettier to correctly print it we need to attach it to the first node in the
   // program body.
@@ -77,7 +77,7 @@ export function mutateESTreeASTCommentsForPrettier(
       docblockComment.trailing = false;
     }
 
-    // If we have a first node in the program body, attache the comment to that
+    // If we have a first node in the program body, attach the comment to that
     // otherwise set it on the program.
     if (program.body.length > 0) {
       const firstStatement = program.body[0];
@@ -262,7 +262,7 @@ export function appendCommentToSource(
   switch (comment.type) {
     case 'Block': {
       // Prettier decides if a newline is necessary between the comment and its node by looking
-      // to see if a newline seperates them in the source text. We can trick prettier into
+      // to see if a newline separates them in the source text. We can trick prettier into
       // formatting how we want for new comments by placing the range such that a newline
       // will (OWN_LINE) or will not (INLINE) be found when searching from the specified range
       // position.
