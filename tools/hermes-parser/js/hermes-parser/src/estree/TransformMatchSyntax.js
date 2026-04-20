@@ -72,7 +72,7 @@ function genIdent(): Identifier {
 /**
  * A series of properties.
  * When combined with the match argument (the root expression), provides the
- * location of to be tested against, or location to be extracted to a binding.
+ * location to be tested against, or location to be extracted to a binding.
  */
 type Key = Array<Identifier | Literal>;
 
@@ -206,7 +206,7 @@ function needsPropExistsCond(pattern: MatchPattern): boolean {
 }
 
 /**
- * Analyzes a match pattern, and produced both the conditions and bindings
+ * Analyzes a match pattern, and produces both the conditions and bindings
  * produced by that pattern.
  */
 function analyzePattern(
@@ -609,7 +609,7 @@ function statementsOfBindings(
 /**
  * For throwing an error if no cases are matched.
  */
-const fallthroughErrorMsgText = `Match: No case succesfully matched. Make exhaustive or add a wildcard case using '_'.`;
+const fallthroughErrorMsgText = `Match: No case successfully matched. Make exhaustive or add a wildcard case using '_'.`;
 function fallthroughErrorMsg(value: Expression): Expression {
   return {
     type: 'BinaryExpression',
@@ -709,10 +709,10 @@ function mapMatchExpression(node: MatchExpression): Expression {
   // No bindings and a simple argument means we can use nested conditional
   // expressions.
   if (!hasBindings && isSimpleArgument) {
-    const wildcardAnalaysis = hasWildcard ? analyses.pop() : null;
+    const wildcardAnalysis = hasWildcard ? analyses.pop() : null;
     const lastBody =
-      wildcardAnalaysis != null
-        ? wildcardAnalaysis.body
+      wildcardAnalysis != null
+        ? wildcardAnalysis.body
         : iife([fallthroughError(shallowCloneNode(root))]);
 
     return analyses.reverse().reduce((acc, analysis) => {
@@ -894,7 +894,7 @@ export function transformProgram(
         }
         case 'Identifier': {
           // A rudimentary check to avoid some collisions with our generated
-          // variable names. Ideally, we would have access a scope analyzer
+          // variable names. Ideally, we would have access to a scope analyzer
           // inside the transform instead.
           if (GenID == null) {
             throw Error(
