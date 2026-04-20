@@ -243,7 +243,9 @@ IdentifierNode *getClassID(ClassLikeNode *node) {
       return llvh::dyn_cast_or_null<IdentifierNode>(
           cast<ClassExpressionNode>(node)->_id);
     case NodeKind::ClassDeclaration:
-      return dyn_cast<IdentifierNode>(cast<ClassDeclarationNode>(node)->_id);
+      // ClassDeclaration has an optional id due to 'export default class'.
+      return llvh::dyn_cast_or_null<IdentifierNode>(
+          cast<ClassDeclarationNode>(node)->_id);
     default:
       break;
   }
