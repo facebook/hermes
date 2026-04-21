@@ -639,6 +639,59 @@ bool Context<Traits>::matchesNCharICase8(
   return true;
 }
 
+/// Match a backreference against the input. Compares the captured text
+/// (from \p cr) against the current cursor position character by character.
+/// If \p icase is true, characters are compared after canonicalization.
+/// \return true if the backreference matches, advancing \p c past the matched
+/// text. Returns false (without modifying \p c) if the match fails.
+template <class Traits>
+bool matchBackRef(
+    const Context<Traits> &ctx,
+    CapturedRange cr,
+    Cursor<Traits> &c,
+    bool icase) {
+  // TODO: this can be optimized by hoisting the branches out of the loop.
+  bool unicode = ctx.syntaxFlags_.unicode;
+  auto capturedStart = ctx.first_ + cr.start;
+  auto capturedEnd = ctx.first_ + cr.end;
+  Cursor<Traits> cursor2(
+      capturedStart,
+      c.forwards() ? capturedStart : capturedEnd,
+      capturedEnd,
+      c.forwards());
+  Cursor<Traits> cursor1 = c;
+  bool matched = true;
+  while (matched && !cursor2.atEnd()) {
+    if (cursor1.atEnd()) {
+      matched = false;
+    } else if (!icase) {
+      // Direct comparison. Here we don't need to decode surrogate pairs.
+      matched = (cursor1.consume() == cursor2.consume());
+    } else if (!unicode) {
+      // Case-insensitive non-Unicode comparison, no decoding of surrogate
+      // pairs.
+      auto c1 = cursor1.consume();
+      auto c2 = cursor2.consume();
+      matched =
+          (c1 == c2 ||
+           ctx.traits_.canonicalize(c1, unicode) ==
+               ctx.traits_.canonicalize(c2, unicode));
+    } else {
+      // Unicode: we do need to decode surrogate pairs.
+      auto cp1 = cursor1.consumeUTF16();
+      auto cp2 = cursor2.consumeUTF16();
+      matched =
+          (cp1 == cp2 ||
+           ctx.traits_.canonicalize(cp1, unicode) ==
+               ctx.traits_.canonicalize(cp2, unicode));
+    }
+  }
+  if (matched) {
+    c.setCurrentPointer(cursor1.currentPointer());
+  }
+  return matched;
+}
+
 /// \return true if the character \p ch matches a bracket instruction \p insn,
 /// containing the bracket ranges \p ranges. Note the count of ranges is given
 /// in \p insn.
@@ -1276,50 +1329,10 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
             break;
           }
 
-          // TODO: this can be optimized by hoisting the branches out of the
-          // loop.
-          bool icase = syntaxFlags_.ignoreCase;
-          bool unicode = syntaxFlags_.unicode;
-          auto capturedStart = first_ + cr.start;
-          auto capturedEnd = first_ + cr.end;
-          Cursor<Traits> cursor2(
-              capturedStart,
-              c.forwards() ? capturedStart : capturedEnd,
-              capturedEnd,
-              c.forwards());
-          Cursor<Traits> cursor1 = c;
-          bool matched = true;
-          while (matched && !cursor2.atEnd()) {
-            if (cursor1.atEnd()) {
-              matched = false;
-            } else if (!icase) {
-              // Direct comparison. Here we don't need to decode surrogate
-              // pairs.
-              matched = (cursor1.consume() == cursor2.consume());
-            } else if (!unicode) {
-              // Case-insensitive non-Unicode comparison, no decoding of
-              // surrogate pairs.
-              auto c1 = cursor1.consume();
-              auto c2 = cursor2.consume();
-              matched =
-                  (c1 == c2 ||
-                   traits_.canonicalize(c1, unicode) ==
-                       traits_.canonicalize(c2, unicode));
-            } else {
-              // Unicode: we do need to decode surrogate pairs.
-              auto cp1 = cursor1.consumeUTF16();
-              auto cp2 = cursor2.consumeUTF16();
-              matched =
-                  (cp1 == cp2 ||
-                   traits_.canonicalize(cp1, unicode) ==
-                       traits_.canonicalize(cp2, unicode));
-            }
-          }
-          if (!matched) {
+          if (!matchBackRef(*this, cr, c, syntaxFlags_.ignoreCase)) {
             BACKTRACK();
           }
           s->ip_ += sizeof(BackRefInsn);
-          c.setCurrentPointer(cursor1.currentPointer());
           break;
         }
 
