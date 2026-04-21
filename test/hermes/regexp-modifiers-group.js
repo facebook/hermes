@@ -48,5 +48,69 @@ print(new RegExp("(?-i:abc)").source);
 print(new RegExp("(?i-ms:abc)").source);
 // CHECK-NEXT: (?i-ms:abc)
 
+// Test that modifier groups affect matching behavior.
+print('Modifier Group Matching');
+// CHECK-LABEL: Modifier Group Matching
+
+// (?i:...) enables case-insensitive matching inside the group.
+print(/(?i:abc)/.test('ABC'));
+// CHECK-NEXT: true
+print(/(?i:abc)/.test('abc'));
+// CHECK-NEXT: true
+print(/(?i:abc)def/.test('ABCdef'));
+// CHECK-NEXT: true
+print(/(?i:abc)def/.test('ABCDEF'));
+// CHECK-NEXT: false
+
+// (?-i:...) disables case-insensitive matching inside the group.
+print(/(?-i:abc)/i.test('ABC'));
+// CHECK-NEXT: false
+print(/(?-i:abc)/i.test('abc'));
+// CHECK-NEXT: true
+print(/(?-i:abc)def/i.test('abcDEF'));
+// CHECK-NEXT: true
+print(/(?-i:abc)def/i.test('ABCDEF'));
+// CHECK-NEXT: false
+
+// (?m:...) enables multiline matching inside the group.
+print(/(?m:^abc)/.test('xyz\nabc'));
+// CHECK-NEXT: true
+print(/^abc/.test('xyz\nabc'));
+// CHECK-NEXT: false
+print(/(?m:abc$)/.test('abc\nxyz'));
+// CHECK-NEXT: true
+print(/abc$/.test('abc\nxyz'));
+// CHECK-NEXT: false
+
+// (?-m:...) disables multiline matching inside the group.
+print(/(?-m:^abc)/m.test('xyz\nabc'));
+// CHECK-NEXT: false
+print(/(?-m:abc$)/m.test('abc\nxyz'));
+// CHECK-NEXT: false
+
+// (?s:...) enables dotAll matching inside the group.
+print(/(?s:a.b)/.test('a\nb'));
+// CHECK-NEXT: true
+print(/a.b/.test('a\nb'));
+// CHECK-NEXT: false
+
+// (?-s:...) disables dotAll matching inside the group.
+print(/(?-s:a.b)/s.test('a\nb'));
+// CHECK-NEXT: false
+
+// (?i:...) affects backreferences inside the group.
+print(/(?i:(abc)\1)/.test('abcABC'));
+// CHECK-NEXT: true
+print(/(abc)(?i:\1)/.test('abcABC'));
+// CHECK-NEXT: true
+print(/(abc)\1/.test('abcABC'));
+// CHECK-NEXT: false
+
+// (?i:...) affects character classes.
+print(/(?i:[a-z])/.test('A'));
+// CHECK-NEXT: true
+print(/[a-z]/.test('A'));
+// CHECK-NEXT: false
+
 print('done');
 // CHECK-NEXT: done

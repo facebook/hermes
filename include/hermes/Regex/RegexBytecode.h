@@ -46,7 +46,9 @@ struct Insn {
 
 struct GoalInsn : public Insn {};
 struct LeftAnchorInsn : public Insn {};
+struct LeftAnchorMultilineInsn : public Insn {};
 struct RightAnchorInsn : public Insn {};
+struct RightAnchorMultilineInsn : public Insn {};
 struct MatchAnyInsn : public Insn {};
 struct U16MatchAnyInsn : public Insn {};
 struct MatchAnyButNewlineInsn : public Insn {};
@@ -97,6 +99,10 @@ struct BackRefInsn : public Insn {
   uint16_t mexp;
 };
 
+struct BackRefICaseInsn : public Insn {
+  uint16_t mexp;
+};
+
 /// A BracketRange represents an inclusive range of characters in a bracket,
 /// such as /[a-z]/. Singletons like /[a]/ are represented as the range a-a.
 struct BracketRange32 {
@@ -124,9 +130,16 @@ struct BracketInsn : public Insn {
   }
 };
 
+/// BracketICaseInsn is a variant of BracketInsn used when the ignoreCase flag
+/// is set. Character class tests (\w, \d, \s) canonicalize before matching.
+struct BracketICaseInsn : public BracketInsn {};
+
 /// U16BracketInsn is a variant of BracketInsn used in Unicode regular
 /// expressions. It differs in that surrogate characters are decoded.
 struct U16BracketInsn : public BracketInsn {};
+
+/// U16BracketICaseInsn combines Unicode and ignoreCase behavior.
+struct U16BracketICaseInsn : public BracketInsn {};
 
 struct MatchNChar8Insn : public Insn {
   // number of 8-byte char following this instruction.

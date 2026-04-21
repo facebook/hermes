@@ -62,6 +62,18 @@ uint32_t instructionWidth<regex::U16BracketInsn>(
 }
 
 template <>
+uint32_t instructionWidth<regex::BracketICaseInsn>(
+    const regex::BracketICaseInsn *insn) {
+  return insn->totalWidth();
+}
+
+template <>
+uint32_t instructionWidth<regex::U16BracketICaseInsn>(
+    const regex::U16BracketICaseInsn *insn) {
+  return insn->totalWidth();
+}
+
+template <>
 uint32_t instructionWidth<regex::MatchNChar8Insn>(
     const regex::MatchNChar8Insn *insn) {
   return insn->totalWidth();
@@ -173,8 +185,21 @@ void dumpInstruction(
 
 void dumpInstruction(const regex::BracketInsn *insn, llvh::raw_ostream &OS) {
   using namespace regex;
-  OS << (insn->opcode == Opcode::U16Bracket ? "U16Bracket" : "Bracket")
-     << ": [";
+  switch (insn->opcode) {
+    case Opcode::U16Bracket:
+      OS << "U16Bracket";
+      break;
+    case Opcode::U16BracketICase:
+      OS << "U16BracketICase";
+      break;
+    case Opcode::BracketICase:
+      OS << "BracketICase";
+      break;
+    default:
+      OS << "Bracket";
+      break;
+  }
+  OS << ": [";
   if (insn->negate)
     OS << '^';
   if (insn->positiveCharClasses & CharacterClass::Digits)
@@ -211,6 +236,18 @@ void dumpInstruction(const regex::BracketInsn *insn, llvh::raw_ostream &OS) {
 }
 
 void dumpInstruction(
+    const regex::BracketICaseInsn *insn,
+    llvh::raw_ostream &OS) {
+  dumpInstruction(static_cast<const regex::BracketInsn *>(insn), OS);
+}
+
+void dumpInstruction(
+    const regex::U16BracketICaseInsn *insn,
+    llvh::raw_ostream &OS) {
+  dumpInstruction(static_cast<const regex::BracketInsn *>(insn), OS);
+}
+
+void dumpInstruction(
     const regex::WordBoundaryInsn *insn,
     llvh::raw_ostream &OS) {
   OS << "WordBoundary: " << (insn->invert ? "\\B" : "\\b");
@@ -230,6 +267,24 @@ void dumpInstruction(
 
 void dumpInstruction(const regex::BackRefInsn *insn, llvh::raw_ostream &OS) {
   OS << "BackRefInsn: " << insn->mexp;
+}
+
+void dumpInstruction(
+    const regex::BackRefICaseInsn *insn,
+    llvh::raw_ostream &OS) {
+  OS << "BackRefICaseInsn: " << insn->mexp;
+}
+
+void dumpInstruction(
+    const regex::LeftAnchorMultilineInsn *insn,
+    llvh::raw_ostream &OS) {
+  OS << "LeftAnchorMultiline";
+}
+
+void dumpInstruction(
+    const regex::RightAnchorMultilineInsn *insn,
+    llvh::raw_ostream &OS) {
+  OS << "RightAnchorMultiline";
 }
 
 void dumpInstruction(const regex::LookaroundInsn *insn, llvh::raw_ostream &OS) {

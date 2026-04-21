@@ -3109,6 +3109,22 @@
         "test262/test/built-ins/RegExp/prototype/Symbol.matchAll/species-constructor-is-not-object-throws.js"
       ],
       "comment": "String.prototype.matchAll / RegExp matchAll issues."
+    },
+    {
+      "paths": [
+        "test262/test/built-ins/RegExp/regexp-modifiers/add-ignoreCase-affects-slash-lower-b.js",
+        "test262/test/built-ins/RegExp/regexp-modifiers/add-ignoreCase-affects-slash-upper-b.js"
+      ],
+      "comment": "WordBoundary does not yet have an icase-aware opcode variant."
+    },
+    {
+      "paths": [
+        "test262/test/built-ins/RegExp/regexp-modifiers/add-ignoreCase-affects-slash-lower-p.js",
+        "test262/test/built-ins/RegExp/regexp-modifiers/add-ignoreCase-affects-slash-upper-p.js",
+        "test262/test/built-ins/RegExp/regexp-modifiers/remove-ignoreCase-affects-slash-lower-p.js",
+        "test262/test/built-ins/RegExp/regexp-modifiers/remove-ignoreCase-affects-slash-upper-p.js"
+      ],
+      "comment": "Tests use \\p{}/\\P{} but are only tagged regexp-modifiers, not regexp-unicode-property-escapes. They compile-fail on builds without HERMES_ENABLE_UNICODE_REGEXP_PROPERTY_ESCAPES."
     }
   ],
   "lazy_skip_list": [
@@ -4794,7 +4810,6 @@
     "upsert",
     "RegExp.escape",
     "immutable-arraybuffer",
-    "regexp-modifiers",
     "joint-iteration"
   ],
   "permanent_unsupported_features": [

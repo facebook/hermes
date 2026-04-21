@@ -79,6 +79,7 @@ enum class Width1Opcode : uint8_t {
   MatchAny = (uint8_t)Opcode::MatchAny,
   MatchAnyButNewline = (uint8_t)Opcode::MatchAnyButNewline,
   Bracket = (uint8_t)Opcode::Bracket,
+  BracketICase = (uint8_t)Opcode::BracketICase,
 };
 
 /// LoopData tracks information about a loop during a match attempt. Each State
@@ -575,15 +576,14 @@ bool isLineTerminator(CharT c) {
 }
 
 template <class Traits>
-bool matchesLeftAnchor(Context<Traits> &ctx, State<Traits> &s) {
+bool matchesLeftAnchor(Context<Traits> &ctx, State<Traits> &s, bool multiline) {
   bool matchesAnchor = false;
   const Cursor<Traits> &c = s.cursor_;
   if (c.atLeft()) {
     // Beginning of text.
     matchesAnchor = true;
   } else if (
-      (ctx.syntaxFlags_.multiline) && !c.atLeft() &&
-      isLineTerminator(c.currentPointer()[-1])) {
+      multiline && !c.atLeft() && isLineTerminator(c.currentPointer()[-1])) {
     // Multiline and after line terminator.
     matchesAnchor = true;
   }
@@ -591,14 +591,16 @@ bool matchesLeftAnchor(Context<Traits> &ctx, State<Traits> &s) {
 }
 
 template <class Traits>
-bool matchesRightAnchor(Context<Traits> &ctx, State<Traits> &s) {
+bool matchesRightAnchor(
+    Context<Traits> &ctx,
+    State<Traits> &s,
+    bool multiline) {
   bool matchesAnchor = false;
   const Cursor<Traits> &c = s.cursor_;
   if (c.atRight() && !(ctx.flags_ & constants::matchNotEndOfLine)) {
     matchesAnchor = true;
   } else if (
-      (ctx.syntaxFlags_.multiline) && (!c.atRight()) &&
-      isLineTerminator(c.currentPointer()[0])) {
+      multiline && (!c.atRight()) && isLineTerminator(c.currentPointer()[0])) {
     matchesAnchor = true;
   }
   return matchesAnchor;
@@ -700,7 +702,8 @@ bool bracketMatchesChar(
     const Context<Traits> &ctx,
     const BracketInsn *insn,
     const BracketRange32 *ranges,
-    typename Traits::CodePoint ch) {
+    typename Traits::CodePoint ch,
+    bool icase) {
   const auto &traits = ctx.traits_;
   // Note that if the bracket is negated /[^abc]/, we want to return true if we
   // do not match, false if we do. Implement this by xor with the negate flag.
@@ -711,9 +714,8 @@ bool bracketMatchesChar(
   // /iu must match any character whose canonical form is a word character
   // (e.g. U+212A KELVIN SIGN canonicalizes to 'k').
   if (insn->positiveCharClasses || insn->negativeCharClasses) {
-    auto testCh = ctx.syntaxFlags_.ignoreCase && ctx.syntaxFlags_.unicode
-        ? Traits::canonicalize(ch, true)
-        : ch;
+    auto testCh =
+        icase && ctx.syntaxFlags_.unicode ? Traits::canonicalize(ch, true) : ch;
     for (auto charClass :
          {CharacterClass::Digits,
           CharacterClass::Spaces,
@@ -893,7 +895,17 @@ bool Context<Traits>::matchWidth1(const Insn *base, CodeUnit c) const {
       const BracketInsn *insn = llvh::cast<BracketInsn>(base);
       const BracketRange32 *ranges =
           reinterpret_cast<const BracketRange32 *>(insn + 1);
-      return bracketMatchesChar<Traits>(*this, insn, ranges, c);
+      return bracketMatchesChar<Traits>(*this, insn, ranges, c, false);
+    }
+
+    case Width1Opcode::BracketICase: {
+      assert(
+          !(syntaxFlags_.unicode) &&
+          "Unicode should not be set for Width 1 brackets");
+      const BracketICaseInsn *insn = llvh::cast<BracketICaseInsn>(base);
+      const BracketRange32 *ranges =
+          reinterpret_cast<const BracketRange32 *>(insn + 1);
+      return bracketMatchesChar<Traits>(*this, insn, ranges, c, true);
     }
   }
   llvm_unreachable("Invalid width 1 opcode");
@@ -955,6 +967,9 @@ ExecutorResult<bool> Context<Traits>::matchWidth1Loop(
       break;
     case W1::Bracket:
       matched = matchWidth1LoopBody<W1::Bracket>(body, c, maxMatch);
+      break;
+    case W1::BracketICase:
+      matched = matchWidth1LoopBody<W1::BracketICase>(body, c, maxMatch);
       break;
   }
 
@@ -1089,15 +1104,27 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
           return potentialMatchLocation;
 
         case Opcode::LeftAnchor:
-          if (!matchesLeftAnchor(*this, *s))
+          if (!matchesLeftAnchor(*this, *s, false))
             BACKTRACK();
           s->ip_ += sizeof(LeftAnchorInsn);
           break;
 
+        case Opcode::LeftAnchorMultiline:
+          if (!matchesLeftAnchor(*this, *s, true))
+            BACKTRACK();
+          s->ip_ += sizeof(LeftAnchorMultilineInsn);
+          break;
+
         case Opcode::RightAnchor:
-          if (!matchesRightAnchor(*this, *s))
+          if (!matchesRightAnchor(*this, *s, false))
             BACKTRACK();
           s->ip_ += sizeof(RightAnchorInsn);
+          break;
+
+        case Opcode::RightAnchorMultiline:
+          if (!matchesRightAnchor(*this, *s, true))
+            BACKTRACK();
+          s->ip_ += sizeof(RightAnchorMultilineInsn);
           break;
 
         case Opcode::MatchAny:
@@ -1239,14 +1266,33 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
           break;
         }
 
+        case Opcode::BracketICase: {
+          if (c.atEnd() ||
+              !matchWidth1<Width1Opcode::BracketICase>(base, c.consume()))
+            BACKTRACK();
+          s->ip_ += llvh::cast<BracketICaseInsn>(base)->totalWidth();
+          break;
+        }
+
         case Opcode::U16Bracket: {
           const U16BracketInsn *insn = llvh::cast<U16BracketInsn>(base);
-          // U16BracketInsn is followed by a list of BracketRange32s.
           const BracketRange32 *ranges =
               reinterpret_cast<const BracketRange32 *>(insn + 1);
           if (c.atEnd() ||
               !bracketMatchesChar<Traits>(
-                  *this, insn, ranges, c.consumeUTF16()))
+                  *this, insn, ranges, c.consumeUTF16(), false))
+            BACKTRACK();
+          s->ip_ += insn->totalWidth();
+          break;
+        }
+
+        case Opcode::U16BracketICase: {
+          const auto *insn = llvh::cast<U16BracketICaseInsn>(base);
+          const BracketRange32 *ranges =
+              reinterpret_cast<const BracketRange32 *>(insn + 1);
+          if (c.atEnd() ||
+              !bracketMatchesChar<Traits>(
+                  *this, insn, ranges, c.consumeUTF16(), true))
             BACKTRACK();
           s->ip_ += insn->totalWidth();
           break;
@@ -1328,11 +1374,22 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
             s->ip_ += sizeof(BackRefInsn);
             break;
           }
-
-          if (!matchBackRef(*this, cr, c, syntaxFlags_.ignoreCase)) {
+          if (!matchBackRef(*this, cr, c, false))
             BACKTRACK();
-          }
           s->ip_ += sizeof(BackRefInsn);
+          break;
+        }
+
+        case Opcode::BackRefICase: {
+          const auto insn = llvh::cast<BackRefICaseInsn>(base);
+          CapturedRange cr = s->getCapturedRange(insn->mexp);
+          if (cr.start == kNotMatched || cr.end == kNotMatched) {
+            s->ip_ += sizeof(BackRefICaseInsn);
+            break;
+          }
+          if (!matchBackRef(*this, cr, c, true))
+            BACKTRACK();
+          s->ip_ += sizeof(BackRefICaseInsn);
           break;
         }
 

@@ -96,10 +96,17 @@ class Node {
     return false;
   }
 
-  /// If this Node can be coalesced into a single MatchCharNode,
-  /// then add the node's characters to \p output and \return true.
-  /// Otherwise \return false.
-  virtual bool tryCoalesceCharacters(CodePointList *output) const {
+  /// Try to coalesce this node's characters into \p output for merging
+  /// adjacent character nodes into a single MatchCharNode.
+  /// \p requiredICase constrains which nodes may be coalesced:
+  ///   - llvh::None: accept any icase value (used for the first node in a run).
+  ///     On success, \p requiredICase is set to this node's icase flag.
+  ///   - A bool value: only coalesce if this node's icase flag matches.
+  /// \return true if the node was coalesced (characters appended to \p output),
+  ///   false if the node cannot be coalesced or has an incompatible icase flag.
+  virtual bool tryCoalesceCharacters(
+      CodePointList *output,
+      llvh::Optional<bool> &requiredICase) const {
     return false;
   }
 
@@ -479,10 +486,10 @@ class BackRefNode final : public Node {
 
  private:
   virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
-    auto insn = bcs.emit<BackRefInsn>();
-    insn->mexp = mexp_;
-    // icase_ will be wired to the bytecode instruction in the next diff.
-    (void)icase_;
+    if (icase_)
+      bcs.emit<BackRefICaseInsn>()->mexp = mexp_;
+    else
+      bcs.emit<BackRefInsn>()->mexp = mexp_;
     return nullptr;
   }
 };
@@ -525,7 +532,10 @@ class LeftAnchorNode final : public Node {
 
  private:
   virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
-    bcs.emit<LeftAnchorInsn>();
+    if (multiline_)
+      bcs.emit<LeftAnchorMultilineInsn>();
+    else
+      bcs.emit<LeftAnchorInsn>();
     return nullptr;
   }
 };
@@ -541,9 +551,10 @@ class RightAnchorNode : public Node {
 
  private:
   virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
-    bcs.emit<RightAnchorInsn>();
-    // multiline_ will be wired to the bytecode instruction in the next diff.
-    (void)multiline_;
+    if (multiline_)
+      bcs.emit<RightAnchorMultilineInsn>();
+    else
+      bcs.emit<RightAnchorInsn>();
     return nullptr;
   }
 };
@@ -630,8 +641,13 @@ class MatchCharNode final : public Node {
     std::reverse(chars_.begin(), chars_.end());
   }
 
-  bool tryCoalesceCharacters(CodePointList *output) const override {
+  bool tryCoalesceCharacters(
+      CodePointList *output,
+      llvh::Optional<bool> &requiredICase) const override {
+    if (requiredICase.hasValue() && *requiredICase != icase_)
+      return false;
     output->append(chars_.begin(), chars_.end());
+    requiredICase = icase_;
     return true;
   }
 
@@ -858,9 +874,15 @@ class BracketNode : public Node {
  private:
   virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
     if (unicode_) {
-      populateInstruction(bcs, bcs.emit<U16BracketInsn>());
+      if (icase_)
+        populateInstruction(bcs, bcs.emit<U16BracketICaseInsn>());
+      else
+        populateInstruction(bcs, bcs.emit<U16BracketInsn>());
     } else {
-      populateInstruction(bcs, bcs.emit<BracketInsn>());
+      if (icase_)
+        populateInstruction(bcs, bcs.emit<BracketICaseInsn>());
+      else
+        populateInstruction(bcs, bcs.emit<BracketInsn>());
     }
     return nullptr;
   }
@@ -989,16 +1011,18 @@ void Node::optimizeNodeList(
       auto childNodes = nodes[idx]->getChildren();
       stack.insert(stack.end(), childNodes.begin(), childNodes.end());
       // Get the range of nodes that can be successfully coalesced.
+      // Only coalesce nodes that share the same icase flag.
       CodePointList chars;
+      llvh::Optional<bool> runICase;
       size_t rangeStart = idx;
-      while (idx < max && nodes[idx]->tryCoalesceCharacters(&chars)) {
+      while (idx < max && nodes[idx]->tryCoalesceCharacters(&chars, runICase)) {
         idx++;
       }
       if (idx - rangeStart >= 2) {
         // We successfully coalesced some nodes.
         // Replace the range with a new node.
-        nodeHolder.emplace_back(new MatchCharNode(
-            std::move(chars), flags.ignoreCase, flags.unicode));
+        nodeHolder.emplace_back(
+            new MatchCharNode(std::move(chars), *runICase, flags.unicode));
         nodes[rangeStart] = nodeHolder.back().get();
         // Fill the remainder of the range with null (we'll clean them up after
         // the loop) and skip to the end of the range.

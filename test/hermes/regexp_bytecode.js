@@ -130,7 +130,7 @@ print(/(^b)+(c)*?/);
 print(/[\u017f]/i);
 // CHECK:        10: /[\u017f]/i
 // CHECK-NEXT:    Header: marked: 0 loops: 0 flags: 1 constraints: 5
-// CHECK-NEXT:     0000  Bracket: [0x17f]
+// CHECK-NEXT:     0000  BracketICase: [0x17f]
 // CHECK-NEXT:     000e  Goal
 
 print(/a*/);
