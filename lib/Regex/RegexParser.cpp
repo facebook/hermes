@@ -192,6 +192,9 @@ class Parser {
       // Negative lookbehind (?<!)
       LookAround,
 
+      /// We are parsing a modifier group: (?ims-ims:).
+      ModifierGroup,
+
     } type;
 
     /// The splice point.
@@ -219,6 +222,9 @@ class Parser {
 
     // True if this lookaround is a lookahead. Ignored for non-lookarounds.
     bool forwardLookaround{false};
+
+    /// Saved flags to restore when closing a ModifierGroup.
+    SyntaxFlags savedFlags{};
 
     explicit ParseStackElement(Type type) : type(type) {}
   };
@@ -299,6 +305,95 @@ class Parser {
     stack.push_back(std::move(elem));
   }
 
+  /// Consume modifiers after '(?' has been consumed:
+  // (?setFlags:pattern)
+  // (?setFlags-clearFlags:pattern)
+  // Note that pattern isn't consumed here, only up to the flags. The allowed
+  // flags are: i,m, and s.
+  /// \return the new SyntaxFlags, or None if there was an error.
+  Optional<SyntaxFlags> consumeModifiers() {
+    SyntaxFlags newFlags = curFlags_;
+    // Keep track of the flags we've seen so far. No flag should ever appear
+    // twice.
+    SyntaxFlags seenFlags{};
+    bool parsingNegativeFlags = false;
+    bool hasModifierChar = false;
+
+    /// Get and set modifier flags on a SyntaxFlags by character.
+    auto getFlag = [](const SyntaxFlags &flags, CharT c) -> bool {
+      switch (c) {
+        case 'i':
+          return flags.ignoreCase;
+        case 'm':
+          return flags.multiline;
+        case 's':
+          return flags.dotAll;
+        default:
+          llvm_unreachable("invalid flag");
+      }
+    };
+    auto setFlagValue = [](SyntaxFlags &flags, CharT c, bool value) {
+      switch (c) {
+        case 'i':
+          flags.ignoreCase = value;
+          break;
+        case 'm':
+          flags.multiline = value;
+          break;
+        case 's':
+          flags.dotAll = value;
+          break;
+        default:
+          llvm_unreachable("invalid flag");
+      }
+    };
+
+    // Iterate until all modifiers are parsed. Any break out of this
+    // loop is treated as an error.
+    while (current_ != end_) {
+      CharT c = *current_;
+      if (c == 'i' || c == 'm' || c == 's') {
+        if (getFlag(seenFlags, c)) {
+          // Error, duplicate flags.
+          break;
+        }
+        setFlagValue(seenFlags, c, 1);
+        setFlagValue(newFlags, c, parsingNegativeFlags ? 0 : 1);
+        hasModifierChar = true;
+        consume(c);
+      } else if (tryConsume('-')) {
+        if (parsingNegativeFlags) {
+          // Error, can't have `-` twice.
+          break;
+        } else {
+          parsingNegativeFlags = true;
+        }
+      } else if (tryConsume(':')) {
+        if (!hasModifierChar) {
+          // Error, ending the modifiers with no flags specified.
+          break;
+        }
+        return newFlags;
+      } else {
+        // Error, unexpected character.
+        break;
+      }
+    }
+    setError(constants::ErrorType::InvalidFlags);
+    return llvh::None;
+  }
+
+  /// Open a modifier group, pushing it onto \p stack.
+  /// \p newFlags are the flags to use inside the group.
+  void openModifierGroup(ParseStack &stack, SyntaxFlags newFlags) {
+    ParseStackElement elem(ParseStackElement::ModifierGroup);
+    elem.quant = prepareQuantifier();
+    elem.splicePoint = re_->currentNode();
+    elem.savedFlags = curFlags_;
+    curFlags_ = newFlags;
+    stack.push_back(std::move(elem));
+  }
+
   /// Open a lookaround, pushing it onto \p stack.
   void openLookaround(ParseStack &stack, bool negate, bool forwards) {
     ParseStackElement elem(ParseStackElement::LookAround);
@@ -329,6 +424,10 @@ class Parser {
         break;
 
       case ParseStackElement::NonCapturingGroup:
+        break;
+
+      case ParseStackElement::ModifierGroup:
+        curFlags_ = elem.savedFlags;
         break;
 
       case ParseStackElement::LookAround: {
@@ -395,6 +494,15 @@ class Parser {
             openNamedCapturingGroup(stack);
           } else if (tryConsume("(?:")) {
             openNonCapturingGroup(stack);
+          } else if (tryConsume("(?")) {
+            // This must be the beginning of a modifier group
+            if (auto newFlags = consumeModifiers()) {
+              openModifierGroup(stack, *newFlags);
+              break;
+            } else {
+              assert(error_ != constants::ErrorType::None);
+              return;
+            }
           } else {
             consume('(');
             openCapturingGroup(stack);

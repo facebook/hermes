@@ -708,7 +708,7 @@ TEST(Regex, Invalid) {
   EXPECT_EQ(error_for(u"(*)"), ErrorType::InvalidRepeat);
   EXPECT_EQ(error_for(u"(+)"), ErrorType::InvalidRepeat);
   EXPECT_EQ(error_for(u"({1})"), ErrorType::InvalidRepeat);
-  EXPECT_EQ(error_for(u"(?)"), ErrorType::InvalidRepeat);
+  EXPECT_EQ(error_for(u"(?)"), ErrorType::InvalidFlags);
   EXPECT_EQ(error_for(u"abc", u"a"), ErrorType::InvalidFlags);
   EXPECT_EQ(error_for(u"abc", u"gg"), ErrorType::InvalidFlags);
   EXPECT_EQ(error_for(u"(?=a){1}", u"u"), ErrorType::InvalidRepeat);
