@@ -1022,7 +1022,7 @@ class FlowChecker::ExprVisitor {
         outer_.setNodeType(node, arrType);
       } else {
         outer_.sm_.error(
-            node->getSourceRange(), "ft: Array type requires Flowlib");
+            node->getSourceRange(), "ft: Array type requires TypedLib");
         outer_.setNodeType(node, outer_.flowContext_.getAny());
       }
     }

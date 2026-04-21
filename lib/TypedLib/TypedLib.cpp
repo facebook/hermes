@@ -5,20 +5,21 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/FlowLib/FlowLib.h"
+#include "hermes/TypedLib/TypedLib.h"
 
 namespace hermes {
 
-static const unsigned char flowLibSource[] = {
-#include "FlowLib.inc"
+static const unsigned char typedLibSource[] = {
+#include "TypedLib.inc"
     // Add null terminator for parser.
     ,
     0x00};
 
-llvh::StringRef getFlowLibSource() {
+llvh::StringRef getTypedLibSource() {
   // Return size without the null terminator.
   return llvh::StringRef(
-      reinterpret_cast<const char *>(flowLibSource), sizeof(flowLibSource) - 1);
+      reinterpret_cast<const char *>(typedLibSource),
+      sizeof(typedLibSource) - 1);
 }
 
 } // namespace hermes

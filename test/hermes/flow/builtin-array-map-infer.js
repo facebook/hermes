@@ -10,7 +10,7 @@
 // RUN: %hermes -typed %s | %FileCheck --match-full-lines %s
 // RUN: %shermes -typed -exec %s | %FileCheck --match-full-lines %s
 
-/// Test that user-defined types are visible inside callbacks passed to FlowLib
+/// Test that user-defined types are visible inside callbacks passed to TypedLib
 /// generic methods like Array.prototype.map.
 
 'use strict';

@@ -605,9 +605,9 @@ class FlowChecker::DeclareScopeTypes {
         forwardGenericInstantiations.insert({type, std::move(instantiation)});
         return type;
       }
-      // No FlowLib Array class — resolve to any.
+      // No TypedLib Array class — resolve to any.
       outer.sm_.error(
-          annotation->getSourceRange(), "ft: Array type requires FlowLib");
+          annotation->getSourceRange(), "ft: Array type requires TypedLib");
       return outer.flowContext_.createType(
           outer.flowContext_.getAnyInfo(), annotation);
     }

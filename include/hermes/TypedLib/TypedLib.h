@@ -5,16 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_FLOWLIB_FLOWLIB_H
-#define HERMES_FLOWLIB_FLOWLIB_H
+#pragma once
 
 #include "llvh/ADT/StringRef.h"
 
 namespace hermes {
 
-/// Get the FlowLib source code for parsing as a prelude in typed mode.
-llvh::StringRef getFlowLibSource();
+/// Get the TypedLib source code for parsing as a prelude in typed mode.
+llvh::StringRef getTypedLibSource();
 
 } // namespace hermes
-
-#endif // HERMES_FLOWLIB_FLOWLIB_H

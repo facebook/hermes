@@ -227,7 +227,7 @@ void FlowChecker::populateBuiltinMethods() {
     // Name of the function being called.
     auto *id = llvh::cast<ESTree::IdentifierNode>(funcDecl->_id);
 
-    // Currently all builtin functions from FlowLib are non-static.
+    // Currently all builtin functions from TypedLib are non-static.
     BuiltinMethodKey key{
         thisTypeKind,
         id->_name,
@@ -2390,7 +2390,7 @@ Type *FlowChecker::resolveArrayType(Type *elementType, ESTree::Node *node) {
       return flowContext_.createType(
           flowContext_.createInferencePlaceholderArray(elementType), node);
     }
-    sm_.error(node->getSourceRange(), "ft: Array type requires FlowLib");
+    sm_.error(node->getSourceRange(), "ft: Array type requires TypedLib");
     return flowContext_.createType(flowContext_.getAnyInfo(), node);
   }
   return arrClassType;
@@ -3033,7 +3033,7 @@ bool FlowChecker::inferPlaceholdersFromCallArgs(
   // Build argument constraints by binding type params and parsing param types.
   llvh::SmallVector<Type *, 2> callArgConstraints{};
 
-  // If a separate scope is needed for parsing param types (e.g., FlowLib
+  // If a separate scope is needed for parsing param types (e.g., TypedLib
   // methods where class type params like T in Array<T> are in a different
   // scope), activate it for the duration of param type parsing only.
   TypeBindingTableScopePtrTy savedScope;

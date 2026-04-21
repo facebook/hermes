@@ -774,7 +774,7 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// \param receiverType Optional receiver type for inferring 'this' param.
   /// \param paramParsingScope Optional scope to activate while parsing the
   ///   method's parameter types (e.g. to make class type params visible for
-  ///   FlowLib methods). Restored before visiting call arguments so
+  ///   TypedLib methods). Restored before visiting call arguments so
   ///   user-defined types remain visible in callbacks.
   /// \return true if all placeholders were resolved.
   bool inferPlaceholdersFromCallArgs(

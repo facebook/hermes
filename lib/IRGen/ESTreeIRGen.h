@@ -952,7 +952,7 @@ class ESTreeIRGen {
   Value *genArrayExpr(ESTree::ArrayExpressionNode *Expr);
   Value *genCallExpr(ESTree::CallExpressionNode *call);
 
-  /// Generate a direct call to a FlowLib builtin function.
+  /// Generate a direct call to a TypedLib builtin function.
   Value *genBuiltinMethodCall(
       ESTree::CallExpressionNode *call,
       ESTree::FunctionDeclarationNode *builtinDecl);

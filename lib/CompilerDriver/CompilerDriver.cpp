@@ -18,7 +18,6 @@
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/BCGen/RegAlloc.h"
 #include "hermes/BCGen/SH/SH.h"
-#include "hermes/FlowLib/FlowLib.h"
 #include "hermes/IR/Analysis.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRBuilder.h"
@@ -42,6 +41,7 @@
 #include "hermes/Support/OutputStream.h"
 #include "hermes/Support/Statistic.h"
 #include "hermes/Support/Warning.h"
+#include "hermes/TypedLib/TypedLib.h"
 #include "hermes/Utils/CompilerRuntimeFlags.h"
 #include "hermes/Utils/Dumper.h"
 #include "hermes/Utils/Options.h"
@@ -897,11 +897,11 @@ ESTree::NodePtr parseJS(
   if (shouldWrapInIIFE) {
     ESTree::ProgramNode *prelude = nullptr;
 
-    // Parse FlowLib prelude if std-globals is enabled.
+    // Parse TypedLib prelude if std-globals is enabled.
     if (cl::StdGlobals) {
-      auto flowLibBuf = llvh::MemoryBuffer::getMemBuffer(
-          getFlowLibSource(), "FlowLib", false);
-      parser::JSParser jsParser(*context, std::move(flowLibBuf));
+      auto typedLibBuf = llvh::MemoryBuffer::getMemBuffer(
+          getTypedLibSource(), "TypedLib", false);
+      parser::JSParser jsParser(*context, std::move(typedLibBuf));
       auto preludeOpt = jsParser.parse();
       if (!preludeOpt) {
         return nullptr;

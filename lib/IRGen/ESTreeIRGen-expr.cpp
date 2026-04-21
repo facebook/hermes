@@ -482,7 +482,7 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
     return emitNativeCall(call, natFuncType);
   }
 
-  // Check for known FlowLib builtin method call (e.g., Array map).
+  // Check for known TypedLib builtin method call (e.g., Array map).
   if (auto *builtinDecl = flowContext_.getBuiltinCallTarget(call)) {
     return genBuiltinMethodCall(call, builtinDecl);
   }
