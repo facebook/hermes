@@ -250,20 +250,20 @@ class Regex {
 
   bool resolveNamedBackRefs();
 
-  void pushLeftAnchor();
-  void pushRightAnchor();
-  void pushMatchAny();
+  void pushLeftAnchor(bool multiline);
+  void pushRightAnchor(bool multiline);
+  void pushMatchAny(bool dotAll);
   void pushLoop(
       uint32_t min,
       uint32_t max,
       NodeList loopedList,
       uint32_t mexp_begin,
       bool greedy);
-  BracketNode *startBracketList(bool negate);
-  void pushChar(CodePoint c);
-  void pushCharClass(CharacterClass c);
-  void pushBackRef(uint32_t i);
-  void pushNamedBackRef(GroupName &&identifier);
+  BracketNode *startBracketList(bool negate, bool icase);
+  void pushChar(CodePoint c, bool icase);
+  void pushCharClass(CharacterClass c, bool icase);
+  void pushBackRef(uint32_t i, bool icase);
+  void pushNamedBackRef(GroupName &&identifier, bool icase);
   void pushAlternation(std::vector<NodeList> alternatives);
   void pushMarkedSubexpression(NodeList, uint32_t mexp);
   void pushWordBoundary(bool);
@@ -406,16 +406,16 @@ void Regex<Traits>::pushLoop(
 }
 
 template <class Traits>
-void Regex<Traits>::pushChar(CodePoint c) {
-  bool icase = globalFlags().ignoreCase;
+void Regex<Traits>::pushChar(CodePoint c, bool icase) {
+  bool unicode = globalFlags_.unicode;
   if (icase)
-    c = traits_.canonicalize(c, globalFlags().unicode);
-  appendNode<MatchCharNode>(Node::CodePointList{c}, globalFlags());
+    c = traits_.canonicalize(c, unicode);
+  appendNode<MatchCharNode>(Node::CodePointList{c}, icase, unicode);
 }
 
 template <class Traits>
-void Regex<Traits>::pushCharClass(CharacterClass c) {
-  auto bracket = startBracketList(false);
+void Regex<Traits>::pushCharClass(CharacterClass c, bool icase) {
+  auto bracket = startBracketList(false, icase);
   bracket->addClass(c);
 }
 
@@ -425,18 +425,19 @@ void Regex<Traits>::pushMarkedSubexpression(NodeList nodes, uint32_t mexp) {
 }
 
 template <class Traits>
-void Regex<Traits>::pushLeftAnchor() {
-  appendNode<LeftAnchorNode>(globalFlags());
+void Regex<Traits>::pushLeftAnchor(bool multiline) {
+  appendNode<LeftAnchorNode>(multiline);
 }
 
 template <class Traits>
-void Regex<Traits>::pushRightAnchor() {
-  appendNode<RightAnchorNode>();
+void Regex<Traits>::pushRightAnchor(bool multiline) {
+  appendNode<RightAnchorNode>(multiline);
 }
 
 template <class Traits>
-void Regex<Traits>::pushMatchAny() {
-  appendNode<MatchAnyNode>(globalFlags());
+void Regex<Traits>::pushMatchAny(bool dotAll) {
+  bool unicode = globalFlags_.unicode;
+  appendNode<MatchAnyNode>(dotAll, unicode);
 }
 
 template <class Traits>
@@ -445,24 +446,24 @@ void Regex<Traits>::pushWordBoundary(bool invert) {
 }
 
 template <class Traits>
-void Regex<Traits>::pushBackRef(uint32_t i) {
-  appendNode<BackRefNode>(i);
+void Regex<Traits>::pushBackRef(uint32_t i, bool icase) {
+  appendNode<BackRefNode>(i, icase);
 }
 
 template <class Traits>
-void Regex<Traits>::pushNamedBackRef(GroupName &&identifier) {
+void Regex<Traits>::pushNamedBackRef(GroupName &&identifier, bool icase) {
   auto search = nameMapping_.find(identifier);
   if (search == nameMapping_.end()) {
     // If this name hasn't been defined yet, we have a case of an ambiguous
     // named backref. It could be valid or not, because the group name could be
     // defined in the future. We will revist these nodes at the end to see if
     // they are valid.
-    BackRefNode *backRef = appendNode<BackRefNode>(0);
+    BackRefNode *backRef = appendNode<BackRefNode>(0, icase);
     unresolvedNamedBackRefs_.emplace_back(std::move(identifier), backRef);
     return;
   }
   auto groupNum = search->second;
-  appendNode<BackRefNode>(groupNum - 1);
+  appendNode<BackRefNode>(groupNum - 1, icase);
 }
 
 template <class Traits>
@@ -471,8 +472,9 @@ void Regex<Traits>::pushAlternation(std::vector<NodeList> alternatives) {
 }
 
 template <class Traits>
-BracketNode<Traits> *Regex<Traits>::startBracketList(bool negate) {
-  return appendNode<BracketNode>(traits_, negate, globalFlags_);
+BracketNode<Traits> *Regex<Traits>::startBracketList(bool negate, bool icase) {
+  bool unicode = globalFlags_.unicode;
+  return appendNode<BracketNode>(traits_, negate, icase, unicode);
 }
 
 template <class Traits>

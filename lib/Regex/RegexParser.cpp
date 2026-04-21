@@ -541,13 +541,13 @@ class Parser {
       const CharT c = *current_;
       switch (c) {
         case '^':
-          re_->pushLeftAnchor();
+          re_->pushLeftAnchor(curFlags_.multiline);
           consume('^');
           quantifierAllowed = false;
           break;
 
         case '$':
-          re_->pushRightAnchor();
+          re_->pushRightAnchor(curFlags_.multiline);
           consume('$');
           quantifierAllowed = false;
           break;
@@ -570,7 +570,7 @@ class Parser {
 
         case '.': {
           consume('.');
-          re_->pushMatchAny();
+          re_->pushMatchAny(curFlags_.dotAll);
           break;
         }
 
@@ -598,7 +598,7 @@ class Parser {
             setError(constants::ErrorType::InvalidQuantifierBracket);
             return;
           }
-          re_->pushChar(consume('{'));
+          re_->pushChar(consume('{'), curFlags_.ignoreCase);
           break;
         }
 
@@ -629,9 +629,9 @@ class Parser {
         default: {
           // Ordinary character or surrogate pair.
           if (auto cp = tryConsumeSurrogatePair()) {
-            re_->pushChar(*cp);
+            re_->pushChar(*cp, curFlags_.ignoreCase);
           } else {
-            re_->pushChar(consume(c));
+            re_->pushChar(consume(c), curFlags_.ignoreCase);
           }
           break;
         }
@@ -827,7 +827,7 @@ class Parser {
     consume('[');
     bool unicode = curFlags_.unicode;
     bool negate = tryConsume('^');
-    auto bracket = re_->startBracketList(negate);
+    auto bracket = re_->startBracketList(negate, curFlags_.ignoreCase);
 
     // Helper to add a ClassAtom to our bracket.
     auto addClassAtom = [&bracket](const ClassAtom &atom) {
@@ -1320,19 +1320,25 @@ class Parser {
       case 'd':
       case 'D':
         consume(c);
-        re_->pushCharClass({CharacterClass::Digits, c == 'D' /* invert */});
+        re_->pushCharClass(
+            {CharacterClass::Digits, c == 'D' /* invert */},
+            curFlags_.ignoreCase);
         break;
 
       case 's':
       case 'S':
         consume(c);
-        re_->pushCharClass({CharacterClass::Spaces, c == 'S' /* invert */});
+        re_->pushCharClass(
+            {CharacterClass::Spaces, c == 'S' /* invert */},
+            curFlags_.ignoreCase);
         break;
 
       case 'w':
       case 'W':
         consume(c);
-        re_->pushCharClass({CharacterClass::Words, c == 'W' /* invert */});
+        re_->pushCharClass(
+            {CharacterClass::Words, c == 'W' /* invert */},
+            curFlags_.ignoreCase);
         break;
 
 #ifdef HERMES_ENABLE_UNICODE_REGEXP_PROPERTY_ESCAPES
@@ -1348,7 +1354,8 @@ class Parser {
             setError(constants::ErrorType::InvalidPropertyName);
             return;
           }
-          auto bracket = re_->startBracketList(c == 'P' /* invert */);
+          auto bracket = re_->startBracketList(
+              c == 'P' /* invert */, curFlags_.ignoreCase);
           auto codePointRanges =
               unicodePropertyRanges(propertyName, propertyValue);
           if (codePointRanges.empty()) {
@@ -1360,7 +1367,7 @@ class Parser {
         } else {
           // When not in Unicode mode, this is just a regular `p` or `P`
           // (unnecessary) escape.
-          re_->pushChar(consumeCharacterEscape());
+          re_->pushChar(consumeCharacterEscape(), curFlags_.ignoreCase);
         }
         break;
       }
@@ -1388,15 +1395,16 @@ class Parser {
           maxBackRef_ = std::max(maxBackRef_, decimal);
           // Subtract 1 so the marked subexpression index starts at zero, to
           // line up with other instructions.
-          re_->pushBackRef(decimal - 1);
+          re_->pushBackRef(decimal - 1, curFlags_.ignoreCase);
         } else if (c < '8' && !unicode) {
           // Octal.
           current_ = saved;
-          re_->pushChar(consumeLegacyOctalEscapeSequence());
+          re_->pushChar(
+              consumeLegacyOctalEscapeSequence(), curFlags_.ignoreCase);
         } else {
           // IdentityEscape.
           current_ = saved;
-          re_->pushChar(identityEscape(consume(c)));
+          re_->pushChar(identityEscape(consume(c)), curFlags_.ignoreCase);
         }
         break;
       }
@@ -1409,7 +1417,7 @@ class Parser {
             setError(constants::ErrorType::InvalidNamedReference);
             return;
           }
-          re_->pushNamedBackRef(std::move(refIdentifer));
+          re_->pushNamedBackRef(std::move(refIdentifer), curFlags_.ignoreCase);
           break;
         }
         re_->sawNamedBackrefBeforeGroup();
@@ -1418,7 +1426,7 @@ class Parser {
         [[fallthrough]];
       }
       default: {
-        re_->pushChar(consumeCharacterEscape());
+        re_->pushChar(consumeCharacterEscape(), curFlags_.ignoreCase);
         break;
       }
     }

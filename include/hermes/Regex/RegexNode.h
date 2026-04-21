@@ -466,8 +466,12 @@ class BackRefNode final : public Node {
   // The backreference like \3.
   uint16_t mexp_;
 
+  /// Whether the ignoreCase flag is set.
+  bool icase_;
+
  public:
-  explicit BackRefNode(unsigned mexp) : mexp_(mexp) {}
+  explicit BackRefNode(unsigned mexp, bool icase)
+      : mexp_(mexp), icase_(icase) {}
 
   void setBackRef(unsigned mexp) {
     mexp_ = mexp;
@@ -475,7 +479,10 @@ class BackRefNode final : public Node {
 
  private:
   virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
-    bcs.emit<BackRefInsn>()->mexp = mexp_;
+    auto insn = bcs.emit<BackRefInsn>();
+    insn->mexp = mexp_;
+    // icase_ will be wired to the bytecode instruction in the next diff.
+    (void)icase_;
     return nullptr;
   }
 };
@@ -504,7 +511,7 @@ class LeftAnchorNode final : public Node {
   bool multiline_;
 
  public:
-  LeftAnchorNode(SyntaxFlags flags) : multiline_(flags.multiline) {}
+  LeftAnchorNode(bool multiline) : multiline_(multiline) {}
 
   virtual MatchConstraintSet matchConstraints() const override {
     MatchConstraintSet result = 0;
@@ -527,12 +534,16 @@ class LeftAnchorNode final : public Node {
 class RightAnchorNode : public Node {
   using Super = Node;
 
+  bool multiline_;
+
  public:
-  RightAnchorNode() {}
+  RightAnchorNode(bool multiline) : multiline_(multiline) {}
 
  private:
   virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
     bcs.emit<RightAnchorInsn>();
+    // multiline_ will be wired to the bytecode instruction in the next diff.
+    (void)multiline_;
     return nullptr;
   }
 };
@@ -549,8 +560,8 @@ class MatchAnyNode final : public Node {
   /// If \p unicode is set, emit bytecode that treats surrogate pairs as a
   /// single character.
   /// If \p dotAll is set, match newlines. Otherwise, don't match newlines.
-  explicit MatchAnyNode(SyntaxFlags flags)
-      : unicode_(flags.unicode), dotAll_(flags.dotAll) {}
+  explicit MatchAnyNode(bool dotAll, bool unicode)
+      : unicode_(unicode), dotAll_(dotAll) {}
 
   virtual MatchConstraintSet matchConstraints() const override {
     return MatchConstraintNonEmpty | Super::matchConstraints();
@@ -603,10 +614,8 @@ class MatchCharNode final : public Node {
   const bool unicode_;
 
  public:
-  MatchCharNode(CodePointList chars, SyntaxFlags flags)
-      : chars_(std::move(chars)),
-        icase_(flags.ignoreCase),
-        unicode_(flags.unicode) {}
+  MatchCharNode(CodePointList chars, bool icase, bool unicode)
+      : chars_(std::move(chars)), icase_(icase), unicode_(unicode) {}
 
   virtual MatchConstraintSet matchConstraints() const override {
     MatchConstraintSet result = MatchConstraintNonEmpty;
@@ -807,11 +816,8 @@ class BracketNode : public Node {
   }
 
  public:
-  BracketNode(const Traits &traits, bool negate, SyntaxFlags flags)
-      : traits_(traits),
-        negate_(negate),
-        icase_(flags.ignoreCase),
-        unicode_(flags.unicode) {}
+  BracketNode(const Traits &traits, bool negate, bool icase, bool unicode)
+      : traits_(traits), negate_(negate), icase_(icase), unicode_(unicode) {}
 
   void addChar(CodePoint c) {
     codePointSet_.add(c);
@@ -991,7 +997,8 @@ void Node::optimizeNodeList(
       if (idx - rangeStart >= 2) {
         // We successfully coalesced some nodes.
         // Replace the range with a new node.
-        nodeHolder.emplace_back(new MatchCharNode(std::move(chars), flags));
+        nodeHolder.emplace_back(new MatchCharNode(
+            std::move(chars), flags.ignoreCase, flags.unicode));
         nodes[rangeStart] = nodeHolder.back().get();
         // Fill the remainder of the range with null (we'll clean them up after
         // the loop) and skip to the end of the range.
