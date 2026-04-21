@@ -45,7 +45,14 @@ class Regex {
 
  private:
   Traits traits_;
-  SyntaxFlags flags_ = {};
+
+  /// This field is the set of flags that were used at the top-level definition
+  /// of the regex. However, the i/m/s flags can be modified locally within the
+  /// regex. So it's not correct to read those flags from this field when
+  /// constructing the individual nodes that need access to those fields.
+  /// Instead, that state is maintained by the parser, and will be passed in to
+  /// the constructor of the nodes that need it.
+  SyntaxFlags globalFlags_ = {};
 
   // Number of capture groups encountered so far.
   uint16_t markedCount_ = 0;
@@ -143,7 +150,7 @@ class Regex {
     RegexBytecodeHeader header = {
         markedCount_,
         static_cast<uint16_t>(loopCount_),
-        flags_.toByte(),
+        globalFlags_.toByte(),
         matchConstraints_};
     RegexBytecodeStream bcs(header);
     Node::compile(nodes_, bcs);
@@ -165,7 +172,7 @@ class Regex {
       error_ = constants::ErrorType::InvalidFlags;
       return;
     }
-    flags_ = *sflags;
+    globalFlags_ = *sflags;
     error_ = parse(pattern.begin(), pattern.end());
   }
 
@@ -181,8 +188,8 @@ class Regex {
   unsigned markCount() const {
     return markedCount_;
   }
-  SyntaxFlags flags() const {
-    return flags_;
+  SyntaxFlags globalFlags() const {
+    return globalFlags_;
   }
 
   std::deque<llvh::SmallVector<char16_t, 5>> &getOrderedNamedGroups() {
@@ -279,7 +286,7 @@ constants::ErrorType Regex<Traits>::parse(
     ForwardIterator first,
     ForwardIterator last) {
   uint32_t maxBackRef = 0;
-  bool hasNamedGroups = flags_.unicode;
+  bool hasNamedGroups = globalFlags_.unicode;
   auto result = parseWithBackRefLimit(
       first,
       last,
@@ -304,14 +311,14 @@ constants::ErrorType Regex<Traits>::parse(
   // We must also reparse if there were any named capture groups used and it is
   // not unicode mode.
   bool reparseForNamedBackref = false;
-  if (!flags_.unicode && nameMapping_.size() > 0 &&
+  if (!globalFlags_.unicode && nameMapping_.size() > 0 &&
       sawNamedBackrefBeforeGroup_) {
     reparseForNamedBackref = true;
     hasNamedGroups = true;
   }
 
   if (reparseForNumberedBackref || reparseForNamedBackref) {
-    if (flags_.unicode) {
+    if (globalFlags_.unicode) {
       return constants::ErrorType::EscapeInvalid;
     }
 
@@ -344,13 +351,19 @@ constants::ErrorType Regex<Traits>::parseWithBackRefLimit(
   nodes_.clear();
   appendNode<Node>();
   auto result = parseRegex(
-      first, last, this, flags_, backRefLimit, hasNamedGroups, outMaxBackRef);
+      first,
+      last,
+      this,
+      globalFlags_,
+      backRefLimit,
+      hasNamedGroups,
+      outMaxBackRef);
 
   // If we succeeded, add a goal node as the last node and perform optimizations
   // on the list.
   if (result == constants::ErrorType::None) {
     appendNode<GoalNode>();
-    Node::optimizeNodeList(nodes_, flags_, nodeHolder_);
+    Node::optimizeNodeList(nodes_, globalFlags_, nodeHolder_);
     if (!resolveNamedBackRefs()) {
       return constants::ErrorType::NonexistentNamedCaptureReference;
     }
@@ -394,10 +407,10 @@ void Regex<Traits>::pushLoop(
 
 template <class Traits>
 void Regex<Traits>::pushChar(CodePoint c) {
-  bool icase = flags().ignoreCase;
+  bool icase = globalFlags().ignoreCase;
   if (icase)
-    c = traits_.canonicalize(c, flags().unicode);
-  appendNode<MatchCharNode>(Node::CodePointList{c}, flags());
+    c = traits_.canonicalize(c, globalFlags().unicode);
+  appendNode<MatchCharNode>(Node::CodePointList{c}, globalFlags());
 }
 
 template <class Traits>
@@ -413,7 +426,7 @@ void Regex<Traits>::pushMarkedSubexpression(NodeList nodes, uint32_t mexp) {
 
 template <class Traits>
 void Regex<Traits>::pushLeftAnchor() {
-  appendNode<LeftAnchorNode>(flags());
+  appendNode<LeftAnchorNode>(globalFlags());
 }
 
 template <class Traits>
@@ -423,7 +436,7 @@ void Regex<Traits>::pushRightAnchor() {
 
 template <class Traits>
 void Regex<Traits>::pushMatchAny() {
-  appendNode<MatchAnyNode>(flags());
+  appendNode<MatchAnyNode>(globalFlags());
 }
 
 template <class Traits>
@@ -459,7 +472,7 @@ void Regex<Traits>::pushAlternation(std::vector<NodeList> alternatives) {
 
 template <class Traits>
 BracketNode<Traits> *Regex<Traits>::startBracketList(bool negate) {
-  return appendNode<BracketNode>(traits_, negate, flags_);
+  return appendNode<BracketNode>(traits_, negate, globalFlags_);
 }
 
 template <class Traits>
