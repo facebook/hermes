@@ -54,7 +54,7 @@ class Parser {
   constants::ErrorType error_ = constants::ErrorType::None;
 
   // Flags for the regex.
-  const SyntaxFlags flags_;
+  SyntaxFlags curFlags_;
 
   // See comment --DecimalEscape--.
   const uint32_t backRefLimit_;
@@ -336,7 +336,7 @@ class Parser {
         bool forwards = elem.forwardLookaround;
         // ES11 Annex B.1.4 extends RegExp to allow quantifiers for
         // lookaheads when unicode is disabled.
-        quantifierAllowed = !(flags_.unicode) && forwards;
+        quantifierAllowed = !(curFlags_.unicode) && forwards;
         auto mexpStart = elem.mexp;
         auto mexpEnd = re_->markedCount();
         auto expr = re_->spliceOut(elem.splicePoint);
@@ -486,7 +486,7 @@ class Parser {
           if (tryConsumeQuantifier(&tmp)) {
             setError(constants::ErrorType::InvalidRepeat);
             return;
-          } else if (flags_.unicode) {
+          } else if (curFlags_.unicode) {
             setError(constants::ErrorType::InvalidQuantifierBracket);
             return;
           }
@@ -509,7 +509,7 @@ class Parser {
           // ExtendedPatternCharacter production of ES9 Annex B 1.4.
           // However they are disallowed under Unicode, where Annex B does not
           // apply.
-          if (flags_.unicode) {
+          if (curFlags_.unicode) {
             setError(
                 c == '}' ? constants::ErrorType::InvalidQuantifierBracket
                          : constants::ErrorType::UnbalancedBracket);
@@ -542,7 +542,7 @@ class Parser {
 
   /// If Unicode is set, try to consume a surrogate pair.
   Optional<CodePoint> tryConsumeSurrogatePair() {
-    if (!(flags_.unicode))
+    if (!(curFlags_.unicode))
       return llvh::None;
     auto saved = current_;
     auto hi = consumeCharIf(isHighSurrogate);
@@ -717,7 +717,7 @@ class Parser {
   /// ES6 21.2.2.13 CharacterClass.
   void consumeCharacterClass() {
     consume('[');
-    bool unicode = flags_.unicode;
+    bool unicode = curFlags_.unicode;
     bool negate = tryConsume('^');
     auto bracket = re_->startBracketList(negate);
 
@@ -842,7 +842,7 @@ class Parser {
 #ifdef HERMES_ENABLE_UNICODE_REGEXP_PROPERTY_ESCAPES
           case 'p':
           case 'P': {
-            if (flags_.unicode) {
+            if (curFlags_.unicode) {
               consume(ec);
               std::string propertyName;
               std::string propertyValue;
@@ -878,7 +878,7 @@ class Parser {
           case '-':
             // ES6 21.2.1 ClassEscape: \- escapes -, in Unicode expressions
             // only.
-            if ((flags_.unicode) && tryConsume('-')) {
+            if ((curFlags_.unicode) && tryConsume('-')) {
               return ClassAtom('-');
             }
             [[fallthrough]];
@@ -910,7 +910,7 @@ class Parser {
     //   ZeroToThree OctalDigit OctalDigit
     // We implement this more directly.
     // Note this is forbidden in Unicode.
-    if (flags_.unicode) {
+    if (curFlags_.unicode) {
       setError(constants::ErrorType::EscapeInvalid);
       return 0;
     }
@@ -1076,7 +1076,7 @@ class Parser {
   /// ES6 21.2.1 IdentityEscape
   CodePoint identityEscape(CharT c) {
     // In Unicode regexps, only syntax characters and '/' may be escaped.
-    if (flags_.unicode) {
+    if (curFlags_.unicode) {
       if (c == 0 || c > 127 || !strchr("^$\\.*+?()[]{}|/", c)) {
         setError(constants::ErrorType::EscapeInvalid);
       }
@@ -1094,7 +1094,7 @@ class Parser {
     }
 
     // Non-unicode path only supports \uABCD style escapes.
-    if (!overrideUnicodeFlag && !(flags_.unicode)) {
+    if (!overrideUnicodeFlag && !(curFlags_.unicode)) {
       if (auto ret = tryConsumeHexDigits(4)) {
         return *ret;
       }
@@ -1182,7 +1182,7 @@ class Parser {
       std::string &propertyName,
       std::string &propertyValue) {
     assert(
-        flags_.unicode &&
+        curFlags_.unicode &&
         "Non-unicode regexps do not support property escapes");
 
     // Unicode path.
@@ -1230,7 +1230,7 @@ class Parser {
 #ifdef HERMES_ENABLE_UNICODE_REGEXP_PROPERTY_ESCAPES
       case 'p':
       case 'P': {
-        if (flags_.unicode) {
+        if (curFlags_.unicode) {
           consume(c);
           std::string propertyName;
           std::string propertyValue;
@@ -1274,7 +1274,7 @@ class Parser {
         // if its value is octal. Otherwise it is IdentityEscape.
         auto saved = current_;
         uint32_t decimal = consumeDecimalIntegerLiteral();
-        bool unicode = flags_.unicode;
+        bool unicode = curFlags_.unicode;
         if (unicode || decimal <= backRefLimit_) {
           // Backreference.
           maxBackRef_ = std::max(maxBackRef_, decimal);
@@ -1294,7 +1294,7 @@ class Parser {
       }
 
       case 'k': {
-        if (flags_.unicode || hasNamedGroups_) {
+        if (curFlags_.unicode || hasNamedGroups_) {
           consume('k');
           GroupName refIdentifer;
           if (!tryConsume('<') || !tryConsumeGroupName(refIdentifer)) {
@@ -1330,7 +1330,7 @@ class Parser {
       : re_(re),
         current_(start),
         end_(end),
-        flags_(flags),
+        curFlags_(flags),
         backRefLimit_(backRefLimit),
         hasNamedGroups_(hasNamedGroups) {}
 
