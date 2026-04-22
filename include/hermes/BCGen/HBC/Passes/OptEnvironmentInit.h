@@ -14,7 +14,7 @@ namespace hermes {
 namespace hbc {
 
 /// Eliminate (HBCStoreToEnvironment _ undefined _) instructions right after
-/// enviroment creation, since all slots are already initialized to undefined.
+/// environment creation, since all slots are already initialized to undefined.
 class OptEnvironmentInit : public FunctionPass {
  public:
   explicit OptEnvironmentInit() : FunctionPass("OptEnvironmentInit") {}
