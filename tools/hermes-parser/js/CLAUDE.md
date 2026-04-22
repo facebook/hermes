@@ -17,13 +17,22 @@ cp <output_path_from_step_1> xplat/static_h/tools/hermes-parser/js/hermes-parser
 
 ## Running Tests
 
-Use `js1 jest` from the fbsource root with `--config` pointing to this directory's jest config:
+From this directory:
+
+```bash
+yarn install   # first time only
+yarn test [<pattern>]
+```
+
+Alternatively, from the fbsource root:
 
 ```bash
 NODE_OPTIONS="--experimental-vm-modules" js1 jest \
   --config xplat/static_h/tools/hermes-parser/js/jest.config.js \
-  "<test-pattern>"
+  [<pattern>]
 ```
+
+If one command fails, try the other.
 
 ### Common test patterns
 
@@ -35,9 +44,3 @@ NODE_OPTIONS="--experimental-vm-modules" js1 jest \
 | `TypeAnnotations-test` | hermes-parser: type annotation parsing |
 | `ClassProperty-test` | hermes-parser: class property parsing |
 | `ObjectProperty-test` | hermes-parser: object property parsing |
-
-### Notes
-
-- `NODE_OPTIONS="--experimental-vm-modules"` is required — without it, prettier's dynamic import fails.
-- `--config` is required — without it, `js1 jest` searches from the repo root and finds nothing.
-- If tests fail with "Cannot find module HermesParserWASM", the WASM parser hasn't been built (see Prerequisites).
