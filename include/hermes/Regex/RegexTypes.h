@@ -170,7 +170,6 @@ inline const char *messageForError(ErrorType error) {
       return "No error";
   }
   llvm_unreachable("Unknown error");
-  return nullptr;
 }
 
 /// Maximum number of supported capture groups.
