@@ -7,6 +7,7 @@
 
 #include "JSONLexer.h"
 
+#include "hermes/Support/FastArraySearch.h"
 #include "hermes/VM/StringPrimitive.h"
 
 #include "hermes/Support/BuildTable256.h"
@@ -264,6 +265,26 @@ ExecutionStatus JSONLexer<Kind>::scanString() {
     if (LLVM_UNLIKELY(!hasChar())) {
       return error("Unexpected end of input");
     }
+
+    // SIMD fast scan: skip over runs of normal characters in bulk.
+    if constexpr (Traits::UsesRawPtr) {
+      const CharT *scanEnd;
+      if constexpr (sizeof(CharT) == 1)
+        scanEnd = scanJsonEscapeU8(iter_.cur, iter_.end);
+      else
+        scanEnd = scanJsonEscapeU16(iter_.cur, iter_.end);
+
+      if (scanEnd > iter_.cur) {
+        if constexpr (ForKey::value) {
+          for (const CharT *p = iter_.cur; p < scanEnd; ++p)
+            hash = hermes::updateJenkinsHash(hash, *p);
+        }
+        iter_.cur = scanEnd;
+        if (!hasChar())
+          return error("Unexpected end of input");
+      }
+    }
+
     CharT curVal = *iter_.cur;
     if (curVal == '"') {
       // Reached the end of string.
