@@ -7,7 +7,7 @@ jobs:
     runs-on: macos-15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Setup xcode
         uses: ./.github/actions/setup-xcode
       - name: Build HermesC Apple
@@ -16,7 +16,7 @@ jobs:
           source ./utils/build-apple-framework.sh
           build_host_hermesc_if_needed
       - name: Upload HermesC Artifact
-        uses: actions/upload-artifact@v4.3.4
+        uses: actions/upload-artifact@v6
         with:
           name: hermesc-apple
           path: ./build_host_hermesc
