@@ -14,3 +14,5 @@ if (HERMES_IS_MOBILE_BUILD)
 endif()
 
 add_subdirectory(asmjit)
+
+set_target_properties(asmjit PROPERTIES POSITION_INDEPENDENT_CODE ON)
