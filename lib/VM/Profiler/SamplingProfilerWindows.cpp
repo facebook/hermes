@@ -226,6 +226,14 @@ void SamplingProfiler::setRuntimeThread() {
   threadNames_[threadID_] = oscompat::thread_name();
 }
 
+namespace sampling_profiler {
+void Sampler::onRegisteredThreadExit(SamplingProfiler *) {
+  // Not applicable on Windows: the sampling path uses HANDLE +
+  // SuspendThread / ResumeThread rather than pthread_kill, and does not
+  // abort on a stale HANDLE.
+}
+} // namespace sampling_profiler
+
 } // namespace vm
 } // namespace hermes
 #endif // !defined(HERMESVM_SAMPLING_PROFILER_WINDOWS)
