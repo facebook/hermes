@@ -131,12 +131,13 @@ void setTimeZone(const char *tzname) {
   ::tzset();
 }
 
-/// Check whether the IANA timezone database is available by setting TZ to a
-/// known IANA name and verifying that we get a non-zero offset.
+/// Check whether the IANA timezone database is available by setting TZ to
+/// known IANA names (America/New_York and Pacific/Auckland) and verifying
+/// that both produce a non-zero offset.
 ///
 /// \return false on Windows (which does not support IANA names) and
-/// on systems without tzdata installed, where IANA names silently fall back to
-/// UTC.
+/// on systems without tzdata installed, where IANA names silently fall back
+/// to UTC (offset 0).
 bool hasIANATimezoneDB() {
 #ifdef _WINDOWS
   return false;
@@ -145,8 +146,10 @@ bool hasIANATimezoneDB() {
   if (result.hasValue())
     return result.getValue();
   setTimeZone("America/New_York");
-  auto tza = localTZA();
-  result = tza != 0;
+  auto nyTZA = localTZA();
+  setTimeZone("Pacific/Auckland");
+  auto aucklandTZA = localTZA();
+  result = nyTZA != 0 && aucklandTZA != 0;
   return *result;
 #endif
 }
@@ -168,11 +171,9 @@ TEST(DateUtilTest, LocalTZATest) {
   setTimeZone(hasIANATimezoneDB() ? "America/Los_Angeles" : "PST8PDT");
   EXPECT_EQ(-2.88e+7, localTZA());
 
-  // New Zealand: DST is from Oct to Apr
-  if (hasIANATimezoneDB()) {
-    setTimeZone("Pacific/Auckland");
-    EXPECT_EQ(4.32e+7, localTZA());
-  }
+  // New Zealand: DST is from Oct to Apr.
+  setTimeZone(hasIANATimezoneDB() ? "Pacific/Auckland" : "NZT-12");
+  EXPECT_EQ(4.32e+7, localTZA());
 
   // Disble DST entirely and make sure the TZA is the same.
   // Test both positive and negative zone.
@@ -276,12 +277,10 @@ TEST(DateUtilTest, LocalTimeTest) {
   EXPECT_EQ(1530446400000, localTime(1530460800000, localTimeOffsetCache));
   EXPECT_EQ(1530460800000, utcTime(1530446400000, localTimeOffsetCache));
 
-  if (hasIANATimezoneDB()) {
-    setTimeZone("Pacific/Auckland");
-    localTimeOffsetCache.reset();
-    EXPECT_EQ(1530504000000, localTime(1530460800000, localTimeOffsetCache));
-    EXPECT_EQ(1530460800000, utcTime(1530504000000, localTimeOffsetCache));
-  }
+  setTimeZone(hasIANATimezoneDB() ? "Pacific/Auckland" : "NZT-12");
+  localTimeOffsetCache.reset();
+  EXPECT_EQ(1530504000000, localTime(1530460800000, localTimeOffsetCache));
+  EXPECT_EQ(1530460800000, utcTime(1530504000000, localTimeOffsetCache));
 
   setTimeZone(hasIANATimezoneDB() ? "Asia/Tokyo" : "JST-9");
   localTimeOffsetCache.reset();
