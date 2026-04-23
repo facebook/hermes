@@ -136,6 +136,7 @@ HERMES_KEYWORD(Hook, "hook")
 HERMES_KEYWORD(Match, "match")
 HERMES_KEYWORD(Underscore, "_")
 HERMES_KEYWORD(Record, "record")
+HERMES_KEYWORD(Writeonly, "writeonly")
 #endif
 
 #if HERMES_PARSE_TS

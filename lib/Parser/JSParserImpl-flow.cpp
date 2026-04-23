@@ -3749,6 +3749,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTupleElementFlow(
   /// +Identifier : Type
   /// -Identifier : Type
   /// readonly Identifier : Type
+  /// writeonly Identifier : Type
   /// ^
   if (check(TokenKind::plus, TokenKind::minus)) {
     variance = setLocation(
@@ -3759,9 +3760,15 @@ Optional<ESTree::Node *> JSParserImpl::parseTupleElementFlow(
     advance(JSLexer::GrammarContext::Type);
   } else if (
       check(readonlyIdent_) &&
-      canFollowReadonlyModifierFlow(lexer_.lookahead1(llvh::None))) {
+      canFollowVarianceKeywordFlow(lexer_.lookahead1(llvh::None))) {
     variance = setLocation(
         tok_, tok_, new (context_) ESTree::VarianceNode(readonlyIdent_));
+    advance(JSLexer::GrammarContext::Type);
+  } else if (
+      check(writeonlyIdent_) &&
+      canFollowVarianceKeywordFlow(lexer_.lookahead1(llvh::None))) {
+    variance = setLocation(
+        tok_, tok_, new (context_) ESTree::VarianceNode(writeonlyIdent_));
     advance(JSLexer::GrammarContext::Type);
   }
 
@@ -4181,9 +4188,15 @@ bool JSParserImpl::parsePropertyTypeAnnotationFlow(
     advance(JSLexer::GrammarContext::Type);
   } else if (
       check(readonlyIdent_) &&
-      canFollowReadonlyModifierFlow(lexer_.lookahead1(llvh::None))) {
+      canFollowVarianceKeywordFlow(lexer_.lookahead1(llvh::None))) {
     variance = setLocation(
         tok_, tok_, new (context_) ESTree::VarianceNode(readonlyIdent_));
+    advance(JSLexer::GrammarContext::Type);
+  } else if (
+      check(writeonlyIdent_) &&
+      canFollowVarianceKeywordFlow(lexer_.lookahead1(llvh::None))) {
+    variance = setLocation(
+        tok_, tok_, new (context_) ESTree::VarianceNode(writeonlyIdent_));
     advance(JSLexer::GrammarContext::Type);
   }
 

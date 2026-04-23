@@ -134,6 +134,9 @@ void JSParserImpl::initializeIdentifiers() {
 
   // Flow Record syntax
   recordIdent_ = kw_.identRecord;
+
+  // Flow `writeonly` variance modifier (Flow-only counterpart to readonly).
+  writeonlyIdent_ = kw_.identWriteonly;
 #endif
 
 #if HERMES_PARSE_TS
@@ -5362,9 +5365,15 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     advance(JSLexer::GrammarContext::Type);
   } else if (
       context_.getParseFlow() && check(readonlyIdent_) &&
-      canFollowReadonlyModifierFlow(lexer_.lookahead1(llvh::None))) {
+      canFollowVarianceKeywordFlow(lexer_.lookahead1(llvh::None))) {
     variance = setLocation(
         tok_, tok_, new (context_) ESTree::VarianceNode(readonlyIdent_));
+    advance(JSLexer::GrammarContext::Type);
+  } else if (
+      context_.getParseFlow() && check(writeonlyIdent_) &&
+      canFollowVarianceKeywordFlow(lexer_.lookahead1(llvh::None))) {
+    variance = setLocation(
+        tok_, tok_, new (context_) ESTree::VarianceNode(writeonlyIdent_));
     advance(JSLexer::GrammarContext::Type);
   }
 #endif
