@@ -27,9 +27,11 @@
 #include "hermes/VM/HostModel.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSArrayBuffer.h"
+#include "hermes/VM/JSError.h"
 #include "hermes/VM/JSLib.h"
 #include "hermes/VM/JSLib/JSLibStorage.h"
 #include "hermes/VM/JSLib/RuntimeJSONUtils.h"
+#include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/NativeState.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/Profiler/CodeCoverageProfiler.h"
@@ -571,6 +573,12 @@ class HermesRuntimeImpl final : public HermesRuntime,
     return ::hermes::vm::Handle<::hermes::vm::JSArrayBuffer>::vmcast(&phv(arr));
   }
 
+  static ::hermes::vm::Handle<::hermes::vm::JSTypedArrayBase> typedArrayHandle(
+      const jsi::TypedArray &arr) {
+    return ::hermes::vm::Handle<::hermes::vm::JSTypedArrayBase>::vmcast(
+        &phv(arr));
+  }
+
   static const ::hermes::vm::WeakRoot<vm::JSObject> &weakRoot(
       const jsi::Pointer &pointer) {
     assert(
@@ -702,6 +710,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   jsi::String createStringFromUtf16(const char16_t *utf16, size_t length)
       override;
   std::string utf8(const jsi::String &) override;
+  size_t length(const jsi::String &) override;
 
   std::u16string utf16(const jsi::String &str) override;
   std::u16string utf16(const jsi::PropNameID &sym) override;
@@ -756,6 +765,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
 
   bool isArray(const jsi::Object &) const override;
   bool isArrayBuffer(const jsi::Object &) const override;
+  bool isTypedArray(const jsi::Object &) const override;
   bool isFunction(const jsi::Object &) const override;
   bool isHostObject(const jsi::Object &) const override;
   bool isHostFunction(const jsi::Function &) const override;
@@ -774,11 +784,14 @@ class HermesRuntimeImpl final : public HermesRuntime,
   size_t size(const jsi::Array &) override;
   size_t size(const jsi::ArrayBuffer &) override;
   uint8_t *data(const jsi::ArrayBuffer &) override;
+  bool detached(const jsi::ArrayBuffer &) override;
   jsi::Value getValueAtIndex(const jsi::Array &, size_t i) override;
   void setValueAtIndexImpl(
       const jsi::Array &,
       size_t i,
       const jsi::Value &value) override;
+  size_t push(const jsi::Array &arr, const jsi::Value *elements, size_t count)
+      override;
 
   jsi::Function createFunctionFromHostFunction(
       const jsi::PropNameID &name,
@@ -799,6 +812,30 @@ class HermesRuntimeImpl final : public HermesRuntime,
       const void *data,
       void (*deleter)(const void *data)) override;
   const void *getRuntimeDataImpl(const jsi::UUID &uuid) override;
+
+  std::shared_ptr<jsi::MutableBuffer> tryGetMutableBuffer(
+      const jsi::ArrayBuffer &arrayBuffer) override;
+
+  jsi::Uint8Array createUint8Array(size_t length) override;
+  jsi::Uint8Array createUint8Array(
+      const jsi::ArrayBuffer &buffer,
+      size_t offset,
+      size_t length) override;
+
+  jsi::ArrayBuffer buffer(const jsi::TypedArray &typedArray) override;
+  size_t byteOffset(const jsi::TypedArray &typedArray) override;
+  size_t byteLength(const jsi::TypedArray &typedArray) override;
+  size_t length(const jsi::TypedArray &typedArray) override;
+
+  bool isUint8Array(const jsi::Object &obj) const override;
+
+  jsi::Value createError(const jsi::String &msg) override;
+  jsi::Value createEvalError(const jsi::String &msg) override;
+  jsi::Value createRangeError(const jsi::String &msg) override;
+  jsi::Value createReferenceError(const jsi::String &msg) override;
+  jsi::Value createSyntaxError(const jsi::String &msg) override;
+  jsi::Value createTypeError(const jsi::String &msg) override;
+  jsi::Value createURIError(const jsi::String &msg) override;
 
   bool strictEquals(const jsi::Symbol &a, const jsi::Symbol &b) const override;
   bool strictEquals(const jsi::BigInt &a, const jsi::BigInt &b) const override;
@@ -2041,6 +2078,10 @@ std::string HermesRuntimeImpl::utf8(const jsi::String &str) {
       vm::StringPrimitive::createStringView(runtime_, stringHandle(str)));
 }
 
+size_t HermesRuntimeImpl::length(const jsi::String &str) {
+  return stringHandle(str)->getStringLength();
+}
+
 std::u16string HermesRuntimeImpl::utf16(const jsi::String &str) {
   auto *stringPrim = phv(str).getString();
   if (stringPrim->isASCII()) {
@@ -2617,6 +2658,10 @@ uint8_t *HermesRuntimeImpl::data(const jsi::ArrayBuffer &arr) {
   return ab->getDataBlock(runtime_);
 }
 
+bool HermesRuntimeImpl::detached(const jsi::ArrayBuffer &arr) {
+  return !arrayBufferHandle(arr)->attached();
+}
+
 jsi::Value HermesRuntimeImpl::getValueAtIndex(const jsi::Array &arr, size_t i) {
   vm::GCScope gcScope(runtime_);
   if (LLVM_UNLIKELY(i >= size(arr))) {
@@ -2649,6 +2694,71 @@ void HermesRuntimeImpl::setValueAtIndexImpl(
       vm::Handle<>(&indexStorage),
       vmHandleFromValue(value, &valueStorage));
   checkStatus(res.getStatus());
+}
+
+size_t HermesRuntimeImpl::push(
+    const jsi::Array &arr,
+    const jsi::Value *elements,
+    size_t count) {
+  vm::GCScope gcScope(runtime_);
+  size_t oldLen = arr.length(*this);
+  auto newLen = oldLen + count;
+  bool isJSArray = vm::vmisa<vm::JSArray>(phv(arr));
+
+  // Fast-path: If it's a regular JSArray with fast index properties, and its
+  // parents do not have any index properties, we can increase the JSArray size
+  // directly and set the elements.
+  if (LLVM_LIKELY(isJSArray)) {
+    auto arrHandle = vm::Handle<vm::JSArray>::vmcast(&phv(arr));
+    if (LLVM_LIKELY(oldLen < UINT32_MAX - count) &&
+        arrayFastPathCheck(
+            runtime_, *arrHandle, *runtime_.arrayClass, oldLen)) {
+      auto increaseSizeRes =
+          vm::JSArray::increaseStorageEndIndex(arrHandle, runtime_, newLen);
+      checkStatus(increaseSizeRes);
+
+      for (size_t i = 0; i < count; ++i) {
+        auto shv = vm::SmallHermesValue::encodeHermesValue(
+            hvFromValue(elements[i]), runtime_);
+        vm::JSArray::unsafeSetExistingElementAt(
+            *arrHandle, runtime_, oldLen + i, shv);
+      }
+
+      auto newLenShv =
+          vm::SmallHermesValue::encodeNumberValue(newLen, runtime_);
+      vm::JSArray::putLengthUnsafe(*arrHandle, runtime_, newLenShv);
+
+      return newLen;
+    }
+  }
+
+  // Slow-path: Set the property at [oldLen, oldLen + count - 1].
+  vm::PinnedHermesValue numStorage;
+  vm::PinnedHermesValue valStorage;
+  for (size_t i = 0; i < count; i++) {
+    numStorage = vm::HermesValue::encodeTrustedNumberValue(oldLen + i);
+
+    auto res = vm::JSObject::putComputed_RJS(
+        handle(arr),
+        runtime_,
+        vm::Handle<>(&numStorage),
+        vmHandleFromValue(elements[i], &valStorage));
+    checkStatus(res.getStatus());
+  }
+
+  // If it's not a JS Array, we need to update the 'length' property explicitly
+  if (LLVM_UNLIKELY(!isJSArray)) {
+    numStorage = vm::HermesValue::encodeTrustedNumberValue(newLen);
+    auto res = vm::JSObject::putNamed_RJS(
+        handle(arr),
+        runtime_,
+        vm::Predefined::getSymbolID(vm::Predefined::length),
+        vm::Handle<>(&numStorage),
+        vm::PropOpFlags().plusThrowOnError());
+    checkStatus(res.getStatus());
+  }
+
+  return newLen;
 }
 
 jsi::Function HermesRuntimeImpl::createFunctionFromHostFunction(
@@ -2813,6 +2923,191 @@ void HermesRuntimeImpl::setRuntimeDataImpl(
 const void *HermesRuntimeImpl::getRuntimeDataImpl(const jsi::UUID &uuid) {
   auto entry = dataMap_.lookup(uuid);
   return entry.first;
+}
+
+std::shared_ptr<jsi::MutableBuffer> HermesRuntimeImpl::tryGetMutableBuffer(
+    const jsi::ArrayBuffer &arrayBuffer) {
+  auto abHandle = arrayBufferHandle(arrayBuffer);
+  if (LLVM_UNLIKELY(!abHandle->attached())) {
+    return nullptr;
+  }
+  if (LLVM_UNLIKELY(!abHandle->external())) {
+    return nullptr;
+  }
+
+  // External ArrayBuffers are created using the `createArrayBuffer` API with a
+  // shared pointer of a MutableBuffer. We pass in that shared pointer as the
+  // context when creating a JSArrayBuffer, thus we can assume the type of the
+  // context here.
+  return std::static_pointer_cast<jsi::MutableBuffer>(
+      vm::JSArrayBuffer::getExternalDataContext(runtime_, abHandle));
+}
+
+jsi::Uint8Array HermesRuntimeImpl::createUint8Array(size_t length) {
+  vm::GCScope gcScope(runtime_);
+  auto result =
+      vm::JSTypedArray<uint8_t, vm::CellKind::Uint8ArrayKind>::allocate(
+          runtime_, length);
+  checkStatus(result.getStatus());
+  return add<jsi::Uint8Array>(result->getHermesValue());
+}
+
+jsi::Uint8Array HermesRuntimeImpl::createUint8Array(
+    const jsi::ArrayBuffer &buffer,
+    size_t offset,
+    size_t length) {
+  vm::GCScope gcScope(runtime_);
+  auto abHandle = arrayBufferHandle(buffer);
+
+  auto typedArrayRes =
+      vm::JSTypedArray<uint8_t, vm::CellKind::Uint8ArrayKind>::allocate(
+          runtime_, length);
+  checkStatus(typedArrayRes.getStatus());
+
+  vm::JSTypedArrayBase::setBuffer(
+      runtime_,
+      typedArrayRes->get(),
+      *abHandle,
+      offset,
+      length,
+      sizeof(uint8_t));
+
+  return add<jsi::Uint8Array>(typedArrayRes->getHermesValue());
+}
+
+jsi::ArrayBuffer HermesRuntimeImpl::buffer(const jsi::TypedArray &typedArray) {
+  vm::GCScope gcScope(runtime_);
+  auto taHandle = typedArrayHandle(typedArray);
+  return add<jsi::ArrayBuffer>(
+      vm::HermesValue::encodeObjectValue(taHandle->getBuffer(runtime_)));
+}
+
+size_t HermesRuntimeImpl::byteOffset(const jsi::TypedArray &typedArray) {
+  auto taHandle = typedArrayHandle(typedArray);
+  if (LLVM_UNLIKELY(!taHandle->attached(runtime_)))
+    return 0;
+  return taHandle->getByteOffset();
+}
+
+size_t HermesRuntimeImpl::byteLength(const jsi::TypedArray &typedArray) {
+  auto taHandle = typedArrayHandle(typedArray);
+  if (LLVM_UNLIKELY(!taHandle->attached(runtime_)))
+    return 0;
+  return taHandle->getByteLength();
+}
+
+size_t HermesRuntimeImpl::length(const jsi::TypedArray &typedArray) {
+  auto taHandle = typedArrayHandle(typedArray);
+  if (LLVM_UNLIKELY(!taHandle->attached(runtime_)))
+    return 0;
+  return taHandle->getLength();
+}
+
+bool HermesRuntimeImpl::isTypedArray(const jsi::Object &obj) const {
+  return vm::vmisa<vm::JSTypedArrayBase>(phv(obj));
+}
+
+bool HermesRuntimeImpl::isUint8Array(const jsi::Object &obj) const {
+  return vm::vmisa<vm::JSTypedArray<uint8_t, vm::CellKind::Uint8ArrayKind>>(
+      phv(obj));
+}
+
+jsi::Value HermesRuntimeImpl::createError(const jsi::String &msg) {
+  vm::GCScope gcScope(runtime_);
+  struct : public vm::Locals {
+    vm::PinnedValue<vm::JSError> errorObj;
+  } lv;
+  vm::LocalsRAII lraii(runtime_, &lv);
+  vm::Handle<vm::JSObject> prototype =
+      vm::Handle<vm::JSObject>::vmcast(&runtime_.ErrorPrototype);
+  lv.errorObj = vm::JSError::create(runtime_, prototype);
+  vm::JSError::recordStackTrace(lv.errorObj, runtime_);
+  vm::JSError::setMessage(lv.errorObj, runtime_, stringHandle(msg));
+  return valueFromHermesValue(lv.errorObj.getHermesValue());
+}
+
+jsi::Value HermesRuntimeImpl::createEvalError(const jsi::String &msg) {
+  vm::GCScope gcScope(runtime_);
+  struct : public vm::Locals {
+    vm::PinnedValue<vm::JSError> errorObj;
+  } lv;
+  vm::LocalsRAII lraii(runtime_, &lv);
+  vm::Handle<vm::JSObject> prototype =
+      vm::Handle<vm::JSObject>::vmcast(&runtime_.EvalErrorPrototype);
+  lv.errorObj = vm::JSError::create(runtime_, prototype);
+  vm::JSError::recordStackTrace(lv.errorObj, runtime_);
+  vm::JSError::setMessage(lv.errorObj, runtime_, stringHandle(msg));
+  return valueFromHermesValue(lv.errorObj.getHermesValue());
+}
+
+jsi::Value HermesRuntimeImpl::createRangeError(const jsi::String &msg) {
+  vm::GCScope gcScope(runtime_);
+  struct : public vm::Locals {
+    vm::PinnedValue<vm::JSError> errorObj;
+  } lv;
+  vm::LocalsRAII lraii(runtime_, &lv);
+  vm::Handle<vm::JSObject> prototype =
+      vm::Handle<vm::JSObject>::vmcast(&runtime_.RangeErrorPrototype);
+  lv.errorObj = vm::JSError::create(runtime_, prototype);
+  vm::JSError::recordStackTrace(lv.errorObj, runtime_);
+  vm::JSError::setMessage(lv.errorObj, runtime_, stringHandle(msg));
+  return valueFromHermesValue(lv.errorObj.getHermesValue());
+}
+
+jsi::Value HermesRuntimeImpl::createReferenceError(const jsi::String &msg) {
+  vm::GCScope gcScope(runtime_);
+  struct : public vm::Locals {
+    vm::PinnedValue<vm::JSError> errorObj;
+  } lv;
+  vm::LocalsRAII lraii(runtime_, &lv);
+  vm::Handle<vm::JSObject> prototype =
+      vm::Handle<vm::JSObject>::vmcast(&runtime_.ReferenceErrorPrototype);
+  lv.errorObj = vm::JSError::create(runtime_, prototype);
+  vm::JSError::recordStackTrace(lv.errorObj, runtime_);
+  vm::JSError::setMessage(lv.errorObj, runtime_, stringHandle(msg));
+  return valueFromHermesValue(lv.errorObj.getHermesValue());
+}
+
+jsi::Value HermesRuntimeImpl::createSyntaxError(const jsi::String &msg) {
+  vm::GCScope gcScope(runtime_);
+  struct : public vm::Locals {
+    vm::PinnedValue<vm::JSError> errorObj;
+  } lv;
+  vm::LocalsRAII lraii(runtime_, &lv);
+  vm::Handle<vm::JSObject> prototype =
+      vm::Handle<vm::JSObject>::vmcast(&runtime_.SyntaxErrorPrototype);
+  lv.errorObj = vm::JSError::create(runtime_, prototype);
+  vm::JSError::recordStackTrace(lv.errorObj, runtime_);
+  vm::JSError::setMessage(lv.errorObj, runtime_, stringHandle(msg));
+  return valueFromHermesValue(lv.errorObj.getHermesValue());
+}
+
+jsi::Value HermesRuntimeImpl::createTypeError(const jsi::String &msg) {
+  vm::GCScope gcScope(runtime_);
+  struct : public vm::Locals {
+    vm::PinnedValue<vm::JSError> errorObj;
+  } lv;
+  vm::LocalsRAII lraii(runtime_, &lv);
+  vm::Handle<vm::JSObject> prototype =
+      vm::Handle<vm::JSObject>::vmcast(&runtime_.TypeErrorPrototype);
+  lv.errorObj = vm::JSError::create(runtime_, prototype);
+  vm::JSError::recordStackTrace(lv.errorObj, runtime_);
+  vm::JSError::setMessage(lv.errorObj, runtime_, stringHandle(msg));
+  return valueFromHermesValue(lv.errorObj.getHermesValue());
+}
+
+jsi::Value HermesRuntimeImpl::createURIError(const jsi::String &msg) {
+  vm::GCScope gcScope(runtime_);
+  struct : public vm::Locals {
+    vm::PinnedValue<vm::JSError> errorObj;
+  } lv;
+  vm::LocalsRAII lraii(runtime_, &lv);
+  vm::Handle<vm::JSObject> prototype =
+      vm::Handle<vm::JSObject>::vmcast(&runtime_.URIErrorPrototype);
+  lv.errorObj = vm::JSError::create(runtime_, prototype);
+  vm::JSError::recordStackTrace(lv.errorObj, runtime_);
+  vm::JSError::setMessage(lv.errorObj, runtime_, stringHandle(msg));
+  return valueFromHermesValue(lv.errorObj.getHermesValue());
 }
 
 bool HermesRuntimeImpl::strictEquals(const jsi::Symbol &a, const jsi::Symbol &b)

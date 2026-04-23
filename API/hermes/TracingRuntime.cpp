@@ -955,6 +955,104 @@ jsi::ArrayBuffer TracingRuntime::createArrayBuffer(
   throw std::logic_error("Cannot create external ArrayBuffers in trace mode.");
 }
 
+jsi::Uint8Array TracingRuntime::createUint8Array(size_t length) {
+  auto arr = RD::createUint8Array(length);
+  trace_.emplace_back<SynthTrace::CreateUInt8ArrayRecord>(
+      getTimeSinceStart(), defObjectID(arr), length);
+  return arr;
+}
+
+jsi::Uint8Array TracingRuntime::createUint8Array(
+    const jsi::ArrayBuffer &buffer,
+    size_t offset,
+    size_t length) {
+  auto arr = RD::createUint8Array(buffer, offset, length);
+  trace_.emplace_back<SynthTrace::CreateUInt8ArrayFromArrayBufferRecord>(
+      getTimeSinceStart(),
+      defObjectID(arr),
+      useObjectID(buffer),
+      offset,
+      length);
+  return arr;
+}
+
+jsi::ArrayBuffer TracingRuntime::buffer(const jsi::TypedArray &typedArray) {
+  auto buf = RD::buffer(typedArray);
+  trace_.emplace_back<SynthTrace::GetBufferFromTypedArrayRecord>(
+      getTimeSinceStart(), defObjectID(buf), useObjectID(typedArray));
+  return buf;
+}
+
+jsi::Value TracingRuntime::createError(const jsi::String &msg) {
+  auto error = RD::createError(msg);
+  trace_.emplace_back<SynthTrace::CreateJSErrorRecord>(
+      getTimeSinceStart(),
+      defObjectID(error.getObject(*this)),
+      SynthTrace::JSErrorType::Error,
+      useObjectID(msg));
+  return error;
+}
+
+jsi::Value TracingRuntime::createEvalError(const jsi::String &msg) {
+  auto error = RD::createEvalError(msg);
+  trace_.emplace_back<SynthTrace::CreateJSErrorRecord>(
+      getTimeSinceStart(),
+      defObjectID(error.getObject(*this)),
+      SynthTrace::JSErrorType::EvalError,
+      useObjectID(msg));
+  return error;
+}
+
+jsi::Value TracingRuntime::createRangeError(const jsi::String &msg) {
+  auto error = RD::createRangeError(msg);
+  trace_.emplace_back<SynthTrace::CreateJSErrorRecord>(
+      getTimeSinceStart(),
+      defObjectID(error.getObject(*this)),
+      SynthTrace::JSErrorType::RangeError,
+      useObjectID(msg));
+  return error;
+}
+
+jsi::Value TracingRuntime::createReferenceError(const jsi::String &msg) {
+  auto error = RD::createReferenceError(msg);
+  trace_.emplace_back<SynthTrace::CreateJSErrorRecord>(
+      getTimeSinceStart(),
+      defObjectID(error.getObject(*this)),
+      SynthTrace::JSErrorType::ReferenceError,
+      useObjectID(msg));
+  return error;
+}
+
+jsi::Value TracingRuntime::createSyntaxError(const jsi::String &msg) {
+  auto error = RD::createSyntaxError(msg);
+  trace_.emplace_back<SynthTrace::CreateJSErrorRecord>(
+      getTimeSinceStart(),
+      defObjectID(error.getObject(*this)),
+      SynthTrace::JSErrorType::SyntaxError,
+      useObjectID(msg));
+  return error;
+}
+
+jsi::Value TracingRuntime::createTypeError(const jsi::String &msg) {
+  auto error = RD::createTypeError(msg);
+  trace_.emplace_back<SynthTrace::CreateJSErrorRecord>(
+      getTimeSinceStart(),
+      defObjectID(error.getObject(*this)),
+      SynthTrace::JSErrorType::TypeError,
+      useObjectID(msg));
+  return error;
+}
+
+jsi::Value TracingRuntime::createURIError(const jsi::String &msg) {
+  auto error = RD::createURIError(msg);
+  trace_.emplace_back<SynthTrace::CreateJSErrorRecord>(
+      getTimeSinceStart(),
+      defObjectID(error.getObject(*this)),
+      SynthTrace::JSErrorType::URIError,
+      useObjectID(msg));
+  return error;
+}
+
 size_t TracingRuntime::size(const jsi::Array &arr) {
   // Array size inquiries read from the length property, which is
   // non-configurable and thus cannot have side effects.
@@ -988,6 +1086,19 @@ void TracingRuntime::setValueAtIndexImpl(
   trace_.emplace_back<SynthTrace::ArrayWriteRecord>(
       getTimeSinceStart(), useObjectID(arr), i, useTraceValue(value));
   return RD::setValueAtIndexImpl(arr, i, value);
+}
+
+size_t TracingRuntime::push(
+    const jsi::Array &arr,
+    const jsi::Value *elements,
+    size_t count) {
+  size_t retVal = RD::push(arr, elements, count);
+  trace_.emplace_back<SynthTrace::ArrayPushRecord>(
+      getTimeSinceStart(),
+      useObjectID(arr),
+      argStringifyer(elements, count),
+      retVal);
+  return retVal;
 }
 
 jsi::Function TracingRuntime::createFunctionFromHostFunction(
@@ -1092,6 +1203,12 @@ void TracingRuntime::setExternalMemoryPressure(
   trace_.emplace_back<SynthTrace::SetExternalMemoryPressureRecord>(
       getTimeSinceStart(), useObjectID(obj), amount);
   RD::setExternalMemoryPressure(obj, amount);
+}
+
+std::shared_ptr<jsi::MutableBuffer> TracingRuntime::tryGetMutableBuffer(
+    const jsi::ArrayBuffer &) {
+  throw std::logic_error(
+      "Cannot retrieve MutableBuffer from ArrayBuffer in trace mode.");
 }
 
 void TracingRuntime::addMarker(const std::string &marker) {

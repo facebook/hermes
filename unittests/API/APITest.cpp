@@ -210,6 +210,21 @@ TEST_F(HermesRuntimeTestMethodsTest, DetachedArrayBuffer) {
   EXPECT_THROW(ab.data(*rt), JSINativeException);
 }
 
+TEST_F(HermesRuntimeTestMethodsTest, ArrayBufferDetached) {
+  auto ab = eval("new ArrayBuffer(10)").getObject(*rt).getArrayBuffer(*rt);
+  EXPECT_FALSE(ab.detached(*rt));
+
+  auto detachedAb = eval(
+                        R"(
+  var x = new ArrayBuffer(10);
+  HermesInternal.detachArrayBuffer(x);
+  x
+)")
+                        .getObject(*rt)
+                        .getArrayBuffer(*rt);
+  EXPECT_TRUE(detachedAb.detached(*rt));
+}
+
 TEST_P(HermesRuntimeTest, BytecodeTest) {
   auto *api = castInterface<IHermesRootAPI>(makeHermesRootAPI());
   const uint8_t shortBytes[] = {1, 2, 3};
@@ -1594,6 +1609,445 @@ TEST_P(HermesRuntimeTest, ObjectTest) {
   EXPECT_THROW(obj.setProperty(*rt, badObjKey, 123), JSError);
   EXPECT_THROW(obj.hasProperty(*rt, badObjKey), JSError);
   EXPECT_THROW(obj.getProperty(*rt, badObjKey), JSError);
+}
+
+TEST_P(HermesRuntimeTest, ArrayPush) {
+  // Push to an empty array
+  Array arr(*rt, 0);
+  size_t newLength = arr.push(*rt, 1, 2, 3);
+  EXPECT_EQ(newLength, 3);
+  EXPECT_EQ(arr.length(*rt), 3);
+
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 0).getNumber(), 1);
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 1).getNumber(), 2);
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 2).getNumber(), 3);
+
+  // Push to an array already containing elements
+  arr = Array::createWithElements(*rt, 1, true);
+  Object obj(*rt);
+  newLength = arr.push(*rt, "foobar", obj);
+  EXPECT_EQ(newLength, 4);
+  EXPECT_EQ(arr.length(*rt), 4);
+
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 0).getNumber(), 1);
+  EXPECT_TRUE(arr.getValueAtIndex(*rt, 1).getBool());
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 2).getString(*rt).utf8(*rt), "foobar");
+  EXPECT_TRUE(
+      Object::strictEquals(
+          *rt, arr.getValueAtIndex(*rt, 3).getObject(*rt), obj));
+
+  // Modifies the parent of the JSArray, tests the slow path
+  arr = eval(
+            "var arr = ['apple', 'orange'];"
+            "var obj = {foo: 'bar'};"
+            "Object.setPrototypeOf(arr, obj);"
+            "arr;")
+            .getObject(*rt)
+            .getArray(*rt);
+  newLength = arr.push(*rt, 1, 2);
+  EXPECT_EQ(newLength, 4);
+  EXPECT_EQ(arr.length(*rt), 4);
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 0).getString(*rt).utf8(*rt), "apple");
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 1).getString(*rt).utf8(*rt), "orange");
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 2).getNumber(), 1);
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 3).getNumber(), 2);
+
+  // Push to a Proxy of a JS Array
+  arr = eval("new Proxy([1], {})").getObject(*rt).getArray(*rt);
+  EXPECT_EQ(arr.length(*rt), 1);
+
+  newLength = arr.push(*rt, true, "foobar");
+  EXPECT_EQ(newLength, 3);
+  EXPECT_EQ(arr.length(*rt), 3);
+
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 0).getNumber(), 1);
+  EXPECT_TRUE(arr.getValueAtIndex(*rt, 1).getBool());
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 2).getString(*rt).utf8(*rt), "foobar");
+
+  // Push to a Proxy of a JS Array, where getting the length returns a custom
+  // value
+  arr = eval(
+            "var arr = [1];"
+            "var handler = {"
+            "    get(target, property) {"
+            "        if (property == 'length') {"
+            "            return target.length + 1;"
+            "        }"
+            "        return Reflect.get(target, property);"
+            "    }"
+            "};"
+            "var proxy = new Proxy(arr, handler);"
+            "proxy;")
+            .getObject(*rt)
+            .getArray(*rt);
+  // The handler returns the underlying array's length plus 1
+  EXPECT_EQ(arr.length(*rt), 2);
+
+  // The elements will be adding starting at element 2
+  newLength = arr.push(*rt, 3, 4);
+  EXPECT_EQ(newLength, 4);
+
+  EXPECT_EQ(arr.length(*rt), 5);
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 0).getNumber(), 1);
+  EXPECT_TRUE(arr.getValueAtIndex(*rt, 1).isUndefined());
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 2).getNumber(), 3);
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 3).getNumber(), 4);
+
+  // Push to a Proxy of a JS Array, where setting the 'length' property is
+  // customized
+  arr = eval(
+            "var arr = [1];"
+            "var handler = {"
+            "    set(target, property, value) {"
+            "        if (property == 'length') {"
+            "            return Reflect.set(target, property, value + 1);"
+            "        }"
+            "        return Reflect.set(target, property, value);"
+            "    }"
+            "};"
+            "var proxy = new Proxy(arr, handler);"
+            "proxy;")
+            .getObject(*rt)
+            .getArray(*rt);
+
+  EXPECT_EQ(arr.length(*rt), 1);
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 0).getNumber(), 1);
+
+  newLength = arr.push(*rt, 2, 3);
+  EXPECT_EQ(newLength, 3);
+
+  // When setting the 'length' property, the handler will actually set it to 3 +
+  // 1
+  EXPECT_EQ(arr.length(*rt), 4);
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 0).getNumber(), 1);
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 1).getNumber(), 2);
+  EXPECT_EQ(arr.getValueAtIndex(*rt, 2).getNumber(), 3);
+  EXPECT_TRUE(arr.getValueAtIndex(*rt, 3).isUndefined());
+}
+
+TEST_P(HermesRuntimeTest, TryGetMutableBuffer) {
+  auto arrayBuffer =
+      eval("new ArrayBuffer(8);").getObject(*rt).getArrayBuffer(*rt);
+  EXPECT_EQ(arrayBuffer.tryGetMutableBuffer(*rt), nullptr);
+
+  struct TestBuffer : MutableBuffer {
+    size_t size() const override {
+      return sizeof(arr);
+    }
+    uint8_t *data() override {
+      return reinterpret_cast<uint8_t *>(arr.data());
+    }
+
+    std::array<uint8_t, 3> arr;
+  };
+  auto buf = std::make_shared<TestBuffer>();
+  for (uint32_t i = 0; i < buf->arr.size(); i++) {
+    buf->arr[i] = i;
+  }
+  arrayBuffer = ArrayBuffer(*rt, buf);
+
+  auto mutableBuffer = arrayBuffer.tryGetMutableBuffer(*rt);
+  auto *mutableBufferData = mutableBuffer->data();
+  EXPECT_EQ(mutableBuffer->size(), 3);
+  EXPECT_EQ(mutableBufferData[0], 0);
+  EXPECT_EQ(mutableBufferData[1], 1);
+  EXPECT_EQ(mutableBufferData[2], 2);
+
+  // Modifying the returned MutableBuffer data also modifies the ArrayBuffer
+  // data.
+  mutableBufferData[1] = 100;
+  auto *arrayBufferData = arrayBuffer.data(*rt);
+  EXPECT_EQ(arrayBufferData[0], 0);
+  EXPECT_EQ(arrayBufferData[1], 100);
+  EXPECT_EQ(arrayBufferData[2], 2);
+}
+
+TEST_P(HermesRuntimeTest, UInt8Array) {
+  // Test creating a UInt8Array with a specific length
+  {
+    Uint8Array uint8Array(*rt, 10);
+
+    EXPECT_EQ(uint8Array.length(*rt), 10);
+    EXPECT_EQ(uint8Array.byteLength(*rt), 10);
+    EXPECT_EQ(uint8Array.byteOffset(*rt), 0);
+  }
+
+  // Test creating a UInt8Array from an ArrayBuffer with offset and length
+  {
+    const auto ab =
+        eval("new ArrayBuffer(20)").getObject(*rt).getArrayBuffer(*rt);
+
+    // Create a Uint8Array starting at offset 5 with length 10
+    Uint8Array uint8Array(*rt, ab, 5, 10);
+
+    EXPECT_EQ(uint8Array.length(*rt), 10);
+    EXPECT_EQ(uint8Array.byteLength(*rt), 10);
+    EXPECT_EQ(uint8Array.byteOffset(*rt), 5);
+
+    // Test buffer returns the correct underlying ArrayBuffer
+    auto buffer = uint8Array.buffer(*rt);
+    EXPECT_EQ(buffer.size(*rt), 20);
+    EXPECT_TRUE(Object::strictEquals(*rt, ab, buffer));
+  }
+}
+
+TEST_F(HermesRuntimeTestMethodsTest, UInt8ArrayDetached) {
+  // Test that byteLength, byteOffset, and length return 0 after detach.
+  {
+    Uint8Array uint8Array(*rt, 10);
+    auto buf = uint8Array.buffer(*rt);
+    // Detach the underlying ArrayBuffer.
+    rt->global().setProperty(*rt, "buf", std::move(buf));
+    eval("HermesInternal.detachArrayBuffer(buf)");
+
+    EXPECT_EQ(uint8Array.length(*rt), 0);
+    EXPECT_EQ(uint8Array.byteLength(*rt), 0);
+    EXPECT_EQ(uint8Array.byteOffset(*rt), 0);
+  }
+
+  // Test with a non-zero byteOffset.
+  {
+    auto ab = eval("new ArrayBuffer(20)").getObject(*rt).getArrayBuffer(*rt);
+    Uint8Array uint8Array(*rt, ab, 5, 10);
+    rt->global().setProperty(*rt, "buf", std::move(ab));
+    eval("HermesInternal.detachArrayBuffer(buf)");
+
+    EXPECT_EQ(uint8Array.byteOffset(*rt), 0);
+    EXPECT_EQ(uint8Array.byteLength(*rt), 0);
+    EXPECT_EQ(uint8Array.length(*rt), 0);
+  }
+
+  // Test that .buffer() still returns a valid (detached) ArrayBuffer.
+  {
+    Uint8Array uint8Array(*rt, 10);
+    auto buf = uint8Array.buffer(*rt);
+    rt->global().setProperty(*rt, "buf", Value(*rt, buf));
+    eval("HermesInternal.detachArrayBuffer(buf)");
+
+    auto detachedBuf = uint8Array.buffer(*rt);
+    EXPECT_TRUE(detachedBuf.detached(*rt));
+    EXPECT_TRUE(Object::strictEquals(*rt, buf, detachedBuf));
+  }
+
+  // Test that multiple Uint8Arrays sharing the same buffer all reflect detach.
+  {
+    auto ab = eval("new ArrayBuffer(20)").getObject(*rt).getArrayBuffer(*rt);
+    Uint8Array ta1(*rt, ab, 0, 10);
+    Uint8Array ta2(*rt, ab, 10, 10);
+    rt->global().setProperty(*rt, "buf", std::move(ab));
+    eval("HermesInternal.detachArrayBuffer(buf)");
+
+    EXPECT_EQ(ta1.length(*rt), 0);
+    EXPECT_EQ(ta1.byteLength(*rt), 0);
+    EXPECT_EQ(ta1.byteOffset(*rt), 0);
+    EXPECT_EQ(ta2.length(*rt), 0);
+    EXPECT_EQ(ta2.byteLength(*rt), 0);
+    EXPECT_EQ(ta2.byteOffset(*rt), 0);
+  }
+}
+
+TEST_P(HermesRuntimeTest, IsTypedArrayTest) {
+  // Test that isTypedArray returns false for a regular object
+  {
+    auto obj = Object(*rt);
+    EXPECT_FALSE(rt->isTypedArray(obj));
+    EXPECT_THROW(obj.asTypedArray(*rt), JSIException);
+  }
+
+  // Test that isTypedArray returns true for a Uint8Array
+  {
+    Uint8Array uint8Array(*rt, 10);
+    EXPECT_TRUE(rt->isTypedArray(uint8Array));
+
+    auto typedArray = uint8Array.getTypedArray(*rt);
+    EXPECT_EQ(typedArray.length(*rt), 10);
+  }
+
+  // Test that isTypedArray returns true for other TypedArray types
+  {
+    auto int32ArrayObj = eval("new Int32Array(5)").getObject(*rt);
+    EXPECT_TRUE(rt->isTypedArray(int32ArrayObj));
+    EXPECT_FALSE(rt->isUint8Array(int32ArrayObj));
+
+    auto typedArray = int32ArrayObj.getTypedArray(*rt);
+    EXPECT_EQ(typedArray.length(*rt), 5);
+  }
+
+  // Test that isTypedArray returns true for Float64Array
+  {
+    auto float64ArrayObj = eval("new Float64Array(3)").getObject(*rt);
+    EXPECT_TRUE(rt->isTypedArray(float64ArrayObj));
+
+    auto typedArray = float64ArrayObj.asTypedArray(*rt);
+    EXPECT_EQ(typedArray.length(*rt), 3);
+  }
+
+  // Test that isTypedArray returns false for ArrayBuffer
+  {
+    auto arrayBufferObj = eval("new ArrayBuffer(10)").getObject(*rt);
+    EXPECT_FALSE(rt->isTypedArray(arrayBufferObj));
+  }
+
+  // Test that isTypedArray returns false for a regular array
+  {
+    auto arrayObj = eval("[1, 2, 3]").getObject(*rt);
+    EXPECT_FALSE(rt->isTypedArray(arrayObj));
+  }
+}
+
+TEST_P(HermesRuntimeTest, IsUint8ArrayTest) {
+  // Test that isUint8Array returns false for a regular object
+  {
+    auto obj = Object(*rt);
+    EXPECT_FALSE(rt->isUint8Array(obj));
+    EXPECT_THROW(obj.asUint8Array(*rt), JSIException);
+  }
+
+  // Test that isUint8Array returns true for a Uint8Array created via JS
+  {
+    auto uint8ArrayObj = eval("new Uint8Array(10)").getObject(*rt);
+    EXPECT_TRUE(rt->isUint8Array(uint8ArrayObj));
+
+    // getUint8Array should succeed.
+    auto uint8Array = uint8ArrayObj.getUint8Array(*rt);
+    EXPECT_EQ(uint8Array.length(*rt), 10);
+  }
+}
+
+TEST_P(HermesRuntimeTest, StringLengthTest) {
+  // Test ASCII string length
+  String ascii = String::createFromAscii(*rt, "hello");
+  EXPECT_EQ(ascii.length(*rt), 5);
+
+  // Test empty string
+  String empty = String::createFromAscii(*rt, "");
+  EXPECT_EQ(empty.length(*rt), 0);
+
+  // Test euro sign (U+20AC) - BMP character, 1 code unit
+  String euro = eval("'\\u20AC'").getString(*rt);
+  EXPECT_EQ(euro.length(*rt), 1);
+
+  // Test codepoint requiring 2 code units (surrogate pair)
+  // U+1F600 is encoded as \uD83D\uDE00 in UTF-16
+  String emoji = eval("'\\uD83D\\uDE00'").getString(*rt);
+  EXPECT_EQ(emoji.length(*rt), 2);
+
+  // Test another surrogate pair: U+10000 (first supplementary character)
+  String supplementary = eval("'\\uD800\\uDC00'").getString(*rt);
+  EXPECT_EQ(supplementary.length(*rt), 2);
+
+  // Test lone high surrogate (U+D800)
+  String loneHighSurrogate = eval("'\\uD800'").getString(*rt);
+  EXPECT_EQ(loneHighSurrogate.length(*rt), 1);
+
+  // Test lone low surrogate (U+DC00)
+  String loneLowSurrogate = eval("'\\uDC00'").getString(*rt);
+  EXPECT_EQ(loneLowSurrogate.length(*rt), 1);
+
+  // Test lone surrogate in the middle of a string
+  String mixedWithLoneSurrogate = eval("'a\\uD800b'").getString(*rt);
+  EXPECT_EQ(mixedWithLoneSurrogate.length(*rt), 3);
+
+  // Unicode Max Value is U+10FFFF, U+11FFFF is invalid
+  // But it could be theoretically encoded as \uDBFF\uDFFF
+  String invalid = eval("'\\uDBFF\\uDFFF'").getString(*rt);
+  EXPECT_EQ(invalid.length(*rt), 2);
+}
+
+TEST_P(HermesRuntimeTest, CreateErrorTest) {
+  // Test JSError::createEvalError
+  {
+    try {
+      throw JSError::createEvalError(*rt, "eval error");
+    } catch (const JSError &e) {
+      // getMessage() checks the C++ JSError's cached message.
+      // The "message" property check verifies the JS object was constructed
+      // correctly, since they are populated independently.
+      EXPECT_EQ(e.getMessage(), "eval error");
+      Object caughtObj = e.value().getObject(*rt);
+      EXPECT_EQ(
+          caughtObj.getProperty(*rt, "message").getString(*rt).utf8(*rt),
+          "eval error");
+      EXPECT_TRUE(rt->instanceOf(
+          caughtObj, rt->global().getPropertyAsFunction(*rt, "EvalError")));
+    }
+  }
+
+  // Test JSError::createRangeError
+  {
+    try {
+      throw JSError::createRangeError(*rt, "range error");
+    } catch (const JSError &e) {
+      EXPECT_EQ(e.getMessage(), "range error");
+      Object caughtObj = e.value().getObject(*rt);
+      EXPECT_EQ(
+          caughtObj.getProperty(*rt, "message").getString(*rt).utf8(*rt),
+          "range error");
+      EXPECT_TRUE(rt->instanceOf(
+          caughtObj, rt->global().getPropertyAsFunction(*rt, "RangeError")));
+    }
+  }
+
+  // Test JSError::createReferenceError
+  {
+    try {
+      throw JSError::createReferenceError(*rt, "reference error");
+    } catch (const JSError &e) {
+      EXPECT_EQ(e.getMessage(), "reference error");
+      Object caughtObj = e.value().getObject(*rt);
+      EXPECT_EQ(
+          caughtObj.getProperty(*rt, "message").getString(*rt).utf8(*rt),
+          "reference error");
+      EXPECT_TRUE(rt->instanceOf(
+          caughtObj,
+          rt->global().getPropertyAsFunction(*rt, "ReferenceError")));
+    }
+  }
+
+  // Test JSError::createSyntaxError
+  {
+    try {
+      throw JSError::createSyntaxError(*rt, "syntax error");
+    } catch (const JSError &e) {
+      EXPECT_EQ(e.getMessage(), "syntax error");
+      Object caughtObj = e.value().getObject(*rt);
+      EXPECT_EQ(
+          caughtObj.getProperty(*rt, "message").getString(*rt).utf8(*rt),
+          "syntax error");
+      EXPECT_TRUE(rt->instanceOf(
+          caughtObj, rt->global().getPropertyAsFunction(*rt, "SyntaxError")));
+    }
+  }
+
+  // Test JSError::createTypeError
+  {
+    try {
+      throw JSError::createTypeError(*rt, "type error");
+    } catch (const JSError &e) {
+      EXPECT_EQ(e.getMessage(), "type error");
+      Object caughtObj = e.value().getObject(*rt);
+      EXPECT_EQ(
+          caughtObj.getProperty(*rt, "message").getString(*rt).utf8(*rt),
+          "type error");
+      EXPECT_TRUE(rt->instanceOf(
+          caughtObj, rt->global().getPropertyAsFunction(*rt, "TypeError")));
+    }
+  }
+
+  // Test JSError::createURIError
+  {
+    try {
+      throw JSError::createURIError(*rt, "uri error");
+    } catch (const JSError &e) {
+      EXPECT_EQ(e.getMessage(), "uri error");
+      Object caughtObj = e.value().getObject(*rt);
+      EXPECT_EQ(
+          caughtObj.getProperty(*rt, "message").getString(*rt).utf8(*rt),
+          "uri error");
+      EXPECT_TRUE(rt->instanceOf(
+          caughtObj, rt->global().getPropertyAsFunction(*rt, "URIError")));
+    }
+  }
 }
 
 INSTANTIATE_TEST_CASE_P(

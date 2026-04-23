@@ -685,6 +685,141 @@ TEST_F(SynthTraceTest, CreateArray) {
       SynthTrace::CreateArrayRecord(records[0]->time_, objID, 10), *records[0]);
 }
 
+TEST_F(SynthTraceTest, CreateUInt8Array) {
+  auto arr = rt->createUint8Array(10);
+  const auto &records = rt->trace().records();
+  EXPECT_EQ(1, records.size());
+  EXPECT_EQ(SynthTrace::RecordType::CreateUInt8Array, records[0]->getType());
+  const auto &record =
+      static_cast<const SynthTrace::CreateUInt8ArrayRecord &>(*records[0]);
+  EXPECT_EQ(10, record.length_);
+}
+
+TEST_F(SynthTraceTest, CreateUInt8ArrayFromArrayBuffer) {
+  rt->evaluateJavaScript(
+      std::unique_ptr<jsi::StringBuffer>(
+          new jsi::StringBuffer("var buf = new ArrayBuffer(16)")),
+      "");
+  auto buf =
+      rt->global().getProperty(*rt, "buf").asObject(*rt).getArrayBuffer(*rt);
+  SynthTrace::ObjectID bufID = rt->useObjectID(buf);
+  auto arr = rt->createUint8Array(buf, 4, 8);
+  EXPECT_EQ(arr.length(*rt), 8);
+  const auto &records = rt->trace().records();
+  // Find the CreateUInt8ArrayFromArrayBuffer record (last record)
+  const auto &record =
+      static_cast<const SynthTrace::CreateUInt8ArrayFromArrayBufferRecord &>(
+          *records.back());
+  EXPECT_EQ(
+      SynthTrace::RecordType::CreateUInt8ArrayFromArrayBuffer,
+      records.back()->getType());
+  EXPECT_EQ(bufID, record.bufferID_);
+  EXPECT_EQ(4, record.offset_);
+  EXPECT_EQ(8, record.length_);
+}
+
+TEST_F(SynthTraceTest, GetBufferFromTypedArray) {
+  // Create a Uint8Array and then get its buffer
+  auto arr = rt->createUint8Array(16);
+  SynthTrace::ObjectID arrID = rt->useObjectID(arr);
+  auto buf = arr.buffer(*rt);
+  SynthTrace::ObjectID bufID = rt->useObjectID(buf);
+  const auto &records = rt->trace().records();
+  // Find the GetBufferFromTypedArray record (last record)
+  const auto &record =
+      static_cast<const SynthTrace::GetBufferFromTypedArrayRecord &>(
+          *records.back());
+  EXPECT_EQ(
+      SynthTrace::RecordType::GetBufferFromTypedArray,
+      records.back()->getType());
+  EXPECT_EQ(arrID, record.typedArrayID_);
+  EXPECT_EQ(bufID, record.bufferID_);
+}
+
+TEST_F(SynthTraceTest, CreateJSError) {
+  auto msg = jsi::String::createFromAscii(*rt, "test error message");
+  SynthTrace::ObjectID msgID = rt->useObjectID(msg);
+  auto error = rt->createError(msg);
+  const auto &records = rt->trace().records();
+  EXPECT_EQ(SynthTrace::RecordType::CreateJSError, records.back()->getType());
+  const auto &record =
+      static_cast<const SynthTrace::CreateJSErrorRecord &>(*records.back());
+  EXPECT_EQ(SynthTrace::JSErrorType::Error, record.errorType_);
+  EXPECT_EQ(msgID, record.messageID_);
+}
+
+TEST_F(SynthTraceTest, CreateEvalError) {
+  auto msg = jsi::String::createFromAscii(*rt, "eval error message");
+  SynthTrace::ObjectID msgID = rt->useObjectID(msg);
+  auto error = rt->createEvalError(msg);
+  const auto &records = rt->trace().records();
+  EXPECT_EQ(SynthTrace::RecordType::CreateJSError, records.back()->getType());
+  const auto &record =
+      static_cast<const SynthTrace::CreateJSErrorRecord &>(*records.back());
+  EXPECT_EQ(SynthTrace::JSErrorType::EvalError, record.errorType_);
+  EXPECT_EQ(msgID, record.messageID_);
+}
+
+TEST_F(SynthTraceTest, CreateRangeError) {
+  auto msg = jsi::String::createFromAscii(*rt, "range error message");
+  SynthTrace::ObjectID msgID = rt->useObjectID(msg);
+  auto error = rt->createRangeError(msg);
+  const auto &records = rt->trace().records();
+  EXPECT_EQ(SynthTrace::RecordType::CreateJSError, records.back()->getType());
+  const auto &record =
+      static_cast<const SynthTrace::CreateJSErrorRecord &>(*records.back());
+  EXPECT_EQ(SynthTrace::JSErrorType::RangeError, record.errorType_);
+  EXPECT_EQ(msgID, record.messageID_);
+}
+
+TEST_F(SynthTraceTest, CreateReferenceError) {
+  auto msg = jsi::String::createFromAscii(*rt, "reference error message");
+  SynthTrace::ObjectID msgID = rt->useObjectID(msg);
+  auto error = rt->createReferenceError(msg);
+  const auto &records = rt->trace().records();
+  EXPECT_EQ(SynthTrace::RecordType::CreateJSError, records.back()->getType());
+  const auto &record =
+      static_cast<const SynthTrace::CreateJSErrorRecord &>(*records.back());
+  EXPECT_EQ(SynthTrace::JSErrorType::ReferenceError, record.errorType_);
+  EXPECT_EQ(msgID, record.messageID_);
+}
+
+TEST_F(SynthTraceTest, CreateSyntaxError) {
+  auto msg = jsi::String::createFromAscii(*rt, "syntax error message");
+  SynthTrace::ObjectID msgID = rt->useObjectID(msg);
+  auto error = rt->createSyntaxError(msg);
+  const auto &records = rt->trace().records();
+  EXPECT_EQ(SynthTrace::RecordType::CreateJSError, records.back()->getType());
+  const auto &record =
+      static_cast<const SynthTrace::CreateJSErrorRecord &>(*records.back());
+  EXPECT_EQ(SynthTrace::JSErrorType::SyntaxError, record.errorType_);
+  EXPECT_EQ(msgID, record.messageID_);
+}
+
+TEST_F(SynthTraceTest, CreateTypeError) {
+  auto msg = jsi::String::createFromAscii(*rt, "type error message");
+  SynthTrace::ObjectID msgID = rt->useObjectID(msg);
+  auto error = rt->createTypeError(msg);
+  const auto &records = rt->trace().records();
+  EXPECT_EQ(SynthTrace::RecordType::CreateJSError, records.back()->getType());
+  const auto &record =
+      static_cast<const SynthTrace::CreateJSErrorRecord &>(*records.back());
+  EXPECT_EQ(SynthTrace::JSErrorType::TypeError, record.errorType_);
+  EXPECT_EQ(msgID, record.messageID_);
+}
+
+TEST_F(SynthTraceTest, CreateURIError) {
+  auto msg = jsi::String::createFromAscii(*rt, "uri error message");
+  SynthTrace::ObjectID msgID = rt->useObjectID(msg);
+  auto error = rt->createURIError(msg);
+  const auto &records = rt->trace().records();
+  EXPECT_EQ(SynthTrace::RecordType::CreateJSError, records.back()->getType());
+  const auto &record =
+      static_cast<const SynthTrace::CreateJSErrorRecord &>(*records.back());
+  EXPECT_EQ(SynthTrace::JSErrorType::URIError, record.errorType_);
+  EXPECT_EQ(msgID, record.messageID_);
+}
+
 TEST_F(SynthTraceTest, ArrayWrite) {
   SynthTrace::ObjectID objID;
   {
@@ -700,6 +835,31 @@ TEST_F(SynthTraceTest, ArrayWrite) {
       SynthTrace::ArrayWriteRecord(
           records[1]->time_, objID, 0, SynthTrace::encodeNumber(1)),
       *records[1]);
+}
+
+TEST_F(SynthTraceTest, ArrayPush) {
+  SynthTrace::ObjectID objID;
+  {
+    auto arr = jsi::Array::createWithElements(*rt, 1);
+    objID = rt->useObjectID(arr);
+    arr.push(*rt, 2, 3);
+  }
+  const auto &records = rt->trace().records();
+  EXPECT_EQ(3, records.size());
+  EXPECT_EQ_RECORD(
+      SynthTrace::CreateArrayRecord(records[0]->time_, objID, 1), *records[0]);
+  EXPECT_EQ_RECORD(
+      SynthTrace::ArrayWriteRecord(
+          records[1]->time_, objID, 0, SynthTrace::encodeNumber(1)),
+      *records[1]);
+
+  EXPECT_EQ_RECORD(
+      SynthTrace::ArrayPushRecord(
+          records[2]->time_,
+          objID,
+          {SynthTrace::encodeNumber(2), SynthTrace::encodeNumber(3)},
+          3),
+      *records[2]);
 }
 
 TEST_F(SynthTraceTest, CallObjectGetProp) {
@@ -1588,6 +1748,30 @@ TEST_F(SynthTraceReplayTest, CreateObjectReplay) {
   }
 }
 
+TEST_F(SynthTraceReplayTest, ArrayPush) {
+  {
+    auto &rt = *traceRt;
+    auto arr = jsi::Array::createWithElements(rt, 1);
+    rt.global().setProperty(rt, "arr", arr);
+
+    auto obj = jsi::Object(rt);
+    obj.setProperty(rt, "foo", "bar");
+
+    arr.push(rt, 2, obj);
+  }
+  replay();
+  {
+    auto &rt = *replayRt;
+    auto arr = rt.global().getProperty(rt, "arr").asObject(rt).getArray(rt);
+    EXPECT_EQ(arr.length(rt), 3);
+    EXPECT_EQ(arr.getValueAtIndex(rt, 0).getNumber(), 1);
+    EXPECT_EQ(arr.getValueAtIndex(rt, 1).getNumber(), 2);
+
+    auto obj = arr.getValueAtIndex(rt, 2).getObject(rt);
+    EXPECT_EQ(obj.getProperty(rt, "foo").getString(rt).utf8(rt), "bar");
+  }
+}
+
 TEST_F(SynthTraceReplayTest, DeletePropertyReplay) {
   {
     auto &rt = *traceRt;
@@ -1931,6 +2115,121 @@ x = BigInt("9007199254740991");
     auto str = rt.global().getProperty(rt, "str").asString(rt);
     EXPECT_EQ(bigint.getInt64(rt), 9007199254740991);
     EXPECT_EQ(str.utf8(rt), "9007199254740991");
+  }
+}
+
+TEST_F(SynthTraceReplayTest, GetBufferFromTypedArray) {
+  {
+    auto &rt = *traceRt;
+    // Create a Uint8Array and store it globally
+    auto arr = rt.createUint8Array(16);
+    rt.global().setProperty(rt, "arr", arr);
+    // Get the buffer from the TypedArray
+    auto buf = arr.buffer(rt);
+    rt.global().setProperty(rt, "buf", buf);
+    // Verify the buffer size
+    EXPECT_EQ(buf.size(rt), 16);
+  }
+  replay();
+  {
+    auto &rt = *replayRt;
+    // Verify the replayed Uint8Array and its buffer
+    auto arr =
+        rt.global().getProperty(rt, "arr").asObject(rt).getUint8Array(rt);
+    auto buf = arr.buffer(rt);
+    EXPECT_EQ(buf.size(rt), 16);
+  }
+}
+
+TEST_F(SynthTraceReplayTest, CreateJSErrorReplay) {
+  {
+    auto &rt = *traceRt;
+
+    // Create all error types using JSError static methods and store globally
+    auto error = jsi::JSError(rt, "This is an Error");
+    rt.global().setProperty(rt, "error", error.value());
+
+    auto evalError = jsi::JSError::createEvalError(rt, "This is an EvalError");
+    rt.global().setProperty(rt, "evalError", evalError.value());
+
+    auto rangeError =
+        jsi::JSError::createRangeError(rt, "This is a RangeError");
+    rt.global().setProperty(rt, "rangeError", rangeError.value());
+
+    auto refError =
+        jsi::JSError::createReferenceError(rt, "This is a ReferenceError");
+    rt.global().setProperty(rt, "refError", refError.value());
+
+    auto syntaxError =
+        jsi::JSError::createSyntaxError(rt, "This is a SyntaxError");
+    rt.global().setProperty(rt, "syntaxError", syntaxError.value());
+
+    auto typeError = jsi::JSError::createTypeError(rt, "This is a TypeError");
+    rt.global().setProperty(rt, "typeError", typeError.value());
+
+    auto uriError = jsi::JSError::createURIError(rt, "This is a URIError");
+    rt.global().setProperty(rt, "uriError", uriError.value());
+  }
+  replay();
+  {
+    auto &rt = *replayRt;
+
+    // Verify each error type was replayed correctly
+    auto errorCtor = rt.global().getPropertyAsFunction(rt, "Error");
+    auto evalErrorCtor = rt.global().getPropertyAsFunction(rt, "EvalError");
+    auto rangeErrorCtor = rt.global().getPropertyAsFunction(rt, "RangeError");
+    auto refErrorCtor = rt.global().getPropertyAsFunction(rt, "ReferenceError");
+    auto syntaxErrorCtor = rt.global().getPropertyAsFunction(rt, "SyntaxError");
+    auto typeErrorCtor = rt.global().getPropertyAsFunction(rt, "TypeError");
+    auto uriErrorCtor = rt.global().getPropertyAsFunction(rt, "URIError");
+
+    auto error = rt.global().getProperty(rt, "error").asObject(rt);
+    EXPECT_TRUE(error.instanceOf(rt, errorCtor));
+    EXPECT_EQ(
+        error.getProperty(rt, "message").getString(rt).utf8(rt),
+        "This is an Error");
+
+    auto evalError = rt.global().getProperty(rt, "evalError").asObject(rt);
+    EXPECT_TRUE(evalError.instanceOf(rt, evalErrorCtor));
+    EXPECT_TRUE(evalError.instanceOf(rt, errorCtor));
+    EXPECT_EQ(
+        evalError.getProperty(rt, "message").getString(rt).utf8(rt),
+        "This is an EvalError");
+
+    auto rangeError = rt.global().getProperty(rt, "rangeError").asObject(rt);
+    EXPECT_TRUE(rangeError.instanceOf(rt, rangeErrorCtor));
+    EXPECT_TRUE(rangeError.instanceOf(rt, errorCtor));
+    EXPECT_EQ(
+        rangeError.getProperty(rt, "message").getString(rt).utf8(rt),
+        "This is a RangeError");
+
+    auto refError = rt.global().getProperty(rt, "refError").asObject(rt);
+    EXPECT_TRUE(refError.instanceOf(rt, refErrorCtor));
+    EXPECT_TRUE(refError.instanceOf(rt, errorCtor));
+    EXPECT_EQ(
+        refError.getProperty(rt, "message").getString(rt).utf8(rt),
+        "This is a ReferenceError");
+
+    auto syntaxError = rt.global().getProperty(rt, "syntaxError").asObject(rt);
+    EXPECT_TRUE(syntaxError.instanceOf(rt, syntaxErrorCtor));
+    EXPECT_TRUE(syntaxError.instanceOf(rt, errorCtor));
+    EXPECT_EQ(
+        syntaxError.getProperty(rt, "message").getString(rt).utf8(rt),
+        "This is a SyntaxError");
+
+    auto typeError = rt.global().getProperty(rt, "typeError").asObject(rt);
+    EXPECT_TRUE(typeError.instanceOf(rt, typeErrorCtor));
+    EXPECT_TRUE(typeError.instanceOf(rt, errorCtor));
+    EXPECT_EQ(
+        typeError.getProperty(rt, "message").getString(rt).utf8(rt),
+        "This is a TypeError");
+
+    auto uriError = rt.global().getProperty(rt, "uriError").asObject(rt);
+    EXPECT_TRUE(uriError.instanceOf(rt, uriErrorCtor));
+    EXPECT_TRUE(uriError.instanceOf(rt, errorCtor));
+    EXPECT_EQ(
+        uriError.getProperty(rt, "message").getString(rt).utf8(rt),
+        "This is a URIError");
   }
 }
 
