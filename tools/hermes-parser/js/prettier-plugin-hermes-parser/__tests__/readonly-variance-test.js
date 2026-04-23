@@ -81,4 +81,61 @@ describe(`'readonly' variance annotation`, () => {
       "
     `);
   });
+
+  // The `+` variance sigil accepts reserved words as property names, e.g.
+  // `{+with: string}` parses fine. The `readonly` modifier should behave
+  // the same way: with one token of lookahead the parser can disambiguate
+  // `readonly <name> :` (variance modifier) from `readonly :` / `readonly ?`
+  // (property literally named `readonly`). Today these inputs throw
+  // `SyntaxError: ':' or '?' expected in property type annotation`, which
+  // breaks codemods that mechanically rewrite `+x` to `readonly x`.
+  describe('reserved-word property names', () => {
+    // $FlowFixMe[prop-missing]
+    test.failing('with', async () => {
+      // eslint-disable-next-line jest/no-standalone-expect
+      expect(
+        await format(`
+          type T = {
+            readonly with: (start?: Position, end?: Position) => Range,
+          };
+        `),
+      ).toMatchInlineSnapshot();
+    });
+
+    // $FlowFixMe[prop-missing]
+    test.failing('enum', async () => {
+      // eslint-disable-next-line jest/no-standalone-expect
+      expect(
+        await format(`
+          type T = {
+            readonly enum: {+[string]: string},
+          };
+        `),
+      ).toMatchInlineSnapshot();
+    });
+
+    // $FlowFixMe[prop-missing]
+    test.failing('default (optional)', async () => {
+      // eslint-disable-next-line jest/no-standalone-expect
+      expect(
+        await format(`
+          type T<T> = {
+            readonly default?: ?T,
+          };
+        `),
+      ).toMatchInlineSnapshot();
+    });
+
+    // $FlowFixMe[prop-missing]
+    test.failing('new (inline object type)', async () => {
+      // eslint-disable-next-line jest/no-standalone-expect
+      expect(
+        await format(`
+          declare class C {
+            constructor(value: {readonly old: string, readonly new: string, ...}): void;
+          }
+        `),
+      ).toMatchInlineSnapshot();
+    });
+  });
 });
