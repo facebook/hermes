@@ -1665,6 +1665,14 @@ class JSParserImpl {
     if (!optTokenKind.hasValue()) {
       return false;
     }
+    // Reserved words (e.g. `with`, `enum`, `default`, `new`) are valid
+    // property names, so `readonly <reservedWord>:` should be parsed as a
+    // variance modifier on a reserved-word property — the same way
+    // `+<reservedWord>:` already is.
+    if (*optTokenKind > TokenKind::_first_resword &&
+        *optTokenKind < TokenKind::_last_resword) {
+      return true;
+    }
     switch (*optTokenKind) {
       case TokenKind::identifier:
       case TokenKind::private_identifier:

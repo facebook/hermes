@@ -322,7 +322,174 @@ class C {
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
-// CHECK:          }
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+// readonly with reserved-word property names
+// `+with: string` parses; `readonly with: string` should too.
+type T8 = {
+  readonly with: string,
+}
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "TypeAlias",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "T8"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": null,
+// CHECK-NEXT:       "right": {
+// CHECK-NEXT:         "type": "ObjectTypeAnnotation",
+// CHECK-NEXT:         "properties": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "ObjectTypeProperty",
+// CHECK-NEXT:             "key": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "with"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "value": {
+// CHECK-NEXT:               "type": "StringTypeAnnotation"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "method": false,
+// CHECK-NEXT:             "optional": false,
+// CHECK-NEXT:             "static": false,
+// CHECK-NEXT:             "proto": false,
+// CHECK-NEXT:             "variance": {
+// CHECK-NEXT:               "type": "Variance",
+// CHECK-NEXT:               "kind": "readonly"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "kind": "init"
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ],
+// CHECK-NEXT:         "indexers": [],
+// CHECK-NEXT:         "callProperties": [],
+// CHECK-NEXT:         "internalSlots": [],
+// CHECK-NEXT:         "inexact": false,
+// CHECK-NEXT:         "exact": false
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+type T9 = {
+  readonly enum: number,
+}
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "TypeAlias",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "T9"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": null,
+// CHECK-NEXT:       "right": {
+// CHECK-NEXT:         "type": "ObjectTypeAnnotation",
+// CHECK-NEXT:         "properties": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "ObjectTypeProperty",
+// CHECK-NEXT:             "key": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "enum"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "value": {
+// CHECK-NEXT:               "type": "NumberTypeAnnotation"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "method": false,
+// CHECK-NEXT:             "optional": false,
+// CHECK-NEXT:             "static": false,
+// CHECK-NEXT:             "proto": false,
+// CHECK-NEXT:             "variance": {
+// CHECK-NEXT:               "type": "Variance",
+// CHECK-NEXT:               "kind": "readonly"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "kind": "init"
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ],
+// CHECK-NEXT:         "indexers": [],
+// CHECK-NEXT:         "callProperties": [],
+// CHECK-NEXT:         "internalSlots": [],
+// CHECK-NEXT:         "inexact": false,
+// CHECK-NEXT:         "exact": false
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+type T10 = {
+  readonly default?: string,
+}
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "TypeAlias",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "T10"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": null,
+// CHECK-NEXT:       "right": {
+// CHECK-NEXT:         "type": "ObjectTypeAnnotation",
+// CHECK-NEXT:         "properties": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "ObjectTypeProperty",
+// CHECK-NEXT:             "key": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "default"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "value": {
+// CHECK-NEXT:               "type": "StringTypeAnnotation"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "method": false,
+// CHECK-NEXT:             "optional": true,
+// CHECK-NEXT:             "static": false,
+// CHECK-NEXT:             "proto": false,
+// CHECK-NEXT:             "variance": {
+// CHECK-NEXT:               "type": "Variance",
+// CHECK-NEXT:               "kind": "readonly"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "kind": "init"
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ],
+// CHECK-NEXT:         "indexers": [],
+// CHECK-NEXT:         "callProperties": [],
+// CHECK-NEXT:         "internalSlots": [],
+// CHECK-NEXT:         "inexact": false,
+// CHECK-NEXT:         "exact": false
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+type T11 = {
+  readonly new: string,
+}
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "TypeAlias",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "T11"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": null,
+// CHECK-NEXT:       "right": {
+// CHECK-NEXT:         "type": "ObjectTypeAnnotation",
+// CHECK-NEXT:         "properties": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "ObjectTypeProperty",
+// CHECK-NEXT:             "key": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "new"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "value": {
+// CHECK-NEXT:               "type": "StringTypeAnnotation"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "method": false,
+// CHECK-NEXT:             "optional": false,
+// CHECK-NEXT:             "static": false,
+// CHECK-NEXT:             "proto": false,
+// CHECK-NEXT:             "variance": {
+// CHECK-NEXT:               "type": "Variance",
+// CHECK-NEXT:               "kind": "readonly"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "kind": "init"
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ],
+// CHECK-NEXT:         "indexers": [],
+// CHECK-NEXT:         "callProperties": [],
+// CHECK-NEXT:         "internalSlots": [],
+// CHECK-NEXT:         "inexact": false,
+// CHECK-NEXT:         "exact": false
+// CHECK-NEXT:       }
+// CHECK-NEXT:     }
 
 // CHECK:        ]
 // CHECK-NEXT: }
