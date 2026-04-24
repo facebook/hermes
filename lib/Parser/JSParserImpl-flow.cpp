@@ -4738,12 +4738,13 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeParamFlow() {
     advance(JSLexer::GrammarContext::Type);
   }
 
-  // `in` is ambiguous (variance modifier `<in T>` vs name `<in>`,
-  // `<in: T>`, `<in extends Foo>`). Defer the decision: consume `in`
-  // here, and below — once we know the *actual* next token — either
-  // promote it to variance or treat it as the name itself.
-  SMRange inRange;
-  UniqueString *inKind = nullptr;
+  // `in` and `out` are both ambiguous: variance modifier (`<in T>`,
+  // `<out T>`) vs name (`<in>`, `<out>`, `<in: T>`, `<in extends Foo>`).
+  // Defer the decision: consume the keyword here, and below — once we
+  // know the *actual* next token — either promote it to variance or
+  // treat it as the name itself.
+  SMRange varianceKeywordRange;
+  UniqueString *varianceKeywordKind = nullptr;
 
   if (check(TokenKind::plus, TokenKind::minus)) {
     variance = setLocation(
@@ -4752,30 +4753,34 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeParamFlow() {
         new (context_) ESTree::VarianceNode(
             check(TokenKind::plus) ? plusIdent_ : minusIdent_));
     advance(JSLexer::GrammarContext::Type);
-  } else if (check(TokenKind::rw_in)) {
-    inKind = tok_->getResWordIdentifier();
-    inRange = tok_->getSourceRange();
+  } else if (check(TokenKind::rw_in) || check(outIdent_)) {
+    varianceKeywordKind = tok_->getResWordOrIdentifier();
+    varianceKeywordRange = tok_->getSourceRange();
     advance(JSLexer::GrammarContext::Type);
   }
 
   // Type-param name: identifier or `in` (rw_in). `in` is accepted because
   // Flow reclassifies it to an identifier in TYPE lex mode (matching
-  // `<in>`, `<in: T>`, `<in extends T>`, `<X, in, Y>`).
+  // `<in>`, `<in: T>`, `<in extends T>`, `<X, in, Y>`). `out` is already a
+  // plain identifier in Hermes, so `<out>` etc. work without special
+  // handling.
   UniqueString *name;
   if (check(TokenKind::identifier) || check(TokenKind::rw_in)) {
-    if (inKind != nullptr) {
+    if (varianceKeywordKind != nullptr) {
       // The deferred `in` was variance, and the current token is the name.
       variance = setLocation(
-          inRange, inRange, new (context_) ESTree::VarianceNode(inKind));
+          varianceKeywordRange,
+          varianceKeywordRange,
+          new (context_) ESTree::VarianceNode(varianceKeywordKind));
     }
     name = tok_->getResWordOrIdentifier();
     advance(JSLexer::GrammarContext::Type);
-  } else if (inKind != nullptr) {
-    // The deferred `in` was the type-param name itself, not variance.
-    // Reached when the next token is `>`, `,`, `:`, `=`, or `rw_extends`
-    // (none of which are name tokens). E.g. `<in>`, `<in: T>`,
-    // `<in extends T>`, `<in = T>`, `<X, in, Y>`.
-    name = inKind;
+  } else if (varianceKeywordKind != nullptr) {
+    // The deferred `in`/`out` was the type-param name itself, not
+    // variance. Reached when the next token is `>`, `,`, `:`, `=`, or
+    // `rw_extends` (none of which are name tokens). E.g. `<in>`,
+    // `<out: T>`, `<in extends T>`, `<out = T>`, `<X, in, Y>`.
+    name = varianceKeywordKind;
   } else {
     errorExpected(TokenKind::identifier, "in type parameter", nullptr, {});
     return None;

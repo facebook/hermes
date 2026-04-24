@@ -341,6 +341,7 @@ class JSParserImpl {
 
   UniqueString *recordIdent_;
   UniqueString *writeonlyIdent_;
+  UniqueString *outIdent_;
 #endif
 
 #if HERMES_PARSE_FLOW || HERMES_PARSE_TS

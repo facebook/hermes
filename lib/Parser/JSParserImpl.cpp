@@ -137,6 +137,9 @@ void JSParserImpl::initializeIdentifiers() {
 
   // Flow `writeonly` variance modifier (Flow-only counterpart to readonly).
   writeonlyIdent_ = kw_.identWriteonly;
+
+  // Flow `out` type-parameter variance modifier (long-form spelling of `+T`).
+  outIdent_ = kw_.identOut;
 #endif
 
 #if HERMES_PARSE_TS
