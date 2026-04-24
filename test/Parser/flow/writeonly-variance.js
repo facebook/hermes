@@ -172,6 +172,38 @@ type T4 = {
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
+// writeonly on tuple labeled element
+type T5 = [writeonly label: string];
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "TypeAlias",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "T5"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": null,
+// CHECK-NEXT:       "right": {
+// CHECK-NEXT:         "type": "TupleTypeAnnotation",
+// CHECK-NEXT:         "elementTypes": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "TupleTypeLabeledElement",
+// CHECK-NEXT:             "label": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "label"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "elementType": {
+// CHECK-NEXT:               "type": "StringTypeAnnotation"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "optional": false,
+// CHECK-NEXT:             "variance": {
+// CHECK-NEXT:               "type": "Variance",
+// CHECK-NEXT:               "kind": "writeonly"
+// CHECK-NEXT:             }
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ],
+// CHECK-NEXT:         "inexact": false
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
 // writeonly on class property
 class C {
   writeonly x: number;

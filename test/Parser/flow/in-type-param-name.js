@@ -169,6 +169,40 @@ type T5<in = string> = void;
 // CHECK-NEXT:       "right": {
 // CHECK-NEXT:         "type": "VoidTypeAnnotation"
 // CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+// `in` and `out` together as names in the same declaration: verifies the
+// deferred-keyword disambiguation works when both kinds of variance-like
+// keywords appear as type-param names side by side.
+type T6<in, out> = void;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "TypeAlias",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "T6"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": {
+// CHECK-NEXT:         "type": "TypeParameterDeclaration",
+// CHECK-NEXT:         "params": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "TypeParameter",
+// CHECK-NEXT:             "name": "in",
+// CHECK-NEXT:             "bound": null,
+// CHECK-NEXT:             "variance": null,
+// CHECK-NEXT:             "default": null
+// CHECK-NEXT:           },
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "TypeParameter",
+// CHECK-NEXT:             "name": "out",
+// CHECK-NEXT:             "bound": null,
+// CHECK-NEXT:             "variance": null,
+// CHECK-NEXT:             "default": null
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ]
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "right": {
+// CHECK-NEXT:         "type": "VoidTypeAnnotation"
+// CHECK-NEXT:       }
 // CHECK-NEXT:     }
 
 // CHECK:        ]
