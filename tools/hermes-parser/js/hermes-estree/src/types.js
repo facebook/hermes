@@ -1213,7 +1213,7 @@ export type TypeAnnotationType =
 
 export interface Variance extends BaseNode {
   +type: 'Variance';
-  +kind: 'plus' | 'minus' | 'readonly';
+  +kind: 'plus' | 'minus' | 'readonly' | 'writeonly' | 'in' | 'out';
 }
 
 interface BaseTypeAlias extends BaseNode {
