@@ -57,7 +57,7 @@ jobs:
           chmod +x ./utils/build-apple-framework-rn.sh
           source ./utils/build-apple-framework-rn.sh
           prepare_dest_root_for_ci
-      - name: Create fat framework for iOS
+      - name: Create universal framework
         shell: bash
         run: |
           echo "[HERMES] Creating the universal framework"
@@ -72,8 +72,6 @@ jobs:
           echo "Packaging Hermes Apple frameworks for $BUILD_TYPE build type"
 
           TARBALL_OUTPUT_DIR=$(mktemp -d /tmp/hermes-tarball-output-XXXXXXXX)
-
-          echo "Packaging Hermes Apple frameworks for $BUILD_TYPE build type"
 
           TARBALL_OUTPUT_PATH=$(node ./utils/scripts/hermes/create-tarball.js \
             --inputDir . \
