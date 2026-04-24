@@ -173,7 +173,9 @@ class NumberFormat : public vm::DecoratedObject::Decoration {
   Options resolvedOptions() noexcept;
 
   std::u16string format(double jsTimeValue) noexcept;
+  std::u16string format(const std::string &numberString) noexcept;
   std::vector<Part> formatToParts(double jsTimeValue) noexcept;
+  std::vector<Part> formatToParts(const std::string &numberString) noexcept;
 };
 
 } // namespace platform_intl
