@@ -111,6 +111,64 @@ type T3<in: number> = void;
 // CHECK-NEXT:       "right": {
 // CHECK-NEXT:         "type": "VoidTypeAnnotation"
 // CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+// `in` as the name with an `extends` bound.
+type T4<in extends number> = void;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "TypeAlias",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "T4"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": {
+// CHECK-NEXT:         "type": "TypeParameterDeclaration",
+// CHECK-NEXT:         "params": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "TypeParameter",
+// CHECK-NEXT:             "name": "in",
+// CHECK-NEXT:             "bound": {
+// CHECK-NEXT:               "type": "TypeAnnotation",
+// CHECK-NEXT:               "typeAnnotation": {
+// CHECK-NEXT:                 "type": "NumberTypeAnnotation"
+// CHECK-NEXT:               }
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "variance": null,
+// CHECK-NEXT:             "default": null,
+// CHECK-NEXT:             "usesExtendsBound": true
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ]
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "right": {
+// CHECK-NEXT:         "type": "VoidTypeAnnotation"
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+// `in` as the name with a default initializer.
+type T5<in = string> = void;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "TypeAlias",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "T5"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeParameters": {
+// CHECK-NEXT:         "type": "TypeParameterDeclaration",
+// CHECK-NEXT:         "params": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "TypeParameter",
+// CHECK-NEXT:             "name": "in",
+// CHECK-NEXT:             "bound": null,
+// CHECK-NEXT:             "variance": null,
+// CHECK-NEXT:             "default": {
+// CHECK-NEXT:               "type": "StringTypeAnnotation"
+// CHECK-NEXT:             }
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ]
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "right": {
+// CHECK-NEXT:         "type": "VoidTypeAnnotation"
+// CHECK-NEXT:       }
 // CHECK-NEXT:     }
 
 // CHECK:        ]

@@ -4738,6 +4738,13 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeParamFlow() {
     advance(JSLexer::GrammarContext::Type);
   }
 
+  // `in` is ambiguous (variance modifier `<in T>` vs name `<in>`,
+  // `<in: T>`, `<in extends Foo>`). Defer the decision: consume `in`
+  // here, and below — once we know the *actual* next token — either
+  // promote it to variance or treat it as the name itself.
+  SMRange inRange;
+  UniqueString *inKind = nullptr;
+
   if (check(TokenKind::plus, TokenKind::minus)) {
     variance = setLocation(
         tok_,
@@ -4745,18 +4752,34 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeParamFlow() {
         new (context_) ESTree::VarianceNode(
             check(TokenKind::plus) ? plusIdent_ : minusIdent_));
     advance(JSLexer::GrammarContext::Type);
+  } else if (check(TokenKind::rw_in)) {
+    inKind = tok_->getResWordIdentifier();
+    inRange = tok_->getSourceRange();
+    advance(JSLexer::GrammarContext::Type);
   }
 
-  // Accept `in` (rw_in) as a type-parameter name in addition to plain
-  // identifiers, matching Flow which reclassifies `in` to an identifier
-  // in TYPE lex mode. `out` already works because it's a plain identifier
-  // in Hermes (not a reserved word).
-  if (!check(TokenKind::identifier) && !check(TokenKind::rw_in)) {
+  // Type-param name: identifier or `in` (rw_in). `in` is accepted because
+  // Flow reclassifies it to an identifier in TYPE lex mode (matching
+  // `<in>`, `<in: T>`, `<in extends T>`, `<X, in, Y>`).
+  UniqueString *name;
+  if (check(TokenKind::identifier) || check(TokenKind::rw_in)) {
+    if (inKind != nullptr) {
+      // The deferred `in` was variance, and the current token is the name.
+      variance = setLocation(
+          inRange, inRange, new (context_) ESTree::VarianceNode(inKind));
+    }
+    name = tok_->getResWordOrIdentifier();
+    advance(JSLexer::GrammarContext::Type);
+  } else if (inKind != nullptr) {
+    // The deferred `in` was the type-param name itself, not variance.
+    // Reached when the next token is `>`, `,`, `:`, `=`, or `rw_extends`
+    // (none of which are name tokens). E.g. `<in>`, `<in: T>`,
+    // `<in extends T>`, `<in = T>`, `<X, in, Y>`.
+    name = inKind;
+  } else {
     errorExpected(TokenKind::identifier, "in type parameter", nullptr, {});
     return None;
   }
-  UniqueString *name = tok_->getResWordOrIdentifier();
-  advance(JSLexer::GrammarContext::Type);
 
   ESTree::Node *bound = nullptr;
   bool usesExtendsBound = false;
