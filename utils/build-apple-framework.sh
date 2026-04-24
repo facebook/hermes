@@ -232,10 +232,12 @@ function create_universal_framework {
   # shellcheck disable=SC2086
   if xcodebuild -create-xcframework $args -output "universal/hermesvm.xcframework"
   then
-    # # Remove the thin iOS hermesvm.frameworks that are now part of the universal
-    # XCFramework
+    # Remove the thin hermesvm.frameworks that are now part of the universal
+    # XCFramework, but keep macosx since it's expected as a standalone framework.
     for platform in "${platforms[@]}"; do
-      rm -r "$platform"
+      if [[ "$platform" != "macosx" ]]; then
+        rm -r "$platform"
+      fi
     done
   fi
 
