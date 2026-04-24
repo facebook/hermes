@@ -99,6 +99,7 @@ export function flowDefToTSDef(
     if (node.type in transform) {
       const result: $FlowFixMe | Array<$FlowFixMe> = transform[
         // $FlowExpectedError[prop-missing]
+        // $FlowFixMe[incompatible-type]
         node.type
       ](
         // $FlowExpectedError[incompatible-type]
