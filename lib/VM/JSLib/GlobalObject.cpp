@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 #include "hermes/Platform/Intl/PlatformIntl.h"
 #include "hermes/Support/FastStrToDouble.h"
+#include "hermes/VM/Callable.h"
+#include "hermes/VM/DecoratedObject.h"
 #include "hermes/VM/FastArray.h"
 #include "hermes/VM/JSArrayBuffer.h"
 #include "hermes/VM/JSDataView.h"
@@ -268,6 +270,8 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
 
   struct : public Locals {
     PinnedValue<JSObject> tempHandle;
+    PinnedValue<HiddenClass> tempClazzCreateRoot;
+    PinnedValue<HiddenClass> tempClazzForPrototype;
     PinnedValue<> value;
   } lv;
   LocalsRAII lraii(runtime, &lv);
@@ -296,6 +300,17 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   clearConfigurableDPF.setConfigurable = 1;
   clearConfigurableDPF.configurable = 0;
 
+  ClassFlags hostObjectFlags{};
+  hostObjectFlags.hostObject = 1;
+  ClassFlags proxyFlags{};
+  proxyFlags.proxyObject = 1;
+  ClassFlags fastArrayFlags{};
+  fastArrayFlags.noExtend = 1;
+  fastArrayFlags.sealed = 1;
+  fastArrayFlags.indexedStorage = 1;
+  ClassFlags indexedStorageFlags{};
+  indexedStorageFlags.indexedStorage = 1;
+
   // Define a function on the global object with name \p name.
   // Allocates a NativeObject and puts it in the global object.
   auto defineGlobalFunc =
@@ -303,19 +318,44 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
         gcScope.clearAllHandles();
 
         auto func = NativeFunction::create(
-            runtime,
-            runtime.functionPrototype,
-            Runtime::makeNullHandle<Environment>(),
-            nullptr,
-            functionPtr,
-            name,
-            paramCount,
-            Runtime::makeNullHandle<JSObject>());
+            runtime, nullptr, functionPtr, name, paramCount);
         runtime.ignoreAllocationFailure(
             JSObject::defineOwnProperty(
                 runtime.getGlobal(), runtime, name, normalDPF, func));
         return func;
       };
+
+  /// Create a root HiddenClass for the given CellKind.
+  /// Has the base number of reserved slots for \p kind.
+  auto createRootHiddenClassWithParent =
+      [&runtime, &lv](
+          CellKind kind,
+          Handle<JSObject> parent,
+          ClassFlags flags = {}) -> HiddenClass * {
+    size_t baseNumSlots = JSObject::numOverlapSlotsForCellKind(kind);
+    lv.tempClazzCreateRoot = HiddenClass::createRoot(runtime, parent, flags);
+    // Add the base number of slots.
+    for (size_t i = 0; i < baseNumSlots; ++i) {
+      GCScopeMarkerRAII marker{runtime};
+      auto addResult =
+          HiddenClass::reserveSlot(lv.tempClazzCreateRoot, runtime);
+      assert(
+          addResult != ExecutionStatus::EXCEPTION &&
+          "Could not possibly grow larger than the limit");
+      lv.tempClazzCreateRoot = *addResult->first;
+    }
+    lv.tempClazzCreateRoot =
+        runtime.getHiddenClassForPrototype(*parent, lv.tempClazzCreateRoot);
+    return *lv.tempClazzCreateRoot;
+  };
+
+  /// Make a root HiddenClass and store it in the Runtime.
+#define CREATE_CLASS_FOR_PARENT(kind, parentField) \
+  runtime.class##kind =                            \
+      createRootHiddenClassWithParent(CellKind::kind##Kind, parentField);
+#define CREATE_CLASS_FOR_PARENT_FLAGS(kind, parentField, flags) \
+  runtime.class##kind = createRootHiddenClassWithParent(        \
+      CellKind::kind##Kind, parentField, flags);
 
   // 15.1.1.1 NaN.
   lv.value = HermesValue::encodeNaNValue();
@@ -351,9 +391,11 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   // "Forward declaration" of Object.prototype is in the Runtime constructor,
   // before the global object is allocated.
 
+  CREATE_CLASS_FOR_PARENT(JSObject, runtime.objectPrototype)
+
   // "Forward declaration" of Error.prototype. Its properties will be populated
   // later.
-  runtime.ErrorPrototype = JSObject::create(runtime);
+  runtime.ErrorPrototype = JSObject::create(runtime, runtime.objectPrototype);
 
 // "Forward declaration" of the prototype for native error types. Their
 // properties will be populated later.
@@ -369,9 +411,12 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
 
   // "Forward declaration" of Function.prototype. Its properties will be
   // populated later.
+  lv.tempClazzForPrototype = createRootHiddenClassWithParent(
+      CellKind::NativeFunctionKind, runtime.objectPrototype);
   runtime.functionPrototype = NativeFunction::create(
       runtime,
       runtime.objectPrototype,
+      lv.tempClazzForPrototype,
       Runtime::makeNullHandle<Environment>(),
       nullptr,
       emptyFunction,
@@ -387,41 +432,36 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
           configurableOnlyPDF,
           Runtime::getZeroValue()));
 
-  // [[ThrowTypeError]].
-  auto throwTypeErrorFunction = NativeFunction::create(
-      runtime,
-      runtime.functionPrototype,
-      Runtime::makeNullHandle<Environment>(),
-      (void *)TypeErrorKind::RestrictedProperty,
-      throwTypeError,
-      Predefined::getSymbolID(Predefined::emptyString),
-      0,
-      Runtime::makeNullHandle<JSObject>());
-  runtime.ignoreAllocationFailure(
-      JSObject::defineOwnProperty(
-          throwTypeErrorFunction,
-          runtime,
-          Predefined::getSymbolID(Predefined::length),
-          clearConfigurableDPF,
-          Runtime::getUndefinedValue()));
-  runtime.throwTypeErrorAccessor = PropertyAccessor::create(
-      runtime, throwTypeErrorFunction, throwTypeErrorFunction);
+  CREATE_CLASS_FOR_PARENT(BoundFunction, runtime.functionPrototype)
+  CREATE_CLASS_FOR_PARENT(NativeFunction, runtime.functionPrototype)
+  CREATE_CLASS_FOR_PARENT(FinalizableNativeFunction, runtime.functionPrototype)
+  CREATE_CLASS_FOR_PARENT(NativeConstructor, runtime.functionPrototype)
+  CREATE_CLASS_FOR_PARENT_FLAGS(
+      JSCallableProxy, runtime.functionPrototype, proxyFlags)
+  CREATE_CLASS_FOR_PARENT(NativeJSClass, runtime.functionPrototype)
+  CREATE_CLASS_FOR_PARENT(JSClass, runtime.functionPrototype)
+  CREATE_CLASS_FOR_PARENT(JSFunction, runtime.functionPrototype)
+  CREATE_CLASS_FOR_PARENT(NativeJSFunction, runtime.functionPrototype)
 
-  // Define the 'parseInt' function.
-  runtime.parseIntFunction = defineGlobalFunc(
-      Predefined::getSymbolID(Predefined::parseInt), parseInt, 2);
-
-  // Define the 'parseFloat' function.
-  runtime.parseFloatFunction = defineGlobalFunc(
-      Predefined::getSymbolID(Predefined::parseFloat), parseFloat, 1);
+  // Initialize reserved HiddenClasses for 1 additional slot where necessary.
+  {
+    Handle<HiddenClass> prev =
+        Handle<HiddenClass>::vmcast(&runtime.classNativeFunction);
+    auto addResult = runtime.ignoreAllocationFailure(
+        HiddenClass::reserveSlot(prev, runtime));
+    runtime.classNativeFunction1Reserved = addResult.first.get();
+  }
 
   // "Forward declaration" of String.prototype. Its properties will be
   // populated later.
+  lv.tempClazzForPrototype = createRootHiddenClassWithParent(
+      CellKind::JSStringKind, runtime.objectPrototype, indexedStorageFlags);
   runtime.stringPrototype = runtime.ignoreAllocationFailure(
       JSString::create(
           runtime,
           runtime.getPredefinedStringHandle(Predefined::emptyString),
-          runtime.objectPrototype));
+          runtime.objectPrototype,
+          lv.tempClazzForPrototype));
 
   // "Forward declaration" of BigInt.prototype. Its properties will be
   // populated later.
@@ -429,13 +469,17 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
 
   // "Forward declaration" of Number.prototype. Its properties will be
   // populated later.
-  runtime.numberPrototype =
-      JSNumber::create(runtime, +0.0, runtime.objectPrototype);
+  lv.tempClazzForPrototype = createRootHiddenClassWithParent(
+      CellKind::JSNumberKind, runtime.objectPrototype);
+  runtime.numberPrototype = JSNumber::create(
+      runtime, +0.0, runtime.objectPrototype, lv.tempClazzForPrototype);
 
   // "Forward declaration" of Boolean.prototype. Its properties will be
   // populated later.
-  runtime.booleanPrototype =
-      JSBoolean::create(runtime, false, runtime.objectPrototype);
+  lv.tempClazzForPrototype = createRootHiddenClassWithParent(
+      CellKind::JSBooleanKind, runtime.objectPrototype);
+  runtime.booleanPrototype = JSBoolean::create(
+      runtime, false, runtime.objectPrototype, lv.tempClazzForPrototype);
 
   // "Forward declaration" of Symbol.prototype. Its properties will be
   // populated later.
@@ -450,27 +494,22 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
 
   // "Forward declaration" of Array.prototype. Its properties will be
   // populated later.
+  lv.tempClazzForPrototype = createRootHiddenClassWithParent(
+      CellKind::JSArrayKind, runtime.objectPrototype, indexedStorageFlags);
+  runtime.classJSArray = JSArray::createClass(
+      runtime, runtime.objectPrototype, lv.tempClazzForPrototype);
   runtime.arrayPrototype = runtime.ignoreAllocationFailure(
       JSArray::createNoAllocPropStorage(
-          runtime,
-          runtime.objectPrototype,
-          JSArray::createClass(runtime, runtime.objectPrototype),
-          0,
-          0));
-
-  // Declare the array class.
-  runtime.arrayClass = JSArray::createClass(runtime, runtime.arrayPrototype);
+          runtime, runtime.objectPrototype, runtime.classJSArray, 0, 0));
+  assert(runtime.arrayPrototype.get()->getClassGCPtr());
+  assert(
+      runtime.arrayPrototype->getParent(runtime) ==
+      runtime.objectPrototype.get());
+  runtime.classJSArray = JSArray::createClass(
+      runtime, runtime.arrayPrototype, lv.tempClazzForPrototype);
 
   // TODO: Give FastArray its own prototype so methods like push will work.
   runtime.fastArrayPrototype = *runtime.objectPrototype;
-
-  // Declare the fast array class.
-  runtime.fastArrayClass =
-      FastArray::createClass(runtime, runtime.fastArrayPrototype);
-
-  // Declare the regexp match object class.
-  runtime.regExpMatchClass =
-      JSRegExp::createMatchClass(runtime, runtime.arrayClass);
 
   // "Forward declaration" of ArrayBuffer.prototype. Its properties will be
   // populated later.
@@ -550,6 +589,95 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   // "Forward declaration" of %AsyncFunction.prototype%
   runtime.asyncFunctionPrototype =
       JSObject::create(runtime, runtime.functionPrototype);
+
+  // Populate the root classes for each JSObject.
+
+  CREATE_CLASS_FOR_PARENT(DecoratedObject, runtime.objectPrototype)
+  CREATE_CLASS_FOR_PARENT_FLAGS(
+      HostObject, runtime.objectPrototype, hostObjectFlags)
+  CREATE_CLASS_FOR_PARENT(JSError, runtime.ErrorPrototype)
+  CREATE_CLASS_FOR_PARENT(JSCallSite, runtime.callSitePrototype)
+  CREATE_CLASS_FOR_PARENT_FLAGS(
+      Arguments, runtime.objectPrototype, indexedStorageFlags)
+  CREATE_CLASS_FOR_PARENT(JSArrayBuffer, runtime.arrayBufferPrototype)
+  CREATE_CLASS_FOR_PARENT(JSDataView, runtime.dataViewPrototype)
+#define TYPED_ARRAY(name, type)  \
+  CREATE_CLASS_FOR_PARENT_FLAGS( \
+      name##Array, runtime.name##ArrayPrototype, indexedStorageFlags)
+#include "hermes/VM/TypedArrays.def"
+  CREATE_CLASS_FOR_PARENT(JSArrayIterator, runtime.arrayIteratorPrototype)
+  CREATE_CLASS_FOR_PARENT(JSSet, runtime.setPrototype)
+  CREATE_CLASS_FOR_PARENT(JSMap, runtime.mapPrototype)
+  CREATE_CLASS_FOR_PARENT(JSSetIterator, runtime.setIteratorPrototype)
+  CREATE_CLASS_FOR_PARENT(JSMapIterator, runtime.mapIteratorPrototype)
+  CREATE_CLASS_FOR_PARENT(JSWeakMap, runtime.weakMapPrototype)
+  CREATE_CLASS_FOR_PARENT(JSWeakSet, runtime.weakSetPrototype)
+  CREATE_CLASS_FOR_PARENT(JSWeakRef, runtime.weakRefPrototype)
+  CREATE_CLASS_FOR_PARENT(JSBoolean, runtime.booleanPrototype)
+  CREATE_CLASS_FOR_PARENT_FLAGS(
+      JSString, runtime.stringPrototype, indexedStorageFlags)
+  CREATE_CLASS_FOR_PARENT(JSNumber, runtime.numberPrototype)
+  CREATE_CLASS_FOR_PARENT(JSSymbol, runtime.symbolPrototype)
+  CREATE_CLASS_FOR_PARENT(JSStringIterator, runtime.stringIteratorPrototype)
+  CREATE_CLASS_FOR_PARENT(JSJSON, runtime.objectPrototype)
+  CREATE_CLASS_FOR_PARENT(JSMath, runtime.objectPrototype)
+  CREATE_CLASS_FOR_PARENT(JSDate, runtime.datePrototype)
+  CREATE_CLASS_FOR_PARENT(JSRegExp, runtime.regExpPrototype)
+  CREATE_CLASS_FOR_PARENT(
+      JSRegExpStringIterator, runtime.regExpStringIteratorPrototype)
+  CREATE_CLASS_FOR_PARENT(RequireContext, runtime.objectPrototype)
+  CREATE_CLASS_FOR_PARENT(JSGeneratorObject, runtime.generatorPrototype)
+  CREATE_CLASS_FOR_PARENT_FLAGS(JSProxy, runtime.objectPrototype, proxyFlags)
+  CREATE_CLASS_FOR_PARENT(JSFinalizationRegistry, runtime.objectPrototype)
+  CREATE_CLASS_FOR_PARENT(JSBigInt, runtime.bigintPrototype)
+  CREATE_CLASS_FOR_PARENT_FLAGS(
+      FastArray, runtime.fastArrayPrototype, fastArrayFlags)
+
+#undef CREATE_CLASS_FOR_PARENT
+#undef CREATE_CLASS_FOR_PARENT_FLAGS
+
+  // Declare the fast array class.
+  runtime.classFastArray = createRootHiddenClassWithParent(
+      CellKind::FastArrayKind, runtime.fastArrayPrototype, indexedStorageFlags);
+  runtime.classFastArray = FastArray::createClass(
+      runtime, runtime.fastArrayPrototype, runtime.classFastArray);
+
+  // Declare the regexp match object class.
+  runtime.regExpMatchClass =
+      JSRegExp::createMatchClass(runtime, runtime.classJSArray);
+
+  {
+    Handle<HiddenClass> prev =
+        Handle<HiddenClass>::vmcast(&runtime.classDecoratedObject);
+    auto addResult = runtime.ignoreAllocationFailure(
+        HiddenClass::reserveSlot(prev, runtime));
+    runtime.classDecoratedObject1Reserved = addResult.first.get();
+  }
+
+  // [[ThrowTypeError]].
+  auto throwTypeErrorFunction = NativeFunction::create(
+      runtime,
+      (void *)TypeErrorKind::RestrictedProperty,
+      throwTypeError,
+      Predefined::getSymbolID(Predefined::emptyString),
+      0);
+  runtime.ignoreAllocationFailure(
+      JSObject::defineOwnProperty(
+          throwTypeErrorFunction,
+          runtime,
+          Predefined::getSymbolID(Predefined::length),
+          clearConfigurableDPF,
+          Runtime::getUndefinedValue()));
+  runtime.throwTypeErrorAccessor = PropertyAccessor::create(
+      runtime, throwTypeErrorFunction, throwTypeErrorFunction);
+
+  // Define the 'parseInt' function.
+  runtime.parseIntFunction = defineGlobalFunc(
+      Predefined::getSymbolID(Predefined::parseInt), parseInt, 2);
+
+  // Define the 'parseFloat' function.
+  runtime.parseFloatFunction = defineGlobalFunc(
+      Predefined::getSymbolID(Predefined::parseFloat), parseFloat, 1);
 
   // Object constructor.
   runtime.objectConstructor.castAndSetHermesValue<NativeConstructor>(
@@ -797,13 +925,10 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   // Define the 'require' function.
   runtime.requireFunction = NativeFunction::create(
       runtime,
-      runtime.functionPrototype,
-      Runtime::makeNullHandle<Environment>(),
       nullptr,
       require,
       Predefined::getSymbolID(Predefined::require),
-      1,
-      Runtime::makeNullHandle<JSObject>());
+      1);
 
   if (jsLibFlags.enableHermesInternal) {
     // Define the 'gc' function.
@@ -823,6 +948,13 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
             normalDPF,
             lv.value));
   }
+#endif
+
+#ifndef NDEBUG
+  // Check that all the classes are HiddenClass type.
+#define CELL_JSOBJECT_NAME(name, vmClassName) \
+  assert(runtime.class##name.get() != nullptr);
+#include "hermes/VM/CellKinds.def"
 #endif
 }
 

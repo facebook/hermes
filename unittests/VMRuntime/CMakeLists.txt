@@ -72,6 +72,7 @@ set(RTSources
   TestHelpers1.cpp TestHelpers1.h
   TwineChar16Test.cpp
   WeakValueMapTest.cpp
+  WeakValueObjectMapTest.cpp
   MetadataTest.cpp
   FinalizationRegistryTest.cpp
   )

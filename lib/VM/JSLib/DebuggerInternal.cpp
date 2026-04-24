@@ -44,7 +44,7 @@ Handle<JSObject> createDebuggerInternalObject(Runtime &runtime) {
       true,
       false);
 
-  JSObject::preventExtensions(*intern);
+  JSObject::preventExtensionsNonProxy(intern, runtime);
 
   return intern;
 }

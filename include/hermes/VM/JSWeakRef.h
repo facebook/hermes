@@ -29,6 +29,9 @@ class JSWeakRef final : public JSObject {
     return cell->getKind() == CellKind::JSWeakRefKind;
   }
 
+  /// Create a new WeakRef using the standard WeakRef prototype.
+  static PseudoHandle<JSWeakRef> create(Runtime &runtime);
+
   /// Create a new WeakRef with prototype property \p parentHandle.
   static PseudoHandle<JSWeakRef> create(
       Runtime &runtime,

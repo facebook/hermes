@@ -26,6 +26,7 @@ namespace vm {
 /// Object.
 
 HermesValue createObjectConstructor(Runtime &runtime) {
+  assert(runtime.objectPrototype.get() != nullptr);
   auto objectPrototype = Handle<JSObject>::vmcast(&runtime.objectPrototype);
 
   struct : public Locals {
@@ -365,7 +366,7 @@ CallResult<HermesValue> getOwnPropertyDescriptor(
       return ExecutionStatus::EXCEPTION;
     }
     if (!*result) {
-      if (LLVM_LIKELY(!object->isHostObject()))
+      if (LLVM_LIKELY(!object->isHostObject(runtime)))
         return HermesValue::encodeUndefinedValue();
       // For compatibility with polyfills we want to pretend that all HostObject
       // properties are "own" properties in hasOwnProperty() and in
@@ -653,7 +654,7 @@ objectDefinePropertiesInternal(Runtime &runtime, Handle<> obj, Handle<> props) {
           // setIncludeNonEnumerable for proxies is necessary to get the right
           // traps in the right order.  The non-enumerable props will be
           // filtered out below.
-          .setIncludeNonEnumerable(lv.propsHandle->isProxyObject()));
+          .setIncludeNonEnumerable(lv.propsHandle->isProxyObject(runtime)));
   if (cr == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -695,7 +696,7 @@ objectDefinePropertiesInternal(Runtime &runtime, Handle<> obj, Handle<> props) {
     if (LLVM_UNLIKELY(!*descRes || !desc.flags.enumerable)) {
       continue;
     }
-    CallResult<PseudoHandle<>> propRes = lv.propsHandle->isProxyObject()
+    CallResult<PseudoHandle<>> propRes = lv.propsHandle->isProxyObject(runtime)
         ? JSObject::getComputed_RJS(lv.propsHandle, runtime, lv.propName)
         : JSObject::getComputedPropertyValueInternal_RJS(
               lv.propsHandle, runtime, lv.propsHandle, desc);
@@ -888,7 +889,7 @@ CallResult<HermesValue> enumerableOwnProperties_RJS(
       objHandle,
       runtime,
       OwnKeysFlags().plusIncludeNonSymbols().setIncludeNonEnumerable(
-          objHandle->isProxyObject()));
+          objHandle->isProxyObject(runtime)));
   if (namesRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -901,7 +902,8 @@ CallResult<HermesValue> enumerableOwnProperties_RJS(
   } lv;
   LocalsRAII lraii(runtime, &lv);
 
-  if (kind == EnumerableOwnPropertiesKind::Key && !objHandle->isProxyObject()) {
+  if (kind == EnumerableOwnPropertiesKind::Key &&
+      !objHandle->isProxyObject(runtime)) {
     return *namesRes;
   }
   lv.names.castAndSetHermesValue<JSArray>(*namesRes);
@@ -943,7 +945,7 @@ CallResult<HermesValue> enumerableOwnProperties_RJS(
         return ExecutionStatus::EXCEPTION;
       }
       lv.value = std::move(*valueRes);
-    } else if (!objHandle->isProxyObject()) {
+    } else if (!objHandle->isProxyObject(runtime)) {
       continue;
     } else {
       // This is a proxy, so we need to call getOwnProperty() to see
@@ -989,7 +991,7 @@ CallResult<HermesValue> enumerableOwnProperties_RJS(
       lv.entry = lv.value.getHermesValue();
     } else {
       assert(
-          objHandle->isProxyObject() &&
+          objHandle->isProxyObject(runtime) &&
           "Key kind did not return early but not proxy");
       lv.entry = lv.names->at(runtime, i).unboxToHV(runtime);
     }
@@ -1159,7 +1161,7 @@ CallResult<HermesValue> objectAssign(void *, Runtime &runtime) {
         OwnKeysFlags()
             .plusIncludeSymbols()
             .plusIncludeNonSymbols()
-            .setIncludeNonEnumerable(fromHandle->isProxyObject()));
+            .setIncludeNonEnumerable(fromHandle->isProxyObject(runtime)));
     if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
       // 5.c.ii. ReturnIfAbrupt(keys).
       return ExecutionStatus::EXCEPTION;
@@ -1193,7 +1195,7 @@ CallResult<HermesValue> objectAssign(void *, Runtime &runtime) {
       // changing it to make proxy work is is a surprisingly large
       // regression if used always, even with no Proxy objects.  So we
       // check if we can use getComputedPropertyValue_RJS and do so.
-      CallResult<PseudoHandle<>> propRes = fromHandle->isProxyObject()
+      CallResult<PseudoHandle<>> propRes = fromHandle->isProxyObject(runtime)
           ? JSObject::getComputed_RJS(fromHandle, runtime, nextKeyHandle)
           : JSObject::getComputedPropertyValue_RJS(
                 fromHandle, runtime, fromHandle, desc, nextKeyHandle);
@@ -1447,7 +1449,7 @@ objectHasOwnHelper(Runtime &runtime, Handle<JSObject> O, Handle<> P) {
   //      if (Object.hasOwnProperty(hostObj, key))
   //        ...
   //    }
-  if (LLVM_UNLIKELY(O->isHostObject())) {
+  if (LLVM_UNLIKELY(O->isHostObject(runtime))) {
     return HermesValue::encodeBoolValue(true);
   }
   return HermesValue::encodeBoolValue(false);

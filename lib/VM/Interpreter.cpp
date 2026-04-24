@@ -1853,7 +1853,8 @@ tailCall:
 
       CASE(LoadParentNoTraps) {
         assert(
-            !vmcast<JSObject>(O2REG(LoadParentNoTraps))->isProxyObject() &&
+            !vmcast<JSObject>(O2REG(LoadParentNoTraps))
+                 ->isProxyObject(runtime) &&
             "proxy is not supported");
         auto *parent =
             vmcast<JSObject>(O2REG(LoadParentNoTraps))->getParent(runtime);
@@ -1903,10 +1904,10 @@ tailCall:
     if (LLVM_LIKELY(cacheEntry->negMatchClazz == clazzPtr)) {                 \
       /* Proxy, HostObject and lazy objects have special hidden classes, so   \
        * they should never match the cached class. */                         \
-      assert(!obj->getFlags().proxyObject);                                   \
-      assert(!obj->getFlags().hostObject);                                    \
-      assert(!obj->getFlags().lazyObject);                                    \
-      const GCPointer<JSObject> &parentGCPtr = obj->getParentGCPtr();         \
+      assert(!obj->isProxyObject(runtime));                                   \
+      assert(!obj->isHostObject(runtime));                                    \
+      assert(!obj->isLazy(runtime));                                          \
+      const GCPointer<JSObject> &parentGCPtr = obj->getParentGCPtr(runtime);  \
       if (LLVM_LIKELY(parentGCPtr)) {                                         \
         JSObject *parent = parentGCPtr.getNonNull(runtime);                   \
         if (LLVM_LIKELY(cacheEntry->clazz == parent->getClassGCPtr())) {      \
@@ -2076,7 +2077,7 @@ tailCall:
             LLVM_LIKELY(
                 addCacheEntry.getParentEpoch() ==
                 runtime.getParentCacheEpoch()) &&
-            LLVM_LIKELY(addCacheEntry.parent == obj->getParentGCPtr())) {
+            LLVM_LIKELY(addCacheEntry.parent == obj->getParentGCPtr(runtime))) {
           HiddenClass *resultClazz =
               addCacheEntry.resultClazz.getNonNull(runtime, runtime.getHeap());
           ++NumPutByIdTransitionHits;
@@ -2655,16 +2656,17 @@ tailCall:
         DISPATCH;
       }
       CASE(NewObjectWithParent) {
-        CAPTURE_IP(
-            O1REG(NewObjectWithParent) =
-                JSObject::create(
-                    runtime,
-                    O2REG(NewObjectWithParent).isObject()
-                        ? Handle<JSObject>::vmcast(&O2REG(NewObjectWithParent))
-                        : O2REG(NewObjectWithParent).isNull()
-                        ? Runtime::makeNullHandle<JSObject>()
-                        : Handle<JSObject>::vmcast(&runtime.objectPrototype))
-                    .getHermesValue());
+        CAPTURE_IP_ASSIGN(
+            O1REG(NewObjectWithParent),
+            createObjectWithParent(
+                runtime,
+                curCodeBlock,
+                O2REG(NewObjectWithParent).isObject()
+                    ? Handle<JSObject>::vmcast(&O2REG(NewObjectWithParent))
+                    : O2REG(NewObjectWithParent).isNull()
+                    ? Runtime::makeNullHandle<JSObject>()
+                    : Handle<JSObject>::vmcast(&runtime.objectPrototype),
+                ip->iNewObjectWithParent.op3));
         assert(
             gcScope.getHandleCountDbg() == KEEP_HANDLES &&
             "Should not create handles.");
@@ -2876,6 +2878,7 @@ tailCall:
                 &O2REG(CreateThisForSuper),
                 &O3REG(CreateThisForSuper),
                 ip->iCreateThisForSuper.op4,
+                ip->iCreateThisForSuper.op5,
                 curCodeBlock));
         if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
           goto exception;
@@ -2893,6 +2896,7 @@ tailCall:
                 &O2REG(CreateThisForNew),
                 &O2REG(CreateThisForNew),
                 ip->iCreateThisForNew.op3,
+                ip->iCreateThisForNew.op4,
                 curCodeBlock));
         if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
           goto exception;

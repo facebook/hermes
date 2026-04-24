@@ -72,7 +72,7 @@ CallResult<HermesValue> FinalizableNativeFunction::createWithoutPrototype(
       runtime,
       parentHandle,
       runtime.getHiddenClassForPrototype(
-          *parentHandle, numOverlapSlots<FinalizableNativeFunction>()),
+          *parentHandle, runtime.classFinalizableNativeFunction),
       context,
       functionPtr,
       finalizePtr);
@@ -123,9 +123,15 @@ CallResult<HermesValue> HostObject::createWithoutPrototype(
   auto parentHandle = Handle<JSObject>::vmcast(&runtime.objectPrototype);
 
   HostObject *hostObj = runtime.makeAFixed<HostObject, HasFinalizer::Yes>(
-      runtime, parentHandle, runtime.hostObjectClass, std::move(proxy));
+      runtime,
+      parentHandle,
+      runtime.getHiddenClassForPrototype(
+          *parentHandle, runtime.classHostObject),
+      std::move(proxy));
 
-  hostObj->flags_.hostObject = true;
+  assert(
+      hostObj->isHostObject(runtime) &&
+      "new HostObject made with the wrong HiddenClass");
 
   return JSObjectInit::initToHermesValue(runtime, hostObj);
 }

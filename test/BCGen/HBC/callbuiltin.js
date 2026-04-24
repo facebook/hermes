@@ -100,7 +100,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:  StringSwitchImm count: 0
 // CHKBC-NEXT:  Key buffer size (bytes): 15
 // CHKBC-NEXT:  Value buffer size (bytes): 18
-// CHKBC-NEXT:  Shape table count: 2
+// CHKBC-NEXT:  Shape table count: 3
 // CHKBC-NEXT:  Segment ID: 0
 // CHKBC-NEXT:  CommonJS module count: 0
 // CHKBC-NEXT:  CommonJS module count (static): 0
@@ -139,8 +139,9 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:[String 10]
 
 // CHKBC:Object Shape Table:
-// CHKBC-NEXT:0[0, 4]
-// CHKBC-NEXT:1[12, 1]
+// CHKBC-NEXT:0[0, 0]
+// CHKBC-NEXT:1[0, 4]
+// CHKBC-NEXT:2[12, 1]
 
 // CHKBC:Function<global>(1 params, 13 registers, 0 numbers, 1 non-pointers):
 // CHKBC-NEXT:Offset in debug table: source 0x0000
@@ -157,7 +158,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:    PutByIdLoose      r1, r2, 2, "checkNonStaticBui"...
 // CHKBC-NEXT:    TryGetById        r2, r1, 0, "print"
 // CHKBC-NEXT:    GetByIdShort      r3, r1, 1, "foo"
-// CHKBC-NEXT:    NewObjectWithBuffer r1, 0, 0
+// CHKBC-NEXT:    NewObjectWithBuffer r1, 1, 0
 // CHKBC-NEXT:    Call2             r1, r3, r0, r1
 // CHKBC-NEXT:    Call2             r1, r2, r0, r1
 // CHKBC-NEXT:    Ret               r1
@@ -170,7 +171,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 
 // CHKBC:Function<shadows>(1 params, 13 registers, 0 numbers, 1 non-pointers):
 // CHKBC-NEXT:Offset in debug table: source 0x002c
-// CHKBC-NEXT:    NewObjectWithBuffer r3, 1, 17
+// CHKBC-NEXT:    NewObjectWithBuffer r3, 2, 17
 // CHKBC-NEXT:    GetGlobalObject   r1
 // CHKBC-NEXT:    TryGetById        r1, r1, 0, "print"
 // CHKBC-NEXT:    PutOwnBySlotIdx   r3, r1, 0

@@ -8,6 +8,7 @@
 #ifndef HERMES_SH_MIRROR_H
 #define HERMES_SH_MIRROR_H
 
+#include "hermes/VM/JIT/Config.h"
 #include "hermes/VM/sh_legacy_value.h"
 #include "hermes/VM/sh_runtime.h"
 
@@ -17,6 +18,7 @@ typedef uint32_t SHCompressedPointerRawType;
 typedef uintptr_t SHCompressedPointerRawType;
 #endif
 
+typedef uint32_t SHSymbolID;
 typedef uint32_t SHWeakRootSymbolID;
 
 typedef struct SHNativeFuncInfo SHNativeFuncInfo;
@@ -57,7 +59,6 @@ typedef struct SHGCCell {
 typedef struct SHJSObject {
   SHGCCell base;
   SHObjectFlags flags;
-  SHCompressedPointerRawType parent;
   SHCompressedPointerRawType clazz;
   SHCompressedPointerRawType propStorage;
 } SHJSObject;
@@ -127,5 +128,36 @@ typedef struct SHBoxedDouble {
   SHGCCell base;
   double value_;
 } SHBoxedDouble;
+
+/// Struct mirroring the layout of detail::Transition.
+typedef struct SHHiddenClassTransition {
+  uint32_t symbolID;
+  uint16_t propertyFlags;
+  uint16_t classFlags;
+} SHTransition;
+
+/// Struct mirroring the layout of detail::TransitionMap.
+typedef struct SHHiddenClassTransitionMap {
+  SHTransition smallKey;
+  void *unionMember;
+} SHTransitionMap;
+
+/// Struct mirroring the layout of HiddenClass.
+typedef struct SHHiddenClass {
+  SHGCCell base;
+  SHCompressedPointerRawType propertyMap;
+  SHCompressedPointerRawType parent;
+  SHCompressedPointerRawType objectParent;
+  SHCompressedPointerRawType forInCache;
+  SHCompressedPointerRawType parentTransitionMap;
+  SHSymbolID symbolID;
+  uint16_t propertyFlags;
+  unsigned numProperties;
+#if HERMESVM_JIT
+  uint16_t lazyJITId;
+#endif
+  uint16_t flags;
+  SHTransitionMap transitionMap;
+} SHHiddenClass;
 
 #endif

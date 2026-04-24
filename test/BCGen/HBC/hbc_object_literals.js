@@ -201,7 +201,7 @@ function obj7() {
 // BCGEN-NEXT:  StringSwitchImm count: 0
 // BCGEN-NEXT:  Key buffer size (bytes): 107
 // BCGEN-NEXT:  Value buffer size (bytes): 160
-// BCGEN-NEXT:  Shape table count: 4
+// BCGEN-NEXT:  Shape table count: 5
 // BCGEN-NEXT:  Segment ID: 0
 // BCGEN-NEXT:  CommonJS module count: 0
 // BCGEN-NEXT:  CommonJS module count (static): 0
@@ -338,10 +338,11 @@ function obj7() {
 // BCGEN-NEXT:[String 10]
 
 // BCGEN:Object Shape Table:
-// BCGEN-NEXT:0[0, 7]
-// BCGEN-NEXT:1[15, 18]
-// BCGEN-NEXT:2[53, 13]
-// BCGEN-NEXT:3[83, 6]
+// BCGEN-NEXT:0[0, 0]
+// BCGEN-NEXT:1[0, 7]
+// BCGEN-NEXT:2[15, 18]
+// BCGEN-NEXT:3[53, 13]
+// BCGEN-NEXT:4[83, 6]
 
 // BCGEN:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // BCGEN-NEXT:Offset in debug table: source 0x0000
@@ -371,34 +372,34 @@ function obj7() {
 // BCGEN-NEXT:    Ret               r0
 
 // BCGEN:Function<obj1>(1 params, 3 registers, 0 numbers, 1 non-pointers):
-// BCGEN-NEXT:    NewObjectWithBuffer r1, 0, 0
+// BCGEN-NEXT:    NewObjectWithBuffer r1, 1, 0
 // BCGEN-NEXT:    LoadConstUndefined r0
 // BCGEN-NEXT:    CreateClosure     r2, r0, Function<f>
 // BCGEN-NEXT:    PutOwnBySlotIdx   r1, r2, 5
 // BCGEN-NEXT:    Ret               r1
 
 // BCGEN:Function<obj2>(1 params, 1 registers, 0 numbers, 0 non-pointers):
-// BCGEN-NEXT:    NewObjectWithBuffer r0, 1, 17
+// BCGEN-NEXT:    NewObjectWithBuffer r0, 2, 17
 // BCGEN-NEXT:    Ret               r0
 
 // BCGEN:Function<obj3>(1 params, 1 registers, 0 numbers, 0 non-pointers):
-// BCGEN-NEXT:    NewObjectWithBuffer r0, 2, 85
+// BCGEN-NEXT:    NewObjectWithBuffer r0, 3, 85
 // BCGEN-NEXT:    Ret               r0
 
 // BCGEN:Function<obj4>(1 params, 1 registers, 0 numbers, 0 non-pointers):
-// BCGEN-NEXT:    NewObjectWithBuffer r0, 2, 85
+// BCGEN-NEXT:    NewObjectWithBuffer r0, 3, 85
 // BCGEN-NEXT:    Ret               r0
 
 // BCGEN:Function<obj5>(1 params, 1 registers, 0 numbers, 0 non-pointers):
-// BCGEN-NEXT:    NewObjectWithBuffer r0, 3, 135
+// BCGEN-NEXT:    NewObjectWithBuffer r0, 4, 135
 // BCGEN-NEXT:    Ret               r0
 
 // BCGEN:Function<obj6>(1 params, 1 registers, 0 numbers, 0 non-pointers):
-// BCGEN-NEXT:    NewObjectWithBuffer r0, 3, 67
+// BCGEN-NEXT:    NewObjectWithBuffer r0, 4, 67
 // BCGEN-NEXT:    Ret               r0
 
 // BCGEN:Function<obj7>(1 params, 1 registers, 0 numbers, 0 non-pointers):
-// BCGEN-NEXT:    NewObjectWithBuffer r0, 3, 68
+// BCGEN-NEXT:    NewObjectWithBuffer r0, 4, 68
 // BCGEN-NEXT:    Ret               r0
 
 // BCGEN:Function<f>(1 params, 1 registers, 0 numbers, 1 non-pointers):

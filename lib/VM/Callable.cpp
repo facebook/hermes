@@ -132,11 +132,17 @@ void Callable::defineLazyProperties(Handle<Callable> fn, Runtime &runtime) {
     const CodeBlock *codeBlock = jsFun->getCodeBlock();
 
     // Set the actual non-lazy hidden class.
+    // Preserve the object's parent and CellKind.
     Handle<HiddenClass> newClass = runtime.getHiddenClassForPrototype(
-        *inferredParent(
-            runtime, (FuncKind)codeBlock->getHeaderFlags().getKind()),
-        numOverlapSlots<JSFunction>());
-    jsFun->updateClassNoAllocPropStorageUnsafe(runtime, *newClass);
+        jsFun->getParent(runtime),
+        vmisa<JSClass>(*jsFun) ? runtime.classJSClass
+                               : runtime.classJSFunction);
+    // Need to preserve the ClassFlags of the lazy object.
+    ClassFlags flags = fn->getClass(runtime)->getFlags();
+    flags.lazyObject = 0;
+    HiddenClass *newClassWithFlags =
+        HiddenClass::updateClassFlags(newClass, runtime, flags);
+    jsFun->updateClassNoAllocPropStorageUnsafe(runtime, newClassWithFlags);
 
     // Create empty object for prototype.
     auto prototypeParent = Callable::isGeneratorFunction(*jsFun)
@@ -167,9 +173,15 @@ void Callable::defineLazyProperties(Handle<Callable> fn, Runtime &runtime) {
   } else if (auto nativeFun = Handle<NativeJSFunction>::dyn_vmcast(fn)) {
     // Set the actual non-lazy hidden class.
     Handle<HiddenClass> newClass = runtime.getHiddenClassForPrototype(
-        *inferredParent(runtime, (FuncKind)nativeFun->getFunctionInfo()->kind),
-        numOverlapSlots<NativeJSFunction>());
-    nativeFun->updateClassNoAllocPropStorageUnsafe(runtime, *newClass);
+        nativeFun->getParent(runtime),
+        vmisa<NativeJSClass>(*nativeFun) ? runtime.classNativeJSClass
+                                         : runtime.classNativeJSFunction);
+    // Need to preserve the ClassFlags of the lazy object.
+    ClassFlags flags = fn->getClass(runtime)->getFlags();
+    flags.lazyObject = 0;
+    HiddenClass *newClassWithFlags =
+        HiddenClass::updateClassFlags(newClass, runtime, flags);
+    nativeFun->updateClassNoAllocPropStorageUnsafe(runtime, newClassWithFlags);
 
     auto prototypeParent = Callable::isGeneratorFunction(*nativeFun)
         ? Handle<JSObject>::vmcast(&runtime.generatorPrototype)
@@ -558,7 +570,7 @@ CallResult<double> Callable::extractOwnLengthProperty_RJS(
           desc)) {
     propRes = JSObject::getNamedPropertyValue_RJS(
         selfHandle, runtime, selfHandle, desc);
-  } else if (selfHandle->isProxyObject()) {
+  } else if (selfHandle->isProxyObject(runtime)) {
     ComputedPropertyDescriptor desc;
     CallResult<bool> hasLength = JSProxy::getOwnProperty(
         selfHandle,
@@ -682,8 +694,7 @@ CallResult<HermesValue> BoundFunction::create(
   auto *cell = runtime.makeAFixed<BoundFunction>(
       runtime,
       lv.proto,
-      runtime.getHiddenClassForPrototype(
-          runtime.functionPrototypeRawPtr, numOverlapSlots<BoundFunction>()),
+      runtime.getHiddenClassForPrototype(*lv.proto, runtime.classBoundFunction),
       target,
       lv.arrStorage);
   lv.self = JSObjectInit::initToPointer(runtime, cell);
@@ -699,7 +710,7 @@ ExecutionStatus BoundFunction::initializeLengthAndName_RJS(
     Runtime &runtime,
     Handle<Callable> target,
     unsigned argCount) {
-  if (LLVM_UNLIKELY(target->isLazy())) {
+  if (LLVM_UNLIKELY(target->isLazy(runtime))) {
     Callable::initializeLazyObject(runtime, target);
   }
 
@@ -988,13 +999,13 @@ Handle<NativeJSFunction> NativeJSFunction::create(
   auto *cell = runtime.makeAFixed<NativeJSFunction>(
       runtime,
       parentHandle,
-      runtime.lazyObjectClass,
+      runtime.getLazyHiddenClassForPrototype(*parentHandle),
       parentEnvHandle,
       functionPtr,
       funcInfo,
       unit);
   auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
-  selfHandle->flags_.lazyObject = 1;
+  assert(selfHandle->isLazy(runtime) && "NativeJSFunction must be lazy");
   return selfHandle;
 }
 
@@ -1095,13 +1106,13 @@ Handle<NativeJSClass> NativeJSClass::create(
   auto *cell = runtime.makeAFixed<NativeJSClass>(
       runtime,
       parentHandle,
-      runtime.lazyObjectClass,
+      runtime.getLazyHiddenClassForPrototype(*parentHandle),
       parentEnvHandle,
       functionPtr,
       funcInfo,
       unit);
   auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
-  selfHandle->flags_.lazyObject = 1;
+  assert(selfHandle->isLazy(runtime) && "NativeJSClass must be lazy");
   return selfHandle;
 }
 
@@ -1154,23 +1165,18 @@ std::string NativeFunction::_snapshotNameImpl(GCCell *cell, GC &gc) {
 Handle<NativeFunction> NativeFunction::create(
     Runtime &runtime,
     Handle<JSObject> parentHandle,
+    Handle<HiddenClass> clazz,
     Handle<Environment> parentEnvHandle,
     void *context,
     NativeFunctionPtr functionPtr,
     SymbolID name,
     unsigned paramCount,
-    Handle<JSObject> prototypeObjectHandle,
-    unsigned additionalSlotCount) {
-  size_t reservedSlots =
-      numOverlapSlots<NativeFunction>() + additionalSlotCount;
+    Handle<JSObject> prototypeObjectHandle) {
   auto *cell = runtime.makeAFixed<NativeFunction>(
-      runtime,
-      parentHandle,
-      runtime.getHiddenClassForPrototype(*parentHandle, reservedSlots),
-      parentEnvHandle,
-      context,
-      functionPtr);
+      runtime, parentHandle, clazz, parentEnvHandle, context, functionPtr);
   auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
+
+  size_t reservedSlots = clazz->getNumProperties();
 
   // Allocate a propStorage if the number of additional slots requires it.
   runtime.ignoreAllocationFailure(
@@ -1392,11 +1398,11 @@ PseudoHandle<JSFunction> JSFunction::create(
       runtime,
       domain,
       parentHandle,
-      runtime.lazyObjectClass,
+      runtime.getLazyHiddenClassForPrototype(*parentHandle),
       envHandle,
       codeBlock);
   auto self = JSObjectInit::initToPseudoHandle(runtime, cell);
-  self->flags_.lazyObject = 1;
+  assert(cell->isLazy(runtime) && "JSFunction must be lazy");
   return self;
 }
 
@@ -1546,11 +1552,11 @@ PseudoHandle<JSClass> JSClass::create(
       runtime,
       domain,
       parentHandle,
-      runtime.lazyObjectClass,
+      runtime.getLazyHiddenClassForPrototype(*parentHandle),
       envHandle,
       codeBlock);
   auto self = JSObjectInit::initToPseudoHandle(runtime, cell);
-  self->flags_.lazyObject = 1;
+  assert(cell->isLazy(runtime) && "JSClass must be lazy");
   return self;
 }
 

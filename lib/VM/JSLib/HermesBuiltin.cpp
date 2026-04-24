@@ -254,7 +254,7 @@ CallResult<HermesValue> copyDataPropertiesSlowPath_RJS(
     //     1. Set excluded to true.
     if (excludedItems) {
       assert(
-          !excludedItems->isProxyObject() &&
+          !excludedItems->isProxyObject(runtime) &&
           "internal excludedItems object is a proxy");
       ComputedPropertyDescriptor desc;
       CallResult<bool> cr = JSObject::getOwnComputedPrimitiveDescriptor(
@@ -278,7 +278,7 @@ CallResult<HermesValue> copyDataPropertiesSlowPath_RJS(
     //   ii. If desc is not undefined and desc.[[Enumerable]] is true, then
     // TODO(T141997867), move this special case behavior for host objects to
     // getOwnComputedDescriptor.
-    if ((*crb && desc.flags.enumerable) || from->isHostObject()) {
+    if ((*crb && desc.flags.enumerable) || from->isHostObject(runtime)) {
       //     1. Let propValue be ? Get(from, nextKey).
       CallResult<PseudoHandle<>> crv =
           JSObject::getComputed_RJS(from, runtime, lv.nextKeyHandle);
@@ -352,7 +352,7 @@ CallResult<HermesValue> hermesBuiltinCopyDataProperties(
   // propertyKeys
   Handle<JSObject> excludedItems = args.dyncastArg<JSObject>(2);
   assert(
-      (!excludedItems || !excludedItems->isProxyObject()) &&
+      (!excludedItems || !excludedItems->isProxyObject(runtime)) &&
       "excludedItems internal List is a Proxy");
 
   // We cannot use the fast path if the object is a proxy, host object, or when
@@ -360,7 +360,7 @@ CallResult<HermesValue> hermesBuiltinCopyDataProperties(
   // because in order to use JSObject::forEachOwnPropertyWhile, we must not
   // modify the underlying property map or hidden class. However, if we have an
   // accessor, we cannot guarantee that condition, so we use the slow path.
-  if (source->isProxyObject() || source->isHostObject() ||
+  if (source->isProxyObject(runtime) || source->isHostObject(runtime) ||
       source->getClass(runtime)->getMayHaveAccessor()) {
     return copyDataPropertiesSlowPath_RJS(
         runtime, target, source, excludedItems);
@@ -380,7 +380,7 @@ CallResult<HermesValue> hermesBuiltinCopyDataProperties(
 
         if (excludedItems) {
           assert(
-              !excludedItems->isProxyObject() &&
+              !excludedItems->isProxyObject(runtime) &&
               "internal excludedItems object is a proxy");
           ComputedPropertyDescriptor xdesc;
           auto cr = JSObject::getOwnComputedPrimitiveDescriptor(
@@ -830,7 +830,7 @@ CallResult<HermesValue> hermesBuiltinExportAll(void *, Runtime &runtime) {
   }
 
   Handle<JSObject> source = args.dyncastArg<JSObject>(1);
-  if (LLVM_UNLIKELY(!source) || LLVM_UNLIKELY(source->isProxyObject())) {
+  if (LLVM_UNLIKELY(!source) || LLVM_UNLIKELY(source->isProxyObject(runtime))) {
     return runtime.raiseTypeError(
         "exportAll() source argument must be non-Proxy object");
   }
@@ -1026,13 +1026,10 @@ void createHermesBuiltins(Runtime &runtime) {
                                 uint8_t count = 0) {
     auto methodRes = NativeFunction::create(
         runtime,
-        Handle<JSObject>::vmcast(&runtime.functionPrototype),
-        Runtime::makeNullHandle<Environment>(),
         nullptr /* context */,
         func,
         Predefined::getSymbolID(symID),
-        count,
-        Runtime::makeNullHandle<JSObject>());
+        count);
     lv.method = std::move(*methodRes);
     runtime.registerBuiltin(builtinIndex, *lv.method);
   };

@@ -62,7 +62,7 @@ LLVM_ATTRIBUTE_ALWAYS_INLINE
   // Fall-back fast path for other objects with fast index properties.
   // Make sure that the index is within 32-bit range, since getOwnIndexed()
   // only works for 32-bit indexes.
-  else if (index <= UINT32_MAX && obj->hasFastIndexProperties()) {
+  else if (index <= UINT32_MAX && obj->hasFastIndexProperties(runtime)) {
     GCScopeMarkerRAII marker{runtime};
     HermesValue hv =
         JSObject::getOwnIndexed(createPseudoHandle(obj), runtime, index);

@@ -1144,7 +1144,7 @@ inline void JITContext::Compiler::emitNewObject(
 
 inline void JITContext::Compiler::emitNewObjectWithParent(
     const inst::NewObjectWithParentInst *inst) {
-  em_.newObjectWithParent(FR(inst->op1), FR(inst->op2));
+  em_.newObjectWithParent(FR(inst->op1), FR(inst->op2), inst->op3);
 }
 
 #define EMIT_NEW_OBJECT_WITH_BUFFER(name)                                      \

@@ -9,6 +9,7 @@
 #define HERMES_VM_RUNTIME_INLINE_H
 
 #include "hermes/FrontEndDefs/Builtins.h"
+#include "hermes/VM/HiddenClass-inline.h"
 #include "hermes/VM/Runtime.h"
 
 namespace hermes {
@@ -34,13 +35,26 @@ inline void Runtime::enqueueJob(Callable *job) {
 
 inline Handle<HiddenClass> Runtime::getHiddenClassForPrototype(
     JSObject *proto,
-    unsigned reservedSlots) {
-  assert(
-      reservedSlots <= InternalProperty::NumAnonymousInternalProperties &&
-      "out of bounds");
-  PinnedHermesValue *clazz = &rootClazzes_[reservedSlots];
-  assert(!clazz->isUndefined() && "must initialize root classes before use");
-  return Handle<HiddenClass>::vmcast(clazz);
+    Handle<HiddenClass> root) {
+  assert(root && "root must be non-null");
+  clazzForPrototypeTmp = HermesValue::encodeObjectValue(
+      HiddenClass::updateObjectParent(root, *this, createPseudoHandle(proto)));
+  return Handle<HiddenClass>::vmcast(&clazzForPrototypeTmp);
+}
+
+inline Handle<HiddenClass> Runtime::getLazyHiddenClassForPrototype(
+    JSObject *proto) {
+  const PinnedValue<HiddenClass> *clazz = &lazyObjectClass_;
+  auto clazzWithNullObjParent = Handle<HiddenClass>::vmcast(clazz);
+  if (!proto)
+    return clazzWithNullObjParent;
+  clazzForPrototypeTmp = HermesValue::encodeObjectValue(proto);
+  clazzForPrototypeTmp = HermesValue::encodeObjectValue(
+      HiddenClass::updateObjectParent(
+          clazzWithNullObjParent,
+          *this,
+          Handle<JSObject>::vmcast(&clazzForPrototypeTmp)));
+  return Handle<HiddenClass>::vmcast(&clazzForPrototypeTmp);
 }
 
 } // namespace vm

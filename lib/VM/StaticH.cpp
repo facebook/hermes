@@ -10,6 +10,7 @@
 #include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/FastArray.h"
+#include "hermes/VM/HiddenClass-inline.h"
 #include "hermes/VM/Interpreter.h"
 #include "hermes/VM/JIT/Config.h"
 #include "hermes/VM/JSArray.h"
@@ -724,7 +725,7 @@ extern "C" void _sh_ljs_declare_global_var(SHRuntime *shr, SHSymbolID name) {
     if (res != ExecutionStatus::EXCEPTION)
       return;
     assert(
-        !runtime.getGlobal()->isProxyObject() &&
+        !runtime.getGlobal()->isProxyObject(runtime) &&
         "global can't be a proxy object");
     // If the property already exists, this should be a noop.
     // Instead of incurring the cost to check every time, do it
@@ -802,7 +803,7 @@ static inline void putById_RJS(
         LLVM_LIKELY(addCacheEntry.resultClazz) &&
         LLVM_LIKELY(
             addCacheEntry.getParentEpoch() == runtime.getParentCacheEpoch()) &&
-        LLVM_LIKELY(addCacheEntry.parent == obj->getParentGCPtr())) {
+        LLVM_LIKELY(addCacheEntry.parent == obj->getParentGCPtr(runtime))) {
       HiddenClass *resultClazz =
           addCacheEntry.resultClazz.getNonNull(runtime, runtime.getHeap());
       JSObject::addNewOwnPropertyInSlot(
@@ -1049,10 +1050,10 @@ static inline HermesValue getByIdWithReceiver_RJS(
       if (LLVM_LIKELY(cacheEntry->negMatchClazz == clazzPtr)) {
         // Proxy, HostObject and lazy objects have special hidden classes, so
         // they should never match the cached class.
-        assert(!obj->getFlags().proxyObject);
-        assert(!obj->getFlags().hostObject);
-        assert(!obj->getFlags().lazyObject);
-        const GCPointer<JSObject> &parentGCPtr = obj->getParentGCPtr();
+        assert(!obj->isProxyObject(runtime));
+        assert(!obj->isHostObject(runtime));
+        assert(!obj->isLazy(runtime));
+        const GCPointer<JSObject> &parentGCPtr = obj->getParentGCPtr(runtime);
         if (LLVM_LIKELY(parentGCPtr)) {
           JSObject *parent = parentGCPtr.getNonNull(runtime);
           if (LLVM_LIKELY(cacheEntry->clazz == parent->getClassGCPtr())) {
@@ -1089,7 +1090,7 @@ static inline HermesValue getByIdWithReceiver_RJS(
       }
 
       assert(
-          !obj->isProxyObject() &&
+          !obj->isProxyObject(runtime) &&
           "tryGetOwnNamedDescriptorFast returned true on Proxy");
       return JSObject::getNamedSlotValueUnsafe(obj, runtime, desc)
           .unboxToHV(runtime);
@@ -1703,16 +1704,42 @@ extern "C" SHLegacyValue _sh_ljs_new_object(SHRuntime *shr) {
 LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_ljs_new_object_with_parent(
     SHRuntime *shr,
-    const SHLegacyValue *parent) {
+    SHUnit *unit,
+    const SHLegacyValue *parent,
+    uint32_t shapeTableIndex) {
+  auto &runtime = getRuntime(shr);
+  auto *parentPHV = toPHV(parent);
+  Handle<JSObject> parentHandle = parentPHV->isObject()
+      ? Handle<JSObject>::vmcast(parentPHV)
+      : parentPHV->isNull()
+      ? Runtime::makeNullHandle<JSObject>()
+      : Handle<JSObject>::vmcast(&runtime.objectPrototype);
+
+  HiddenClass *clazz;
+  auto *cacheEntry = reinterpret_cast<WeakRoot<HiddenClass> *>(
+      &unit->object_literal_class_cache[shapeTableIndex]);
+  if (*cacheEntry &&
+      cacheEntry->getNonNull(runtime, runtime.getHeap())
+              ->getObjectParent(runtime) == *parentHandle) {
+    // There is a already a cached entry for this shape, we can just use that.
+    clazz = cacheEntry->getNonNull(runtime, runtime.getHeap());
+  } else {
+    clazz = *runtime.getHiddenClassForPrototype(
+        *parentHandle, runtime.classJSObject);
+    cacheEntry->set(runtime, clazz);
+  }
+
+  struct : public Locals {
+    PinnedValue<HiddenClass> clazz;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  lv.clazz = clazz;
+
   PseudoHandle<JSObject> result;
   {
-    NoHandleScope noHandle{getRuntime(shr)};
-    result = JSObject::create(
-        getRuntime(shr),
-        toPHV(parent)->isObject() ? Handle<JSObject>::vmcast(toPHV(parent))
-            : toPHV(parent)->isNull()
-            ? Runtime::makeNullHandle<JSObject>()
-            : Handle<JSObject>::vmcast(&getRuntime(shr).objectPrototype));
+    NoHandleScope noHandle{runtime};
+    result = JSObject::create(runtime, parentHandle, lv.clazz);
   }
   return result.getHermesValue();
 }
@@ -1727,7 +1754,9 @@ static SHLegacyValue createObjectFromBuffer(
   HiddenClass *clazz = nullptr;
   auto *cacheEntry = reinterpret_cast<WeakRoot<HiddenClass> *>(
       &unit->object_literal_class_cache[shapeTableIndex]);
-  if (*cacheEntry) {
+  if (*cacheEntry &&
+      cacheEntry->getNonNull(runtime, runtime.getHeap())
+              ->getObjectParent(runtime) == *parent) {
     // There is a already a cached entry for this shape, we can just use that.
     clazz = cacheEntry->getNonNull(runtime, runtime.getHeap());
   } else {
@@ -1761,8 +1790,8 @@ static SHLegacyValue createObjectFromBuffer(
     if (isTypedAllocKind(AllocKind)) {
       bool propertiesEnumerable =
           AllocKind != ObjectAllocKind::TypedNonEnumerable;
-      lv.clazz =
-          HiddenClass::createForTypedObject(runtime, shapeInfo->num_props);
+      lv.clazz = HiddenClass::createForTypedObject(
+          runtime, parent, shapeInfo->num_props);
       addTypedBufferPropertiesToHiddenClass(
           runtime,
           keyBuffer,
@@ -1777,8 +1806,7 @@ static SHLegacyValue createObjectFromBuffer(
           runtime,
           keyBuffer,
           shapeInfo->num_props,
-          *runtime.getHiddenClassForPrototype(
-              *parent, JSObject::numOverlapSlots<JSObject>()),
+          *runtime.getHiddenClassForPrototype(*parent, runtime.classJSObject),
           [unit](StringID id) {
             return SymbolID::unsafeCreate(unit->symbols[id]);
           });
@@ -1836,7 +1864,7 @@ static SHLegacyValue createObjectFromBuffer(
 
   if (isTypedAllocKind(AllocKind)) {
     // Freeze the object from the perspective of untyped code.
-    lv.obj->markAsTyped();
+    lv.obj->markAsTyped(runtime);
   }
 
   return lv.obj.getHermesValue();
@@ -2589,6 +2617,13 @@ _sh_string_concat(SHRuntime *shr, uint32_t argCount, ...) {
     _sh_throw_current(shr);
   }
   return *result;
+}
+
+extern "C" bool _sh_ljs_is_proxy(SHRuntime *shr, SHLegacyValue object) {
+  Runtime &runtime = getRuntime(shr);
+  HermesValue val = *toPHV(&object);
+  JSObject *obj = vmcast<JSObject>(val);
+  return obj->isProxyObject(runtime);
 }
 
 LLVM_ATTRIBUTE_NOINLINE

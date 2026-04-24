@@ -24,8 +24,8 @@ JSTypedArrayBase::JSTypedArrayBase(
       buffer_(nullptr),
       length_(0),
       offset_(0) {
-  flags_.indexedStorage = true;
-  flags_.fastIndexProperties = true;
+  assert(hasIndexedStorage(runtime) && "must have indexed storage");
+  assert(hasFastIndexProperties(runtime) && "must have fast index properties");
 }
 
 void TypedArrayBaseBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
@@ -76,9 +76,9 @@ OptValue<PropertyFlags> JSTypedArrayBase::_getOwnIndexedPropertyFlagsImpl(
   indexedElementFlags.writable = 1;
   indexedElementFlags.configurable = 1;
 
-  if (LLVM_UNLIKELY(self->flags_.sealed)) {
+  if (LLVM_UNLIKELY(self->getClass(runtime)->isSealed())) {
     indexedElementFlags.configurable = 0;
-    if (LLVM_UNLIKELY(self->flags_.frozen))
+    if (LLVM_UNLIKELY(self->getClass(runtime)->isFrozen()))
       indexedElementFlags.writable = 0;
   }
 
@@ -355,7 +355,9 @@ CallResult<Handle<JSTypedArrayBase>> JSTypedArray<T, C>::allocate(
     size_type length) {
   Handle<JSTypedArrayBase> ta = runtime.makeHandle(
       JSTypedArray<T, C>::create(
-          runtime, JSTypedArray<T, C>::getPrototype(runtime)));
+          runtime,
+          JSTypedArray<T, C>::getPrototype(runtime),
+          JSTypedArray<T, C>::getRootHiddenClass(runtime)));
   if (JSTypedArrayBase::createBuffer(runtime, ta, length) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -392,12 +394,10 @@ CallResult<Handle<JSTypedArrayBase>> JSTypedArray<T, C>::allocateSpecies(
 template <typename T, CellKind C>
 PseudoHandle<JSTypedArray<T, C>> JSTypedArray<T, C>::create(
     Runtime &runtime,
-    Handle<JSObject> parentHandle) {
-  auto *cell = runtime.makeAFixed<JSTypedArray<T, C>>(
-      runtime,
-      parentHandle,
-      runtime.getHiddenClassForPrototype(
-          *parentHandle, numOverlapSlots<JSTypedArray>()));
+    Handle<JSObject> parentHandle,
+    Handle<HiddenClass> clazz) {
+  auto *cell =
+      runtime.makeAFixed<JSTypedArray<T, C>>(runtime, parentHandle, clazz);
   return JSObjectInit::initToPseudoHandle(runtime, cell);
   // NOTE: If any fields are ever added beyond the base class, then the
   // *BuildMeta functions must be updated to call addJSObjectOverlapSlots.
@@ -423,6 +423,15 @@ PseudoHandle<JSTypedArray<T, C>> JSTypedArray<T, C>::create(
   JSTypedArray<type, CellKind::name##ArrayKind>::getPrototype(      \
       const Runtime &runtime) {                                     \
     return Handle<JSObject>::vmcast(&runtime.name##ArrayPrototype); \
+  }
+#include "hermes/VM/TypedArrays.def"
+
+#define TYPED_ARRAY(name, type)                                      \
+  template <>                                                        \
+  Handle<HiddenClass>                                                \
+  JSTypedArray<type, CellKind::name##ArrayKind>::getRootHiddenClass( \
+      const Runtime &runtime) {                                      \
+    return Handle<HiddenClass>::vmcast(&runtime.class##name##Array); \
   }
 #include "hermes/VM/TypedArrays.def"
 

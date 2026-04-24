@@ -869,6 +869,7 @@ CallResult<HermesValue> Interpreter::createThisImpl(
     PinnedHermesValue *callee,
     PinnedHermesValue *newTarget,
     uint8_t cacheIdx,
+    uint32_t shapeTableIdx,
     CodeBlock *curCodeBlock) {
   if (LLVM_UNLIKELY(!callee->isObject())) {
     // Add a leading space because the value will come first when we use
@@ -936,6 +937,8 @@ CallResult<HermesValue> Interpreter::createThisImpl(
     PinnedValue<Callable> newTarget;
     // This is the .prototype of new.target
     PinnedValue<JSObject> newTargetPrototype;
+    // HiddenClass for the new object.
+    PinnedValue<HiddenClass> clazz;
   } lv;
   LocalsRAII lraii(runtime, &lv);
   lv.newTarget = correctNewTarget;
@@ -971,7 +974,21 @@ CallResult<HermesValue> Interpreter::createThisImpl(
     }
   }
 
-  return JSObject::create(runtime, lv.newTargetPrototype).getHermesValue();
+  RuntimeModule *runtimeModule = curCodeBlock->getRuntimeModule();
+  if (auto *cachedClazz = runtimeModule->findCachedLiteralHiddenClass(
+          runtime, *lv.newTargetPrototype, shapeTableIdx)) {
+    lv.clazz = cachedClazz;
+  } else {
+    lv.clazz = *runtime.getHiddenClassForPrototype(
+        *lv.newTargetPrototype, runtime.classJSObject);
+    runtimeModule->setCachedLiteralHiddenClass(
+        runtime, shapeTableIdx, *lv.clazz);
+  }
+
+  // Avoid passing just the prototype to avoid a lookup and a HiddenClass
+  // transition. We use the cache to prepopulate the clazz.
+  return JSObject::create(runtime, lv.newTargetPrototype, lv.clazz)
+      .getHermesValue();
 }
 
 ExecutionStatus Interpreter::implCallBuiltin(
@@ -1030,7 +1047,7 @@ ExecutionStatus Interpreter::declareGlobalVarImpl(
       PropOpFlags().plusThrowOnError());
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     assert(
-        !runtime.getGlobal()->isProxyObject() &&
+        !runtime.getGlobal()->isProxyObject(runtime) &&
         "global can't be a proxy object");
     // If the property already exists, this should be a noop.
     // Instead of incurring the cost to check every time, do it
@@ -1469,7 +1486,7 @@ ExecutionStatus doGetByIdSlowPath_RJS(
     }
 
     assert(
-        !obj->isProxyObject() &&
+        !obj->isProxyObject(runtime) &&
         "tryGetOwnNamedDescriptorFast returned true on Proxy");
     O1REG(GetById) = JSObject::getNamedSlotValueUnsafe(obj, runtime, desc)
                          .unboxToHV(runtime);
@@ -1835,8 +1852,9 @@ CallResult<HiddenClass *> Interpreter::getHiddenClassForBuffer(
   LocalsRAII lraii(runtime, &lv);
 
   if (auto *cachedClazz = runtimeModule->findCachedLiteralHiddenClass(
-          runtime, shapeTableIndex)) {
+          runtime, *parent, shapeTableIndex)) {
     lv.clazz = cachedClazz;
+    assert(lv.clazz->getObjectParent(runtime) == *parent && "wrong parent");
   } else {
     const auto *shapeInfo =
         &runtimeModule->getBytecode()->getObjectShapeTable()[shapeTableIndex];
@@ -1852,8 +1870,8 @@ CallResult<HiddenClass *> Interpreter::getHiddenClassForBuffer(
     if (isTypedAllocKind(allocKind)) {
       bool propertiesEnumerable =
           allocKind != ObjectAllocKind::TypedNonEnumerable;
-      lv.clazz =
-          HiddenClass::createForTypedObject(runtime, shapeInfo->numProps);
+      lv.clazz = HiddenClass::createForTypedObject(
+          runtime, parent, shapeInfo->numProps);
       addTypedBufferPropertiesToHiddenClass(
           runtime,
           keyBuffer,
@@ -1864,8 +1882,8 @@ CallResult<HiddenClass *> Interpreter::getHiddenClassForBuffer(
             return runtimeModule->getSymbolIDMustExist(id);
           });
     } else {
-      auto *rootClazz = *runtime.getHiddenClassForPrototype(
-          *runtime.objectPrototype, JSObject::numOverlapSlots<JSObject>());
+      auto *rootClazz =
+          *runtime.getHiddenClassForPrototype(*parent, runtime.classJSObject);
 
       // Ensure that the hidden class does not start out with any properties, so
       // we just need to check the shape table entry.
@@ -1894,6 +1912,30 @@ CallResult<HiddenClass *> Interpreter::getHiddenClassForBuffer(
   return *lv.clazz;
 }
 
+PseudoHandle<> Interpreter::createObjectWithParent(
+    Runtime &runtime,
+    CodeBlock *curCodeBlock,
+    Handle<JSObject> parent,
+    unsigned shapeTableIndex) {
+  struct : public Locals {
+    PinnedValue<HiddenClass> clazz;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  CallResult<HiddenClass *> clazzRes = getHiddenClassForBuffer(
+      runtime, curCodeBlock, parent, shapeTableIndex, ObjectAllocKind::Untyped);
+  assert(
+      clazzRes != ExecutionStatus::EXCEPTION &&
+      "no properties, so this can't throw");
+  lv.clazz = *clazzRes;
+
+  // Create a new object using the built-in constructor or cached hidden class.
+  // Note that the built-in constructor is empty, so we don't actually need to
+  // call it.
+  return createPseudoHandle(
+      JSObject::create(runtime, parent, lv.clazz).getHermesValue());
+}
+
 CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
     Runtime &runtime,
     CodeBlock *curCodeBlock,
@@ -1918,6 +1960,7 @@ CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
   // Note that the built-in constructor is empty, so we don't actually need to
   // call it.
   lv.obj = JSObject::create(runtime, parent, lv.clazz).get();
+  assert(lv.obj->getParent(runtime) == *parent);
   auto numLiterals = lv.clazz->getNumProperties();
 
   // Set up the visitor to populate property values in the object.
@@ -1961,7 +2004,7 @@ CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
 
   if (isTypedAllocKind(allocKind)) {
     // Freeze the object from the perspective of untyped code.
-    lv.obj->markAsTyped();
+    lv.obj->markAsTyped(runtime);
   }
 
   return createPseudoHandle(lv.obj.getHermesValue());

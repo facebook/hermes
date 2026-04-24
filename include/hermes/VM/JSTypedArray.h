@@ -413,7 +413,8 @@ class JSTypedArray final : public JSTypedArrayBase {
 
   static PseudoHandle<JSTypedArray<T, C>> create(
       Runtime &runtime,
-      Handle<JSObject> prototype);
+      Handle<JSObject> prototype,
+      Handle<HiddenClass> clazz);
 
   T *begin(PointerBase &base) {
     return reinterpret_cast<T *>(data(base));
@@ -434,6 +435,7 @@ class JSTypedArray final : public JSTypedArrayBase {
   }
 
   static Handle<JSObject> getPrototype(const Runtime &runtime);
+  static Handle<HiddenClass> getRootHiddenClass(const Runtime &runtime);
   static Handle<Callable> getConstructor(const Runtime &runtime);
   static SymbolID getName(Runtime &runtime);
 

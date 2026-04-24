@@ -65,6 +65,12 @@ void JSWeakRef::_finalizeImpl(GCCell *cell, GC &) {
   self->ref_.releaseSlot();
 }
 
+PseudoHandle<JSWeakRef> JSWeakRef::create(Runtime &runtime) {
+  auto *cell = runtime.makeAFixed<JSWeakRef, HasFinalizer::Yes>(
+      runtime, runtime.weakRefPrototype, runtime.classJSWeakRef);
+  return JSObjectInit::initToPseudoHandle(runtime, cell);
+}
+
 PseudoHandle<JSWeakRef> JSWeakRef::create(
     Runtime &runtime,
     Handle<JSObject> parentHandle) {
@@ -72,7 +78,7 @@ PseudoHandle<JSWeakRef> JSWeakRef::create(
       runtime,
       parentHandle,
       runtime.getHiddenClassForPrototype(
-          *parentHandle, numOverlapSlots<JSWeakRef>()));
+          *parentHandle, runtime.classJSWeakRef));
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 

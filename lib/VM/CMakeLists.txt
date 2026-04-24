@@ -73,6 +73,7 @@ set(source_files
   SymbolRegistry.cpp
   TimeLimitMonitor.cpp
   TwineChar16.cpp
+  WeakValueObjectMap.cpp
   StringRefUtils.cpp
   VTable.cpp
   Metadata.cpp

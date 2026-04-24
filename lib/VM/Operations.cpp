@@ -2010,7 +2010,7 @@ ordinaryHasInstance(Runtime &runtime, Handle<> constructor, Handle<> object) {
     if (parentRes->get() == ctorPrototype.get()) {
       return true;
     }
-    if (head->isProxyObject()) {
+    if (head->isProxyObject(runtime)) {
       ++proxyCount;
       if (proxyCount > kMaxProxyCount) {
         return runtime.raiseRangeError(
@@ -2136,7 +2136,7 @@ CallResult<bool> isArray(Runtime &runtime, JSObject *obj) {
     if (vmisa<FastArray>(obj)) {
       return true;
     }
-    if (LLVM_LIKELY(!obj->isProxyObject())) {
+    if (LLVM_LIKELY(!obj->isProxyObject(runtime))) {
       return false;
     }
     if (JSProxy::isRevoked(obj, runtime)) {
@@ -2538,7 +2538,7 @@ ExecutionStatus setTemplateObjectProps(
     return runtime.raiseTypeError(
         "Failed to set 'length' property on the raw object read-only.");
   }
-  JSObject::preventExtensions(rawObj.get());
+  JSObject::preventExtensionsNonProxy(rawObj, runtime);
 
   // Set raw object as a read-only non-enumerable property of the template
   // object.
@@ -2570,7 +2570,7 @@ ExecutionStatus setTemplateObjectProps(
     return runtime.raiseTypeError(
         "Failed to set 'length' property on the raw object read-only.");
   }
-  JSObject::preventExtensions(templateObj.get());
+  JSObject::preventExtensionsNonProxy(templateObj, runtime);
 
   return ExecutionStatus::RETURNED;
 }

@@ -34,6 +34,8 @@ NAMED_PROP(ExternalMemoryPressure)
 
 /// A reserved symbol ID to use for the HC transition to the frozen state.
 NAMED_PROP(FreezeTransition)
+/// A reserved symbol ID to use for the HC transition between ClassFlags.
+NAMED_PROP(FlagsTransition)
 
 #undef PROP
 #undef NAMED_PROP

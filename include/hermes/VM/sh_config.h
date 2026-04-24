@@ -11,7 +11,7 @@
 #include "libhermesvm-config.h"
 
 /// Number of property slots allocated directly inside the object.
-enum { HERMESVM_DIRECT_PROPERTY_SLOTS = 5 };
+enum { HERMESVM_DIRECT_PROPERTY_SLOTS = 6 };
 
 #ifndef __cplusplus
 // uchar.h is not universally available, so just define our own.

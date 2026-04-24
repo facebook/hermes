@@ -268,7 +268,7 @@ function stringSwitchSeveralSwitches(b, s, i) {
 // HBC-NEXT:  StringSwitchImm count: 2
 // HBC-NEXT:  Key buffer size (bytes): 0
 // HBC-NEXT:  Value buffer size (bytes): 0
-// HBC-NEXT:  Shape table count: 0
+// HBC-NEXT:  Shape table count: 1
 // HBC-NEXT:  Segment ID: 0
 // HBC-NEXT:  CommonJS module count: 0
 // HBC-NEXT:  CommonJS module count (static): 0
@@ -300,6 +300,9 @@ function stringSwitchSeveralSwitches(b, s, i) {
 // HBC-NEXT:s19[ASCII, 69..70]: l8
 // HBC-NEXT:s20[ASCII, 71..72]: l9
 // HBC-NEXT:i21[ASCII, 73..99] #88138FB1: stringSwitchSeveralSwitches
+
+// HBC:Object Shape Table:
+// HBC-NEXT:0[0, 0]
 
 // HBC:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // HBC-NEXT:Offset in debug table: source 0x0000

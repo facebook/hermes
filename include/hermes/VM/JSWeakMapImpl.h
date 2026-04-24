@@ -335,6 +335,9 @@ class JSWeakMapImpl final : public JSWeakMapImplBase {
   }
 
   /// Create a new WeakMap with prototype property \p parentHandle.
+  /// Create a JSWeakMapImpl using the appropriate prototype from runtime.
+  static CallResult<PseudoHandle<JSWeakMapImpl<C>>> create(Runtime &runtime);
+
   static CallResult<PseudoHandle<JSWeakMapImpl<C>>> create(
       Runtime &runtime,
       Handle<JSObject> parentHandle);

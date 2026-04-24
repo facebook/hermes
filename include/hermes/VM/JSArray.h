@@ -99,7 +99,9 @@ class ArrayImpl : public JSObject {
       SmallHermesValue value) {
     // The array must be extendable (and by implication is not frozen or sealed)
     // because we don't know whether the element being set is empty or not.
-    assert(!self->flags_.noExtend && "this array cannot be extended");
+    assert(
+        self->getClass(runtime)->isExtensible() &&
+        "this array cannot be extended");
 
     assert(
         index >= self->beginIndex_ && index < self->getEndIndex() &&
@@ -194,8 +196,9 @@ class ArrayImpl : public JSObject {
       HiddenClass *clazz,
       NeedsBarriers needsBarriers)
       : JSObject(runtime, parent, clazz, needsBarriers) {
-    flags_.indexedStorage = true;
-    flags_.fastIndexProperties = true;
+    assert(hasIndexedStorage(runtime) && "must have indexed storage");
+    assert(
+        hasFastIndexProperties(runtime) && "must have fast index properties");
   }
 
   /// Default needsBarriers to Yes.
@@ -324,9 +327,11 @@ class JSArray final : public ArrayImpl {
 
   /// Construct an instance of the hidden class describing the layout of JSArray
   /// instances.
-  static Handle<HiddenClass> createClass(
+  /// \param rootClazz the starting HiddenClass for the JSArray.
+  static HiddenClass *createClass(
       Runtime &runtime,
-      Handle<JSObject> prototypeHandle);
+      Handle<JSObject> prototypeHandle,
+      Handle<HiddenClass> rootClazz);
 
   static constexpr CellKind getCellKind() {
     return CellKind::JSArrayKind;
@@ -376,16 +381,7 @@ class JSArray final : public ArrayImpl {
       Runtime &runtime,
       Handle<JSObject> prototypeHandle,
       size_type capacity,
-      size_type length) {
-    return createNoAllocPropStorage(
-        runtime,
-        prototypeHandle,
-        *prototypeHandle == *runtime.arrayPrototype
-            ? runtime.arrayClass
-            : createClass(runtime, prototypeHandle),
-        capacity,
-        length);
-  }
+      size_type length);
   static CallResult<PseudoHandle<JSArray>> create(
       Runtime &runtime,
       Handle<JSObject> prototypeHandle) {

@@ -16,7 +16,7 @@ bazz = "const-string";
 
 //CHECK:    DeclareGlobalVar  "glob"
 //CHECK:    DeclareGlobalVar  "re"
-//CHECK:    NewObjectWithBuffer {{r[0-9]+}}, 0, 0
+//CHECK:    NewObjectWithBuffer {{r[0-9]+}}, 1, 0
 //CHECK:    GetGlobalObject   {{r[0-9]+}}
 //CHECK:    TryGetById        {{r[0-9]+}}, {{r[0-9]+}}, 0, "bar"
 //CHECK:    LoadConstUndefined {{r[0-9]+}}

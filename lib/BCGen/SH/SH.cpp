@@ -1693,42 +1693,35 @@ class InstrGen {
     assert(
         inst.getKeyValuePairCount() == 0 &&
         "AllocObjectLiteralInst with properties should be lowered to LIRAllocObjectFromBufferInst");
+    assert(llvh::isa<EmptySentinel>(inst.getParentObject()));
     os_.indent(2);
     generateRegister(inst);
     os_ << " = ";
     // TODO: Utilize sizeHint.
-    if (llvh::isa<EmptySentinel>(inst.getParentObject())) {
-      os_ << "_sh_ljs_new_object(shr)";
-    } else {
-      os_ << "_sh_ljs_new_object_with_parent(shr, &";
-      generateValue(*inst.getParentObject());
-      os_ << ")";
-    }
+    os_ << "_sh_ljs_new_object(shr)";
     os_ << ";\n";
   }
   void generateAllocTypedObjectInst(AllocTypedObjectInst &inst) {
     assert(
         inst.getKeyValuePairCount() == 0 &&
         "AllocTypedObjectInst with properties should be lowered to LIRAllocObjectFromBufferInst");
+    assert(llvh::isa<EmptySentinel>(inst.getParentObject()));
     os_.indent(2);
     generateRegister(inst);
     os_ << " = ";
     // TODO: Utilize sizeHint.
-    os_ << "_sh_ljs_new_object_with_parent(shr, &";
-    generateValue(*inst.getParentObject());
-    os_ << ")";
+    os_ << "_sh_ljs_new_object(shr)";
     os_ << ";\n";
   }
   void generateAllocTypedNonEnumObjectInst(AllocTypedNonEnumObjectInst &inst) {
     assert(
         inst.getKeyValuePairCount() == 0 &&
         "AllocTypedNonEnumObjectInst with properties should be lowered to LIRAllocTypedNonEnumObjectFromBufferInst");
+    assert(llvh::isa<EmptySentinel>(inst.getParentObject()));
     os_.indent(2);
     generateRegister(inst);
     os_ << " = ";
-    os_ << "_sh_ljs_new_object_with_parent(shr, &";
-    generateValue(*inst.getParentObject());
-    os_ << ")";
+    os_ << "_sh_ljs_new_object(shr)";
     os_ << ";\n";
   }
   void generateCreateArgumentsLooseInst(CreateArgumentsLooseInst &inst) {
@@ -2184,15 +2177,24 @@ class InstrGen {
         moduleGen_.literalBuffers.serializedLiteralOffsetFor(&inst);
 
     os_ << " = ";
-    if (llvh::isa<EmptySentinel>(inst.getParentObject())) {
+    if (inst.getKeyValuePairCount() == 0) {
+      assert(
+          !llvh::isa<EmptySentinel>(inst.getParentObject()) &&
+          "must have a parent, otherwise we should use AllocObjectLiteral");
+      os_ << "_sh_ljs_new_object_with_parent(shr, shUnit, ";
+      generateRegisterPtr(*inst.getParentObject());
+      os_ << ", " << shapeIdx << ")";
+    } else if (llvh::isa<EmptySentinel>(inst.getParentObject())) {
       os_ << "_sh_ljs_new_object_with_buffer(shr, shUnit, ";
     } else {
       os_ << "_sh_ljs_new_object_with_buffer_and_parent(shr, shUnit, ";
       generateRegisterPtr(*inst.getParentObject());
       os_ << ", ";
     }
-    os_ << shapeIdx << ", ";
-    os_ << valIdx << ")";
+    if (inst.getKeyValuePairCount() > 0) {
+      os_ << shapeIdx << ", ";
+      os_ << valIdx << ")";
+    }
     os_ << ";\n";
   }
   void generateLIRAllocTypedObjectFromBufferInst(
@@ -2204,12 +2206,19 @@ class InstrGen {
         moduleGen_.literalBuffers.serializedLiteralOffsetFor(&inst);
 
     os_ << " = ";
-    os_ << "_sh_new_typed_object_with_buffer(shr, shUnit, ";
-    generateRegisterPtr(*inst.getParentObject());
-    os_ << ", ";
-    os_ << shapeIdx << ", ";
-    os_ << valIdx;
-    os_ << ");\n";
+    if (inst.getKeyValuePairCount() == 0) {
+      os_ << "_sh_ljs_new_object_with_parent(shr, shUnit, ";
+      generateRegisterPtr(*inst.getParentObject());
+      os_ << ", " << shapeIdx << ")";
+    } else {
+      os_ << "_sh_new_typed_object_with_buffer(shr, shUnit, ";
+      generateRegisterPtr(*inst.getParentObject());
+      os_ << ", ";
+      os_ << shapeIdx << ", ";
+      os_ << valIdx;
+      os_ << ")";
+    }
+    os_ << ";\n";
   }
   void generateLIRAllocTypedNonEnumObjectFromBufferInst(
       LIRAllocTypedNonEnumObjectFromBufferInst &inst) {
@@ -2220,12 +2229,19 @@ class InstrGen {
         moduleGen_.literalBuffers.serializedLiteralOffsetFor(&inst);
 
     os_ << " = ";
-    os_ << "_sh_new_typed_non_enum_object_with_buffer(shr, shUnit, ";
-    generateRegisterPtr(*inst.getParentObject());
-    os_ << ", ";
-    os_ << shapeIdx << ", ";
-    os_ << valIdx;
-    os_ << ");\n";
+    if (inst.getKeyValuePairCount() == 0) {
+      os_ << "_sh_ljs_new_object_with_parent(shr, shUnit, ";
+      generateRegisterPtr(*inst.getParentObject());
+      os_ << ", " << shapeIdx << ")";
+    } else {
+      os_ << "_sh_new_typed_non_enum_object_with_buffer(shr, shUnit, ";
+      generateRegisterPtr(*inst.getParentObject());
+      os_ << ", ";
+      os_ << shapeIdx << ", ";
+      os_ << valIdx;
+      os_ << ")";
+    }
+    os_ << ";\n";
   }
   void generateHBCProfilePointInst(HBCProfilePointInst &inst) {
     unimplemented(inst);

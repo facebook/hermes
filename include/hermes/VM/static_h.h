@@ -27,7 +27,6 @@ extern "C" {
 #endif
 
 typedef struct SHUnitExt SHUnitExt;
-typedef uint32_t SHSymbolID;
 typedef struct SHUnit SHUnit;
 
 /// Encodes the set of keys to be used to construct an object literal.
@@ -1249,8 +1248,11 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_typeof(SHRuntime *shr, SHLegacyValue *v);
 SHERMES_EXPORT bool _sh_ljs_typeof_is(SHLegacyValue val, uint16_t types);
 
 SHERMES_EXPORT SHLegacyValue _sh_ljs_new_object(SHRuntime *shr);
-SHERMES_EXPORT SHLegacyValue
-_sh_ljs_new_object_with_parent(SHRuntime *shr, const SHLegacyValue *parent);
+SHERMES_EXPORT SHLegacyValue _sh_ljs_new_object_with_parent(
+    SHRuntime *shr,
+    SHUnit *unit,
+    const SHLegacyValue *parent,
+    uint32_t shapeTableIndex);
 
 /// \p shapeTableIndex the entry index in the literal shape table.
 /// \p valBufferOffset the beginning offset in the literal value buffer.
@@ -1614,16 +1616,23 @@ static inline SHLegacyValue _sh_fastarray_length(
 #endif
 }
 
+/// \return true if the given JSObject is a proxy.
+SHERMES_EXPORT bool _sh_ljs_is_proxy(SHRuntime *shr, SHLegacyValue object);
+
 /// \return the parent of the legacy, ordinary object \p object. It must not be
 /// a proxy.
 static inline SHLegacyValue _sh_ljs_load_parent_no_traps(
     SHRuntime *shr,
     SHLegacyValue object) {
   SHJSObject *objectPtr = (SHJSObject *)_sh_ljs_get_pointer(object);
-  assert(!objectPtr->flags.proxyObject && "proxy is not supported");
-  if (objectPtr->parent) {
-    SHCompressedPointer parent = {.raw = objectPtr->parent};
-    return _sh_ljs_object(_sh_cp_decode_non_null(shr, parent));
+  SHCompressedPointer clazzCompressed = {.raw = objectPtr->clazz};
+  SHHiddenClass *clazz =
+      (SHHiddenClass *)_sh_cp_decode_non_null(shr, clazzCompressed);
+  assert(!_sh_ljs_is_proxy(shr, object) && "proxy is not supported");
+  if (clazz->objectParent) {
+    SHCompressedPointer parent = {.raw = clazz->objectParent};
+    SHJSObject *parentPtr = (SHJSObject *)_sh_cp_decode_non_null(shr, parent);
+    return _sh_ljs_object(parentPtr);
   }
   return _sh_ljs_null();
 }
@@ -1631,9 +1640,12 @@ static inline SHLegacyValue _sh_ljs_load_parent_no_traps(
 static inline SHLegacyValue _sh_typed_load_parent(
     SHRuntime *shr,
     const SHLegacyValue *object) {
-  SHCompressedPointer parent = {
-      .raw = ((SHJSObject *)_sh_ljs_get_pointer(*object))->parent};
-  return _sh_ljs_object(_sh_cp_decode_non_null(shr, parent));
+  SHCompressedPointer clazzCompressed = {
+      .raw = ((SHJSObject *)_sh_ljs_get_pointer(*object))->clazz};
+  SHHiddenClass *clazz =
+      (SHHiddenClass *)_sh_cp_decode_non_null(shr, clazzCompressed);
+  SHCompressedPointer parentCompressed = {.raw = clazz->objectParent};
+  return _sh_ljs_object(_sh_cp_decode(shr, parentCompressed));
 }
 
 /// If the double value is within representable integer range, convert it,

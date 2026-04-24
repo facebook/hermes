@@ -45,7 +45,7 @@ function foo() {
 // CHKBC-NEXT:  StringSwitchImm count: 0
 // CHKBC-NEXT:  Key buffer size (bytes): 0
 // CHKBC-NEXT:  Value buffer size (bytes): 0
-// CHKBC-NEXT:  Shape table count: 0
+// CHKBC-NEXT:  Shape table count: 1
 // CHKBC-NEXT:  Segment ID: 0
 // CHKBC-NEXT:  CommonJS module count: 0
 // CHKBC-NEXT:  CommonJS module count (static): 0
@@ -58,6 +58,9 @@ function foo() {
 // CHKBC-NEXT:s0[ASCII, 0..5]: global
 // CHKBC-NEXT:i1[ASCII, 6..8] #9290584E: foo
 // CHKBC-NEXT:i2[ASCII, 9..9] #0001E7F9: x
+
+// CHKBC:Object Shape Table:
+// CHKBC-NEXT:0[0, 0]
 
 // CHKBC:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHKBC-NEXT:Offset in debug table: source 0x0000

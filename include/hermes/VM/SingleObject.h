@@ -28,14 +28,17 @@ class SingleObject final : public JSObject {
   }
 
   /// Create a SingleObject.
-  static CallResult<HermesValue> create(
-      Runtime &runtime,
-      Handle<JSObject> parentHandle) {
+  static CallResult<HermesValue> create(Runtime &runtime) {
+    Handle<HiddenClass> clazz = runtime.classJSMath;
+    if constexpr (kind == CellKind::JSMathKind) {
+      clazz = runtime.classJSMath;
+    } else {
+      static_assert(kind == CellKind::JSJSONKind, "Unknown SingleObject kind");
+      clazz = runtime.classJSJSON;
+    }
+
     auto *cell = runtime.makeAFixed<SingleObject>(
-        runtime,
-        parentHandle,
-        runtime.getHiddenClassForPrototype(
-            *parentHandle, numOverlapSlots<SingleObject>()));
+        runtime, runtime.objectPrototype, clazz);
     return JSObjectInit::initToHermesValue(runtime, cell);
   }
 

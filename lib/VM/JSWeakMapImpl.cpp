@@ -247,13 +247,37 @@ const ObjectVTable JSWeakMapImpl<C>::vt{
 
 template <CellKind C>
 CallResult<PseudoHandle<JSWeakMapImpl<C>>> JSWeakMapImpl<C>::create(
+    Runtime &runtime) {
+  Handle<JSObject> prototype = runtime.weakMapPrototype;
+  Handle<HiddenClass> clazz = runtime.classJSWeakMap;
+  if constexpr (C == CellKind::JSWeakMapKind) {
+    prototype = Handle<JSObject>::vmcast(&runtime.weakMapPrototype);
+    clazz = Handle<HiddenClass>::vmcast(&runtime.classJSWeakMap);
+  } else {
+    static_assert(C == CellKind::JSWeakSetKind, "Unexpected CellKind");
+    prototype = Handle<JSObject>::vmcast(&runtime.weakSetPrototype);
+    clazz = Handle<HiddenClass>::vmcast(&runtime.classJSWeakSet);
+  }
+  auto *cell = runtime.makeAFixed<JSWeakMapImpl<C>, HasFinalizer::Yes>(
+      runtime, prototype, clazz);
+  return JSObjectInit::initToPseudoHandle(runtime, cell);
+}
+
+template <CellKind C>
+CallResult<PseudoHandle<JSWeakMapImpl<C>>> JSWeakMapImpl<C>::create(
     Runtime &runtime,
     Handle<JSObject> parentHandle) {
+  Handle<HiddenClass> clazz = runtime.classJSWeakMap;
+  if constexpr (C == CellKind::JSWeakMapKind) {
+    clazz = runtime.getHiddenClassForPrototype(
+        *parentHandle, runtime.classJSWeakMap);
+  } else {
+    static_assert(C == CellKind::JSWeakSetKind, "Unexpected CellKind");
+    clazz = runtime.getHiddenClassForPrototype(
+        *parentHandle, runtime.classJSWeakSet);
+  }
   auto *cell = runtime.makeAFixed<JSWeakMapImpl<C>, HasFinalizer::Yes>(
-      runtime,
-      parentHandle,
-      runtime.getHiddenClassForPrototype(
-          *parentHandle, numOverlapSlots<JSWeakMapImpl>()));
+      runtime, parentHandle, clazz);
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
