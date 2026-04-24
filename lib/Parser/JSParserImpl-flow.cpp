@@ -4747,9 +4747,15 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeParamFlow() {
     advance(JSLexer::GrammarContext::Type);
   }
 
-  if (!need(TokenKind::identifier, "in type parameter", nullptr, {}))
+  // Accept `in` (rw_in) as a type-parameter name in addition to plain
+  // identifiers, matching Flow which reclassifies `in` to an identifier
+  // in TYPE lex mode. `out` already works because it's a plain identifier
+  // in Hermes (not a reserved word).
+  if (!check(TokenKind::identifier) && !check(TokenKind::rw_in)) {
+    errorExpected(TokenKind::identifier, "in type parameter", nullptr, {});
     return None;
-  UniqueString *name = tok_->getIdentifier();
+  }
+  UniqueString *name = tok_->getResWordOrIdentifier();
   advance(JSLexer::GrammarContext::Type);
 
   ESTree::Node *bound = nullptr;
