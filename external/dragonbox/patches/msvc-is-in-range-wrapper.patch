@@ -1,0 +1,22 @@
+diff --git a/xplat/static_h/external/dragonbox/dragonbox/dragonbox.h b/xplat/static_h/external/dragonbox/dragonbox/dragonbox.h
+--- a/xplat/static_h/external/dragonbox/dragonbox/dragonbox.h
++++ b/xplat/static_h/external/dragonbox/dragonbox/dragonbox.h
+@@ -1107,10 +1107,17 @@
+                     return false;
+                 }
+ 
++                template <template <stdr::size_t> class Info, stdr::int_least32_t min_exponent,
++                          stdr::int_least32_t max_exponent, stdr::size_t current_tier>
++                struct is_in_range_v {
++                    static constexpr bool value =
++                        is_in_range<Info, min_exponent, max_exponent, current_tier>(0);
++                };
++
+                 // Generic implementation of log computations.
+                 template <template <stdr::size_t> class Info, stdr::int_least32_t min_exponent,
+                           stdr::int_least32_t max_exponent, stdr::size_t current_tier = 0,
+-                          bool = is_in_range<Info, min_exponent, max_exponent, current_tier>(0)>
++                          bool = is_in_range_v<Info, min_exponent, max_exponent, current_tier>::value>
+                 struct compute_impl;
+ 
+                 // Specialization for the case when the given tier covers the requested range of input.
