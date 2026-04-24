@@ -410,7 +410,7 @@ CallResult<HermesValue> numberPrototypeToFixed(void *, Runtime &runtime) {
         "toFixed argument must be between 0 and 100");
   }
   /// Number of digits after the decimal point.
-  /// Because we checked, 0 <= f <= 20.
+  /// Because we checked, 0 <= f <= 100.
   /// In particular, we know that f is non-negative.
   int32_t f = static_cast<int32_t>(fDouble);
 
