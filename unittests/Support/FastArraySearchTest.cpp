@@ -679,4 +679,123 @@ TEST(SIMD, ReverseU64VariousOffsets) {
   EXPECT_EQ(searchReverseU64(arr, 0, 5, 42), -1);
 }
 
+//===----------------------------------------------------------------------===//
+// scanJsonEscapeU8
+//===----------------------------------------------------------------------===//
+
+TEST(SIMD, ScanU8Empty) {
+  const char *p = "";
+  EXPECT_EQ(scanJsonEscapeU8(p, p), p);
+}
+
+TEST(SIMD, ScanU8NoSpecial) {
+  const char *s = "hello world 123";
+  EXPECT_EQ(scanJsonEscapeU8(s, s + 15), s + 15);
+}
+
+TEST(SIMD, ScanU8Quote) {
+  const char *s = "hello\"world";
+  EXPECT_EQ(scanJsonEscapeU8(s, s + 11), s + 5);
+}
+
+TEST(SIMD, ScanU8Backslash) {
+  const char *s = "hello\\world";
+  EXPECT_EQ(scanJsonEscapeU8(s, s + 11), s + 5);
+}
+
+TEST(SIMD, ScanU8ControlChar) {
+  std::string s = "hello";
+  s += '\x0A'; // newline
+  s += "world";
+  EXPECT_EQ(scanJsonEscapeU8(s.data(), s.data() + s.size()), s.data() + 5);
+}
+
+TEST(SIMD, ScanU8AtStart) {
+  const char *s = "\"hello";
+  EXPECT_EQ(scanJsonEscapeU8(s, s + 6), s);
+}
+
+TEST(SIMD, ScanU8AtEnd) {
+  std::string s(30, 'a');
+  s += '"';
+  EXPECT_EQ(scanJsonEscapeU8(s.data(), s.data() + s.size()), s.data() + 30);
+}
+
+TEST(SIMD, ScanU8Large) {
+  // Test across SIMD boundaries (>16 bytes).
+  std::string s(200, 'x');
+  s[150] = '"';
+  EXPECT_EQ(scanJsonEscapeU8(s.data(), s.data() + s.size()), s.data() + 150);
+}
+
+TEST(SIMD, ScanU8LargeNoSpecial) {
+  std::string s(200, 'x');
+  EXPECT_EQ(
+      scanJsonEscapeU8(s.data(), s.data() + s.size()), s.data() + s.size());
+}
+
+TEST(SIMD, ScanU8ControlZero) {
+  std::string s = "abc";
+  s += '\0';
+  s += "def";
+  EXPECT_EQ(scanJsonEscapeU8(s.data(), s.data() + s.size()), s.data() + 3);
+}
+
+//===----------------------------------------------------------------------===//
+// scanJsonEscapeU16
+//===----------------------------------------------------------------------===//
+
+TEST(SIMD, ScanU16Empty) {
+  const char16_t *p = u"";
+  EXPECT_EQ(scanJsonEscapeU16(p, p), p);
+}
+
+TEST(SIMD, ScanU16NoSpecial) {
+  const char16_t *s = u"hello world 123";
+  EXPECT_EQ(scanJsonEscapeU16(s, s + 15), s + 15);
+}
+
+TEST(SIMD, ScanU16Quote) {
+  const char16_t *s = u"hello\"world";
+  EXPECT_EQ(scanJsonEscapeU16(s, s + 11), s + 5);
+}
+
+TEST(SIMD, ScanU16Backslash) {
+  const char16_t *s = u"hello\\world";
+  EXPECT_EQ(scanJsonEscapeU16(s, s + 11), s + 5);
+}
+
+TEST(SIMD, ScanU16ControlChar) {
+  std::u16string s = u"hello";
+  s += u'\x0A';
+  s += u"world";
+  EXPECT_EQ(scanJsonEscapeU16(s.data(), s.data() + s.size()), s.data() + 5);
+}
+
+TEST(SIMD, ScanU16Large) {
+  std::u16string s(200, u'x');
+  s[150] = u'"';
+  EXPECT_EQ(scanJsonEscapeU16(s.data(), s.data() + s.size()), s.data() + 150);
+}
+
+TEST(SIMD, ScanU16LargeNoSpecial) {
+  std::u16string s(200, u'x');
+  EXPECT_EQ(
+      scanJsonEscapeU16(s.data(), s.data() + s.size()), s.data() + s.size());
+}
+
+TEST(SIMD, ScanU16HighUnicode) {
+  // Characters above 0x1F but not quote/backslash should be skipped.
+  std::u16string s(20, u'\u4e2d'); // Chinese character
+  s += u'"';
+  EXPECT_EQ(scanJsonEscapeU16(s.data(), s.data() + s.size()), s.data() + 20);
+}
+
+TEST(SIMD, ScanU16HighBit) {
+  // Values >= 0x8000 must not false-positive as control chars.
+  std::u16string s(20, u'\uFFFF');
+  s += u'"';
+  EXPECT_EQ(scanJsonEscapeU16(s.data(), s.data() + s.size()), s.data() + 20);
+}
+
 } // namespace
