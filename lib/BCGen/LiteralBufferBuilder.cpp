@@ -16,7 +16,7 @@
 #include "hermes/VM/ObjectAllocKind.h"
 
 namespace hermes::LiteralBufferBuilder::detail {
-/// The key with which to to deduplicate shape table entries in coordToIdx.
+/// The key with which to deduplicate shape table entries in coordToIdx.
 struct ShapeTableDedupKey {
   /// The offset of the first key in the key buffer.
   uint32_t keyBufferOffset;
@@ -160,7 +160,7 @@ class Builder {
   void serializeLiteralFor(LIRAllocTypedObjectFromBufferInst *AOFB);
   void serializeLiteralFor(LIRAllocTypedNonEnumObjectFromBufferInst *AOFB);
 
-  /// Serialize the the input literals \p elements into the UniquedStringVector
+  /// Serialize the input literals \p elements into the UniquedStringVector
   /// \p dest.
   /// \p isKeyBuffer: whether this is generating object literal key buffer or
   /// not.

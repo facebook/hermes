@@ -721,7 +721,7 @@ inline ClassFlags HiddenClass::computeFlags(
     PropertyFlags pf,
     bool addedIndexLike) {
   flags.hasIndexLikeProperties |= addedIndexLike;
-  // Carry over the the existing mayHaveAccessor flag. Once an accessor property
+  // Carry over the existing mayHaveAccessor flag. Once an accessor property
   // has been set, all subsequent classes must have this property marked.
   flags.mayHaveAccessor |= pf.accessor;
   return flags;

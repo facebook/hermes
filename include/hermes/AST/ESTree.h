@@ -496,7 +496,7 @@ class IdentifierDecoration {
 };
 
 namespace detail {
-/// We need to to be able customize some ESTree types when passing them through
+/// We need to be able to customize some ESTree types when passing them through
 /// a constructor, so we create a simple template type mapper. Specifically, a
 /// NodeList has to be passed by RValue-reference and moved into place.
 /// In the default case, the type is unmodified.

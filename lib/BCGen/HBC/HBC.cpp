@@ -117,7 +117,7 @@ class LazyCompilationThreadData {
 
 /// Worker function for the compileLazyFunction, intended to be run in a
 /// thread with a fresh stack to prevent stack overflows.
-/// \param argPtr[in/out] pointer to the the LazyCompilationThreadData to use as
+/// \param argPtr[in/out] pointer to the LazyCompilationThreadData to use as
 ///   input/output.
 static void compileLazyFunctionWorker(void *argPtr) {
   LazyCompilationThreadData *data =
@@ -607,7 +607,7 @@ VariableInfoAtDepth getVariableInfoAtDepth(
   sema::SemContext *semCtx = providerFromSrc->getSemCtx();
   if (!semCtx->customData2) {
     // The lifetime of this cache has to be tied to the lifetime of the
-    // SemContext. A SemContext could be destoryed and allocated again. there's
+    // SemContext. A SemContext could be destroyed and allocated again. there's
     // then a potential for a new LexicalScope in the same place but with
     // different data. Use shared_ptr to make sure it isn't accessible after the
     // SemContext is freed.

@@ -302,7 +302,7 @@ ExecutionStatus JSONLexer<Kind>::scanString() {
     break;
   }
 
-  // We reach this point after an escape has occured. This means that the
+  // We reach this point after an escape has occurred. This means that the
   // contents of the string we are parsing don't actually exist byte for byte in
   // the input string. Instead, we must build the contents of the string from
   // scratch. The contents of the string are placed into escapedStr.

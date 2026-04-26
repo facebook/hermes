@@ -30,7 +30,7 @@ class StringKind {
   StringKind() = delete;
 
   enum Kind : uint32_t {
-    /// Not been used as an identifer.
+    /// Not been used as an identifier.
     String = 0u << CountBits,
 
     /// Used as an identifier.

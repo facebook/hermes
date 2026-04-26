@@ -168,7 +168,7 @@ class ManagedChunkedList {
       chunk = nextChunk;
     }
 
-    // Schedule the next collection at a multiple of the the number of suviving
+    // Schedule the next collection at a multiple of the number of surviving
     // elements (using the occupancy ratio), averaged with previous target to
     // avoid drastic jumps.
     targetChunkCount_.update(

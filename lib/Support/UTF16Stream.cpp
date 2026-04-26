@@ -47,7 +47,7 @@ void UTF16Stream::makeRoomForCapture() {
   assert(beginCapture_ && "no active capture");
   assert(cur_ == end_ && "there is still room left for the capture");
   size_t beginCaptureOffset = beginCapture_ - &storage_.front();
-  // We only grow the conversion buffer if the the beginning of the capture is
+  // We only grow the conversion buffer if the beginning of the capture is
   // in the first half of the buffer. Otherwise, we just copy the current
   // capture into the beginning of the storage.
   if (beginCaptureOffset < storage_.size() / 2) {

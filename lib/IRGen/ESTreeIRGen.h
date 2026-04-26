@@ -1554,7 +1554,7 @@ class ESTreeIRGen {
       BuiltinMethod::Enum builtinIndex,
       ArrayRef<Value *> args);
 
-  /// Generate code to ensure that \p value is an object and it it isn't, throw
+  /// Generate code to ensure that \p value is an object and if it isn't, throw
   /// a type error with the specified message.
   void emitEnsureObject(Value *value, llvh::StringRef message);
 
