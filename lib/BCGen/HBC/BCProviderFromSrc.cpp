@@ -104,6 +104,7 @@ BCProviderFromSrc::create(
 
   CodeGenerationSettings codeGenOpts{};
   codeGenOpts.test262 = compileFlags.test262;
+  codeGenOpts.enableTDZ = compileFlags.enableTDZ;
 
   OptimizationSettings optSettings;
   // If the optional value is not set, the parser will automatically detect
