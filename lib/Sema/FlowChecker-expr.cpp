@@ -300,6 +300,7 @@ class FlowChecker::ExprVisitor {
         }
 
         params.push_back(typedFnParam);
+        ++i;
       }
 
       Type *returnType;
