@@ -1909,7 +1909,11 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement(Param param) {
       if (!optIdent)
         return None;
       ESTree::NodeList declList;
-      declList.push_back(**optIdent);
+      auto *declarator = setLocation(
+          *optIdent,
+          *optIdent,
+          new (context_) ESTree::VariableDeclaratorNode(nullptr, *optIdent));
+      declList.push_back(*declarator);
 
       decl = setLocation(
           varStartLoc,
@@ -1929,7 +1933,11 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement(Param param) {
     if (!optIdent)
       return None;
     ESTree::NodeList declList;
-    declList.push_back(**optIdent);
+    auto *declarator = setLocation(
+        *optIdent,
+        *optIdent,
+        new (context_) ESTree::VariableDeclaratorNode(nullptr, *optIdent));
+    declList.push_back(*declarator);
 
     decl = setLocation(
         varStartLoc,

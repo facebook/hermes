@@ -19,8 +19,12 @@ for (using x of y);
 // CHECK-NEXT:         "kind": "using",
 // CHECK-NEXT:         "declarations": [
 // CHECK-NEXT:           {
-// CHECK-NEXT:             "type": "Identifier",
-// CHECK-NEXT:             "name": "x"
+// CHECK-NEXT:             "type": "VariableDeclarator",
+// CHECK-NEXT:             "init": null,
+// CHECK-NEXT:             "id": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "x"
+// CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       },
@@ -42,8 +46,12 @@ for (using x in y);
 // CHECK-NEXT:         "kind": "using",
 // CHECK-NEXT:         "declarations": [
 // CHECK-NEXT:           {
-// CHECK-NEXT:             "type": "Identifier",
-// CHECK-NEXT:             "name": "x"
+// CHECK-NEXT:             "type": "VariableDeclarator",
+// CHECK-NEXT:             "init": null,
+// CHECK-NEXT:             "id": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "x"
+// CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       },
@@ -93,8 +101,12 @@ async function f() {
 // CHECK-NEXT:               "kind": "await using",
 // CHECK-NEXT:               "declarations": [
 // CHECK-NEXT:                 {
-// CHECK-NEXT:                   "type": "Identifier",
-// CHECK-NEXT:                   "name": "x"
+// CHECK-NEXT:                   "type": "VariableDeclarator",
+// CHECK-NEXT:                   "init": null,
+// CHECK-NEXT:                   "id": {
+// CHECK-NEXT:                     "type": "Identifier",
+// CHECK-NEXT:                     "name": "x"
+// CHECK-NEXT:                   }
 // CHECK-NEXT:                 }
 // CHECK-NEXT:               ]
 // CHECK-NEXT:             },
