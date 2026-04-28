@@ -14,6 +14,9 @@
 
 #include <gtest/gtest.h>
 
+#include <chrono>
+#include <thread>
+
 namespace {
 using namespace hermes::vm;
 
@@ -82,6 +85,41 @@ TEST(SamplingProfilerTest, RegisterIdenticalThread) {
 
   rt->samplingProfiler->setRuntimeThread();
   EXPECT_TRUE(rt->samplingProfiler->belongsToCurrentThread());
+  rt->samplingProfiler->setRuntimeThread();
+  EXPECT_TRUE(rt->samplingProfiler->belongsToCurrentThread());
+}
+
+// Regression test for https://github.com/facebook/hermes/issues/1853 and
+// https://github.com/getsentry/sentry-react-native/issues/5441: if a thread
+// that registered a profiler exits while the profiler instance lives on, the
+// sampler must not call pthread_kill on the dead thread. On Android bionic
+// this would abort the process; on other POSIX platforms it would be an
+// ESRCH. With the thread-death guard, the sampler skips the profiler.
+TEST(SamplingProfilerTest, SamplingAfterRegisteredThreadExitDoesNotCrash) {
+  auto rt = makeRuntime(withSamplingProfilerEnabled);
+
+  std::thread worker([&]() {
+    rt->samplingProfiler->setRuntimeThread();
+    EXPECT_TRUE(rt->samplingProfiler->belongsToCurrentThread());
+  });
+  // std::thread::join() waits for the OS thread to fully terminate. Per
+  // POSIX, pthread_join does not return until after the thread's C++
+  // thread_local destructors and all pthread_key_create destructors have
+  // run. That means our ThreadDeathGuard destructor -- and therefore the
+  // call to Sampler::onRegisteredThreadExit that invalidates the
+  // registered thread -- has completed by the time join() returns. Do not
+  // relax this ordering assumption when editing the test.
+  worker.join();
+
+  // After the registered thread has exited, the profiler must no longer
+  // report ownership by any live thread.
+  EXPECT_FALSE(rt->samplingProfiler->belongsToCurrentThread());
+
+  SamplingProfiler::enable();
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  SamplingProfiler::disable();
+
+  // Re-register on the main thread so subsequent use works normally.
   rt->samplingProfiler->setRuntimeThread();
   EXPECT_TRUE(rt->samplingProfiler->belongsToCurrentThread());
 }
