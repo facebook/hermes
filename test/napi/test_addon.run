@@ -1,0 +1,18 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+// REQUIRES: napi
+
+// RUN: echo 'var addon = loadNativeModule("%napi_addon_dir/napi_ref_addon.node"); print(typeof addon.add); print(typeof addon.hello); print(addon.add(2, 3)); print(addon.add(-1, 1)); print(addon.add(1.5, 2.5)); print(addon.hello()); print(addon.add(0, 0));' > %t.js && %hermes %t.js | %FileCheck --match-full-lines %s
+
+// CHECK: function
+// CHECK-NEXT: function
+// CHECK-NEXT: 5
+// CHECK-NEXT: 0
+// CHECK-NEXT: 4
+// CHECK-NEXT: world
+// CHECK-NEXT: 0

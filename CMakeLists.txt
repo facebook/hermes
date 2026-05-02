@@ -841,6 +841,9 @@ if(HERMES_ENABLE_TEST_SUITE)
   if(HERMES_ENABLE_NAPI)
     list(APPEND HERMES_TEST_DEPS
       napi-runner
+      napi_test_addon
+      napi_ref_addon
+      napi_text_encoder_addon
     )
   endif()
 
@@ -885,6 +888,7 @@ if(HERMES_ENABLE_TEST_SUITE)
   if(HERMES_ENABLE_NAPI)
     list(APPEND HERMES_LIT_TEST_PARAMS_BASE
       napi_runner=${HERMES_TOOLS_OUTPUT_DIR}/napi-runner
+      napi_addon_dir=${CMAKE_CURRENT_BINARY_DIR}/unittests/napi
     )
   endif()
 

@@ -1,0 +1,51 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+// REQUIRES: napi
+
+// Test hermes_compile_to_bytecode via napi-runner --compile, and the full
+// compile-then-run round-trip.
+
+// Compile to .hbc, then run the .hbc.
+// RUN: echo '1 + 2' > %t.js
+// RUN: %napi-runner --compile %t.hbc %t.js
+// RUN: %napi-runner %t.hbc | %FileCheck --match-full-lines --check-prefix=NUM %s
+// NUM: 3
+
+// String concatenation round-trip.
+// RUN: echo "'hello' + ' world'" > %t.js
+// RUN: %napi-runner --compile %t.hbc %t.js
+// RUN: %napi-runner %t.hbc | %FileCheck --match-full-lines --check-prefix=STR %s
+// STR: hello world
+
+// Undefined result (no output).
+// RUN: echo 'var x = 42' > %t.js
+// RUN: %napi-runner --compile %t.hbc %t.js
+// RUN: %napi-runner %t.hbc | %FileCheck --allow-empty --check-prefix=UNDEF %s
+// UNDEF-NOT: {{.}}
+
+// Compile error (syntax error) should fail.
+// RUN: echo 'function(' > %t.js
+// RUN: ! %napi-runner --compile %t.hbc %t.js 2>&1 | %FileCheck --check-prefix=SYNERR %s
+// SYNERR: Error:
+
+// Runtime error after compile+run round-trip.
+// RUN: echo "throw new Error('compile-boom')" > %t.js
+// RUN: %napi-runner --compile %t.hbc %t.js
+// RUN: ! %napi-runner %t.hbc 2>&1 | %FileCheck --check-prefix=RTERR %s
+// RTERR: Error: compile-boom
+
+// Compile with optimization.
+// RUN: echo '10 * 10' > %t.js
+// RUN: %napi-runner --compile %t.hbc -O %t.js
+// RUN: %napi-runner %t.hbc | %FileCheck --match-full-lines --check-prefix=OPT %s
+// OPT: 100
+
+// --compile on .hbc input should fail.
+// RUN: echo '1+1' > %t.js && %napi-runner --compile %t.hbc %t.js
+// RUN: ! %napi-runner --compile %t.out.hbc %t.hbc 2>&1 | %FileCheck --check-prefix=HBCERR %s
+// HBCERR: Error: --compile cannot be used with .hbc input

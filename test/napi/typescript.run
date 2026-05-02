@@ -1,0 +1,31 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+// REQUIRES: napi
+
+// Test that --enable-ts strips TypeScript type annotations via napi-runner.
+
+// Type annotation on variable — runs correctly with --enable-ts.
+// RUN: echo 'let x: number = 42; x' > %t.ts
+// RUN: %napi-runner --enable-ts %t.ts | %FileCheck --match-full-lines --check-prefix=VAR %s
+// VAR: 42
+
+// Type annotation on function parameter.
+// RUN: echo 'function add(a: number, b: number): number { return a + b; } add(3, 4)' > %t.ts
+// RUN: %napi-runner --enable-ts %t.ts | %FileCheck --match-full-lines --check-prefix=FUNC %s
+// FUNC: 7
+
+// Without --enable-ts, TS syntax is a parse error.
+// RUN: echo 'let x: number = 42; x' > %t.ts
+// RUN: ! %napi-runner %t.ts 2>&1 | %FileCheck --check-prefix=ERR %s
+// ERR: Error:
+
+// Compile path: --enable-ts --compile produces bytecode that runs.
+// RUN: echo 'let y: string = "hello"; y' > %t.ts
+// RUN: %napi-runner --enable-ts --compile %t.hbc %t.ts
+// RUN: %napi-runner %t.hbc | %FileCheck --match-full-lines --check-prefix=COMPILE %s
+// COMPILE: hello
