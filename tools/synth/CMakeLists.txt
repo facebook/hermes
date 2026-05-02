@@ -16,3 +16,7 @@ target_link_libraries(synth
   synthTrace_obj
   synthTraceParser_obj
 )
+
+if(HERMES_ENABLE_NAPI)
+  target_link_libraries(synth hermesNapi)
+endif()

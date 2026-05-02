@@ -35,17 +35,6 @@ using namespace hermes::hbc;
 
 namespace {
 
-class StringBuffer : public Buffer {
- public:
-  StringBuffer(std::string buffer) : string_(std::move(buffer)) {
-    data_ = reinterpret_cast<const uint8_t *>(string_.c_str());
-    size_ = string_.size();
-  }
-
- private:
-  std::string string_;
-};
-
 class VectorBuffer : public Buffer {
  public:
   VectorBuffer(std::vector<uint8_t> buffer) : vec_(std::move(buffer)) {

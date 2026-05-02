@@ -261,6 +261,22 @@ else()
     -Wl,--no-whole-archive
   )
 endif()
+if(HERMES_ENABLE_NAPI)
+  if(APPLE)
+    target_link_libraries(hermesvm PRIVATE -force_load hermesNapi)
+    target_link_libraries(hermesvmlean PRIVATE -force_load hermesNapi)
+  elseif(MSVC)
+    target_link_libraries(hermesvm PRIVATE hermesNapi)
+    target_link_options(hermesvm PRIVATE /WHOLEARCHIVE:hermesNapi)
+    target_link_libraries(hermesvmlean PRIVATE hermesNapi)
+    target_link_options(hermesvmlean PRIVATE /WHOLEARCHIVE:hermesNapi)
+  else()
+    target_link_libraries(hermesvm PRIVATE
+      -Wl,--whole-archive hermesNapi -Wl,--no-whole-archive)
+    target_link_libraries(hermesvmlean PRIVATE
+      -Wl,--whole-archive hermesNapi -Wl,--no-whole-archive)
+  endif()
+endif()
 
 # Since we use private dependencies above, we need to enumerate all the headers
 # that should be available to consumers of hermesvm. Note that we only expose

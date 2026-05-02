@@ -92,6 +92,9 @@ endif()
 
 # Project options.
 
+set(HERMES_ENABLE_NAPI ON CACHE BOOL
+  "Build Node-API support")
+
 set(HERMES_IS_ANDROID OFF CACHE BOOL
   "Building for Android")
 
@@ -835,6 +838,12 @@ if(HERMES_ENABLE_TEST_SUITE)
     hermes-jsi-lean-shared
     )
 
+  if(HERMES_ENABLE_NAPI)
+    list(APPEND HERMES_TEST_DEPS
+      napi-runner
+    )
+  endif()
+
   set(coverage_directory "")
   if (HERMES_ENABLE_CODE_COVERAGE)
     set(coverage_directory ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/coverage)
@@ -870,7 +879,14 @@ if(HERMES_ENABLE_TEST_SUITE)
     core_extensions_enabled=${HERMES_ENABLE_CORE_EXTENSIONS}
     contrib_extensions_enabled=${HERMES_ENABLE_CONTRIB_EXTENSIONS}
     qemu_run_prefix=${QEMU_RUN_PREFIX}
+    napi_enabled=${HERMES_ENABLE_NAPI}
     )
+
+  if(HERMES_ENABLE_NAPI)
+    list(APPEND HERMES_LIT_TEST_PARAMS_BASE
+      napi_runner=${HERMES_TOOLS_OUTPUT_DIR}/napi-runner
+    )
+  endif()
 
   set(HERMES_LIT_TEST_PARAMS
     ${HERMES_LIT_TEST_PARAMS_BASE}

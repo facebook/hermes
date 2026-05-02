@@ -25,6 +25,9 @@
 #include "hermes/VM/TimeLimitMonitor.h"
 #include "hermes/VM/instrumentation/PerfEvents.h"
 #include "hermes/hermes.h"
+#ifdef HERMES_ENABLE_NAPI
+#include "hermes_napi_impl.h"
+#endif
 
 #include "jsi/jsi.h"
 
@@ -42,6 +45,15 @@ ConsoleHostContext::ConsoleHostContext(vm::Runtime &runtime) {
 static vm::CallResult<vm::HermesValue> quit(void *, vm::Runtime &runtime) {
   return runtime.raiseQuitError();
 }
+
+#ifdef HERMES_ENABLE_NAPI
+/// Trigger a full garbage collection. Exposed as gc_() for NAPI tests.
+static vm::CallResult<vm::HermesValue>
+triggerGC(void *, vm::Runtime &runtime) {
+  runtime.collect("gc_");
+  return vm::HermesValue::encodeUndefinedValue();
+}
+#endif
 
 static void printStats(
     vm::Runtime &runtime,
@@ -175,6 +187,85 @@ static vm::CallResult<vm::HermesValue> loadSegment(
 
   return HermesValue::encodeUndefinedValue();
 }
+
+#ifdef HERMES_ENABLE_NAPI
+/// Envs created for loaded NAPI modules. These must remain alive for
+/// the lifetime of the Runtime because NativeFunctions created during
+/// module init hold pointers to CallbackBundles owned by these envs.
+static std::vector<std::unique_ptr<napi_env__, struct NapiEnvDeleter>>
+    loadedModuleEnvs;
+
+struct NapiEnvDeleter {
+  void operator()(napi_env env) const {
+    hermes_napi_destroy_env(env);
+  }
+};
+
+/// Load a NAPI native module from a shared library.
+/// Usage: var exports = loadNativeModule("/path/to/addon.node");
+static vm::CallResult<vm::HermesValue> loadNativeModule(
+    void *,
+    vm::Runtime &runtime) {
+  vm::NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  using namespace hermes::vm;
+
+  if (args.getArgCount() < 1 || !args.getArg(0).isString()) {
+    return runtime.raiseTypeError(
+        "loadNativeModule requires a string argument");
+  }
+
+  // Extract the path string from the argument.
+  auto str = Handle<StringPrimitive>::vmcast(args.getArgHandle(0));
+  auto jsPath = StringPrimitive::createStringView(runtime, str);
+  std::string path;
+  llvh::SmallVector<char16_t, 64> buf;
+  convertUTF16ToUTF8WithReplacements(path, jsPath.getUTF16Ref(buf));
+
+  // Create a napi_env for loading the module. The env must outlive the
+  // loaded module because NativeFunctions hold pointers to
+  // CallbackBundles owned by the env.
+  napi_env env = hermes_napi_create_env(&runtime);
+
+  // Open a handle scope for the module init call.
+  napi_handle_scope scope;
+  napi_open_handle_scope(env, &scope);
+
+  napi_value napiResult;
+  napi_status status =
+      hermes_napi_load_module(env, path.c_str(), &napiResult);
+
+  if (status != napi_ok) {
+    // The load failed — capture the pending exception from the env
+    // and re-throw it on the runtime.
+    HermesValue exceptionVal =
+        HermesValue::encodeUndefinedValue();
+    if (env->hasPendingException) {
+      std::memcpy(
+          &exceptionVal, &env->pendingException, sizeof(HermesValue));
+      env->pendingException = HermesValue::encodeUndefinedValue();
+      env->hasPendingException = false;
+    }
+
+    napi_close_handle_scope(env, scope);
+    loadedModuleEnvs.push_back(
+        std::unique_ptr<napi_env__, NapiEnvDeleter>(env));
+
+    runtime.setThrownValue(exceptionVal);
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // Copy the result HermesValue before closing the handle scope.
+  HermesValue resultVal;
+  auto *phv = reinterpret_cast<PinnedHermesValue *>(napiResult);
+  std::memcpy(&resultVal, phv, sizeof(HermesValue));
+
+  napi_close_handle_scope(env, scope);
+  loadedModuleEnvs.push_back(
+      std::unique_ptr<napi_env__, NapiEnvDeleter>(env));
+
+  return resultVal;
+}
+#endif // HERMES_ENABLE_NAPI
 
 static vm::CallResult<vm::HermesValue> setTimeout(
     void *ctx,
@@ -469,6 +560,19 @@ void installConsoleBindings(
   // Define the 'quit' function.
   defineGlobalFunc(
       vm::Predefined::getSymbolID(vm::Predefined::quit), quit, nullptr, 0);
+
+#ifdef HERMES_ENABLE_NAPI
+  // Define 'gc_()' — triggers a full garbage collection.
+  // Used by NAPI tests (common.js gcUntil helper).
+  defineGlobalFunc(
+      runtime
+          .ignoreAllocationFailure(runtime.getIdentifierTable().getSymbolHandle(
+              runtime, llvh::createASCIIRef("gc_")))
+          .get(),
+      triggerGC,
+      nullptr,
+      0);
+#endif
   defineGlobalFunc(
       vm::Predefined::getSymbolID(vm::Predefined::createHeapSnapshot),
       createHeapSnapshot,
@@ -484,6 +588,18 @@ void installConsoleBindings(
       loadSegment,
       reinterpret_cast<void *>(const_cast<std::string *>(filename)),
       2);
+
+#ifdef HERMES_ENABLE_NAPI
+  // Define the 'loadNativeModule' function for loading NAPI addons.
+  defineGlobalFunc(
+      runtime
+          .ignoreAllocationFailure(runtime.getIdentifierTable().getSymbolHandle(
+              runtime, llvh::createASCIIRef("loadNativeModule")))
+          .get(),
+      loadNativeModule,
+      nullptr,
+      1);
+#endif
 
   defineGlobalFunc(
       runtime
@@ -832,6 +948,15 @@ bool executeHBCBytecodeImpl(
                    << options.profilingOutFile << "'.\n";
     }
   }
+#endif
+
+#ifdef HERMES_ENABLE_NAPI
+  // Destroy all NAPI envs before the Runtime goes out of scope.
+  // The env destructor releases WeakRefSlots, which must happen while
+  // the GC is still alive. Collect first so that env finalizer
+  // callbacks don't trigger GC reentrancy.
+  runtime->collect("pre-env-teardown");
+  loadedModuleEnvs.clear();
 #endif
 
   return !threwException;

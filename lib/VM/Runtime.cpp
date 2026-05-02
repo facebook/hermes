@@ -2000,6 +2000,11 @@ void Runtime::freezeBuiltins() {
 }
 
 ExecutionStatus Runtime::drainJobs() {
+  // Invoke registered callbacks before draining (e.g., NAPI
+  // finalizer draining).
+  for (auto &cb : drainJobsCallbacks_)
+    cb();
+
   GCScope gcScope{*this};
   MutableHandle<Callable> job{*this};
   // Note that new jobs can be enqueued during the draining.

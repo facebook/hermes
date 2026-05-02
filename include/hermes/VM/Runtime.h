@@ -235,6 +235,11 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   void addCustomRootsFunction(
       std::function<void(GC *, RootAcceptor &)> markRootsFn);
 
+  /// Register a callback invoked once at the start of drainJobs(),
+  /// before any jobs are executed. Used by embedders (e.g., NAPI) to
+  /// perform housekeeping such as draining deferred finalizers.
+  void addDrainJobsCallback(std::function<void()> callback);
+
   /// Add a custom function that will be executed sometime during garbage
   /// collection to mark additional weak GC roots that may not be known to the
   /// Runtime.
@@ -1216,6 +1221,7 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
       customMarkWeakRootFuncs_;
   std::vector<std::function<void(HeapSnapshot &)>> customSnapshotNodeFuncs_;
   std::vector<std::function<void(HeapSnapshot &)>> customSnapshotEdgeFuncs_;
+  std::vector<std::function<void()>> drainJobsCallbacks_;
 
   /// All state related to JIT compilation.
   JITContext jitContext_;
@@ -2127,6 +2133,11 @@ inline void Runtime::addCustomRootsFunction(
 inline void Runtime::addCustomWeakRootsFunction(
     std::function<void(GC *, WeakRootAcceptor &)> markRootsFn) {
   customMarkWeakRootFuncs_.emplace_back(std::move(markRootsFn));
+}
+
+inline void Runtime::addDrainJobsCallback(
+    std::function<void()> callback) {
+  drainJobsCallbacks_.emplace_back(std::move(callback));
 }
 
 inline void Runtime::addCustomSnapshotFunction(
