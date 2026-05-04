@@ -1,0 +1,1 @@
+add_node_api_cts_addon(2_function_arguments 2_function_arguments.c)

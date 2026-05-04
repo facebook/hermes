@@ -1,0 +1,12 @@
+# Node-API CTS skip list for Hermes
+#
+# Lines starting with '#' are comments.
+# Blank lines are ignored.
+# Each non-comment line is a test name (directory name under
+# tests/js-native-api/) that should be skipped, optionally followed
+# by a '#' comment explaining the reason.
+#
+# Example:
+#   test_name  # reason for skipping
+#
+# Currently all CTS tests pass — no entries needed.

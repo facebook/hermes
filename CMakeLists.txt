@@ -912,6 +912,9 @@ if(HERMES_ENABLE_TEST_SUITE)
     ARGS ${HERMES_TEST_EXTRA_ARGS}
     )
   set_target_properties(check-hermes PROPERTIES FOLDER "Hermes regression tests")
+  if(HERMES_ENABLE_NAPI)
+    add_dependencies(check-hermes check-napi)
+  endif()
 
   list(APPEND SHERMES_TEST_DEPS shermes-dep)
   add_lit_testsuite(check-shermes "Running the Static Hermes regression tests"

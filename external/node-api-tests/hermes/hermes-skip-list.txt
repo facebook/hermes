@@ -1,0 +1,95 @@
+# Hermes Node.js NAPI Test Skip List
+#
+# Format:
+#   dir_name                        - skip all tests in dir (both categories)
+#   dir_name/test_file              - skip specific test (both categories)
+#   js-native-api/dir_name          - skip all tests in dir (js-native-api only)
+#   js-native-api/dir_name/test     - skip specific test (js-native-api only)
+#   node-api/dir_name               - skip all tests in dir (node-api only)
+#   node-api/dir_name/test          - skip specific test (node-api only)
+#
+# Test file names omit the .js extension.
+# Lines starting with # are comments. Inline # comments are supported.
+#
+# This skip list is updated as new APIs are implemented. Tests should be
+# removed from this list once the required APIs are available.
+
+# =========================================================================
+# Category: js-native-api — tests requiring Node.js-specific modules
+# =========================================================================
+js-native-api/test_general/testEnvCleanup            # require('child_process')
+js-native-api/test_exception/testFinalizerException   # require('child_process')
+
+# =========================================================================
+# Category: js-native-api — tests for NAPI_EXPERIMENTAL APIs
+# (addon cannot be compiled; experimental APIs not in vendored headers)
+# =========================================================================
+js-native-api/test_sharedarraybuffer     # node_api_is_sharedarraybuffer
+js-native-api/test_object/test           # napi_create_object_with_properties
+js-native-api/test_object/test_null      # test_object addon not built
+
+# =========================================================================
+# Category: js-native-api — napi_cannot_run_js
+# =========================================================================
+js-native-api/test_cannot_run_js        # napi_cannot_run_js (finalizer during GC)
+
+# =========================================================================
+# Category: js-native-api — requires module reloading
+# =========================================================================
+js-native-api/test_instance_data/test   # require('../../common/require-as')
+
+# =========================================================================
+# Category: js-native-api — Hermes limitations
+# =========================================================================
+js-native-api/test_array                # Array size 2^32-1 not supported
+
+# =========================================================================
+# Category: js-native-api — tests for NAPI_EXPERIMENTAL APIs
+# =========================================================================
+js-native-api/test_finalizer            # node_api_post_finalizer
+
+# =========================================================================
+# Category: js-native-api — uses Node.js `process` global
+# =========================================================================
+js-native-api/6_object_wrap/test-basic-finalizer   # uses process global
+js-native-api/test_reference/test_finalizer        # uses process global
+
+# =========================================================================
+# Category: js-native-api — weak ref not accessible in wrap finalizer
+# DeleteBeforeFinalizeFinalizer: napi_get_reference_value on a weak ref
+# created for the same object fails inside the wrap finalizer.
+# =========================================================================
+js-native-api/test_reference/test       # napi_get_reference_value fails in finalizer
+
+# =========================================================================
+# Category: js-native-api — Hermes external string semantics
+# Hermes always copies external strings (no external storage support).
+# Tests that verify the string is NOT copied fail because our
+# node_api_create_external_string_* implementations set copied=true.
+# =========================================================================
+js-native-api/test_string/test            # external string always copied
+
+# =========================================================================
+# Category: js-native-api — NullArrayBuffer detach semantics
+# Hermes considers a 0-length external ArrayBuffer as "attached" (valid
+# but empty). The test expects it to be "detached".
+# =========================================================================
+js-native-api/test_typedarray/test        # NullArrayBuffer not detached
+
+# =========================================================================
+# Category: node-api — tests requiring Node.js-specific modules
+# =========================================================================
+node-api/1_hello_world/test              # require('worker_threads')
+node-api/test_general                    # require('child_process'), require('fs')
+node-api/test_buffer                     # require('util'), common/tick module
+node-api/test_instance_data              # require('child_process'), <uv.h>
+
+# =========================================================================
+# Category: node-api — tests requiring Node.js process module
+# =========================================================================
+node-api/test_exception                  # process.on()
+
+# =========================================================================
+# Category: node-api — NULL init function handling
+# =========================================================================
+node-api/test_null_init                  # napi_module_register with NULL init
