@@ -13,6 +13,7 @@
 #include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/PropertyAccessor.h"
+#include "hermes/VM/Runtime-inline.h"
 
 namespace hermes {
 namespace vm {
@@ -93,9 +94,9 @@ OptValue<PropertyFlags> ArrayImpl::_getOwnIndexedPropertyFlagsImpl(
     indexedElementFlags.writable = 1;
     indexedElementFlags.configurable = 1;
 
-    if (LLVM_UNLIKELY(self->flags_.sealed)) {
+    if (LLVM_UNLIKELY(self->getClass(runtime)->isSealed())) {
       indexedElementFlags.configurable = 0;
-      if (LLVM_UNLIKELY(self->flags_.frozen))
+      if (LLVM_UNLIKELY(self->getClass(runtime)->isFrozen()))
         indexedElementFlags.writable = 0;
     }
 
@@ -190,7 +191,7 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
   auto *self = vmcast<ArrayImpl>(selfHandle.get());
   auto beginIndex = self->beginIndex_;
 
-  if (LLVM_UNLIKELY(self->flags_.frozen))
+  if (LLVM_UNLIKELY(self->getClass(runtime)->isFrozen()))
     return false;
 
   // Check whether the index is within the storage.
@@ -330,7 +331,7 @@ bool ArrayImpl::_deleteOwnIndexedImpl(
   if (index < self->elemCount_) {
     auto *indexedStorage = self->getIndexedStorageUnsafe(runtime);
     // Cannot delete indexed elements if we are sealed.
-    if (LLVM_UNLIKELY(self->flags_.sealed)) {
+    if (LLVM_UNLIKELY(self->getClass(runtime)->isSealed())) {
       SmallHermesValue elem = indexedStorage->at(index);
       if (!elem.isEmpty())
         return false;
@@ -408,7 +409,7 @@ CallResult<PseudoHandle<Arguments>> Arguments::create(
   } lv;
   LocalsRAII lraii{runtime, &lv};
   auto clazz = runtime.getHiddenClassForPrototype(
-      runtime.objectPrototypeRawPtr, numOverlapSlots<Arguments>());
+      runtime.objectPrototypeRawPtr, runtime.classArguments);
   auto obj = runtime.makeAFixed<Arguments>(
       runtime, Handle<JSObject>::vmcast(&runtime.objectPrototype), clazz);
   lv.self = JSObjectInit::initToPointer(runtime, obj);
@@ -521,11 +522,17 @@ void JSArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.setVTable(&JSArray::vt);
 }
 
-Handle<HiddenClass> JSArray::createClass(
+HiddenClass *JSArray::createClass(
     Runtime &runtime,
-    Handle<JSObject> prototypeHandle) {
-  Handle<HiddenClass> classHandle = runtime.getHiddenClassForPrototype(
-      *prototypeHandle, numOverlapSlots<JSArray>());
+    Handle<JSObject> prototypeHandle,
+    Handle<HiddenClass> rootClazz) {
+  assert(rootClazz && "must have a starting point");
+
+  struct : public Locals {
+    PinnedValue<HiddenClass> clazz;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+  lv.clazz = runtime.getHiddenClassForPrototype(*prototypeHandle, rootClazz);
 
   PropertyFlags pf{};
   pf.enumerable = 0;
@@ -534,19 +541,19 @@ Handle<HiddenClass> JSArray::createClass(
   pf.internalSetter = 1;
 
   auto added = HiddenClass::addProperty(
-      classHandle, runtime, Predefined::getSymbolID(Predefined::length), pf);
+      lv.clazz, runtime, Predefined::getSymbolID(Predefined::length), pf);
   assert(
       added != ExecutionStatus::EXCEPTION &&
       "Adding the first properties shouldn't cause overflow");
   assert(
       added->second == lengthPropIndex() && "JSArray.length has invalid index");
-  classHandle = added->first;
+  lv.clazz = added->first;
 
   assert(
-      classHandle->getNumProperties() == jsArrayPropertyCount() &&
+      lv.clazz->getNumProperties() == jsArrayPropertyCount() &&
       "JSArray class defined with incorrect number of properties");
 
-  return classHandle;
+  return *lv.clazz;
 }
 
 CallResult<PseudoHandle<JSArray>> JSArray::createNoAllocPropStorage(
@@ -558,6 +565,7 @@ CallResult<PseudoHandle<JSArray>> JSArray::createNoAllocPropStorage(
   assert(length <= capacity && "length must be <= capacity");
 
   assert(
+      classHandle &&
       classHandle->getNumProperties() >= jsArrayPropertyCount() &&
       "invalid number of properties in JSArray hidden class");
 
@@ -647,14 +655,24 @@ CallResult<PseudoHandle<JSArray>> JSArray::createAndAllocPropStorage(
   return PseudoHandle<JSArray>::create(*lv.arr);
 }
 
+CallResult<PseudoHandle<JSArray>> JSArray::create(
+    Runtime &runtime,
+    Handle<JSObject> prototypeHandle,
+    size_type capacity,
+    size_type length) {
+  return createNoAllocPropStorage(
+      runtime,
+      prototypeHandle,
+      runtime.getHiddenClassForPrototype(
+          *prototypeHandle, runtime.classJSArray),
+      capacity,
+      length);
+}
+
 CallResult<PseudoHandle<JSArray>>
 JSArray::create(Runtime &runtime, size_type capacity, size_type length) {
   return JSArray::createNoAllocPropStorage(
-      runtime,
-      Handle<JSObject>::vmcast(&runtime.arrayPrototype),
-      Handle<HiddenClass>::vmcast(&runtime.arrayClass),
-      capacity,
-      length);
+      runtime, runtime.arrayPrototype, runtime.classJSArray, capacity, length);
 }
 
 CallResult<bool> JSArray::setLength(
@@ -728,7 +746,7 @@ CallResult<bool> JSArray::setLength(
   uint32_t adjustedLength = newLength;
 
   // If we are sealed, we can't shrink past non-empty properties.
-  if (LLVM_UNLIKELY(selfHandle->flags_.sealed)) {
+  if (LLVM_UNLIKELY(selfHandle->getClass(runtime)->isSealed())) {
     // We must scan backwards looking for a non-empty property. We only have
     // to scan in the intersection between the range of present values and
     // the range between the current length and the new length.
@@ -854,8 +872,8 @@ PseudoHandle<JSArrayIterator> JSArrayIterator::create(
     Handle<JSObject> array,
     IterationKind iterationKind) {
   auto proto = Handle<JSObject>::vmcast(&runtime.arrayIteratorPrototype);
-  auto clazz = runtime.getHiddenClassForPrototype(
-      *proto, numOverlapSlots<JSArrayIterator>());
+  auto clazz =
+      runtime.getHiddenClassForPrototype(*proto, runtime.classJSArrayIterator);
   auto *obj = runtime.makeAFixed<JSArrayIterator>(
       runtime, proto, clazz, array, iterationKind);
   return JSObjectInit::initToPseudoHandle(runtime, obj);

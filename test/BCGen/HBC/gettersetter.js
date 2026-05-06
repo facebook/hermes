@@ -27,7 +27,7 @@ var obj = {
 // CHECK-NEXT:  StringSwitchImm count: 0
 // CHECK-NEXT:  Key buffer size (bytes): 0
 // CHECK-NEXT:  Value buffer size (bytes): 0
-// CHECK-NEXT:  Shape table count: 0
+// CHECK-NEXT:  Shape table count: 1
 // CHECK-NEXT:  Segment ID: 0
 // CHECK-NEXT:  CommonJS module count: 0
 // CHECK-NEXT:  CommonJS module count (static): 0
@@ -46,6 +46,9 @@ var obj = {
 // CHECK-NEXT:s6[ASCII, 15..20]: global
 // CHECK-NEXT:s7[ASCII, 21..25]: set b
 // CHECK-NEXT:i8[ASCII, 26..28] #DC53DBCF: obj
+
+// CHECK:Object Shape Table:
+// CHECK-NEXT:0[0, 0]
 
 // CHECK:Function<global>(1 params, 5 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000

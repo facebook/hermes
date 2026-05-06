@@ -202,13 +202,10 @@ TEST_F(InterpreterTest, SimpleSmokeTest) {
 
   auto printFn = runtime.makeHandle<NativeFunction>(*NativeFunction::create(
       runtime,
-      runtime.functionPrototype,
-      Runtime::makeNullHandle<Environment>(),
       nullptr,
       print,
       Predefined::getSymbolID(Predefined::emptyString),
-      0,
-      Runtime::makeNullHandle<JSObject>()));
+      0));
 
   // Define the 'print' function.
   (void)JSObject::putNamed_RJS(
@@ -591,13 +588,10 @@ TEST_F(InterpreterTest, FrameSizeTest) {
 
   auto getSPFn = runtime.makeHandle<NativeFunction>(*NativeFunction::create(
       runtime,
-      runtime.functionPrototype,
-      Runtime::makeNullHandle<Environment>(),
       nullptr,
       getSP,
       Predefined::getSymbolID(Predefined::emptyString),
-      0,
-      Runtime::makeNullHandle<JSObject>()));
+      0));
 
   // Define the 'getSP' function.
   (void)JSObject::putNamed_RJS(

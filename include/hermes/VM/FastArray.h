@@ -135,9 +135,11 @@ class FastArray : public JSObject {
 
   /// Construct an instance of the hidden class describing the layout of JSArray
   /// instances.
+  /// \param rootClazz the starting HiddenClass for the JSArray.
   static Handle<HiddenClass> createClass(
       Runtime &runtime,
-      Handle<JSObject> prototypeHandle);
+      Handle<JSObject> prototypeHandle,
+      Handle<HiddenClass> rootClazz);
 
   /// Create a new FastArray with the given capacity. Note that storage will be
   /// allocated even if the capacity is zero, to maintain indexedStorage_ as
@@ -155,10 +157,9 @@ class FastArray : public JSObject {
       Handle<HiddenClass> clazz,
       NeedsBarriers needsBarriers)
       : JSObject(runtime, *parent, *clazz, needsBarriers) {
-    flags_.indexedStorage = true;
-    flags_.fastIndexProperties = true;
-    flags_.noExtend = true;
-    flags_.sealed = true;
+    assert(hasIndexedStorage(runtime) && "must have indexed storage");
+    assert(
+        hasFastIndexProperties(runtime) && "must have fast index properties");
   }
 
  private:

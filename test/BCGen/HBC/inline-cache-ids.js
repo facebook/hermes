@@ -139,7 +139,7 @@ function manyPutByIds(o, o2, val) {
 // CHECK-NEXT:  StringSwitchImm count: 0
 // CHECK-NEXT:  Key buffer size (bytes): 0
 // CHECK-NEXT:  Value buffer size (bytes): 0
-// CHECK-NEXT:  Shape table count: 0
+// CHECK-NEXT:  Shape table count: 1
 // CHECK-NEXT:  Segment ID: 0
 // CHECK-NEXT:  CommonJS module count: 0
 // CHECK-NEXT:  CommonJS module count (static): 0
@@ -410,6 +410,9 @@ function manyPutByIds(o, o2, val) {
 // CHECK-NEXT:i258[ASCII, 874..877] #8540FCA9: p255
 // CHECK-NEXT:i259[ASCII, 878..881] #8540F8BE: p256
 // CHECK-NEXT:i260[ASCII, 882..885] #8540E4CF: p257
+
+// CHECK:Object Shape Table:
+// CHECK-NEXT:0[0, 0]
 
 // CHECK:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000

@@ -25,7 +25,7 @@ y = x;
 // STRICT-NEXT:  StringSwitchImm count: 0
 // STRICT-NEXT:  Key buffer size (bytes): 0
 // STRICT-NEXT:  Value buffer size (bytes): 0
-// STRICT-NEXT:  Shape table count: 0
+// STRICT-NEXT:  Shape table count: 1
 // STRICT-NEXT:  Segment ID: 0
 // STRICT-NEXT:  CommonJS module count: 0
 // STRICT-NEXT:  CommonJS module count (static): 0
@@ -39,6 +39,9 @@ y = x;
 // STRICT-NEXT:i1[ASCII, 6..8] #9290584E: foo
 // STRICT-NEXT:i2[ASCII, 9..9] #0001E7F9: x
 // STRICT-NEXT:i3[ASCII, 10..10] #0001E3E8: y
+
+// STRICT:Object Shape Table:
+// STRICT-NEXT:0[0, 0]
 
 // STRICT:Function<global>(1 params, 14 registers, 1 numbers, 1 non-pointers):
 // STRICT-NEXT:Offset in debug table: source 0x0000
@@ -82,7 +85,7 @@ y = x;
 // NONSTRICT-NEXT:  StringSwitchImm count: 0
 // NONSTRICT-NEXT:  Key buffer size (bytes): 0
 // NONSTRICT-NEXT:  Value buffer size (bytes): 0
-// NONSTRICT-NEXT:  Shape table count: 0
+// NONSTRICT-NEXT:  Shape table count: 1
 // NONSTRICT-NEXT:  Segment ID: 0
 // NONSTRICT-NEXT:  CommonJS module count: 0
 // NONSTRICT-NEXT:  CommonJS module count (static): 0
@@ -96,6 +99,9 @@ y = x;
 // NONSTRICT-NEXT:i1[ASCII, 6..8] #9290584E: foo
 // NONSTRICT-NEXT:i2[ASCII, 9..9] #0001E7F9: x
 // NONSTRICT-NEXT:i3[ASCII, 10..10] #0001E3E8: y
+
+// NONSTRICT:Object Shape Table:
+// NONSTRICT-NEXT:0[0, 0]
 
 // NONSTRICT:Function<global>(1 params, 14 registers, 1 numbers, 1 non-pointers):
 // NONSTRICT-NEXT:Offset in debug table: source 0x0000

@@ -28,14 +28,10 @@ class JSDate final : public JSObject {
     return cell->getKind() == CellKind::JSDateKind;
   }
 
+  static PseudoHandle<JSDate> create(Runtime &runtime, double value);
+
   static PseudoHandle<JSDate>
   create(Runtime &runtime, double value, Handle<JSObject> prototype);
-
-  static PseudoHandle<JSDate> create(
-      Runtime &runtime,
-      Handle<JSObject> prototype) {
-    return create(runtime, std::numeric_limits<double>::quiet_NaN(), prototype);
-  }
 
   /// \return the [[PrimitiveValue]] internal property.
   double getPrimitiveValue() {

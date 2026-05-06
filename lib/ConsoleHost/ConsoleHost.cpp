@@ -450,14 +450,7 @@ void installConsoleBindings(
                               unsigned paramCount) -> void {
     vm::GCScopeMarkerRAII marker{runtime};
     auto func = vm::NativeFunction::create(
-        runtime,
-        runtime.functionPrototype,
-        vm::Runtime::makeNullHandle<vm::Environment>(),
-        context,
-        functionPtr,
-        name,
-        paramCount,
-        vm::Runtime::makeNullHandle<vm::JSObject>());
+        runtime, context, functionPtr, name, paramCount);
     auto res = vm::JSObject::defineOwnProperty(
         runtime.getGlobal(), runtime, name, normalDPF, func);
     (void)res;
@@ -561,14 +554,7 @@ void installConsoleBindings(
                              runtime, llvh::createASCIIRef(name)))
                      .get();
       auto func = vm::NativeFunction::create(
-          runtime,
-          runtime.functionPrototype,
-          vm::Runtime::makeNullHandle<vm::Environment>(),
-          context,
-          functionPtr,
-          sym,
-          paramCount,
-          vm::Runtime::makeNullHandle<vm::JSObject>());
+          runtime, context, functionPtr, sym, paramCount);
       auto res = vm::JSObject::defineOwnProperty(
           hermescliObj, runtime, sym, normalDPF, func);
       (void)res;

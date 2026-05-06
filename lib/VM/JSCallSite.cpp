@@ -60,7 +60,7 @@ CallResult<HermesValue> JSCallSite::create(
       runtime,
       jsCallSiteProto,
       runtime.getHiddenClassForPrototype(
-          *jsCallSiteProto, numOverlapSlots<JSCallSite>()),
+          *jsCallSiteProto, runtime.classJSCallSite),
       errorHandle,
       stackFrameIndex);
 

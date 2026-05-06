@@ -12,4 +12,8 @@
 
 RUNTIME_PHV_FIELD(hvStorageTmp)
 
+// Field for storing the HiddenClass when running getHiddenClassForPrototype.
+RUNTIME_PHV_FIELD(clazzForPrototypeTmp)
+RUNTIME_PHV_FIELD(jsArrayClazzTmp)
+
 #undef RUNTIME_PHV_FIELD

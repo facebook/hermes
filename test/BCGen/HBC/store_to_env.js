@@ -38,7 +38,7 @@ function foo() {
 // CHECK-NEXT:  StringSwitchImm count: 0
 // CHECK-NEXT:  Key buffer size (bytes): 0
 // CHECK-NEXT:  Value buffer size (bytes): 0
-// CHECK-NEXT:  Shape table count: 0
+// CHECK-NEXT:  Shape table count: 2
 // CHECK-NEXT:  Segment ID: 0
 // CHECK-NEXT:  CommonJS module count: 0
 // CHECK-NEXT:  CommonJS module count (static): 0
@@ -56,6 +56,10 @@ function foo() {
 // CHECK-NEXT:i5[ASCII, 22..24] #9290584E: foo
 // CHECK-NEXT:i6[ASCII, 25..29] #A689F65B: print
 
+// CHECK:Object Shape Table:
+// CHECK-NEXT:0[0, 0]
+// CHECK-NEXT:1[0, 0]
+
 // CHECK:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "foo"
@@ -72,7 +76,7 @@ function foo() {
 // CHECK-NEXT:    StoreNPToEnvironment r1, 0, r0
 // CHECK-NEXT:    GetGlobalObject   r2
 // CHECK-NEXT:    TryGetById        r2, r2, 0, "Object"
-// CHECK-NEXT:    CreateThisForNew  r3, r2, 1
+// CHECK-NEXT:    CreateThisForNew  r3, r2, 1, 1
 // CHECK-NEXT:    Mov               r4, r3
 // CHECK-NEXT:    Construct         r2, r2, 1
 // CHECK-NEXT:    SelectObject      r2, r3, r2
@@ -118,7 +122,7 @@ function foo() {
 // CHECK-NEXT:  0x000b  function idx 1, starts at line 10 col 1
 // CHECK-NEXT:    bc 15: line 14 col 21
 // CHECK-NEXT:    bc 21: line 14 col 27
-// CHECK-NEXT:    bc 28: line 14 col 27
+// CHECK-NEXT:    bc 30: line 14 col 27
 // CHECK-NEXT:  0x0019  function idx 2, starts at line 17 col 18
 // CHECK-NEXT:    bc 20: line 21 col 9
 // CHECK-NEXT:    bc 32: line 21 col 14

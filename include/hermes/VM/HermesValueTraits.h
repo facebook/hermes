@@ -40,6 +40,7 @@ HERMES_VM_GCOBJECT(Domain);
 HERMES_VM_GCOBJECT(Environment);
 HERMES_VM_GCOBJECT(FastArray);
 HERMES_VM_GCOBJECT(FinalizableNativeFunction);
+HERMES_VM_GCOBJECT(GCCell);
 HERMES_VM_GCOBJECT(HiddenClass);
 HERMES_VM_GCOBJECT(HostObject);
 HERMES_VM_GCOBJECT(JSArray);
@@ -76,6 +77,7 @@ HERMES_VM_GCOBJECT(NativeState);
 HERMES_VM_GCOBJECT(PropertyAccessor);
 HERMES_VM_GCOBJECT(RequireContext);
 HERMES_VM_GCOBJECT(StringPrimitive);
+HERMES_VM_GCOBJECT(WeakValueObjectMapImpl);
 
 namespace testhelpers {
 struct DummyObject;
@@ -106,6 +108,11 @@ template <CellKind C>
 class JSWeakMapImpl;
 template <CellKind C>
 struct IsGCObject<JSWeakMapImpl<C>> : public std::true_type {};
+
+template <class ValueT>
+class WeakValueObjectMap;
+template <class ValueT>
+struct IsGCObject<WeakValueObjectMap<ValueT>> : public std::true_type {};
 
 template <typename T, bool Uniqued>
 class DynamicStringPrimitive;

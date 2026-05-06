@@ -706,7 +706,7 @@ HermesABIVoidOrError set_object_external_memory_pressure(
   auto &rt = *hart->rt;
   vm::GCScope gcScope(rt);
   auto objHandle = toHandle(obj);
-  if (objHandle->isProxyObject()) {
+  if (objHandle->isProxyObject(rt)) {
     hart->nativeExceptionMessage = "Cannot set external memory on Proxy";
     return abi::createVoidOrError(HermesABIErrorCodeNativeException);
   }
@@ -1194,7 +1194,7 @@ HermesABINativeState *get_native_state(
   auto h = toHandle(obj);
 
   // Proxy and HostObject cannot have native state.
-  if (h->isProxyObject() || h->isHostObject())
+  if (h->isProxyObject(runtime) || h->isHostObject(runtime))
     return nullptr;
 
   // Check if the internal property exists, and if so retrieve its descriptor.
@@ -1242,10 +1242,10 @@ HermesABIVoidOrError set_native_state(
   lv.ns = vm::NativeState::create(runtime, abiState, finalize);
 
   auto h = toHandle(obj);
-  if (h->isProxyObject()) {
+  if (h->isProxyObject(runtime)) {
     hart->nativeExceptionMessage = "Native state is unsupported on Proxy";
     return abi::createVoidOrError(HermesABIErrorCodeNativeException);
-  } else if (h->isHostObject()) {
+  } else if (h->isHostObject(runtime)) {
     hart->nativeExceptionMessage = "Native state is unsupported on HostObject";
     return abi::createVoidOrError(HermesABIErrorCodeNativeException);
   }

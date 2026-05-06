@@ -33,14 +33,19 @@ void JSDateBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.setVTable(&JSDate::vt);
 }
 
+PseudoHandle<JSDate> JSDate::create(Runtime &runtime, double value) {
+  auto *cell = runtime.makeAFixed<JSDate>(
+      runtime, value, runtime.datePrototype, runtime.classJSDate);
+  return JSObjectInit::initToPseudoHandle(runtime, cell);
+}
+
 PseudoHandle<JSDate>
 JSDate::create(Runtime &runtime, double value, Handle<JSObject> parentHandle) {
   auto *cell = runtime.makeAFixed<JSDate>(
       runtime,
       value,
       parentHandle,
-      runtime.getHiddenClassForPrototype(
-          *parentHandle, numOverlapSlots<JSDate>()));
+      runtime.getHiddenClassForPrototype(*parentHandle, runtime.classJSDate));
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 

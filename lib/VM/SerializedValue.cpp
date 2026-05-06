@@ -899,7 +899,7 @@ ExecutionStatus serializeArrayProperties(
 
     // Let inputValue be ? value.[[Get]](key, value).
     // Fast-path: Access the index element directly.
-    if (LLVM_LIKELY(selfArray->hasFastIndexProperties())) {
+    if (LLVM_LIKELY(selfArray->hasFastIndexProperties(runtime))) {
       SmallHermesValue shv = selfArray->at(runtime, arrayIndex);
       assert(!shv.isEmpty() && "Accessed empty value while serializing Array");
       lv.tmp = shv.unboxToHV(runtime);
@@ -1370,10 +1370,10 @@ CallResult<PseudoHandle<JSTypedArrayBase>> deserializeTypedArray(
   // [[ByteLength]] internal slot value is serialized.[[ByteLength]], whose
   // [[ByteOffset]] internal slot value is serialized.[[ByteOffset]], and whose
   // [[ArrayLength]] internal slot value is serialized.[[ArrayLength]].
-#define TYPED_ARRAY(name, type)                                      \
-  if (typeTag == SerializedValue::Type::name##Array) {               \
-    lv.self = JSTypedArray<type, CellKind::name##ArrayKind>::create( \
-        runtime, runtime.name##ArrayPrototype);                      \
+#define TYPED_ARRAY(name, type)                                             \
+  if (typeTag == SerializedValue::Type::name##Array) {                      \
+    lv.self = JSTypedArray<type, CellKind::name##ArrayKind>::create(        \
+        runtime, runtime.name##ArrayPrototype, runtime.class##name##Array); \
   }
 #include "hermes/VM/TypedArrays.def"
   uint8_t width = lv.self->getByteWidth();
@@ -1458,7 +1458,7 @@ ExecutionStatus serializeImpl(
   /// Use Handle::vmcast here to assert that the value must be an JS object at
   /// this point.
   auto selfObjHandle = Handle<JSObject>::vmcast(value);
-  if (selfObjHandle->isHostObject()) {
+  if (selfObjHandle->isHostObject(runtime)) {
     return runtime.raiseError("Host Objects are not serializable");
   }
 

@@ -364,7 +364,8 @@ CallResult<HermesValue> typedArrayConstructor(
     Runtime &runtime,
     NativeArgs args,
     const PinnedValue<NativeConstructor> *arrayConstructor,
-    const PinnedValue<JSObject> *arrayPrototype) {
+    const PinnedValue<JSObject> *arrayPrototype,
+    const PinnedValue<HiddenClass> *arrayClazz) {
   // 1. If NewTarget is undefined, throw a TypeError exception.
   if (!args.isConstructorCall()) {
     return runtime.raiseTypeError(
@@ -373,6 +374,7 @@ CallResult<HermesValue> typedArrayConstructor(
 
   struct : public Locals {
     PinnedValue<JSObject> selfParent;
+    PinnedValue<HiddenClass> clazz;
     PinnedValue<JSTypedArray<T, C>> self;
   } lv;
   LocalsRAII lraii(runtime, &lv);
@@ -380,6 +382,7 @@ CallResult<HermesValue> typedArrayConstructor(
           args.getNewTarget().getRaw() ==
           arrayConstructor->getHermesValue().getRaw())) {
     lv.selfParent = *arrayPrototype;
+    lv.clazz = *arrayClazz;
   } else {
     CallResult<PseudoHandle<JSObject>> thisParentRes =
         NativeConstructor::parentForNewThis_RJS(
@@ -390,9 +393,10 @@ CallResult<HermesValue> typedArrayConstructor(
       return ExecutionStatus::EXCEPTION;
     }
     lv.selfParent = std::move(*thisParentRes);
+    lv.clazz = runtime.getHiddenClassForPrototype(*lv.selfParent, *arrayClazz);
   }
-  lv.self = JSTypedArray<T, C>::create(runtime, lv.selfParent);
-
+  assert(*lv.clazz && "must have a hidden class");
+  lv.self = JSTypedArray<T, C>::create(runtime, lv.selfParent, lv.clazz);
   if (args.getArgCount() == 0) {
     // ES6 22.2.1.1
     if (JSTypedArray<T, C>::createBuffer(runtime, lv.self, 0) ==
@@ -802,11 +806,16 @@ CallResult<HermesValue> typedArrayBaseConstructor(void *, Runtime &runtime) {
 
 /// @}
 
-#define TYPED_ARRAY(name, type)                                               \
-  CallResult<HermesValue> name##ArrayConstructor(void *ctx, Runtime &rt) {    \
-    NativeArgs args = rt.getCurrentFrame().getNativeArgs();                   \
-    return typedArrayConstructor<type, CellKind::name##ArrayKind>(            \
-        ctx, rt, args, &rt.name##ArrayConstructor, &rt.name##ArrayPrototype); \
+#define TYPED_ARRAY(name, type)                                            \
+  CallResult<HermesValue> name##ArrayConstructor(void *ctx, Runtime &rt) { \
+    NativeArgs args = rt.getCurrentFrame().getNativeArgs();                \
+    return typedArrayConstructor<type, CellKind::name##ArrayKind>(         \
+        ctx,                                                               \
+        rt,                                                                \
+        args,                                                              \
+        &rt.name##ArrayConstructor,                                        \
+        &rt.name##ArrayPrototype,                                          \
+        &rt.class##name##Array);                                           \
   }
 #include "hermes/VM/TypedArrays.def"
 #undef TYPED_ARRAY

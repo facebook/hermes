@@ -30,7 +30,7 @@ function foo(p) {
 // CHECK-NEXT:  StringSwitchImm count: 0
 // CHECK-NEXT:  Key buffer size (bytes): 3
 // CHECK-NEXT:  Value buffer size (bytes): 5
-// CHECK-NEXT:  Shape table count: 1
+// CHECK-NEXT:  Shape table count: 2
 // CHECK-NEXT:  Segment ID: 0
 // CHECK-NEXT:  CommonJS module count: 0
 // CHECK-NEXT:  CommonJS module count (static): 0
@@ -52,7 +52,8 @@ function foo(p) {
 // CHECK-NEXT:[String 1]
 
 // CHECK:Object Shape Table:
-// CHECK-NEXT:0[0, 1]
+// CHECK-NEXT:0[0, 0]
+// CHECK-NEXT:1[0, 1]
 
 // CHECK:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000
@@ -66,7 +67,7 @@ function foo(p) {
 // CHECK:Function<foo>(2 params, 5 registers, 1 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x000b
 // CHECK-NEXT:[@ 0] LoadParam 3<Reg8>, 1<UInt8>
-// CHECK-NEXT:[@ 3] NewObjectWithBuffer 2<Reg8>, 0<UInt16>, 0<UInt16>
+// CHECK-NEXT:[@ 3] NewObjectWithBuffer 2<Reg8>, 1<UInt16>, 0<UInt16>
 // CHECK-NEXT:[@ 9] LoadConstUInt8 0<Reg8>, 1<UInt8>
 // CHECK-NEXT:[@ 12] PutByIdLoose 2<Reg8>, 0<Reg8>, 0<UInt8>, 1<UInt16>
 // CHECK-NEXT:[@ 18] PutByValLoose 2<Reg8>, 3<Reg8>, 0<Reg8>

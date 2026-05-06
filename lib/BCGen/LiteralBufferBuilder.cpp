@@ -10,13 +10,14 @@
 #include "hermes/BCGen/SerializedLiteralParser.h"
 #include "hermes/BCGen/ShapeTableEntry.h"
 #include "hermes/IR/IR.h"
+#include "hermes/IR/IRBuilder.h"
 #include "hermes/IR/Instrs.h"
 #include "hermes/Inst/Inst.h"
 #include "hermes/Inst/InstDecode.h"
 #include "hermes/VM/ObjectAllocKind.h"
 
 namespace hermes::LiteralBufferBuilder::detail {
-/// The key with which to to deduplicate shape table entries in coordToIdx.
+/// The key with which to deduplicate shape table entries in coordToIdx.
 struct ShapeTableDedupKey {
   /// The offset of the first key in the key buffer.
   uint32_t keyBufferOffset;
@@ -26,6 +27,10 @@ struct ShapeTableDedupKey {
   /// We don't share shape table entries between different allocation kinds
   /// because they use different property flags, make new HiddenClasses, etc.
   ValueKind allocKind;
+  /// The parent object.
+  /// We store the parent to avoid sharing cache entries between instructions
+  /// that will likely never match.
+  Value *parent;
 };
 } // namespace hermes::LiteralBufferBuilder::detail
 
@@ -38,23 +43,29 @@ struct DenseMapInfo<ShapeTableDedupKey> {
     return {
         DenseMapInfo<uint32_t>::getEmptyKey(),
         DenseMapInfo<uint32_t>::getEmptyKey(),
-        hermes::ValueKind::AllocObjectLiteralInstKind};
+        hermes::ValueKind::AllocObjectLiteralInstKind,
+        DenseMapInfo<hermes::Value *>::getEmptyKey()};
   }
   static inline ShapeTableDedupKey getTombstoneKey() {
     return {
         DenseMapInfo<uint32_t>::getTombstoneKey(),
         DenseMapInfo<uint32_t>::getTombstoneKey(),
-        hermes::ValueKind::AllocObjectLiteralInstKind};
+        hermes::ValueKind::AllocObjectLiteralInstKind,
+        DenseMapInfo<hermes::Value *>::getTombstoneKey()};
   }
   static inline unsigned getHashValue(const ShapeTableDedupKey &key) {
     return hash_combine(
-        key.keyBufferOffset, key.numProps, static_cast<uint8_t>(key.allocKind));
+        key.keyBufferOffset,
+        key.numProps,
+        static_cast<uint8_t>(key.allocKind),
+        DenseMapInfo<hermes::Value *>::getHashValue(key.parent));
   }
   static inline bool isEqual(
       const ShapeTableDedupKey &lhs,
       const ShapeTableDedupKey &rhs) {
     return lhs.keyBufferOffset == rhs.keyBufferOffset &&
-        lhs.numProps == rhs.numProps && lhs.allocKind == rhs.allocKind;
+        lhs.numProps == rhs.numProps && lhs.allocKind == rhs.allocKind &&
+        lhs.parent == rhs.parent;
   }
 };
 
@@ -137,7 +148,12 @@ class Builder {
         shouldVisitFunction_(shouldVisitFunction),
         optimize_(optimize),
         literalGenerator_(getIdentifier, getString),
-        bcProvider_(bcProvider) {}
+        bcProvider_(bcProvider) {
+    static_assert(
+        hbc::SHAPE_TABLE_CACHING_DISABLED == 0,
+        "first shape table entry has no caching");
+    objShapeTable_.push_back({0, 0});
+  }
 
   /// Do everything: collect the literals, optionally deduplicate them.
   Result generate();
@@ -159,6 +175,7 @@ class Builder {
   void serializeLiteralFor(LIRAllocObjectFromBufferInst *AOFB);
   void serializeLiteralFor(LIRAllocTypedObjectFromBufferInst *AOFB);
   void serializeLiteralFor(LIRAllocTypedNonEnumObjectFromBufferInst *AOFB);
+  void serializeLiteralFor(CreateThisInst *createThis);
 
   /// Serialize the the input literals \p elements into the UniquedStringVector
   /// \p dest.
@@ -200,10 +217,11 @@ class Builder {
 
   // This contains all the unique shapes of all the object literals in the
   // module.
+  // The first entry is a dummy entry because we don't use it for caching.
   std::vector<ShapeTableEntry> objShapeTable_{};
 
-  /// This maps a <keyBufferOffset, numProps, allocKind> key to an element index
-  /// in \p objShapeTable_.
+  /// This maps a <keyBufferOffset, numProps, allocKind, parent> key to an
+  /// element index in \c objShapeTable_.
   llvh::DenseMap<detail::ShapeTableDedupKey, uint32_t> keyOffsetToShapeIdx_;
 
   /// Each element is the keys portion of a serialized object literal.
@@ -222,6 +240,9 @@ class Builder {
   /// * LIRAllocTypedNonEnumObjectFromBufferInst
   std::vector<std::pair<const Instruction *, std::pair<size_t, size_t>>>
       objInst_{};
+
+  /// List of CreateThis instructions.
+  std::vector<CreateThisInst *> createThisInst_{};
 };
 
 void Builder::reseedFromBaseBytecode() {
@@ -327,10 +348,22 @@ void Builder::reseedFromBaseBytecode() {
   objShapeTable_ = shapeTable.vec();
   llvh::ArrayRef<unsigned char> keyBuf = bcProvider_->getObjectKeyBuffer();
   std::vector<StringTableEntry> keyStrTable;
+  IRBuilder builder{M_};
   keyStrTable.reserve(objShapeTable_.size());
   for (size_t i = 0, e = objShapeTable_.size(); i < e; ++i) {
     auto numProps = objShapeTable_[i].numProps;
     auto keyBufferOffset = objShapeTable_[i].keyBufferOffset;
+    if (numProps == 0) {
+      // Account for empty shape table entries (used for caching by, e.g.,
+      // CreateThis).
+      keyOffsetToShapeIdx_.insert(
+          {{keyBufferOffset,
+            numProps,
+            ValueKind::CreateThisInstKind,
+            builder.getEmptySentinel()},
+           (uint32_t)i});
+      continue;
+    }
     auto sizeInBytes = SerializedLiteralParser::parseKeyBuffer(
         keyBuf.slice(keyBufferOffset), numProps, emptyVisitor);
     keyStrTable.push_back({keyBufferOffset, (uint32_t)sizeInBytes, false});
@@ -338,10 +371,16 @@ void Builder::reseedFromBaseBytecode() {
         llvh::StringRef{
             reinterpret_cast<const char *>(keyBuf.data() + keyBufferOffset),
             sizeInBytes});
+    // Add to keyOffsetToShapeIdx_ here because the common way to
+    // instantiate an object is without a custom parent.
+    // If a non-standard parent is used, a new shape table entry will be
+    // created. It's possible this will waste an entry, but it's the only way to
+    // do it without storing the parent somehow in the bytecode.
     keyOffsetToShapeIdx_.insert(
         {{keyBufferOffset,
           numProps,
-          ValueKind::LIRAllocObjectFromBufferInstKind},
+          ValueKind::LIRAllocObjectFromBufferInstKind,
+          builder.getEmptySentinel()},
          (uint32_t)i});
   }
   keyStorage_ =
@@ -400,15 +439,19 @@ LiteralBufferBuilder::Result Builder::generate() {
     const auto [keyIdx, valIdx] = indices;
     ValueKind allocKind = Inst->getKind();
     uint32_t len;
+    Value *parent;
     if (auto *typed = llvh::dyn_cast<LIRAllocTypedObjectFromBufferInst>(Inst)) {
       len = typed->getKeyValuePairCount();
+      parent = typed->getParentObject();
     } else if (
         auto *typedNonEnum =
             llvh::dyn_cast<LIRAllocTypedNonEnumObjectFromBufferInst>(Inst)) {
       len = typedNonEnum->getKeyValuePairCount();
+      parent = typedNonEnum->getParentObject();
     } else {
-      len = llvh::cast<LIRAllocObjectFromBufferInst>(Inst)
-                ->getKeyValuePairCount();
+      auto *obj = llvh::cast<LIRAllocObjectFromBufferInst>(Inst);
+      len = obj->getKeyValuePairCount();
+      parent = obj->getParentObject();
     }
     assert(
         literalOffsetMap.count(Inst) == 0 &&
@@ -417,7 +460,8 @@ LiteralBufferBuilder::Result Builder::generate() {
     uint32_t valIndexInSet = values_.indexInSet(valIdx);
     uint32_t keyBufferOffset = keyView[keyIndexInSet].getOffset();
     const auto [iter, success] = keyOffsetToShapeIdx_.insert(
-        {{keyBufferOffset, len, allocKind}, keyOffsetToShapeIdx_.size()});
+        {{keyBufferOffset, len, allocKind, parent},
+         (uint32_t)objShapeTable_.size()});
     auto shapeID = iter->second;
     if (success) {
       // This is a new entry, add it to the shape table.
@@ -425,6 +469,13 @@ LiteralBufferBuilder::Result Builder::generate() {
     }
     literalOffsetMap[Inst] =
         LiteralOffset{shapeID, valView[valIndexInSet].getOffset()};
+  }
+
+  for (size_t i = 0, e = createThisInst_.size(); i != e; ++i) {
+    const auto *inst = createThisInst_[i];
+    uint32_t shapeID = objShapeTable_.size();
+    objShapeTable_.push_back({0, 0});
+    literalOffsetMap[inst] = LiteralOffset{shapeID, UINT32_MAX};
   }
 
   return {
@@ -454,6 +505,8 @@ void Builder::traverse() {
             auto *AOFB =
                 llvh::dyn_cast<LIRAllocTypedNonEnumObjectFromBufferInst>(&I)) {
           serializeLiteralFor(AOFB);
+        } else if (auto *createThis = llvh::dyn_cast<CreateThisInst>(&I)) {
+          serializeLiteralFor(createThis);
         }
       }
     }
@@ -484,13 +537,25 @@ void Builder::serializeLiteralFor(AllocArrayInst *AAI) {
   serializeInto(values_, elements, false);
 }
 
+void Builder::serializeLiteralFor(CreateThisInst *inst) {
+  createThisInst_.push_back(inst);
+}
+
 void Builder::serializeLiteralFor(LIRAllocObjectFromBufferInst *AOFB) {
   unsigned e = AOFB->getKeyValuePairCount();
-  if (!e)
-    return;
 
   llvh::SmallVector<Literal *, 8> objKeys;
   llvh::SmallVector<Literal *, 8> objVals;
+
+  if (e == 0) {
+    // Empty object literal, we're just going to use the shape table for the
+    // parent.
+    objInst_.push_back({AOFB, {objKeys_.size(), values_.size()}});
+    objKeys_.push_back({});
+    values_.push_back({});
+    return;
+  }
+
   for (unsigned ind = 0; ind != e; ++ind) {
     auto keyValuePair = AOFB->getKeyValuePair(ind);
     objKeys.push_back(cast<Literal>(keyValuePair.first));
@@ -504,8 +569,14 @@ void Builder::serializeLiteralFor(LIRAllocObjectFromBufferInst *AOFB) {
 
 void Builder::serializeLiteralFor(LIRAllocTypedObjectFromBufferInst *AOFB) {
   unsigned e = AOFB->getKeyValuePairCount();
-  if (!e)
+
+  if (e == 0) {
+    // Empty typed object literal, just use the shape table for the parent.
+    objInst_.push_back({AOFB, {objKeys_.size(), values_.size()}});
+    objKeys_.push_back({});
+    values_.push_back({});
     return;
+  }
 
   llvh::SmallVector<Literal *, 8> objKeys;
   llvh::SmallVector<Literal *, 8> objVals;
@@ -523,8 +594,15 @@ void Builder::serializeLiteralFor(LIRAllocTypedObjectFromBufferInst *AOFB) {
 void Builder::serializeLiteralFor(
     LIRAllocTypedNonEnumObjectFromBufferInst *AOFB) {
   unsigned e = AOFB->getKeyValuePairCount();
-  if (!e)
+
+  if (e == 0) {
+    // Empty typed non-enum object literal, just use the shape table for the
+    // parent.
+    objInst_.push_back({AOFB, {objKeys_.size(), values_.size()}});
+    objKeys_.push_back({});
+    values_.push_back({});
     return;
+  }
 
   llvh::SmallVector<Literal *, 8> objKeys;
   llvh::SmallVector<Literal *, 8> objVals;

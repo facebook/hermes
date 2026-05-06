@@ -412,55 +412,30 @@ Runtime::Runtime(
   returnThisCodeBlock_ =
       specialCodeBlockRuntimeModule_->getCodeBlockMayAllocate(1);
 
-  // Initialize the root hidden class and its variants.
-  {
-    MutableHandle<HiddenClass> clazz(*this, HiddenClass::createRoot(*this));
-    rootClazzes_[0] = clazz.getHermesValue();
-    for (unsigned i = 1; i <= InternalProperty::NumAnonymousInternalProperties;
-         ++i) {
-      auto addResult = HiddenClass::reserveSlot(clazz, *this);
-      assert(
-          addResult != ExecutionStatus::EXCEPTION &&
-          "Could not possibly grow larger than the limit");
-      clazz = *addResult->first;
-      rootClazzes_[i] = clazz.getHermesValue();
-    }
+  initRootHiddenClasses();
 
-    // Create a separate hierarchy of hidden classes for lazy objects, Proxy and
-    // HostObject, for lazy objects so that they never
-    // compare equal to ordinary objects.
-    clazz = HiddenClass::createRoot(*this);
+  classJSObjectNullParent =
+      HiddenClass::createRoot(*this, makeNullHandle<JSObject>(), ClassFlags{});
 
-    // For lazy objects, they should just use this empty HiddenClass until they
-    // are actually populated.
-    lazyObjectClass = clazz;
-
-    constexpr unsigned maxNumOverlapSlots = std::max(
-        {JSObject::numOverlapSlots<JSProxy>(),
-         JSObject::numOverlapSlots<JSCallableProxy>(),
-         JSObject::numOverlapSlots<HostObject>()});
-    for (unsigned i = 0;; ++i) {
-      if (i == JSObject::numOverlapSlots<JSProxy>())
-        proxyClass = clazz;
-      if (i == JSObject::numOverlapSlots<JSCallableProxy>())
-        callableProxyClass = clazz;
-      if (i == JSObject::numOverlapSlots<HostObject>())
-        hostObjectClass = clazz;
-      if (i == maxNumOverlapSlots)
-        break;
-      auto addResult = HiddenClass::reserveSlot(clazz, *this);
-      assert(
-          addResult != ExecutionStatus::EXCEPTION &&
-          "Could not possibly grow larger than the limit");
-      clazz = *addResult->first;
-    }
-  }
-
-  objectPrototype =
-      JSObject::create(*this, Runtime::makeNullHandle<JSObject>());
+  objectPrototype = JSObject::create(
+      *this, makeNullHandle<JSObject>(), classJSObjectNullParent);
   objectPrototypeRawPtr = *objectPrototype;
 
-  global_ = JSObject::create(*this, objectPrototype).getHermesValue();
+  // We want the prototype of 'global' to be an ordinary object,
+  // with Object.prototype as the parent.
+  // We don't need to use the full createRootHiddenClass in GlobalObject.cpp
+  // because we know that JSObject has no overlap slots, simplifying things.
+  static_assert(
+      JSObject::numOverlapSlots<JSObject>() == 0,
+      "must have no overlap slots for classJSObject");
+  classJSObject = HiddenClass::createRoot(*this, objectPrototype, ClassFlags{});
+
+  global_ =
+      JSObject::create(*this, objectPrototype, classJSObject).getHermesValue();
+  nullParentTransitionObject =
+      JSObject::create(
+          *this, Runtime::makeNullHandle<JSObject>(), classJSObjectNullParent)
+          .get();
 
   JSLibFlags jsLibFlags{};
   jsLibFlags.enableHermesInternal = runtimeConfig.getEnableHermesInternal();
@@ -623,8 +598,6 @@ void Runtime::markRoots(RootAcceptorWithNames &acceptor, bool markLongLived) {
   {
     MarkRootsPhaseTimer timer(*this, RootAcceptor::Section::RuntimeFields);
     acceptor.beginRootSection(RootAcceptor::Section::RuntimeFields);
-    for (auto &clazz : rootClazzes_)
-      acceptor.accept(clazz, "rootClass");
 #define SHRUNTIME_HV_FIELD(name) acceptor.acceptNullable(*toPHV(&name));
 #include "hermes/VM/SHRuntimeHermesValueFields.def"
 #define RUNTIME_HV_FIELD(name, type) acceptor.acceptNullablePV(name);
@@ -1701,6 +1674,22 @@ void Runtime::initCharacterStrings() {
     gc.flushToMarker(marker);
     charStrings_.push_back(allocateCharacterString(ch).getHermesValue());
   }
+}
+
+/// Initialize the root HiddenClasses for all the GCCells.
+void Runtime::initRootHiddenClasses() {
+  struct : public Locals {
+    PinnedValue<HiddenClass> clazz;
+  } lv;
+  LocalsRAII lraii{*this, &lv};
+
+  // For lazy objects, they should just use this empty HiddenClass until they
+  // are actually populated.
+  ClassFlags lazyFlags{};
+  lazyFlags.lazyObject = 1;
+  lv.clazz =
+      HiddenClass::createRoot(*this, makeNullHandle<JSObject>(), lazyFlags);
+  lazyObjectClass_ = lv.clazz;
 }
 
 Handle<StringPrimitive> Runtime::allocateCharacterString(char16_t ch) {

@@ -60,14 +60,19 @@ void JSRegExpBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField(&self->groupNameMappings_);
 }
 
+PseudoHandle<JSRegExp> JSRegExp::create(Runtime &runtime) {
+  auto *cell = runtime.makeAFixed<JSRegExp, HasFinalizer::Yes>(
+      runtime, runtime.regExpPrototype, runtime.classJSRegExp);
+  return JSObjectInit::initToPseudoHandle(runtime, cell);
+}
+
 PseudoHandle<JSRegExp> JSRegExp::create(
     Runtime &runtime,
     Handle<JSObject> parentHandle) {
   auto *cell = runtime.makeAFixed<JSRegExp, HasFinalizer::Yes>(
       runtime,
       parentHandle,
-      runtime.getHiddenClassForPrototype(
-          *parentHandle, numOverlapSlots<JSRegExp>()));
+      runtime.getHiddenClassForPrototype(*parentHandle, runtime.classJSRegExp));
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
@@ -209,7 +214,11 @@ ExecutionStatus JSRegExp::initializeGroupNameMappingObj(
   if (parsedMappings.size() == 0)
     return ExecutionStatus::RETURNED;
 
-  auto objRes = JSObject::create(runtime, parsedMappings.size());
+  auto objRes = JSObject::create(
+      runtime,
+      Runtime::makeNullHandle<JSObject>(),
+      runtime.classJSObjectNullParent,
+      parsedMappings.size());
   lv.obj = objRes.get();
 
   MutableHandle<HermesValue> numberHandle{runtime};

@@ -155,9 +155,13 @@ bool LowerAllocObjectLiteral::lowerAllocObjectBuffer(
   IRBuilder builder(F);
   uint32_t size = allocInst->getKeyValuePairCount();
 
-  // Should not create lowered instruction for an object with 0
-  // properties.
-  if (size == 0) {
+  // Handle empty object literals.
+  // If there's no parent object, don't lower it so that we don't allocate a
+  // shape table entry.
+  // If there is a parent object, we want to lower it in order to create a
+  // shape table entry because we want to cache the HiddenClass (which
+  // contains the parent), so just let this function complete as usual.
+  if (size == 0 && llvh::isa<EmptySentinel>(allocInst->getParentObject())) {
     return false;
   }
 

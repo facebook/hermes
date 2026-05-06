@@ -799,7 +799,7 @@ class Emitter {
   asmjit::Label newPrefLabel(const char *pref, size_t index);
 
   void newObject(FR frRes);
-  void newObjectWithParent(FR frRes, FR frParent);
+  void newObjectWithParent(FR frRes, FR frParent, uint32_t shapeTableIndex);
   void newObjectWithBuffer(
       FR frRes,
       uint32_t shapeTableIndex,

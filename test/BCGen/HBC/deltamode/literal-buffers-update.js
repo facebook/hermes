@@ -90,7 +90,7 @@ function o5() {
 // CHECK-NEXT:  StringSwitchImm count: 0
 // CHECK-NEXT:  Key buffer size (bytes): 31
 // CHECK-NEXT:  Value buffer size (bytes): 57
-// CHECK-NEXT:  Shape table count: 5
+// CHECK-NEXT:  Shape table count: 6
 // CHECK-NEXT:  Segment ID: 0
 // CHECK-NEXT:  CommonJS module count: 0
 // CHECK-NEXT:  CommonJS module count (static): 0
@@ -153,11 +153,12 @@ function o5() {
 // CHECK-NEXT:[String 20]
 
 // CHECK:Object Shape Table:
-// CHECK-NEXT:0[0, 3]
-// CHECK-NEXT:1[7, 3]
-// CHECK-NEXT:2[14, 2]
-// CHECK-NEXT:3[19, 2]
-// CHECK-NEXT:4[24, 3]
+// CHECK-NEXT:0[0, 0]
+// CHECK-NEXT:1[0, 3]
+// CHECK-NEXT:2[7, 3]
+// CHECK-NEXT:3[14, 2]
+// CHECK-NEXT:4[19, 2]
+// CHECK-NEXT:5[24, 3]
 
 // CHECK:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000
@@ -197,7 +198,7 @@ function o5() {
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<o0>(1 params, 1 registers, 0 numbers, 0 non-pointers):
-// CHECK-NEXT:    NewObjectWithBuffer r0, 4, 44
+// CHECK-NEXT:    NewObjectWithBuffer r0, 5, 44
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<a1>(1 params, 1 registers, 0 numbers, 0 non-pointers):
@@ -209,23 +210,23 @@ function o5() {
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<o1>(1 params, 1 registers, 0 numbers, 0 non-pointers):
-// CHECK-NEXT:    NewObjectWithBuffer r0, 0, 0
-// CHECK-NEXT:    Ret               r0
-
-// CHECK:Function<o2>(1 params, 1 registers, 0 numbers, 0 non-pointers):
-// CHECK-NEXT:    NewObjectWithBuffer r0, 0, 0
-// CHECK-NEXT:    Ret               r0
-
-// CHECK:Function<o3>(1 params, 1 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:    NewObjectWithBuffer r0, 1, 0
 // CHECK-NEXT:    Ret               r0
 
+// CHECK:Function<o2>(1 params, 1 registers, 0 numbers, 0 non-pointers):
+// CHECK-NEXT:    NewObjectWithBuffer r0, 1, 0
+// CHECK-NEXT:    Ret               r0
+
+// CHECK:Function<o3>(1 params, 1 registers, 0 numbers, 0 non-pointers):
+// CHECK-NEXT:    NewObjectWithBuffer r0, 2, 0
+// CHECK-NEXT:    Ret               r0
+
 // CHECK:Function<o4>(1 params, 1 registers, 0 numbers, 0 non-pointers):
-// CHECK-NEXT:    NewObjectWithBuffer r0, 2, 26
+// CHECK-NEXT:    NewObjectWithBuffer r0, 3, 26
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<o5>(1 params, 1 registers, 0 numbers, 0 non-pointers):
-// CHECK-NEXT:    NewObjectWithBuffer r0, 3, 35
+// CHECK-NEXT:    NewObjectWithBuffer r0, 4, 35
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Debug filename table:

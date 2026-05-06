@@ -241,7 +241,7 @@ CallResult<std::vector<std::u16string>> normalizeLocales(
     return ExecutionStatus::EXCEPTION;
   }
 
-  bool isProxy = lv.localeObj->isProxyObject();
+  bool isProxy = lv.localeObj->isProxyObject(runtime);
   if (LLVM_UNLIKELY(
           createListFromArrayLike_RJS(
               lv.localeObj,
@@ -489,6 +489,8 @@ CallResult<HermesValue> intlServiceConstructor(
     Handle<NativeConstructor> serviceConstructor,
     Handle<JSObject> servicePrototype,
     unsigned int additionalSlots) {
+  assert(additionalSlots <= 1 && "can only use up to 1 slot");
+
   CallResult<std::vector<std::u16string>> localesRes =
       normalizeLocales(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(localesRes == ExecutionStatus::EXCEPTION)) {
@@ -538,7 +540,13 @@ CallResult<HermesValue> intlServiceConstructor(
     lv.selfParent = std::move(*thisParentRes);
   }
   lv.self = DecoratedObject::create(
-      runtime, servicePrototype, std::move(native), additionalSlots);
+      runtime,
+      servicePrototype,
+      runtime.getHiddenClassForPrototype(
+          *servicePrototype,
+          additionalSlots == 1 ? runtime.classDecoratedObject1Reserved
+                               : runtime.classDecoratedObject),
+      std::move(native));
 
   lv.typeVal =
       HermesValue::encodeTrustedNumberValue((uint32_t)T::getNativeType());
@@ -758,6 +766,8 @@ void defineIntlCollator(Runtime &runtime, Handle<JSObject> intl) {
 
 CallResult<HermesValue> intlCollatorConstructor(void *, Runtime &runtime) {
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  static_assert(
+      (unsigned)CollatorSlotIndexes::COUNT == 1, "can only reserve 1 slot");
   return intlServiceConstructor<platform_intl::Collator>(
       runtime,
       args,
@@ -819,16 +829,19 @@ CallResult<HermesValue> intlCollatorPrototypeCompareGetter(
     return boundCompare.getHermesValue();
   }
 
+  static_assert(
+      (unsigned)CollatorCompareSlotIndexes::COUNT == 1,
+      "can only reserve 1 slot");
   Handle<NativeFunction> compare = NativeFunction::create(
       runtime,
       runtime.functionPrototype,
+      runtime.classNativeFunction1Reserved,
       Runtime::makeNullHandle<Environment>(),
       nullptr,
       intlCollatorCompare,
       Predefined::getSymbolID(Predefined::emptyString),
       2,
-      Runtime::makeNullHandle<JSObject>(),
-      static_cast<unsigned int>(CollatorCompareSlotIndexes::COUNT));
+      Runtime::makeNullHandle<JSObject>());
   setCollator(compare, runtime, collatorHandle);
 
   setBoundCompare(*collatorHandle, runtime, compare);
@@ -1010,6 +1023,8 @@ CallResult<HermesValue> intlDateTimeFormatConstructor(
     void *,
     Runtime &runtime) {
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  static_assert(
+      (unsigned)DTFSlotIndexes::COUNT == 1, "can only reserve 1 slot");
   return intlServiceConstructor<platform_intl::DateTimeFormat>(
       runtime,
       args,
@@ -1107,16 +1122,18 @@ CallResult<HermesValue> intlDateTimeFormatPrototypeFormatGetter(
     return boundFormat.getHermesValue();
   }
 
+  static_assert(
+      (unsigned)DTFFormatSlotIndexes::COUNT == 1, "can only reserve 1 slot");
   Handle<NativeFunction> format = NativeFunction::create(
       runtime,
       runtime.functionPrototype,
+      runtime.classNativeFunction1Reserved,
       Runtime::makeNullHandle<Environment>(),
       nullptr,
       intlDateTimeFormatFormat,
       Predefined::getSymbolID(Predefined::emptyString),
       1,
-      Runtime::makeNullHandle<JSObject>(),
-      static_cast<unsigned int>(DTFFormatSlotIndexes::COUNT));
+      Runtime::makeNullHandle<JSObject>());
   setDateTimeFormat(format, runtime, dateTimeFormatHandle);
 
   setDTFBoundFormat(dateTimeFormatHandle, runtime, format);
@@ -1323,6 +1340,7 @@ void defineIntlNumberFormat(Runtime &runtime, Handle<JSObject> intl) {
 
 CallResult<HermesValue> intlNumberFormatConstructor(void *, Runtime &runtime) {
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  static_assert((unsigned)NFSlotIndexes::COUNT == 1, "can only reserve 1 slot");
   return intlServiceConstructor<platform_intl::NumberFormat>(
       runtime,
       args,
@@ -1386,16 +1404,18 @@ CallResult<HermesValue> intlNumberFormatPrototypeFormatGetter(
     return boundFormat.getHermesValue();
   }
 
+  static_assert(
+      (unsigned)NFFormatSlotIndexes::COUNT == 1, "can only reserve 1 slot");
   Handle<NativeFunction> format = NativeFunction::create(
       runtime,
       runtime.functionPrototype,
+      runtime.classNativeFunction1Reserved,
       Runtime::makeNullHandle<Environment>(),
       nullptr,
       intlNumberFormatFormat,
       Predefined::getSymbolID(Predefined::emptyString),
       1,
-      Runtime::makeNullHandle<JSObject>(),
-      static_cast<unsigned int>(NFFormatSlotIndexes::COUNT));
+      Runtime::makeNullHandle<JSObject>());
   setNumberFormat(format, runtime, numberFormatHandle);
 
   setNFBoundFormat(numberFormatHandle, runtime, format);

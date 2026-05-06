@@ -43,6 +43,9 @@ class JSMapImpl final : public JSObject,
     return cell->getKind() == C;
   }
 
+  /// Create a JSMapImpl using the appropriate prototype from runtime.
+  static PseudoHandle<JSMapImpl<C>> create(Runtime &runtime);
+
   static PseudoHandle<JSMapImpl<C>> create(
       Runtime &runtime,
       Handle<JSObject> parentHandle);

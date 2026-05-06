@@ -64,6 +64,8 @@ struct RuntimeOffsets {
 
   static constexpr uint32_t hiddenClassLazyJITId =
       offsetof(HiddenClass, lazyJITId_);
+  static constexpr uint32_t hiddenClassObjectParent =
+      offsetof(HiddenClass, objectParent_);
 #if HERMESVM_GCKIND == _HERMESVM_GCVALUE_HADES
   static constexpr uint32_t runtimeHadesYGLevel =
       offsetof(Runtime, heap_.youngGen_.level_);
@@ -80,9 +82,6 @@ struct RuntimeOffsets {
       offsetof(GCCell, _debugAllocationId_);
   static constexpr uint32_t gcCellMagicValue = GCCell::kMagic;
 #endif
-
-  static constexpr uint32_t runtimeRootClazzes =
-      offsetof(Runtime, rootClazzes_);
 
   using IdentifierTableLookupEntryType = IdentifierTable::LookupEntry;
   using IdentifierTableLookupVectorType =

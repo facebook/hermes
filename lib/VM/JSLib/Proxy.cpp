@@ -129,7 +129,7 @@ CallResult<HermesValue> proxyRevocationSteps(void *, Runtime &runtime) {
   setRevocableProxySlot(revoker, runtime, SmallHermesValue::encodeNullValue());
   // 4. Assert: p is a Proxy object.
   JSObject *proxy = vmcast<JSObject>(proxyVal.getObject(runtime));
-  assert(proxy->isProxyObject() && "[[RevocableProxy]] is not a Proxy");
+  assert(proxy->isProxyObject(runtime) && "[[RevocableProxy]] is not a Proxy");
 
   struct : public Locals {
     PinnedValue<JSObject> proxyHandle;
@@ -173,16 +173,20 @@ CallResult<HermesValue> proxyRevocable(void *, Runtime &runtime) {
 
   // 2. Let steps be the algorithm steps defined in Proxy Revocation Functions.
   // 3. Let revoker be CreateBuiltinFunction(steps, « [[RevocableProxy]] »).
+  static_assert(
+      ProxySlotIndexes::COUNT == 1,
+      "COUNT must be 1. "
+      "Only 1 reserved slot in classNativeFunction1Reserved");
   Handle<NativeFunction> revoker = NativeFunction::create(
       runtime,
       runtime.functionPrototype,
+      runtime.classNativeFunction1Reserved,
       Runtime::makeNullHandle<Environment>(),
       nullptr,
       proxyRevocationSteps,
       Predefined::getSymbolID(Predefined::emptyString),
       0,
-      Runtime::makeNullHandle<JSObject>(),
-      ProxySlotIndexes::COUNT);
+      Runtime::makeNullHandle<JSObject>());
   // 4. Set revoker.[[RevocableProxy]] to p.
   auto shv = SmallHermesValue::encodeHermesValue(
       lv.finalProxy.getHermesValue(), runtime);

@@ -10,14 +10,34 @@
 #include "SHUnitExt.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/Callable.h"
+#include "hermes/VM/DecoratedObject.h"
+#include "hermes/VM/Domain.h"
+#include "hermes/VM/FastArray.h"
 #include "hermes/VM/HostModel.h"
 #include "hermes/VM/InternalProperty.h"
 #include "hermes/VM/JSArray.h"
+#include "hermes/VM/JSCallSite.h"
+#include "hermes/VM/JSCallableProxy.h"
+#include "hermes/VM/JSDataView.h"
+#include "hermes/VM/JSDate.h"
+#include "hermes/VM/JSError.h"
+#include "hermes/VM/JSFinalizationRegistry.h"
+#include "hermes/VM/JSGeneratorObject.h"
+#include "hermes/VM/JSLib.h"
+#include "hermes/VM/JSLib/JSLibStorage.h"
+#include "hermes/VM/JSMapImpl.h"
 #include "hermes/VM/JSObject-inline.h"
 #include "hermes/VM/JSProxy.h"
+#include "hermes/VM/JSRegExp.h"
+#include "hermes/VM/JSRegExpStringIterator.h"
+#include "hermes/VM/JSTypedArray.h"
+#include "hermes/VM/JSWeakMapImpl.h"
+#include "hermes/VM/JSWeakRef.h"
 #include "hermes/VM/NativeState.h"
 #include "hermes/VM/Operations.h"
+#include "hermes/VM/PrimitiveBox.h"
 #include "hermes/VM/PropertyAccessor.h"
+#include "hermes/VM/SingleObject.h"
 #include "hermes/VM/StaticHUtils.h"
 
 #include "llvh/ADT/DenseSet.h"
@@ -60,7 +80,6 @@ void JSObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const JSObject *>(cell);
   mb.setVTable(&JSObject::vt);
   mb.setJitCall(&JSObject::_jitCallImpl);
-  mb.addField("parent", &self->parent_);
   mb.addField("class", &self->clazzDoNotAccessDirectly_);
   mb.addField("propStorage", &self->propStorage_);
 
@@ -78,100 +97,98 @@ void JSObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   }
 }
 
-PseudoHandle<JSObject> JSObject::create(
-    Runtime &runtime,
-    Handle<JSObject> parentHandle) {
-  auto *cell = runtime.makeAFixed<JSObject>(
-      runtime,
-      parentHandle,
-      runtime.getHiddenClassForPrototype(
-          *parentHandle, numOverlapSlots<JSObject>()),
-      GCPointerBase::NoBarriers());
-  return JSObjectInit::initToPseudoHandle(runtime, cell);
+size_t JSObject::numOverlapSlotsForCellKind(CellKind k) {
+  switch (k) {
+#define CELL_JSOBJECT_NAME(name, vmClassName) \
+  case CellKind::name##Kind:                  \
+    return JSObject::numOverlapSlots<vmClassName>();
+#include "hermes/VM/CellKinds.def"
+    default:
+      hermes_fatal("CellKind does not have a known JS class");
+      return 0;
+  }
 }
 
 PseudoHandle<JSObject> JSObject::create(
     Runtime &runtime,
-    unsigned propertyCount) {
-  unsigned numIndirectSlots = propertyCount <= DIRECT_PROPERTY_SLOTS
-      ? 0
-      : propertyCount - DIRECT_PROPERTY_SLOTS;
-  if (numIndirectSlots == 0) {
-    // No indirect storage needed, so just pass through to create.
-    return create(runtime);
-  }
-
-  auto propStorageSize =
-      heapAlignSize(PropStorage::allocationSize(numIndirectSlots));
-  if (LLVM_UNLIKELY(propertyCount > maxYoungGenAllocationPropCount())) {
-    // The object and property storage together are too big to fit in the young
-    // gen together, so allocate them separately.
-    auto self = create(runtime);
-    return runtime.ignoreAllocationFailure(
-        JSObject::allocatePropStorage(std::move(self), runtime, propertyCount));
-  }
-
-  static_assert(
-      heapAlignSize(
-          PropStorage::allocationSize(
-              maxYoungGenAllocationPropCount() - DIRECT_PROPERTY_SLOTS) +
-              heapAlignSize(cellSize<JSObject>()) <=
-          GC::maxYoungGenAllocationSize()),
-      "maxYoungGenAllocationPropCount too large");
-
-  // Otherwise, allocate both parts together.
-  // This ensures both the object and the property storage are in the young gen.
-
-  auto parent = Handle<JSObject>::vmcast(&runtime.objectPrototype);
-  auto clazz =
-      runtime.getHiddenClassForPrototype(*parent, numOverlapSlots<JSObject>());
-
-  auto [obj, storage] = runtime.make2YoungGenUnsafe<JSObject, PropStorage>(
-      cellSize<JSObject>(),
-      std::tuple<
-          Runtime &,
-          Handle<JSObject>,
-          Handle<HiddenClass>,
-          GCPointerBase::NoBarriers>(
-          runtime, parent, clazz, GCPointerBase::NoBarriers()),
-      propStorageSize,
-      std::tuple{});
-
-  NoAllocScope noAlloc{runtime};
-
-  PropStorage::resizeWithinCapacity(storage, runtime, numIndirectSlots);
-  obj->propStorage_.set(runtime, storage, runtime.getHeap());
-
-  return JSObjectInit::initToPseudoHandle(runtime, obj);
+    Handle<JSObject> parentHandle) {
+  return create(
+      runtime,
+      parentHandle,
+      runtime.getHiddenClassForPrototype(*parentHandle, runtime.classJSObject));
 }
 
 PseudoHandle<JSObject> JSObject::create(
     Runtime &runtime,
     Handle<JSObject> parentHandle,
-    Handle<HiddenClass> clazz) {
-  auto obj = JSObject::create(runtime, clazz->getNumProperties());
-  obj->updateClass(runtime, *clazz);
-  // If the hidden class has index like property, we need to clear the fast path
-  // flag.
-  if (LLVM_UNLIKELY(obj->getClass(runtime)->getHasIndexLikeProperties()))
-    obj->flags_.fastIndexProperties = false;
-  obj->parent_.set(runtime, parentHandle.get(), runtime.getHeap());
-  return obj;
+    Handle<HiddenClass> clazz,
+    unsigned propertyCount) {
+  unsigned numIndirectSlots = propertyCount <= DIRECT_PROPERTY_SLOTS
+      ? 0
+      : propertyCount - DIRECT_PROPERTY_SLOTS;
+  auto propStorageSize =
+      heapAlignSize(PropStorage::allocationSize(numIndirectSlots));
+
+  PseudoHandle<JSObject> result;
+  if (numIndirectSlots == 0) {
+    // No indirect storage needed, so just create with no slots.
+    auto *cell = runtime.makeAFixed<JSObject>(
+        runtime, parentHandle, clazz, GCPointerBase::NoBarriers());
+    result = JSObjectInit::initToPseudoHandle(runtime, cell);
+  } else if (LLVM_UNLIKELY(propertyCount > maxYoungGenAllocationPropCount())) {
+    // The object and property storage together are too big to fit in the young
+    // gen together, so allocate them separately.
+    auto *cell = runtime.makeAFixed<JSObject>(
+        runtime, parentHandle, clazz, GCPointerBase::NoBarriers());
+    PseudoHandle<JSObject> self =
+        JSObjectInit::initToPseudoHandle(runtime, cell);
+    result = runtime.ignoreAllocationFailure(
+        JSObject::allocatePropStorage(std::move(self), runtime, propertyCount));
+  } else {
+    static_assert(
+        heapAlignSize(
+            PropStorage::allocationSize(
+                maxYoungGenAllocationPropCount() - DIRECT_PROPERTY_SLOTS) +
+                heapAlignSize(cellSize<JSObject>()) <=
+            GC::maxYoungGenAllocationSize()),
+        "maxYoungGenAllocationPropCount too large");
+
+    // Otherwise, allocate both parts together.
+    // This ensures both the object and the property storage are in the young
+    // gen.
+
+    auto [obj, storage] = runtime.make2YoungGenUnsafe<JSObject, PropStorage>(
+        cellSize<JSObject>(),
+        std::tuple<
+            Runtime &,
+            Handle<JSObject>,
+            Handle<HiddenClass>,
+            GCPointerBase::NoBarriers>(
+            runtime, parentHandle, clazz, GCPointerBase::NoBarriers()),
+        propStorageSize,
+        std::tuple{});
+
+    NoAllocScope noAlloc{runtime};
+
+    PropStorage::resizeWithinCapacity(storage, runtime, numIndirectSlots);
+    obj->propStorage_.set(runtime, storage, runtime.getHeap());
+
+    result = JSObjectInit::initToPseudoHandle(runtime, obj);
+  }
+
+  return result;
 }
 
 void JSObject::initializeLazyObject(
     Runtime &runtime,
     Handle<JSObject> lazyObject) {
-  assert(lazyObject->flags_.lazyObject && "object must be lazy");
-  assert(
-      lazyObject->getClass(runtime) == *runtime.lazyObjectClass &&
-      "lazy object must have lazy class");
-  // object is now assumed to be a regular object.
-  lazyObject->flags_.lazyObject = 0;
+  assert(lazyObject->isLazy(runtime) && "object must be lazy");
 
   // only functions can be lazy.
   assert(vmisa<Callable>(lazyObject.get()) && "unexpected lazy object");
   Callable::defineLazyProperties(Handle<Callable>::vmcast(lazyObject), runtime);
+
+  assert(!lazyObject->isLazy(runtime) && "object must no longer be lazy");
 }
 
 ObjectID JSObject::getObjectID(JSObject *self, Runtime &runtime) {
@@ -190,7 +207,7 @@ ObjectID JSObject::getObjectID(JSObject *self, Runtime &runtime) {
 CallResult<PseudoHandle<JSObject>> JSObject::getPrototypeOf(
     PseudoHandle<JSObject> selfHandle,
     Runtime &runtime) {
-  if (LLVM_LIKELY(!selfHandle->isProxyObject())) {
+  if (LLVM_LIKELY(!selfHandle->isProxyObject(runtime))) {
     return createPseudoHandle(selfHandle->getParent(runtime));
   }
 
@@ -221,7 +238,7 @@ CallResult<bool> JSObject::setParent(
     Runtime &runtime,
     JSObject *parent,
     PropOpFlags opFlags) {
-  if (LLVM_UNLIKELY(self->isProxyObject())) {
+  if (LLVM_UNLIKELY(self->isProxyObject(runtime))) {
     return proxyOpFlags(
         runtime,
         opFlags,
@@ -231,7 +248,7 @@ CallResult<bool> JSObject::setParent(
   }
   // ES9 9.1.2
   // 4.
-  if (self->parent_.get(runtime) == parent)
+  if (self->getParent(runtime) == parent)
     return true;
   // ES2022 10.4.7 Immutable Prototype Exotic Objects
   // The [[SetPrototypeOf]] for %Object.prototype% is supposed to be
@@ -250,7 +267,7 @@ CallResult<bool> JSObject::setParent(
         "Cannot set prototype of immutable prototype object");
   }
   // 5.
-  if (!self->isExtensible()) {
+  if (!self->isExtensible(runtime)) {
     if (opFlags.getThrowOnError()) {
       return runtime.raiseTypeError("Object is not extensible.");
     } else {
@@ -258,14 +275,14 @@ CallResult<bool> JSObject::setParent(
     }
   }
   // 6-8. Check for a prototype cycle.
-  for (JSObject *cur = parent; cur; cur = cur->parent_.get(runtime)) {
+  for (JSObject *cur = parent; cur; cur = cur->getParent(runtime)) {
     if (cur == self) {
       if (opFlags.getThrowOnError()) {
         return runtime.raiseTypeError("Prototype cycle detected");
       } else {
         return false;
       }
-    } else if (LLVM_UNLIKELY(cur->isProxyObject())) {
+    } else if (LLVM_UNLIKELY(cur->isProxyObject(runtime))) {
       // TODO this branch should also be used for module namespace and
       // immutable prototype exotic objects.
       break;
@@ -276,12 +293,26 @@ CallResult<bool> JSObject::setParent(
   // parent chain that would prevent adding the property to the cached
   // HiddenClass.
   // We must break the cache, so increment the epoch.
-  if (LLVM_UNLIKELY(self->flags_.isCachedUsingEpoch)) {
+  if (LLVM_UNLIKELY(self->isCachedUsingEpoch(runtime))) {
     runtime.incParentCacheEpoch();
   }
 
+  struct : public Locals {
+    PinnedValue<HiddenClass> clazz;
+    PinnedValue<JSObject> self;
+    PinnedValue<JSObject> parent;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  lv.self = self;
+  lv.clazz = lv.self->getClass(runtime);
+  lv.parent = parent;
+
   // 9.
-  self->parent_.set(runtime, parent, runtime.getHeap());
+  lv.clazz = HiddenClass::updateObjectParent(
+      lv.clazz, runtime, createPseudoHandle(*lv.parent));
+  lv.self->updateClass(runtime, *lv.clazz);
+
   // 10.
   return true;
 }
@@ -372,7 +403,7 @@ CallResult<PseudoHandle<>> JSObject::getComputedPropertyValueInternal_RJS(
     Handle<JSObject> propObj,
     ComputedPropertyDescriptor desc) {
   assert(
-      !selfHandle->flags_.proxyObject && !propObj->flags_.proxyObject &&
+      !selfHandle->isProxyObject(runtime) && !propObj->isProxyObject(runtime) &&
       "getComputedPropertyValue_RJS cannot be used with proxy objects");
 
   if (LLVM_LIKELY(!desc.flags.accessor))
@@ -426,8 +457,8 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
       (okFlags.getIncludeNonSymbols() || okFlags.getIncludeSymbols()) &&
       "Can't exclude symbols and strings");
   if (LLVM_UNLIKELY(
-          selfHandle->flags_.lazyObject || selfHandle->flags_.proxyObject)) {
-    if (selfHandle->flags_.proxyObject) {
+          selfHandle->isLazy(runtime) || selfHandle->isProxyObject(runtime))) {
+    if (selfHandle->isProxyObject(runtime)) {
       CallResult<PseudoHandle<JSArray>> proxyRes =
           JSProxy::ownPropertyKeys(selfHandle, runtime, okFlags);
       if (LLVM_UNLIKELY(proxyRes == ExecutionStatus::EXCEPTION)) {
@@ -435,7 +466,7 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
       }
       return runtime.makeHandle(std::move(*proxyRes));
     }
-    assert(selfHandle->flags_.lazyObject && "descriptor flags are impossible");
+    assert(selfHandle->isLazy(runtime) && "descriptor flags are impossible");
     initializeLazyObject(runtime, selfHandle);
   }
 
@@ -475,7 +506,7 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
   llvh::SmallVector<uint32_t, 8> indexNames{};
 
   // Get host object property names
-  if (LLVM_UNLIKELY(selfHandle->flags_.hostObject)) {
+  if (LLVM_UNLIKELY(selfHandle->isHostObject(runtime))) {
     assert(
         range.first == range.second && "Host objects cannot own indexed range");
     // Create a temporary handle to receive the host property names
@@ -832,7 +863,7 @@ inline CallResult<bool> getOwnComputedPrimitiveDescriptorImpl(
   // Try the fast paths first if we have "fast" index properties and the
   // property name is an obvious index.
   if (auto arrayIndex = toArrayIndexFastPath(*nameValHandle)) {
-    if (JSObject::Helper::flags(*selfHandle).fastIndexProperties) {
+    if (selfHandle->hasFastIndexProperties(runtime)) {
       auto res = JSObject::Helper::getOwnIndexedPropertyFlags(
           selfHandle.get(), runtime, *arrayIndex);
       if (res) {
@@ -849,8 +880,8 @@ inline CallResult<bool> getOwnComputedPrimitiveDescriptorImpl(
     }
 
     if (!selfHandle->getClass(runtime)->getHasIndexLikeProperties() &&
-        !selfHandle->isHostObject() && !selfHandle->isLazy() &&
-        !selfHandle->isProxyObject()) {
+        !selfHandle->isHostObject(runtime) && !selfHandle->isLazy(runtime) &&
+        !selfHandle->isProxyObject(runtime)) {
       // Early return to handle the case where an object definitely has no
       // index-like properties. This avoids allocating a new StringPrimitive and
       // uniquing it below.
@@ -871,14 +902,15 @@ inline CallResult<bool> getOwnComputedPrimitiveDescriptorImpl(
   }
 
   if (LLVM_LIKELY(
-          !JSObject::Helper::flags(*selfHandle).indexedStorage &&
-          !selfHandle->isLazy() && !selfHandle->isProxyObject())) {
+          !selfHandle->hasIndexedStorage(runtime) &&
+          !selfHandle->isLazy(runtime) &&
+          !selfHandle->isProxyObject(runtime))) {
     return false;
   }
 
   // If we have indexed storage, perform potentially expensive conversions
   // to array index and check it.
-  if (JSObject::Helper::flags(*selfHandle).indexedStorage) {
+  if (selfHandle->hasIndexedStorage(runtime)) {
     // If the name is a valid integer array index, store it here.
     OptValue<uint32_t> arrayIndex;
 
@@ -901,13 +933,14 @@ inline CallResult<bool> getOwnComputedPrimitiveDescriptorImpl(
     return false;
   }
 
-  if (selfHandle->isLazy()) {
+  if (selfHandle->isLazy(runtime)) {
     JSObject::initializeLazyObject(runtime, selfHandle);
     return JSObject::getOwnComputedPrimitiveDescriptor(
         selfHandle, runtime, nameValHandle, ignoreProxy, desc);
   }
 
-  assert(selfHandle->isProxyObject() && "descriptor flags are impossible");
+  assert(
+      selfHandle->isProxyObject(runtime) && "descriptor flags are impossible");
   if (ignoreProxy == JSObject::IgnoreProxy::Yes) {
     return false;
   }
@@ -968,7 +1001,7 @@ CallResult<bool> JSObject::getOwnComputedDescriptor(
         createPseudoHandle(selfHandle.get()), runtime, desc));
     return true;
   }
-  if (LLVM_UNLIKELY(selfHandle->isProxyObject())) {
+  if (LLVM_UNLIKELY(selfHandle->isProxyObject(runtime))) {
     return JSProxy::getOwnProperty(
         selfHandle, runtime, nameValHandle, desc, &valueOrAccessor);
   }
@@ -990,16 +1023,16 @@ JSObject *JSObject::getNamedDescriptorUnsafe(
   // disambiguation however we want.  This is here in order to avoid
   // impacting perf for the common case where an own property exists
   // in normal storage.
-  if (LLVM_UNLIKELY(selfHandle->flags_.hostObject)) {
+  if (LLVM_UNLIKELY(selfHandle->isHostObject(runtime))) {
     desc.flags.hostObject = true;
     desc.flags.writable = true;
     desc.slot = name.unsafeGetRaw();
     return *selfHandle;
   }
 
-  if (LLVM_UNLIKELY(selfHandle->flags_.lazyObject)) {
+  if (LLVM_UNLIKELY(selfHandle->isLazy(runtime))) {
     assert(
-        !selfHandle->flags_.proxyObject &&
+        !selfHandle->isProxyObject(runtime) &&
         "Proxy objects should never be lazy");
     // Initialize the object and perform the lookup again.
     JSObject::initializeLazyObject(runtime, selfHandle);
@@ -1008,46 +1041,46 @@ JSObject *JSObject::getNamedDescriptorUnsafe(
       return *selfHandle;
   }
 
-  if (LLVM_UNLIKELY(selfHandle->flags_.proxyObject)) {
+  if (LLVM_UNLIKELY(selfHandle->isProxyObject(runtime))) {
     desc.flags.proxyObject = true;
     desc.slot = name.unsafeGetRaw();
     return *selfHandle;
   }
 
-  if (selfHandle->parent_) {
-    MutableHandle<JSObject> mutableSelfHandle{
-        runtime, selfHandle->parent_.getNonNull(runtime)};
+  if (auto *parentRawPtr = selfHandle->getParent(runtime)) {
+    MutableHandle<JSObject> mutableSelfHandle{runtime, parentRawPtr};
 
     do {
+      GCScopeMarkerRAII marker{runtime};
       // Check the most common case first, at the cost of some code duplication.
       if (LLVM_LIKELY(
-              !mutableSelfHandle->flags_.lazyObject &&
-              !mutableSelfHandle->flags_.hostObject &&
-              !mutableSelfHandle->flags_.proxyObject)) {
+              !mutableSelfHandle->isLazy(runtime) &&
+              !mutableSelfHandle->isHostObject(runtime) &&
+              !mutableSelfHandle->isProxyObject(runtime))) {
       findProp:
         if (findProperty(mutableSelfHandle, runtime, name, desc)) {
           assert(
-              !selfHandle->flags_.proxyObject &&
+              !selfHandle->isProxyObject(runtime) &&
               "Proxy object parents should never have own properties");
           return *mutableSelfHandle;
         }
-      } else if (LLVM_UNLIKELY(mutableSelfHandle->flags_.lazyObject)) {
+      } else if (LLVM_UNLIKELY(mutableSelfHandle->isLazy(runtime))) {
         JSObject::initializeLazyObject(runtime, mutableSelfHandle);
         goto findProp;
-      } else if (LLVM_UNLIKELY(mutableSelfHandle->flags_.hostObject)) {
+      } else if (LLVM_UNLIKELY(mutableSelfHandle->isHostObject(runtime))) {
         desc.flags.hostObject = true;
         desc.flags.writable = true;
         desc.slot = name.unsafeGetRaw();
         return *mutableSelfHandle;
       } else {
         assert(
-            mutableSelfHandle->flags_.proxyObject &&
+            mutableSelfHandle->isProxyObject(runtime) &&
             "descriptor flags are impossible");
         desc.flags.proxyObject = true;
         desc.slot = name.unsafeGetRaw();
         return *mutableSelfHandle;
       }
-    } while ((mutableSelfHandle = mutableSelfHandle->parent_.get(runtime)));
+    } while ((mutableSelfHandle = mutableSelfHandle->getParent(runtime)));
   }
 
   return nullptr;
@@ -1083,14 +1116,14 @@ ExecutionStatus JSObject::getComputedPrimitiveDescriptor(
       return ExecutionStatus::RETURNED;
     }
 
-    if (LLVM_UNLIKELY(propObj->flags_.hostObject)) {
+    if (LLVM_UNLIKELY(propObj->isHostObject(runtime))) {
       desc.flags.hostObject = true;
       desc.flags.writable = true;
       desc.slot = id.unsafeGetRaw();
       desc._tmpSymbolStorage.set(id);
       return ExecutionStatus::RETURNED;
     }
-    if (LLVM_UNLIKELY(propObj->flags_.proxyObject)) {
+    if (LLVM_UNLIKELY(propObj->isProxyObject(runtime))) {
       desc.flags.proxyObject = true;
       desc.slot = id.unsafeGetRaw();
       desc._tmpSymbolStorage.set(id);
@@ -1147,10 +1180,10 @@ CallResult<PseudoHandle<>> JSObject::getNamedWithReceiver_RJS(
     // The object must not be a proxy or HostObject, given that the descriptor
     // does not indicate them.
     assert(
-        !selfHandle->getFlags().proxyObject &&
-        !selfHandle->getFlags().hostObject);
+        !selfHandle->isProxyObject(runtime) &&
+        !selfHandle->isHostObject(runtime));
     // The object cannot be lazy after a lookup has occurred.
-    assert(!selfHandle->getFlags().lazyObject);
+    assert(!selfHandle->isLazy(runtime));
 
     // Populate the cache if requested.
     if (cacheEntry && desc.slot <= ReadPropertyCacheEntry::kMaxSlot &&
@@ -1207,7 +1240,7 @@ CallResult<PseudoHandle<>> JSObject::getNamedOrIndexed(
     Runtime &runtime,
     SymbolID name,
     PropOpFlags opFlags) {
-  if (LLVM_UNLIKELY(selfHandle->flags_.indexedStorage)) {
+  if (LLVM_UNLIKELY(selfHandle->hasIndexedStorage(runtime))) {
     // Note that getStringView can be satisfied without materializing the
     // Identifier.
     const auto strView =
@@ -1232,7 +1265,7 @@ CallResult<PseudoHandle<>> JSObject::getComputedWithReceiver_RJS(
     Handle<> receiver) {
   // Try the fast-path first: no "index-like" properties and the "name" already
   // is a valid integer index.
-  if (selfHandle->flags_.fastIndexProperties) {
+  if (selfHandle->hasFastIndexProperties(runtime)) {
     if (auto arrayIndex = toArrayIndexFastPath(*nameValHandle)) {
       // Do we have this value present in our array storage? If so, return it.
       PseudoHandle<> ourValue =
@@ -1317,14 +1350,14 @@ CallResult<bool> JSObject::hasNamedOrIndexed(
     Handle<JSObject> selfHandle,
     Runtime &runtime,
     SymbolID name) {
-  if (LLVM_UNLIKELY(selfHandle->flags_.indexedStorage)) {
+  if (LLVM_UNLIKELY(selfHandle->hasIndexedStorage(runtime))) {
     const auto strView =
         runtime.getIdentifierTable().getStringView(runtime, name);
     if (auto nameAsIndex = toArrayIndex(strView)) {
       if (haveOwnIndexed(selfHandle.get(), runtime, *nameAsIndex)) {
         return true;
       }
-      if (selfHandle->flags_.fastIndexProperties) {
+      if (selfHandle->hasFastIndexProperties(runtime)) {
         return false;
       }
     }
@@ -1341,7 +1374,7 @@ CallResult<bool> JSObject::hasComputed(
     Handle<> nameValHandle) {
   // Try the fast-path first: no "index-like" properties and the "name" already
   // is a valid integer index.
-  if (selfHandle->flags_.fastIndexProperties) {
+  if (selfHandle->hasFastIndexProperties(runtime)) {
     if (auto arrayIndex = toArrayIndexFastPath(*nameValHandle)) {
       // Do we have this value present in our array storage? If so, return true.
       if (haveOwnIndexed(selfHandle.get(), runtime, *arrayIndex)) {
@@ -1399,7 +1432,7 @@ static ExecutionStatus raiseErrorForOverridingStaticBuiltin(
   auto *obj = JSObject::getNamedDescriptorPredefined(
       selfHandle, runtime, Predefined::name, desc);
   assert(
-      !selfHandle->isProxyObject() &&
+      !selfHandle->isProxyObject(runtime) &&
       "raiseErrorForOverridingStaticBuiltin cannot be used with proxy objects");
 
   if (!obj || desc.flags.accessor) {
@@ -1531,7 +1564,8 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
 
   MutableHandle<JSObject> receiverHandle{runtime, *selfHandle};
   if (selfHandle.getHermesValue().getRaw() != receiver->getRaw() ||
-      receiverHandle->isHostObject() || receiverHandle->isProxyObject()) {
+      receiverHandle->isHostObject(runtime) ||
+      receiverHandle->isProxyObject(runtime)) {
     if (selfHandle.getHermesValue().getRaw() != receiver->getRaw()) {
       receiverHandle = dyn_vmcast<JSObject>(*receiver);
     }
@@ -1545,7 +1579,8 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
       }
 
       assert(
-          !receiverHandle->isHostObject() && !receiverHandle->isProxyObject() &&
+          !receiverHandle->isHostObject(runtime) &&
+          !receiverHandle->isProxyObject(runtime) &&
           "getOwnNamedDescriptor never sets hostObject or proxyObject flags");
       auto shv = SmallHermesValue::encodeHermesValue(*valueHandle, runtime);
       setNamedSlotValueUnsafe(*receiverHandle, runtime, desc, shv);
@@ -1556,9 +1591,9 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
     // getOwnComputedPrimitiveDescriptor because it knows how to call
     // the [[getOwnProperty]] Proxy impl if needed.
     if (LLVM_UNLIKELY(
-            receiverHandle->isHostObject() ||
-            receiverHandle->isProxyObject())) {
-      if (receiverHandle->isHostObject()) {
+            receiverHandle->isHostObject(runtime) ||
+            receiverHandle->isProxyObject(runtime))) {
+      if (receiverHandle->isHostObject(runtime)) {
         return vmcast<HostObject>(receiverHandle.get())
             ->set(name, *valueHandle);
       }
@@ -1615,7 +1650,7 @@ CallResult<bool> JSObject::putNamedOrIndexed(
     SymbolID name,
     Handle<> valueHandle,
     PropOpFlags opFlags) {
-  if (LLVM_UNLIKELY(selfHandle->flags_.indexedStorage)) {
+  if (LLVM_UNLIKELY(selfHandle->hasIndexedStorage(runtime))) {
     // Note that getStringView can be satisfied without materializing the
     // Identifier.
     const auto strView =
@@ -1649,7 +1684,7 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
   // Try the fast-path first: has "index-like" properties, the "name"
   // already is a valid integer index, selfHandle and receiver are the
   // same, and it is present in storage.
-  if (selfHandle->flags_.fastIndexProperties) {
+  if (selfHandle->hasFastIndexProperties(runtime)) {
     if (auto arrayIndex = toArrayIndexFastPath(*nameValHandle)) {
       if (selfHandle.getHermesValue().getRaw() == receiver->getRaw()) {
         if (haveOwnIndexed(selfHandle.get(), runtime, *arrayIndex)) {
@@ -1790,7 +1825,8 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
 
   MutableHandle<JSObject> receiverHandle{runtime, *selfHandle};
   if (selfHandle.getHermesValue().getRaw() != receiver->getRaw() ||
-      receiverHandle->isHostObject() || receiverHandle->isProxyObject()) {
+      receiverHandle->isHostObject(runtime) ||
+      receiverHandle->isProxyObject(runtime)) {
     if (selfHandle.getHermesValue().getRaw() != receiver->getRaw()) {
       receiverHandle = dyn_vmcast<JSObject>(*receiver);
     }
@@ -1816,8 +1852,8 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
 
       if (LLVM_LIKELY(
               !existingDesc.flags.internalSetter &&
-              !receiverHandle->isHostObject() &&
-              !receiverHandle->isProxyObject())) {
+              !receiverHandle->isHostObject(runtime) &&
+              !receiverHandle->isProxyObject(runtime))) {
         if (LLVM_UNLIKELY(
                 setComputedSlotValueUnsafe(
                     receiverHandle, runtime, existingDesc, valueHandle) ==
@@ -1832,13 +1868,13 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
     // but it's a corner case; or, there was no descriptor.
     if (LLVM_UNLIKELY(
             existingDesc.flags.internalSetter ||
-            receiverHandle->isHostObject() ||
-            receiverHandle->isProxyObject())) {
+            receiverHandle->isHostObject(runtime) ||
+            receiverHandle->isProxyObject(runtime))) {
       // If putComputed is called on a proxy whose target's prototype
       // is an array with a propname of 'length', then internalSetter
       // will be true, and the receiver will be a proxy.  In that case,
       // proxy wins.
-      if (receiverHandle->isProxyObject()) {
+      if (receiverHandle->isProxyObject(runtime)) {
         if (*descDefinedRes) {
           dpf.setValue = 1;
         } else {
@@ -1864,13 +1900,14 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
             opFlags);
       }
       assert(
-          receiverHandle->isHostObject() && "descriptor flags are impossible");
+          receiverHandle->isHostObject(runtime) &&
+          "descriptor flags are impossible");
       return vmcast<HostObject>(receiverHandle.get())->set(id, *valueHandle);
     }
   }
 
   /// Can we add more properties?
-  if (LLVM_UNLIKELY(!receiverHandle->isExtensible())) {
+  if (LLVM_UNLIKELY(!receiverHandle->isExtensible(runtime))) {
     if (opFlags.getThrowOnError()) {
       return runtime.raiseTypeError(
           "cannot add a new property"); // TODO: better message.
@@ -1880,7 +1917,7 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
 
   // If we have indexed storage we must check whether the property is an index,
   // and if it is, store it in indexed storage.
-  if (receiverHandle->flags_.indexedStorage) {
+  if (receiverHandle->hasIndexedStorage(runtime)) {
     OptValue<uint32_t> arrayIndex;
     StringPrimitive *strPrim = nullptr;
     TO_ARRAY_INDEX(runtime, nameValPrimitiveHandle, strPrim, arrayIndex);
@@ -1945,17 +1982,18 @@ CallResult<bool> JSObject::deleteNamed(
   // If the property doesn't exist in this object, return success.
   if (!pos) {
     if (LLVM_LIKELY(
-            !selfHandle->flags_.lazyObject &&
-            !selfHandle->flags_.proxyObject)) {
+            !selfHandle->isLazy(runtime) &&
+            !selfHandle->isProxyObject(runtime))) {
       return true;
-    } else if (selfHandle->flags_.lazyObject) {
+    } else if (selfHandle->isLazy(runtime)) {
       // object is lazy, initialize and read again.
       initializeLazyObject(runtime, selfHandle);
       pos = findProperty(selfHandle, runtime, name, desc);
       if (!pos) // still not there, return true.
         return true;
     } else {
-      assert(selfHandle->flags_.proxyObject && "object flags are impossible");
+      assert(
+          selfHandle->isProxyObject(runtime) && "object flags are impossible");
       return proxyOpFlags(
           runtime,
           opFlags,
@@ -2009,14 +2047,14 @@ CallResult<bool> JSObject::deleteComputed(
 
   // If we have indexed storage, we must attempt to convert the name to array
   // index, even if the conversion is expensive.
-  if (selfHandle->flags_.indexedStorage) {
+  if (selfHandle->hasIndexedStorage(runtime)) {
     StringPrimitive *strPrim = nullptr;
     TO_ARRAY_INDEX(runtime, nameValPrimitiveHandle, strPrim, arrayIndex);
   }
 
   // Try the fast-path first: the "name" is a valid array index and we don't
   // have "index-like" named properties.
-  if (arrayIndex && selfHandle->flags_.fastIndexProperties) {
+  if (arrayIndex && selfHandle->hasFastIndexProperties(runtime)) {
     // Delete the indexed property.
     if (deleteOwnIndexed(selfHandle, runtime, *arrayIndex))
       return true;
@@ -2030,7 +2068,7 @@ CallResult<bool> JSObject::deleteComputed(
   }
 
   // slow path, check if object is lazy before continuing.
-  if (LLVM_UNLIKELY(selfHandle->flags_.lazyObject)) {
+  if (LLVM_UNLIKELY(selfHandle->isLazy(runtime))) {
     // initialize and try again.
     initializeLazyObject(runtime, selfHandle);
     return deleteComputed(selfHandle, runtime, nameValHandle, opFlags);
@@ -2082,7 +2120,7 @@ CallResult<bool> JSObject::deleteComputed(
     auto newClazz = HiddenClass::deleteProperty(
         runtime.makeHandle(selfHandle->getClassGCPtr()), runtime, *pos);
     selfHandle->updateClass(runtime, *newClazz);
-  } else if (LLVM_UNLIKELY(selfHandle->flags_.proxyObject)) {
+  } else if (LLVM_UNLIKELY(selfHandle->isProxyObject(runtime))) {
     CallResult<Handle<>> key = toPropertyKey(runtime, nameValPrimitiveHandle);
     if (key == ExecutionStatus::EXCEPTION)
       return ExecutionStatus::EXCEPTION;
@@ -2138,8 +2176,8 @@ CallResult<bool> JSObject::defineOwnPropertyInternal(
   }
 
   if (LLVM_UNLIKELY(
-          selfHandle->flags_.lazyObject || selfHandle->flags_.proxyObject)) {
-    if (selfHandle->flags_.proxyObject) {
+          selfHandle->isLazy(runtime) || selfHandle->isProxyObject(runtime))) {
+    if (selfHandle->isProxyObject(runtime)) {
       return JSProxy::defineOwnProperty(
           selfHandle,
           runtime,
@@ -2151,7 +2189,7 @@ CallResult<bool> JSObject::defineOwnPropertyInternal(
           valueOrAccessor,
           opFlags);
     }
-    assert(selfHandle->flags_.lazyObject && "descriptor flags are impossible");
+    assert(selfHandle->isLazy(runtime) && "descriptor flags are impossible");
     // if the property was not found and the object is lazy we need to
     // initialize it and try again.
     JSObject::initializeLazyObject(runtime, selfHandle);
@@ -2170,7 +2208,7 @@ ExecutionStatus JSObject::defineNewOwnProperty(
     PropertyFlags propertyFlags,
     Handle<> valueOrAccessor) {
   assert(
-      (!selfHandle->flags_.proxyObject || propertyFlags.privateName) &&
+      (!selfHandle->isProxyObject(runtime) || propertyFlags.privateName) &&
       "cannot define non-private properties on Proxy");
   assert(
       !(propertyFlags.accessor && !valueOrAccessor.get().isPointer()) &&
@@ -2183,7 +2221,7 @@ ExecutionStatus JSObject::defineNewOwnProperty(
           selfHandle->getClass(runtime), runtime, name) &&
       "new property is already defined");
   // Ensure the object is non-lazy before adding the property.
-  if (selfHandle->isLazy())
+  if (selfHandle->isLazy(runtime))
     initializeLazyObject(runtime, selfHandle);
 
   return addOwnPropertyImpl(
@@ -2236,7 +2274,7 @@ CallResult<bool> JSObject::defineOwnComputedPrimitive(
 
   // If we have indexed storage, we must attempt to convert the name to array
   // index, even if the conversion is expensive.
-  if (selfHandle->flags_.indexedStorage) {
+  if (selfHandle->hasIndexedStorage(runtime)) {
     StringPrimitive *strPrim = nullptr;
     TO_ARRAY_INDEX(runtime, nameValHandle, strPrim, arrayIndex);
   }
@@ -2357,7 +2395,7 @@ CallResult<bool> JSObject::defineOwnComputedPrimitive(
   }
 
   /// Can we add new properties?
-  if (!selfHandle->isExtensible()) {
+  if (!selfHandle->isExtensible(runtime)) {
     if (opFlags.getThrowOnError()) {
       return runtime.raiseTypeError(
           "cannot add a new property"); // TODO: better message.
@@ -2603,12 +2641,12 @@ void JSObject::_snapshotAddEdgesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap) {
 
   // Add the prototype as a property edge, so it's easy for JS developers to
   // walk the prototype chain on their own.
-  if (self->parent_) {
+  if (self->getParentGCPtr(gc.getPointerBase())) {
     snap.addNamedEdge(
         HeapSnapshot::EdgeType::Property,
         // __proto__ chosen for similarity to V8.
         "__proto__",
-        gc.getObjectID(self->parent_));
+        gc.getObjectID(self->getParent(gc.getPointerBase())));
   }
 
   HiddenClass::forEachPropertyNoAlloc(
@@ -2716,42 +2754,57 @@ HermesValue JSObject::_jitCallImpl(Runtime *runtime, JSObject *self) {
   _sh_throw_current(runtime);
 }
 
-void JSObject::preventExtensions(JSObject *self) {
+void JSObject::preventExtensionsNonProxy(
+    Handle<JSObject> self,
+    Runtime &runtime) {
   assert(
-      !self->flags_.proxyObject &&
+      !self->isProxyObject(runtime) &&
       "[[Extensible]] slot cannot be set directly on Proxy objects");
-  self->flags_.noExtend = true;
+  struct : public Locals {
+    PinnedValue<HiddenClass> clazz;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+  lv.clazz = self->getClass(runtime);
+  HiddenClass *newClazz = HiddenClass::markNoExtend(lv.clazz, runtime);
+  self->updateClass(runtime, newClazz);
 }
 
 CallResult<bool> JSObject::preventExtensions(
     Handle<JSObject> selfHandle,
     Runtime &runtime,
     PropOpFlags opFlags) {
-  if (LLVM_UNLIKELY(selfHandle->isProxyObject())) {
+  if (LLVM_UNLIKELY(selfHandle->isProxyObject(runtime))) {
     return JSProxy::preventExtensions(selfHandle, runtime, opFlags);
   }
-  JSObject::preventExtensions(*selfHandle);
+  JSObject::preventExtensionsNonProxy(selfHandle, runtime);
   return true;
 }
 
 ExecutionStatus JSObject::seal(Handle<JSObject> selfHandle, Runtime &runtime) {
-  CallResult<bool> statusRes = JSObject::preventExtensions(
-      selfHandle, runtime, PropOpFlags().plusThrowOnError());
-  if (LLVM_UNLIKELY(statusRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
+  if (LLVM_UNLIKELY(selfHandle->isProxyObject(runtime))) {
+    CallResult<bool> statusRes = JSProxy::preventExtensions(
+        selfHandle, runtime, PropOpFlags().plusThrowOnError());
+    if (LLVM_UNLIKELY(statusRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    assert(
+        *statusRes &&
+        "seal preventExtensions with ThrowOnError returned false");
   }
-  assert(
-      *statusRes && "seal preventExtensions with ThrowOnError returned false");
+
+  struct : public Locals {
+    PinnedValue<HiddenClass> clazz;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  lv.clazz = selfHandle->getClass(runtime);
 
   // Already sealed?
-  if (selfHandle->flags_.sealed)
+  if (lv.clazz->isSealed())
     return ExecutionStatus::RETURNED;
 
-  auto newClazz = HiddenClass::makeAllNonConfigurable(
-      runtime.makeHandle(selfHandle->getClassGCPtr()), runtime);
-  selfHandle->updateClass(runtime, *newClazz);
-
-  selfHandle->flags_.sealed = true;
+  lv.clazz = HiddenClass::seal(lv.clazz, runtime);
+  selfHandle->updateClass(runtime, *lv.clazz);
 
   return ExecutionStatus::RETURNED;
 }
@@ -2759,25 +2812,28 @@ ExecutionStatus JSObject::seal(Handle<JSObject> selfHandle, Runtime &runtime) {
 ExecutionStatus JSObject::freeze(
     Handle<JSObject> selfHandle,
     Runtime &runtime) {
-  CallResult<bool> statusRes = JSObject::preventExtensions(
-      selfHandle, runtime, PropOpFlags().plusThrowOnError());
-  if (LLVM_UNLIKELY(statusRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
+  if (LLVM_UNLIKELY(selfHandle->isProxyObject(runtime))) {
+    CallResult<bool> statusRes = JSProxy::preventExtensions(
+        selfHandle, runtime, PropOpFlags().plusThrowOnError());
+    if (LLVM_UNLIKELY(statusRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    assert(*statusRes && "preventExtensions with ThrowOnError returned false");
   }
-  assert(
-      *statusRes &&
-      "freeze preventExtensions with ThrowOnError returned false");
+
+  struct : public Locals {
+    PinnedValue<HiddenClass> clazz;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  lv.clazz = selfHandle->getClass(runtime);
 
   // Already frozen?
-  if (selfHandle->flags_.frozen)
+  if (lv.clazz->isFrozen())
     return ExecutionStatus::RETURNED;
 
-  auto newClazz = HiddenClass::makeAllReadOnly(
-      runtime.makeHandle(selfHandle->getClassGCPtr()), runtime);
-  selfHandle->updateClass(runtime, *newClazz);
-
-  selfHandle->flags_.frozen = true;
-  selfHandle->flags_.sealed = true;
+  lv.clazz = HiddenClass::freeze(lv.clazz, runtime);
+  selfHandle->updateClass(runtime, *lv.clazz);
 
   return ExecutionStatus::RETURNED;
 }
@@ -2800,61 +2856,84 @@ void JSObject::updatePropertyFlagsWithoutTransitions(
 CallResult<bool> JSObject::isExtensible(
     PseudoHandle<JSObject> self,
     Runtime &runtime) {
-  if (LLVM_UNLIKELY(self->isProxyObject())) {
+  if (LLVM_UNLIKELY(self->isProxyObject(runtime))) {
     return JSProxy::isExtensible(runtime.makeHandle(std::move(self)), runtime);
   }
-  return self->isExtensible();
+  return self->isExtensible(runtime);
 }
 
 bool JSObject::isSealed(PseudoHandle<JSObject> self, Runtime &runtime) {
-  if (self->flags_.sealed)
+  if (self->getClass(runtime)->isSealed())
     return true;
-  if (!self->flags_.noExtend)
+  if (self->getClass(runtime)->isExtensible())
     return false;
 
-  auto selfHandle = runtime.makeHandle(std::move(self));
+  struct : public Locals {
+    PinnedValue<JSObject> self;
+    PinnedValue<HiddenClass> clazz;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
 
-  if (!HiddenClass::areAllNonConfigurable(
-          runtime.makeHandle(selfHandle->getClassGCPtr()), runtime)) {
+  lv.self = std::move(self);
+  lv.clazz = lv.self->getClass(runtime);
+
+  if (!HiddenClass::areAllNonConfigurable(lv.clazz, runtime)) {
     return false;
   }
 
   if (!checkAllOwnIndexed(
-          *selfHandle,
+          *lv.self,
           runtime,
           ObjectVTable::CheckAllOwnIndexedMode::NonConfigurable)) {
     return false;
   }
 
-  // Now that we know we are sealed, set the flag.
-  selfHandle->flags_.sealed = true;
+  lv.clazz = HiddenClass::markAsSealed(lv.clazz, runtime);
+  lv.self->updateClass(runtime, *lv.clazz);
+
   return true;
 }
 
 bool JSObject::isFrozen(PseudoHandle<JSObject> self, Runtime &runtime) {
-  if (self->flags_.frozen)
+  if (self->getClass(runtime)->isFrozen())
     return true;
-  if (!self->flags_.noExtend)
+  if (self->getClass(runtime)->isExtensible())
     return false;
 
-  auto selfHandle = runtime.makeHandle(std::move(self));
+  struct : public Locals {
+    PinnedValue<JSObject> self;
+    PinnedValue<HiddenClass> clazz;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
 
-  if (!HiddenClass::areAllReadOnly(
-          runtime.makeHandle(selfHandle->getClassGCPtr()), runtime)) {
+  lv.self = std::move(self);
+  lv.clazz = lv.self->getClass(runtime);
+
+  if (!HiddenClass::areAllReadOnly(lv.clazz, runtime)) {
     return false;
   }
 
   if (!checkAllOwnIndexed(
-          *selfHandle,
-          runtime,
-          ObjectVTable::CheckAllOwnIndexedMode::ReadOnly)) {
+          *lv.self, runtime, ObjectVTable::CheckAllOwnIndexedMode::ReadOnly)) {
     return false;
   }
 
-  // Now that we know we are sealed, set the flag.
-  selfHandle->flags_.frozen = true;
-  selfHandle->flags_.sealed = true;
   return true;
+}
+
+void JSObject::setCachedUsingEpoch(Handle<JSObject> self, Runtime &runtime) {
+  struct : public Locals {
+    PinnedValue<HiddenClass> clazz;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  lv.clazz = self->getClass(runtime);
+  HiddenClass *newClazz =
+      HiddenClass::markAsCachedUsingEpoch(lv.clazz, runtime);
+  // Ensure that the epoch doesn't get incremented during this operation
+  // We're just flipping the flag on the HiddenClass, so it's safe to bypass the
+  // increment in this case.
+  self->updateClassIgnoringEpochUnsafe(runtime, newClazz);
 }
 
 CallResult<bool> JSObject::addOwnProperty(
@@ -2868,7 +2947,7 @@ CallResult<bool> JSObject::addOwnProperty(
     SHUnit *unit,
     WritePropertyCacheEntry *cacheEntry) {
   /// Can we add more properties?
-  if (!selfHandle->isExtensible() && !opFlags.getInternalForce()) {
+  if (!selfHandle->isExtensible(runtime) && !opFlags.getInternalForce()) {
     if (opFlags.getThrowOnError()) {
       return runtime.raiseTypeError(
           TwineChar16("Cannot add new property '") +
@@ -2931,52 +3010,60 @@ void JSObject::tryCacheAddProperty(
       HiddenClass::kDictionaryThreshold < WritePropertyCacheEntry::kMaxSlot);
   assert(slot <= WritePropertyCacheEntry::kMaxSlot);
 
-  NoAllocScope noAlloc{runtime};
+  {
+    NoAllocScope noAlloc{runtime};
 
-  // If any parents are dictionaries, they won't have their HiddenClass change
-  // when properties are modified. Parent cache epoch is incremented when the
-  // HiddenClass changes, so we can't cache this add.
-  // Perform this check up here to avoid allocating an unused add cache entry if
-  // the check fails.
-  for (JSObject *cur = self->getParent(runtime); cur != nullptr;
-       cur = cur->getParent(runtime)) {
-    if (cur->getClass(runtime)->isDictionary())
-      return;
-  }
-
-  uint32_t parentCacheEpoch = runtime.getParentCacheEpoch();
-  uint32_t addCacheIndex = writeCacheEntry->getAddCacheIndex();
-  if (addCacheIndex == 0) {
-    // Need to allocate a new AddPropertyCacheEntry in the RuntimeModule.
-    if (auto optIdx = runtimeModule ? runtimeModule->allocateAddCacheEntry()
-                                    : sh_unit_allocate_add_cache_entry(unit)) {
-      addCacheIndex = *optIdx;
-      writeCacheEntry->setAddCacheIndex(addCacheIndex);
-    } else {
-      // Might fail if we're out of bits to use for the index.
-      return;
+    // If any parents are dictionaries, they won't have their HiddenClass change
+    // when properties are modified. Parent cache epoch is incremented when the
+    // HiddenClass changes, so we can't cache this add.
+    // Perform this check up here to avoid allocating an unused add cache entry
+    // if the check fails.
+    for (JSObject *cur = self->getParent(runtime); cur != nullptr;
+         cur = cur->getParent(runtime)) {
+      if (cur->getClass(runtime)->isDictionary())
+        return;
     }
+
+    uint32_t parentCacheEpoch = runtime.getParentCacheEpoch();
+    uint32_t addCacheIndex = writeCacheEntry->getAddCacheIndex();
+    if (addCacheIndex == 0) {
+      // Need to allocate a new AddPropertyCacheEntry in the RuntimeModule.
+      if (auto optIdx = runtimeModule
+              ? runtimeModule->allocateAddCacheEntry()
+              : sh_unit_allocate_add_cache_entry(unit)) {
+        addCacheIndex = *optIdx;
+        writeCacheEntry->setAddCacheIndex(addCacheIndex);
+      } else {
+        // Might fail if we're out of bits to use for the index.
+        return;
+      }
+    }
+
+    assert(
+        writeCacheEntry->getAddCacheIndex() == addCacheIndex &&
+        addCacheIndex != 0);
+
+    // Populate AddPropertyCacheEntry.
+    AddPropertyCacheEntry &addCacheEntry = runtimeModule
+        ? runtimeModule->getAddCacheEntry(addCacheIndex)
+        : sh_unit_get_add_cache_entry(unit, addCacheIndex);
+    addCacheEntry.setParentEpochAndSlot(parentCacheEpoch, slot);
+    addCacheEntry.startClazz =
+        CompressedPointer::encodeNonNull(startClazz, runtime);
+    addCacheEntry.resultClazz =
+        CompressedPointer::encodeNonNull(resultClazz, runtime);
+    addCacheEntry.parent = self->getParentGCPtr(runtime);
   }
 
-  assert(
-      writeCacheEntry->getAddCacheIndex() == addCacheIndex &&
-      addCacheIndex != 0);
-
-  // Populate AddPropertyCacheEntry.
-  AddPropertyCacheEntry &addCacheEntry = runtimeModule
-      ? runtimeModule->getAddCacheEntry(addCacheIndex)
-      : sh_unit_get_add_cache_entry(unit, addCacheIndex);
-  addCacheEntry.setParentEpochAndSlot(parentCacheEpoch, slot);
-  addCacheEntry.startClazz =
-      CompressedPointer::encodeNonNull(startClazz, runtime);
-  addCacheEntry.resultClazz =
-      CompressedPointer::encodeNonNull(resultClazz, runtime);
-  addCacheEntry.parent = self->getParentGCPtr();
+  struct : public Locals {
+    PinnedValue<JSObject> cur;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
 
   // Mark everything along the prototype chain as a cached parent.
-  for (JSObject *cur = self->getParent(runtime); cur != nullptr;
-       cur = cur->getParent(runtime)) {
-    cur->flags_.isCachedUsingEpoch = 1;
+  for (lv.cur = self->getParent(runtime); lv.cur.get() != nullptr;
+       lv.cur = lv.cur->getParent(runtime)) {
+    JSObject::setCachedUsingEpoch(lv.cur, runtime);
   }
 }
 
@@ -2991,7 +3078,7 @@ ExecutionStatus JSObject::addOwnPropertyImpl(
     WritePropertyCacheEntry *cacheEntry) {
   assert(
       propertyFlags.privateName ||
-      !selfHandle->flags_.proxyObject &&
+      !selfHandle->isProxyObject(runtime) &&
           "Internal non-private properties cannot be added to Proxy objects");
 
   struct : public Locals {
@@ -3019,10 +3106,6 @@ ExecutionStatus JSObject::addOwnPropertyImpl(
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-
-  // If this is an index-like property, we need to clear the fast path flags.
-  if (LLVM_UNLIKELY(lv.resultClazz->getHasIndexLikeProperties()))
-    selfHandle->flags_.fastIndexProperties = false;
 
   if (cacheEntry && !lv.resultClazz->isDictionary()) {
     tryCacheAddProperty(
@@ -3572,7 +3655,7 @@ ExecutionStatus setProtoClasses(
       arr->clear(runtime);
       return ExecutionStatus::RETURNED;
     }
-    if (JSObject::Helper::flags(*head).lazyObject) {
+    if (head->isLazy(runtime)) {
       // Ensure all properties have been initialized before caching the hidden
       // class. Not doing this will result in changes to the hidden class
       // when getOwnPropertyKeys is called later.
@@ -3619,7 +3702,7 @@ uint32_t matchesProtoClasses(
   while (head.get()) {
     auto protoCls = arr->at(i++);
     if (protoCls.isNull() || protoCls.getObject() != head->getClassGCPtr() ||
-        head->isProxyObject()) {
+        head->isProxyObject(runtime)) {
       return 0;
     }
     head = head->getParent(runtime);

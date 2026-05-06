@@ -485,8 +485,7 @@ CallResult<HermesValue> dateConstructor_RJS(void *, Runtime &runtime) {
   if (LLVM_LIKELY(
           args.getNewTarget().getRaw() ==
           runtime.dateConstructor.getHermesValue().getRaw())) {
-    return JSDate::create(runtime, finalDate, runtime.datePrototype)
-        .getHermesValue();
+    return JSDate::create(runtime, finalDate).getHermesValue();
   }
   CallResult<PseudoHandle<JSObject>> thisParentRes =
       NativeConstructor::parentForNewThis_RJS(

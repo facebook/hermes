@@ -103,7 +103,7 @@
 // HBC-NEXT:  StringSwitchImm count: 1
 // HBC-NEXT:  Key buffer size (bytes): 0
 // HBC-NEXT:  Value buffer size (bytes): 0
-// HBC-NEXT:  Shape table count: 0
+// HBC-NEXT:  Shape table count: 1
 // HBC-NEXT:  Segment ID: 0
 // HBC-NEXT:  CommonJS module count: 0
 // HBC-NEXT:  CommonJS module count (static): 0
@@ -125,6 +125,9 @@
 // HBC-NEXT:s9[ASCII, 21..22]: l8
 // HBC-NEXT:s10[ASCII, 23..24]: l9
 // HBC-NEXT:s11[ASCII, 25..36]: stringSwitch
+
+// HBC:Object Shape Table:
+// HBC-NEXT:0[0, 0]
 
 // HBC:Function<global>(1 params, 13 registers, 1 numbers, 1 non-pointers):
 // HBC-NEXT:Offset in debug table: source 0x0000

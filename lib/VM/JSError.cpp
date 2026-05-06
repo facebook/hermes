@@ -78,7 +78,7 @@ static llvh::Optional<Handle<JSError>> getErrorFromStackTarget(
       return Handle<JSError>::vmcast(targetHandle);
     }
 
-    if (LLVM_UNLIKELY(targetHandle->isProxyObject())) {
+    if (LLVM_UNLIKELY(targetHandle->isProxyObject(runtime))) {
       return llvh::None;
     }
 
@@ -205,26 +205,23 @@ CallResult<HermesValue> errorStackSetter(void *, Runtime &runtime) {
 
 PseudoHandle<JSError> JSError::create(
     Runtime &runtime,
-    Handle<JSObject> parentHandle) {
-  return create(runtime, parentHandle, /*catchable*/ true);
+    Handle<JSObject> prototype) {
+  auto *cell = runtime.makeAFixed<JSError, HasFinalizer::Yes>(
+      runtime,
+      prototype,
+      runtime.getHiddenClassForPrototype(*prototype, runtime.classJSError),
+      /* catchable */ true);
+  return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
 PseudoHandle<JSError> JSError::createUncatchable(
     Runtime &runtime,
     Handle<JSObject> parentHandle) {
-  return create(runtime, parentHandle, /*catchable*/ false);
-}
-
-PseudoHandle<JSError> JSError::create(
-    Runtime &runtime,
-    Handle<JSObject> parentHandle,
-    bool catchable) {
   auto *cell = runtime.makeAFixed<JSError, HasFinalizer::Yes>(
       runtime,
       parentHandle,
-      runtime.getHiddenClassForPrototype(
-          *parentHandle, numOverlapSlots<JSError>()),
-      catchable);
+      runtime.getHiddenClassForPrototype(*parentHandle, runtime.classJSError),
+      /* catchable */ false);
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 

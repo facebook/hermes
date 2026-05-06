@@ -35,11 +35,11 @@ new Foo();
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  %1 = LIRLoadConstInst (:null) null: null
-// CHECK-NEXT:  %2 = AllocTypedNonEnumObjectInst (:object) %1: null
+// CHECK-NEXT:  %2 = LIRAllocTypedNonEnumObjectFromBufferInst (:object) %1: null
 // CHECK-NEXT:       StoreFrameInst %0: environment, %2: object, [%VS0.?O.prototype]: object
 // CHECK-NEXT:  %4 = CreateFunctionInst (:object) empty: any, empty: any, %O(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %2: object, %4: object, "prototype": string
-// CHECK-NEXT:  %6 = AllocTypedNonEnumObjectInst (:object) %1: null
+// CHECK-NEXT:  %6 = LIRAllocTypedNonEnumObjectFromBufferInst (:object) %1: null
 // CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %Foo(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %6: object, %7: object, "prototype": string
 // CHECK-NEXT:  %9 = LIRLoadConstInst (:undefined) undefined: undefined

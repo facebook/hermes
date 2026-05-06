@@ -2818,7 +2818,8 @@ Value *ESTreeIRGen::genRegExpLiteral(ESTree::RegExpLiteralNode *RE) {
       auto *val = Builder.getLiteralNumber(groupIdx);
       propMap.emplace_back(key, val);
     }
-    auto literalObj = Builder.createAllocObjectLiteralInst(propMap);
+    auto literalObj =
+        Builder.createAllocObjectLiteralInst(propMap, Builder.getLiteralNull());
 
     Value *params[] = {exp, literalObj};
     Builder.createCallBuiltinInst(

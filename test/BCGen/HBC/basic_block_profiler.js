@@ -31,7 +31,7 @@ try {
 // CHECK-NEXT:  StringSwitchImm count: 0
 // CHECK-NEXT:  Key buffer size (bytes): 0
 // CHECK-NEXT:  Value buffer size (bytes): 0
-// CHECK-NEXT:  Shape table count: 0
+// CHECK-NEXT:  Shape table count: 1
 // CHECK-NEXT:  Segment ID: 0
 // CHECK-NEXT:  CommonJS module count: 0
 // CHECK-NEXT:  CommonJS module count (static): 0
@@ -48,6 +48,9 @@ try {
 // CHECK-NEXT:i4[ASCII, 15..23] #431898FB: condition
 // CHECK-NEXT:i5[ASCII, 27..31] #834F633C: stack
 // CHECK-NEXT:i6[ASCII, 32..36] #A689F65B: print
+
+// CHECK:Object Shape Table:
+// CHECK-NEXT:0[0, 0]
 
 // CHECK:Function<global>(1 params, 15 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000

@@ -603,6 +603,9 @@ static ExecutionStatus makeMatchIndicesIndexPairArray(
   if (hasGroups) {
     // a. Let groups be OrdinaryObjectCreate(null).
     lv.mappingObjClazz = mappingObj->getClass(runtime);
+    assert(
+        lv.mappingObjClazz->getObjectParent(runtime) == nullptr &&
+        "must have been constructed correctly");
     auto groupsRes = JSObject::create(
         runtime, Runtime::makeNullHandle<JSObject>(), lv.mappingObjClazz);
     lv.groupsObj = groupsRes.get();
@@ -766,8 +769,8 @@ ExecutionStatus directRegExpExec(
 
   auto arrRes = JSArray::createAndAllocPropStorage(
       runtime,
-      Handle<JSObject>::vmcast(&runtime.arrayPrototype),
-      Handle<HiddenClass>::vmcast(&runtime.regExpMatchClass),
+      runtime.arrayPrototype,
+      runtime.regExpMatchClass,
       match.size(),
       match.size());
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {

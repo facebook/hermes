@@ -833,7 +833,6 @@ void emit_stringprim_get_length_and_flags(
 
 /// Emit code to initialize the fields on a JSObject.
 /// \param xObj contains a pointer to the object to initialise.
-/// \param xParent contains a compressed pointer to the parent object.
 /// \param xTempOrPropStorageOpt is a temporary register. It may contain
 ///   a pointer to the PropStorage. If \p HasPropStorage is true, it's
 ///   used to initialize the PropStorage, otherwise it's used as a temporary
@@ -844,7 +843,6 @@ void emit_stringprim_get_length_and_flags(
 void emit_jsobject_init(
     a64::Assembler &a,
     const a64::GpX &xObj,
-    const a64::GpX &xParent,
     const a64::GpX &xTempOrPropStorageOpt,
     bool hasPropStorage,
     const a64::GpX &xClazzOpt = a64::GpX{}) {
@@ -863,11 +861,7 @@ void emit_jsobject_init(
   const a64::GpX &xTemp = xTempOrPropStorageOpt;
 
   if (!xClazzOpt.isValid()) {
-    // Load the hidden class compressed pointer into xClazz.
-    static_assert(
-        JSObject::numOverlapSlots<JSObject>() == 0,
-        "Cannot use 0 property root class.");
-    a.ldr(xTemp, a64::Mem(xRuntime, RuntimeOffsets::runtimeRootClazzes));
+    a.ldr(xTemp, a64::Mem(xRuntime, offsetof(Runtime, classJSObject)));
     emit_sh_ljs_get_pointer(a, xTemp, xTemp);
     emit_sh_cp_encode_non_null(a, xTemp);
   }
@@ -878,15 +872,7 @@ void emit_jsobject_init(
   // obj->parent = xParent
   // obj->clazz = xClazz (may be the same as xTemp).
   assert(xClazz.isValid());
-  static_assert(
-      offsetof(SHJSObject, clazz) - offsetof(SHJSObject, parent) ==
-          sizeof(CompressedPointer),
-      "clazz and parent must be adjacent to use stp");
-  if constexpr (sizeof(CompressedPointer) == 4)
-    a.stp(
-        xParent.w(), xClazz.w(), a64::Mem(xObj, offsetof(SHJSObject, parent)));
-  else
-    a.stp(xParent, xClazz, a64::Mem(xObj, offsetof(SHJSObject, parent)));
+  emit_store_cp(a, xClazz, a64::Mem(xObj, offsetof(SHJSObject, clazz)));
 
   // If !hasPropStorage, obj->propStorage = nullptr.
 
@@ -2938,13 +2924,7 @@ void Emitter::newObject(FR frRes) {
       xTemp2,
       slowPathLab);
 
-  // Get the parent.
-  a.ldr(xTemp1, a64::Mem(xRuntime, offsetof(Runtime, objectPrototype)));
-  emit_sh_ljs_get_pointer(a, xTemp1, xTemp1);
-  emit_sh_cp_encode_non_null(a, xTemp1);
-
-  emit_jsobject_init(
-      a, xRes, /* xParent */ xTemp1, /* xTempOrPropStorageOpt */ xTemp2, false);
+  emit_jsobject_init(a, xRes, /* xTempOrPropStorageOpt */ xTemp2, false);
 
   // Add the object tag to the result.
   emit_sh_ljs_object(a, xRes);
@@ -2968,25 +2948,60 @@ void Emitter::newObject(FR frRes) {
        }});
 }
 
-void Emitter::newObjectWithParent(FR frRes, FR frParent) {
+void Emitter::newObjectWithParent(
+    FR frRes,
+    FR frParent,
+    uint32_t shapeTableIndex) {
   comment("// NewObjectWithParent r%u, r%u", frRes.index(), frParent.index());
   syncAllFRTempExcept(frRes != frParent ? frRes : FR());
   syncToFrame(frParent);
   auto hwParent = getOrAllocFRInGpX(frParent, true);
   auto hwNewObjPtr = allocTempGpX();
+  auto hwClazz = allocTempGpX();
   auto hwTemp1 = allocTempGpX();
   auto hwTemp2 = allocTempGpX();
   auto xParent = hwParent.a64GpX();
   auto xNewObjPtr = hwNewObjPtr.a64GpX();
+  auto xClazz = hwClazz.a64GpX();
   auto xTemp1 = hwTemp1.a64GpX();
   auto xTemp2 = hwTemp2.a64GpX();
   freeAllFRTempExcept({});
   freeReg(hwNewObjPtr);
+  freeReg(hwClazz);
   freeReg(hwTemp1);
   freeReg(hwTemp2);
 
   asmjit::Label slowPathLab = newSlowPathLabel();
   asmjit::Label contLab = newContLabel();
+
+  // Load the HC from the cache.
+  static_assert(
+      std::is_same_v<
+          TransparentConservativeVector<WeakRoot<HiddenClass>>,
+          RuntimeOffsets::RuntimeModuleObjectLiteralHiddenClassesType>,
+      "objectLiteralHiddenClasses_ must be transparent");
+  loadBits64InGp(
+      xTemp1, (uint64_t)codeBlock_->getRuntimeModule(), "RuntimeModule");
+  a.ldr(
+      xTemp1,
+      a64::Mem(
+          xTemp1, RuntimeOffsets::runtimeModuleObjectLiteralHiddenClasses));
+  emit_load_cp(
+      a,
+      xClazz,
+      a64::Mem(xTemp1, shapeTableIndex * sizeof(WeakRoot<HiddenClass>)));
+  // If the HC isn't cached, slow path.
+  a.cbz(xClazz, slowPathLab);
+  // If the parent isn't correct, slow path.
+  auto &xClazzDecoded =
+      emit_sh_cp_decode_non_null_preserve_input(a, xTemp1, xClazz);
+  emit_load_cp(
+      a,
+      xTemp1,
+      a64::Mem(xClazzDecoded, RuntimeOffsets::hiddenClassObjectParent));
+  emit_sh_cp_decode(a, xTemp1);
+  a.cmp(xTemp1, xParent);
+  a.b_ne(slowPathLab);
 
   allocInYoung(
       CellKind::JSObjectKind,
@@ -3022,7 +3037,7 @@ void Emitter::newObjectWithParent(FR frRes, FR frParent) {
   a.bind(parentDoneLab);
 
   // Initialize the object.
-  emit_jsobject_init(a, xNewObjPtr, xParent, xTemp1, false);
+  emit_jsobject_init(a, xNewObjPtr, xTemp1, false, xClazz);
 
   auto hwRes = getOrAllocFRInGpX(frRes, false, HWReg::gpX(0));
   frUpdatedWithHW(frRes, hwRes, FRType::Pointer);
@@ -3038,6 +3053,7 @@ void Emitter::newObjectWithParent(FR frRes, FR frParent) {
        .frRes = frRes,
        .frInput1 = frParent,
        .hwRes = hwRes,
+       .sizeOrIdx = shapeTableIndex,
        .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment(
@@ -3046,12 +3062,15 @@ void Emitter::newObjectWithParent(FR frRes, FR frParent) {
              sl.frInput1.index());
          em.a.bind(sl.slowPathLab);
          em.a.mov(a64::x0, xRuntime);
-         em.loadFrameAddr(a64::x1, sl.frInput1);
+         em.loadBits64InGp(a64::x1, (uint64_t)em.codeBlock_, "CodeBlock");
+         em.loadFrameAddr(a64::x2, sl.frInput1);
+         em.a.mov(a64::w3, sl.sizeOrIdx);
 
          EMIT_RUNTIME_CALL(
              em,
-             SHLegacyValue (*)(SHRuntime *, const SHLegacyValue *),
-             _sh_ljs_new_object_with_parent);
+             SHLegacyValue (*)(
+                 Runtime &, CodeBlock *, PinnedHermesValue *, uint32_t),
+             _interpreter_create_object_with_parent);
          em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
        }});
@@ -3185,16 +3204,10 @@ void Emitter::newObjectWithBuffer(
         slowPathLab);
   }
 
-  // Get the parent.
-  a.ldr(xTmp, a64::Mem(xRuntime, offsetof(Runtime, objectPrototype)));
-  emit_sh_ljs_get_pointer(a, xTmp, xTmp);
-  emit_sh_cp_encode_non_null(a, xTmp);
-
   // Initialize the JSObject to have the correct parent/HC.
   emit_jsobject_init(
       a,
       xObj,
-      /* xParent */ xTmp,
       /* xTempOrPropStorageOpt */ xTmp2,
       numIndirectSlots > 0,
       /* xClazz */ xClazz);
@@ -4609,7 +4622,10 @@ void Emitter::loadParentNoTraps(FR frRes, FR frObj) {
   a64::GpX xRes = hwRes.a64GpX();
   emit_sh_ljs_get_pointer(a, xTmp, hwObj.a64GpX());
   // xTmp contains the unencoded pointer value.
-  emit_load_cp(a, xTmp, a64::Mem(xTmp, offsetof(SHJSObject, parent)));
+  emit_load_cp(a, xTmp, a64::Mem(xTmp, offsetof(SHJSObject, clazz)));
+  emit_sh_cp_decode_non_null(a, xTmp);
+  emit_load_cp(
+      a, xTmp, a64::Mem(xTmp, RuntimeOffsets::hiddenClassObjectParent));
   emit_sh_cp_decode(a, xTmp);
   // Check whether it is nullptr and set flags.
   // TODO: Combine this null check with the one in emit_load_and_sh_cp_decode.
@@ -4631,7 +4647,10 @@ void Emitter::typedLoadParent(FR frRes, FR frObj) {
   HWReg hwRes = getOrAllocFRInGpX(frRes, false);
   a64::GpX xRes = hwRes.a64GpX();
   emit_sh_ljs_get_pointer(a, xRes, hwObj.a64GpX());
-  emit_load_cp(a, xRes, a64::Mem(xRes, offsetof(SHJSObject, parent)));
+  emit_load_cp(a, xRes, a64::Mem(xRes, offsetof(SHJSObject, clazz)));
+  emit_sh_cp_decode_non_null(a, xRes);
+  emit_load_cp(
+      a, xRes, a64::Mem(xRes, RuntimeOffsets::hiddenClassObjectParent));
   emit_sh_cp_decode_non_null(a, xRes);
   emit_sh_ljs_object(a, xRes);
 
@@ -5172,7 +5191,10 @@ class HERMES_ATTRIBUTE_INTERNAL_LINKAGE Emitter::GetByIdImpl {
     a.b_ne(failSpecLab);
 
     // Get the parent.
-    emit_load_cp(a, xTemp1, a64::Mem(xTemp1, offsetof(SHJSObject, parent)));
+    emit_load_cp(a, xTemp1, a64::Mem(xTemp1, offsetof(SHJSObject, clazz)));
+    emit_sh_cp_decode_non_null(a, xTemp1);
+    emit_load_cp(
+        a, xTemp1, a64::Mem(xTemp1, RuntimeOffsets::hiddenClassObjectParent));
     // If no parent, fail.
     a.cbz(xTemp1, failSpecLab);
     emit_sh_cp_decode_non_null(a, xTemp1);

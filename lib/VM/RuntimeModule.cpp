@@ -11,7 +11,7 @@
 #include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/Domain.h"
-#include "hermes/VM/HiddenClass.h"
+#include "hermes/VM/HiddenClass-inline.h"
 #include "hermes/VM/ModuleExportsCache.h"
 #include "hermes/VM/Predefined.h"
 #include "hermes/VM/Runtime.h"
@@ -383,20 +383,28 @@ void RuntimeModule::markWeakRoots(
 
 HiddenClass *RuntimeModule::findCachedLiteralHiddenClass(
     Runtime &runtime,
+    JSObject *parent,
     uint32_t shapeTableIndex) const {
   assert(
       shapeTableIndex < objectLiteralHiddenClasses_.size() &&
       "Invalid shape table index");
-  return objectLiteralHiddenClasses_[shapeTableIndex].get(
+  auto *cached = objectLiteralHiddenClasses_[shapeTableIndex].get(
       runtime, runtime.getHeap());
+  if (cached && cached->getObjectParent(runtime) == parent) {
+    return cached;
+  }
+  return nullptr;
 }
 
 void RuntimeModule::setCachedLiteralHiddenClass(
     Runtime &runtime,
     unsigned shapeTableIndex,
     HiddenClass *clazz) {
+  if (shapeTableIndex == hbc::SHAPE_TABLE_CACHING_DISABLED)
+    return;
   assert(
-      !findCachedLiteralHiddenClass(runtime, shapeTableIndex) &&
+      !findCachedLiteralHiddenClass(
+          runtime, clazz->getObjectParent(runtime), shapeTableIndex) &&
       "Why are we caching an item already cached?");
   objectLiteralHiddenClasses_[shapeTableIndex].set(runtime, clazz);
 }

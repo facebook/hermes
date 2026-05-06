@@ -56,7 +56,7 @@ PseudoHandle<JSRegExpStringIterator> JSRegExpStringIterator::create(
       runtime,
       proto,
       runtime.getHiddenClassForPrototype(
-          *proto, numOverlapSlots<JSRegExpStringIterator>()),
+          *proto, runtime.classJSRegExpStringIterator),
       R,
       S,
       global,
