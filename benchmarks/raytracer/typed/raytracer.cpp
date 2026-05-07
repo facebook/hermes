@@ -479,7 +479,7 @@ void gui_on_main(sapp_desc *desc, int argc, char **argv) {
 }
 
 static int s_imageHnd = -1;
-static ImTextureID s_imageID = nullptr;
+static ImTextureID s_imageID = 0;
 
 void gui_on_init() {
   int w = 256;
