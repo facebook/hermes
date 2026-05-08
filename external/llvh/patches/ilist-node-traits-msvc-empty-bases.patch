@@ -1,0 +1,23 @@
+diff --git a/include/llvh/ADT/ilist.h b/include/llvh/ADT/ilist.h
+index 95edfb8b..518f3ab6 100644
+--- a/include/llvh/ADT/ilist.h
++++ b/include/llvh/ADT/ilist.h
+@@ -80,9 +80,16 @@ template <typename NodeTy> struct ilist_callback_traits {
+ /// node related operations.
+ ///
+ /// TODO: Remove this layer of indirection.  It's not necessary.
++///
++/// `LLVM_DECLARE_EMPTY_BASES` is required so MSVC collapses the two empty
++/// helper bases via Empty Base Optimization. Without it `sizeof` jumps from
++/// 1 to 2, which then prevents EBO when `ilist_node_traits` is itself used
++/// as a base of `iplist_impl` — `iplist`/`ilist` end up carrying needless
++/// trait padding on Windows. See the symmetric fix on `simple_ilist` and
++/// `external/llvh/patches/simple-ilist-msvc-empty-bases.patch`.
+ template <typename NodeTy>
+-struct ilist_node_traits : ilist_alloc_traits<NodeTy>,
+-                           ilist_callback_traits<NodeTy> {};
++struct LLVM_DECLARE_EMPTY_BASES ilist_node_traits
++    : ilist_alloc_traits<NodeTy>, ilist_callback_traits<NodeTy> {};
+ 
+ /// Template traits for intrusive list.
+ ///
