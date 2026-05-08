@@ -75,8 +75,15 @@ namespace llvh {
 /// equivalent to the last.
 ///
 /// See \a is_valid_option for steps on adding a new option.
+///
+/// `simple_ilist` inherits from two empty helpers (`list_base_type` and
+/// `SpecificNodeAccess`). Without `LLVM_DECLARE_EMPTY_BASES` MSVC fails to
+/// collapse them and shifts the embedded `Sentinel` from offset 0 to offset
+/// 8, breaking callers that rely on `&list == &Sentinel` — most visibly FFI
+/// consumers and any code comparing an iterator's stored node pointer
+/// against `&list` rather than against an iterator from `list.end()`.
 template <typename T, class... Options>
-class simple_ilist
+class LLVM_DECLARE_EMPTY_BASES simple_ilist
     : ilist_detail::compute_node_options<T, Options...>::type::list_base_type,
       ilist_detail::SpecificNodeAccess<
           typename ilist_detail::compute_node_options<T, Options...>::type> {

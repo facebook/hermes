@@ -108,6 +108,18 @@
 #define LLVM_LIBRARY_VISIBILITY
 #endif
 
+/// LLVM_DECLARE_EMPTY_BASES - Force MSVC to apply Empty Base Optimization
+/// across multiple empty bases. By default MSVC pads each empty base with
+/// one byte and pointer-aligns the result, which shifts member offsets and
+/// breaks any code that relies on a derived object's address coinciding
+/// with the address of its first member (e.g. layout-sensitive containers
+/// and FFI consumers).
+#ifdef _MSC_VER
+#define LLVM_DECLARE_EMPTY_BASES __declspec(empty_bases)
+#else
+#define LLVM_DECLARE_EMPTY_BASES
+#endif
+
 #if defined(__GNUC__)
 #define LLVM_PREFETCH(addr, rw, locality) __builtin_prefetch(addr, rw, locality)
 #else
