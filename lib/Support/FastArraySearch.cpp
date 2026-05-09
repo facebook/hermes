@@ -470,4 +470,122 @@ int64_t searchReverseU64(
   return searchU64Impl<true>(arr, start, end, target);
 }
 
+//===----------------------------------------------------------------------===//
+// Special character scanning for JSON strings
+//===----------------------------------------------------------------------===//
+
+/// Scalar helper: scan for first byte that is '"', '\\', or <= 0x1F.
+static const char *scalarScanU8(const char *p, const char *end) {
+  while (p < end) {
+    unsigned char ch = static_cast<unsigned char>(*p);
+    if (ch <= 0x1F || ch == '"' || ch == '\\')
+      return p;
+    ++p;
+  }
+  return end;
+}
+
+/// Scalar helper: scan for first char16_t that is '"', '\\', or <= 0x1F.
+static const char16_t *scalarScanU16(const char16_t *p, const char16_t *end) {
+  while (p < end) {
+    char16_t ch = *p;
+    if (ch <= 0x1F || ch == u'"' || ch == u'\\')
+      return p;
+    ++p;
+  }
+  return end;
+}
+
+const char *scanJsonEscapeU8(const char *start, const char *end) {
+  assert(start <= end && "start must be <= end");
+  const char *p = start;
+
+#ifdef HERMES_SIMD_NEON
+  // Broadcast each special character/threshold into 128-bit vectors.
+  uint8x16_t vQuote = vdupq_n_u8('"');
+  uint8x16_t vBackslash = vdupq_n_u8('\\');
+  uint8x16_t vCtrlLimit = vdupq_n_u8(0x20);
+  while (p + 16 <= end) {
+    uint8x16_t data = vld1q_u8(reinterpret_cast<const uint8_t *>(p));
+    // Check three conditions in parallel:
+    // cmp1: byte == '"', cmp2: byte == '\\', cmp3: byte < 0x20 (control).
+    uint8x16_t cmp1 = vceqq_u8(data, vQuote);
+    uint8x16_t cmp2 = vceqq_u8(data, vBackslash);
+    uint8x16_t cmp3 = vcltq_u8(data, vCtrlLimit);
+    // OR all three results; any non-zero lane means a special char exists.
+    uint8x16_t match = vorrq_u8(vorrq_u8(cmp1, cmp2), cmp3);
+    if (vmaxvq_u8(match))
+      // Fall back to scalar to find the exact byte within this chunk.
+      return scalarScanU8(p, p + 16);
+    p += 16;
+  }
+#elif defined(HERMES_SIMD_SSE2)
+  __m128i vQuote = _mm_set1_epi8('"');
+  __m128i vBackslash = _mm_set1_epi8('\\');
+  __m128i vCtrlLimit = _mm_set1_epi8(0x20);
+  while (p + 16 <= end) {
+    __m128i data = _mm_loadu_si128(reinterpret_cast<const __m128i *>(p));
+    __m128i cmp1 = _mm_cmpeq_epi8(data, vQuote);
+    __m128i cmp2 = _mm_cmpeq_epi8(data, vBackslash);
+    // _mm_cmplt_epi8 is signed comparison; this works for JSON because
+    // all valid JSON string bytes are < 0x80 (high bit clear), so
+    // signed < 0x20 is equivalent to unsigned < 0x20.
+    __m128i cmp3 = _mm_cmplt_epi8(data, vCtrlLimit);
+    __m128i match = _mm_or_si128(_mm_or_si128(cmp1, cmp2), cmp3);
+    // 1 mask bit per byte; countTrailingZeros gives exact byte offset.
+    unsigned mask = static_cast<unsigned>(_mm_movemask_epi8(match));
+    if (mask)
+      return p + llvh::countTrailingZeros(mask);
+    p += 16;
+  }
+#endif
+
+  return scalarScanU8(p, end);
+}
+
+const char16_t *scanJsonEscapeU16(const char16_t *start, const char16_t *end) {
+  assert(start <= end && "start must be <= end");
+  const char16_t *p = start;
+
+#ifdef HERMES_SIMD_NEON
+  // Same approach as scanJsonEscapeU8 but with 16-bit lanes (8 per chunk).
+  uint16x8_t vQuote = vdupq_n_u16(u'"');
+  uint16x8_t vBackslash = vdupq_n_u16(u'\\');
+  uint16x8_t vCtrlLimit = vdupq_n_u16(0x20);
+  while (p + 8 <= end) {
+    uint16x8_t data = vld1q_u16(reinterpret_cast<const uint16_t *>(p));
+    uint16x8_t cmp1 = vceqq_u16(data, vQuote);
+    uint16x8_t cmp2 = vceqq_u16(data, vBackslash);
+    uint16x8_t cmp3 = vcltq_u16(data, vCtrlLimit);
+    uint16x8_t match = vorrq_u16(vorrq_u16(cmp1, cmp2), cmp3);
+    if (vmaxvq_u16(match))
+      return scalarScanU16(p, p + 8);
+    p += 8;
+  }
+#elif defined(HERMES_SIMD_SSE2)
+  __m128i vQuote = _mm_set1_epi16(u'"');
+  __m128i vBackslash = _mm_set1_epi16(u'\\');
+  // Bias for unsigned comparison: XOR with 0x8000 converts signed
+  // _mm_cmplt_epi16 into an unsigned less-than, avoiding false positives
+  // for char16_t values >= 0x8000 (e.g. CJK, surrogates).
+  __m128i bias = _mm_set1_epi16(static_cast<short>(0x8000));
+  __m128i vCtrlLimitBiased = _mm_xor_si128(_mm_set1_epi16(0x20), bias);
+  while (p + 8 <= end) {
+    __m128i data = _mm_loadu_si128(reinterpret_cast<const __m128i *>(p));
+    __m128i cmp1 = _mm_cmpeq_epi16(data, vQuote);
+    __m128i cmp2 = _mm_cmpeq_epi16(data, vBackslash);
+    __m128i cmp3 = _mm_cmplt_epi16(_mm_xor_si128(data, bias), vCtrlLimitBiased);
+    __m128i match = _mm_or_si128(_mm_or_si128(cmp1, cmp2), cmp3);
+    // Each 16-bit lane produces 2 mask bits; divide by 2 for the
+    // element index.
+    unsigned mask = static_cast<unsigned>(_mm_movemask_epi8(match));
+    if (mask)
+      return p + llvh::countTrailingZeros(mask) / 2;
+    p += 8;
+  }
+#endif
+
+  return scalarScanU16(p, end);
+}
+
 } // namespace hermes
