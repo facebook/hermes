@@ -33,18 +33,23 @@ promise.then(function(message) {
 });
 // CHECK-NEXT: Resolved: success!
 
+var deferred;
 HermesInternal.enablePromiseRejectionTracker({
   allRejections: true,
-  onUnhandled: function(id, error) {
-    print("Unhandled:", error);
+  onUnhandled: function(id, error, p) {
+    print("Unhandled:", error, "samePromise:", p === deferred);
   },
 });
 
-var promise = new Promise(function(res, rej) {
+var rejectedPromise = new Promise(function(res, rej) {
   rej("failure!");
 });
 
-promise.then(function() {
+// `.then()` attaches a handler to `rejectedPromise`, which fires `_B` and
+// clears its rejection entry. The rejection then propagates to the deferred
+// promise that `.then()` returns; that's the promise the tracker eventually
+// reports as unhandled.
+deferred = rejectedPromise.then(function() {
   print('resolved');
 });
-// CHECK-NEXT: Unhandled: failure!
+// CHECK-NEXT: Unhandled: failure! samePromise: true
