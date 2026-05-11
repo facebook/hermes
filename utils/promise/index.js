@@ -5,6 +5,8 @@
 const Promise = require('promise/setimmediate/es6-extensions');
 
 require('promise/setimmediate/finally');
+require('./Promise.withResolvers.js'); // Specification: https://tc39.es/ecma262/#sec-promise.withResolvers
+require('./Promise.try.js');  // Specification: https://tc39.es/ecma262/#sec-promise.try
 
 // expose Promise to global.
 globalThis.Promise = Promise;
