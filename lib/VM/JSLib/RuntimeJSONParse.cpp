@@ -455,19 +455,24 @@ CallResult<HermesValue> RuntimeJSONParser<Kind>::parseValue() {
                         lv.curVal) == ExecutionStatus::EXCEPTION))
               return ExecutionStatus::EXCEPTION;
           }
-          // Populate cache entry
-          if (lv.hcCache->size() < depth + 1) {
-            if (LLVM_UNLIKELY(
-                    ArrayStorage::resize(lv.hcCache, runtime_, depth + 1) ==
-                    ExecutionStatus::EXCEPTION)) {
-              return ExecutionStatus::EXCEPTION;
+          // Populate cache entry. Dictionary-mode HiddenClasses are owned by
+          // a single object and mutated in place, so caching one would let a
+          // mutation on a sibling object grow the shared class past this
+          // object's propStorage (out-of-bounds access).
+          if (LLVM_LIKELY(!lv.newObject->getClass(runtime_)->isDictionary())) {
+            if (lv.hcCache->size() < depth + 1) {
+              if (LLVM_UNLIKELY(
+                      ArrayStorage::resize(lv.hcCache, runtime_, depth + 1) ==
+                      ExecutionStatus::EXCEPTION)) {
+                return ExecutionStatus::EXCEPTION;
+              }
             }
+            lv.hcCache->set(
+                depth,
+                HermesValue::encodeObjectValue(
+                    lv.newObject->getClass(runtime_), runtime_),
+                runtime_.getHeap());
           }
-          lv.hcCache->set(
-              depth,
-              HermesValue::encodeObjectValue(
-                  lv.newObject->getClass(runtime_), runtime_),
-              runtime_.getHeap());
         }
 
         ArrayStorageSmall::resizeWithinCapacity(
