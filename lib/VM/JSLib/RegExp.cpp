@@ -477,16 +477,84 @@ static ExecutionStatus regExpConstructorFastCopy(
   return ExecutionStatus::RETURNED;
 }
 
-static void createGroupsObject(
+/// Build an object whose property keys are identical to \p mappingObj. Each
+/// value for a given property key `k` in this object is
+/// `source[mappingObj[k]]`. The result has a null prototype.
+static CallResult<PseudoHandle<JSObject>> buildGroupsObject(
     Runtime &runtime,
-    Handle<JSArray> matchObj,
-    Handle<JSObject> mappingObj) {
+    Handle<JSObject> mappingObj,
+    Handle<JSArray> source) {
   struct : public Locals {
-    PinnedValue<HiddenClass> clazzHandle;
+    PinnedValue<HiddenClass> clazz;
     PinnedValue<JSObject> groupsObj;
+    PinnedValue<> tmpVal;
   } lv;
   LocalsRAII lraii(runtime, &lv);
 
+  lv.clazz = mappingObj->getClass(runtime);
+
+  if (LLVM_LIKELY(!lv.clazz->isDictionary())) {
+    // Fast path: non-dictionary class is safe to share between groupsObj and
+    // mappingObj.
+    lv.groupsObj =
+        JSObject::create(runtime, Runtime::makeNullHandle<JSObject>(), lv.clazz)
+            .get();
+    HiddenClass::forEachProperty(
+        lv.clazz, runtime, [&](SymbolID, NamedPropertyDescriptor desc) {
+          assert(
+              !desc.flags.privateName &&
+              "private name not expected in regex mapping object");
+          auto idx =
+              JSObject::getNamedSlotValueUnsafe(*mappingObj, runtime, desc.slot)
+                  .getNumber(runtime);
+          JSObject::setNamedSlotValueUnsafe(
+              lv.groupsObj.get(), runtime, desc.slot, source->at(runtime, idx));
+        });
+    return PseudoHandle<JSObject>::create(lv.groupsObj.get());
+  }
+
+  // Slow path: mappingObj's class is in dictionary mode. Dictionary classes
+  // are owned by a single object and mutated in place; sharing one with
+  // groupsObj would let a later mutation on this `groups` grow the shared
+  // class past the underlying propStorage of any sibling (out-of-bounds
+  // read/write). Build groupsObj with its own fresh class instead.
+  //
+  // Calling defineNewOwnProperty inside HiddenClass::forEachPropertyWhile is
+  // safe: it only touches groupsObj's class chain (independent from
+  // lv.clazz), and forEachPropertyWhile flushes the GCScope after each
+  // callback so handle counts stay bounded.
+  lv.groupsObj =
+      JSObject::create(runtime, Runtime::makeNullHandle<JSObject>()).get();
+  ExecutionStatus status = ExecutionStatus::RETURNED;
+  HiddenClass::forEachPropertyWhile(
+      lv.clazz,
+      runtime,
+      [&](Runtime &, SymbolID id, NamedPropertyDescriptor desc) -> bool {
+        auto idx =
+            JSObject::getNamedSlotValueUnsafe(*mappingObj, runtime, desc.slot)
+                .getNumber(runtime);
+        lv.tmpVal = source->at(runtime, idx).unboxToHV(runtime);
+        if (LLVM_UNLIKELY(
+                JSObject::defineNewOwnProperty(
+                    lv.groupsObj,
+                    runtime,
+                    id,
+                    PropertyFlags::defaultNewNamedPropertyFlags(),
+                    lv.tmpVal) == ExecutionStatus::EXCEPTION)) {
+          status = ExecutionStatus::EXCEPTION;
+          return false;
+        }
+        return true;
+      });
+  if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+  return PseudoHandle<JSObject>::create(lv.groupsObj.get());
+}
+
+static ExecutionStatus setMatchGroups(
+    Runtime &runtime,
+    Handle<JSArray> matchObj,
+    Handle<JSObject> mappingObj) {
   // matchObj is created with a HiddenClass that already has the groups
   // property.
   NamedPropertyDescriptor groupsDesc;
@@ -502,34 +570,19 @@ static void createGroupsObject(
   if (!mappingObj) {
     auto shv = SmallHermesValue::encodeUndefinedValue();
     JSObject::setNamedSlotValueUnsafe(matchObj.get(), runtime, groupsDesc, shv);
-    return;
+    return ExecutionStatus::RETURNED;
   }
 
   // The `__proto__` property on the groups object is not special,
   // and does not affect the [[Prototype]] of the resulting groups object.
   // This means that the prototype of the resulting groups object is null.
-  lv.clazzHandle = mappingObj->getClass(runtime);
-  auto groupsObjRes = JSObject::create(
-      runtime, Runtime::makeNullHandle<JSObject>(), lv.clazzHandle);
-  lv.groupsObj = groupsObjRes.get();
+  auto groupsRes = buildGroupsObject(runtime, mappingObj, matchObj);
+  if (LLVM_UNLIKELY(groupsRes == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
 
-  HiddenClass::forEachProperty(
-      lv.clazzHandle, runtime, [&](SymbolID id, NamedPropertyDescriptor desc) {
-        assert(
-            !desc.flags.privateName &&
-            "private name not expected in regex mapping object");
-        auto groupIdx =
-            JSObject::getNamedSlotValueUnsafe(*mappingObj, runtime, desc.slot)
-                .getNumber(runtime);
-        JSObject::setNamedSlotValueUnsafe(
-            lv.groupsObj.get(),
-            runtime,
-            desc.slot,
-            matchObj->at(runtime, groupIdx));
-      });
-
-  auto shv = SmallHermesValue::encodeObjectValue(lv.groupsObj.get(), runtime);
+  auto shv = SmallHermesValue::encodeObjectValue(groupsRes->get(), runtime);
   JSObject::setNamedSlotValueUnsafe(matchObj.get(), runtime, groupsDesc, shv);
+  return ExecutionStatus::RETURNED;
 }
 
 /// ES2022 22.2.7.8 MakeMatchIndicesIndexPairArray
@@ -545,7 +598,6 @@ static ExecutionStatus makeMatchIndicesIndexPairArray(
     PinnedValue<> groups;
     PinnedValue<JSArray> A;
     PinnedValue<JSArray> pair;
-    PinnedValue<HiddenClass> mappingObjClazz;
     PinnedValue<JSObject> groupsObj;
   } lv;
   LocalsRAII lraii(runtime, &lv);
@@ -602,29 +654,13 @@ static ExecutionStatus makeMatchIndicesIndexPairArray(
   // 6. If hasGroups is true, then
   if (hasGroups) {
     // a. Let groups be OrdinaryObjectCreate(null).
-    lv.mappingObjClazz = mappingObj->getClass(runtime);
-    auto groupsRes = JSObject::create(
-        runtime, Runtime::makeNullHandle<JSObject>(), lv.mappingObjClazz);
-    lv.groupsObj = groupsRes.get();
-    HiddenClass::forEachProperty(
-        lv.mappingObjClazz,
-        runtime,
-        [&](SymbolID id, NamedPropertyDescriptor desc) {
-          assert(
-              !desc.flags.privateName &&
-              "private name not expected in regex mapping object");
-          auto groupIdx =
-              JSObject::getNamedSlotValueUnsafe(*mappingObj, runtime, desc.slot)
-                  .getNumber(runtime);
-          // 9.e. If i > 0 and groupNames[i - 1] is not undefined, then
-          // ii. Perform ! CreateDataPropertyOrThrow(groups, groupNames[i-1],
-          // matchIndexPair).
-          JSObject::setNamedSlotValueUnsafe(
-              lv.groupsObj.get(),
-              runtime,
-              desc.slot,
-              lv.A.get()->at(runtime, groupIdx));
-        });
+    // 9.e. If i > 0 and groupNames[i - 1] is not undefined, then
+    // ii. Perform ! CreateDataPropertyOrThrow(groups, groupNames[i-1],
+    // matchIndexPair).
+    auto groupsRes = buildGroupsObject(runtime, mappingObj, lv.A);
+    if (LLVM_UNLIKELY(groupsRes == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    lv.groupsObj = groupsRes->get();
     lv.groups = lv.groupsObj.getHermesValue();
   } else {
     // 7. Else,
@@ -855,7 +891,10 @@ ExecutionStatus directRegExpExec(
     }
   }
 
-  createGroupsObject(runtime, lv.A, groupNames);
+  if (LLVM_UNLIKELY(
+          setMatchGroups(runtime, lv.A, groupNames) ==
+          ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
   resultOut.castAndSetHermesValue<JSArray>(lv.A.getHermesValue());
   return ExecutionStatus::RETURNED;
 }
