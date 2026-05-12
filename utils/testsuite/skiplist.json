@@ -392,9 +392,6 @@
         "test262/test/built-ins/Promise/race/invoke-resolve-on-promises-every-iteration-of-custom.js",
         "test262/test/built-ins/Promise/race/resolve-non-callable.js",
         "test262/test/built-ins/Promise/resolve/resolve-self.js",
-        "test262/test/built-ins/Promise/try/args.js",
-        "test262/test/built-ins/Promise/try/return-value.js",
-        "test262/test/built-ins/Promise/try/throws.js",
         "test262/test/language/statements/for-await-of/iterator-close-throw-get-method-abrupt.js",
         "test262/test/language/statements/for-await-of/iterator-close-throw-get-method-non-callable.js"
       ],
@@ -604,14 +601,10 @@
       "comment": "These are rest failing tests in mjsunit that we may support soon."
     },
     {
-      "comment": "Promise.try is not implemented. All Promise.try tests fail with 'undefined is not a function'.",
+      "comment": "Promise.try is implemented but a 'try' prop defined no by spec.",
       "paths": [
-        "test262/test/built-ins/Promise/try/ctx-ctor-throws.js",
-        "test262/test/built-ins/Promise/try/ctx-ctor.js",
-        "test262/test/built-ins/Promise/try/length.js",
         "test262/test/built-ins/Promise/try/name.js",
         "test262/test/built-ins/Promise/try/not-a-constructor.js",
-        "test262/test/built-ins/Promise/try/promise.js",
         "test262/test/built-ins/Promise/try/prop-desc.js"
       ]
     },
