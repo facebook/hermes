@@ -473,8 +473,13 @@ class Debugger {
   /// for the given codeBlock and offset, else creates one.
   /// Used by other functions which should be called to set breakpoints.
   /// Installs a breakpoint at that location, doesn't modify it.
-  /// \return the location at which the breakpoint was installed.
-  BreakpointLocation &installBreakpoint(CodeBlock *codeBlock, uint32_t offset);
+  /// \return a pointer to the location at which the breakpoint was installed,
+  ///   or nullptr if the bytecode page cannot be made writable (e.g.
+  ///   statically embedded bytecode in a read-only segment that the OS
+  ///   refuses to remap). On failure, no state is modified.
+  LLVM_NODISCARD BreakpointLocation *installBreakpoint(
+      CodeBlock *codeBlock,
+      uint32_t offset);
 
   /// Helper function to uninstall a breakpoint. Always use this function to
   /// uninstall breakpoints. This takes care of the case when we purposely keep
@@ -489,7 +494,11 @@ class Debugger {
   /// If the physical breakpoint isn't enabled yet, patches the debugger
   /// instruction in.
   /// Sets the breakpoint ID to \p id.
-  void
+  /// \return true on success; false if the bytecode page cannot be made
+  ///   writable. On failure, no state is modified and the breakpoint is not
+  ///   physically installed (the caller may still keep it in
+  ///   userBreakpoints_ as a record).
+  bool
   setUserBreakpoint(CodeBlock *codeBlock, uint32_t offset, BreakpointID id);
 
   /// Should not be called directly except from \p setStepBreakpoint() or \p
