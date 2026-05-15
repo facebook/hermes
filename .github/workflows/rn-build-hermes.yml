@@ -19,6 +19,9 @@ on:
       - 250829098.0.0-stable
       - static_h
 
+permissions:
+  contents: read
+
 jobs:
   set_release_type:
     runs-on: ubuntu-latest

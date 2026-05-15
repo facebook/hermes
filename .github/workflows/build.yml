@@ -4,6 +4,10 @@ on:
   pull_request:
     branches:
       - static_h
+
+permissions:
+  contents: read
+
 jobs:
   macos:
     runs-on: macos-15
