@@ -1091,6 +1091,35 @@ class FlowChecker::ExprVisitor {
         constraint ? constraint->info : nullptr);
 
     for (ESTree::Node &node : node->_properties) {
+      // Spread element: merge fields from an exact-object source.
+      if (auto *spread = llvh::dyn_cast<ESTree::SpreadElementNode>(&node)) {
+        visitESTreeNodeNoReplace(*this, spread->_argument, spread, nullptr);
+        Type *spreadTy = outer_.getNodeTypeOrAny(spread->_argument);
+        if (llvh::isa<AnyType>(spreadTy->info)) {
+          outer_.sm_.warning(
+              node.getSourceRange(),
+              "ft: unsupported property for typed object, assuming 'any'");
+          assumeAny = true;
+        } else if (
+            auto *spreadObjTy =
+                llvh::dyn_cast<ExactObjectType>(spreadTy->info)) {
+          for (const auto &srcField : spreadObjTy->getFields()) {
+            auto [it, inserted] = names.try_emplace(
+                srcField.name.getUnderlyingPointer(), fields.size());
+            if (inserted) {
+              fields.emplace_back(srcField.name, srcField.type);
+            } else {
+              fields[it->second].type = srcField.type;
+            }
+          }
+        } else {
+          outer_.sm_.error(
+              spread->getSourceRange(),
+              "ft: spread argument must be an exact object type");
+        }
+        continue;
+      }
+
       auto *prop = llvh::dyn_cast<ESTree::PropertyNode>(&node);
       // prop->_kind being "init" makes sure this isn't a getter/setter.
       if (!prop || prop->_computed || prop->_kind != outer_.kw_.identInit ||
