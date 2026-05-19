@@ -9,6 +9,7 @@
 
 #include "hermes/IR/IRUtils.h"
 
+#include "llvh/ADT/BitVector.h"
 #include "llvh/ADT/ScopeExit.h"
 #include "llvh/ADT/SetVector.h"
 #include "llvh/ADT/StringSet.h"
@@ -770,9 +771,12 @@ void ESTreeIRGen::emitDestructuringAssignment(
     Value *source) {
   if (auto *APN = llvh::dyn_cast<ESTree::ArrayPatternNode>(target))
     return emitDestructuringArray(declInit, APN, source);
-  else if (auto *OPN = llvh::dyn_cast<ESTree::ObjectPatternNode>(target))
+  else if (auto *OPN = llvh::dyn_cast<ESTree::ObjectPatternNode>(target)) {
+    flow::Type *patType = flowContext_.getNodeTypeOrAny(OPN);
+    if (auto *exact = llvh::dyn_cast<flow::ExactObjectType>(patType->info))
+      return emitDestructuringTypedObject(declInit, OPN, exact, source);
     return emitDestructuringObject(declInit, OPN, source);
-  else {
+  } else {
     Mod->getContext().getSourceErrorManager().error(
         target->getSourceRange(), "unsupported destructuring target");
   }
@@ -1344,6 +1348,88 @@ void ESTreeIRGen::emitRestProperty(
       {Builder.createAllocObjectLiteralInst(), source, excludedObj});
 
   lref.emitStore(restValue);
+}
+
+void ESTreeIRGen::emitDestructuringTypedObject(
+    bool declInit,
+    ESTree::ObjectPatternNode *target,
+    flow::ExactObjectType *srcType,
+    Value *source) {
+  // Track which fields of \p srcType the named properties have consumed,
+  // so a trailing rest element can be built from the remaining fields.
+  llvh::BitVector consumed(srcType->getFields().size());
+
+  for (auto &elem : target->_properties) {
+    if (auto *rest = llvh::dyn_cast<ESTree::RestElementNode>(&elem)) {
+      // Allocate a new exact object containing the remaining fields, in the
+      // same order as srcType. The order matches the rest binding's
+      // ExactObjectType that FlowChecker constructed.
+      AllocObjectLiteralInst::ObjectPropertyMap propMap{};
+      llvh::SmallVector<size_t, 4> remainingSrcIdx{};
+      for (size_t i = 0, e = srcType->getFields().size(); i < e; ++i) {
+        if (consumed.test(i))
+          continue;
+        const auto &field = srcType->getFields()[i];
+        propMap.emplace_back(
+            Builder.getLiteralString(field.name),
+            getDefaultInitValue(field.type));
+        remainingSrcIdx.push_back(i);
+      }
+
+      Value *restObj = propMap.empty()
+          ? Builder.createAllocObjectLiteralInst()
+          : Builder.createAllocObjectLiteralInst(propMap);
+
+      for (size_t destIdx = 0, n = remainingSrcIdx.size(); destIdx < n;
+           ++destIdx) {
+        size_t srcIdx = remainingSrcIdx[destIdx];
+        const auto &field = srcType->getFields()[srcIdx];
+        auto *nameLit = Builder.getLiteralString(field.name);
+        Type irType = flowTypeToIRType(field.type);
+        Value *loaded =
+            Builder.createPrLoadInst(source, srcIdx, nameLit, irType);
+        Builder.createPrStoreInst(
+            loaded, restObj, destIdx, nameLit, irType.isNonPtr());
+      }
+
+      LReference lref = createLRef(rest->_argument, declInit);
+      lref.emitStore(restObj);
+      break;
+    }
+
+    auto *propNode = cast<ESTree::PropertyNode>(&elem);
+
+    ESTree::Node *valueNode = propNode->_value;
+    ESTree::Node *init = nullptr;
+    if (auto *assign =
+            llvh::dyn_cast<ESTree::AssignmentPatternNode>(valueNode)) {
+      valueNode = assign->_left;
+      init = assign->_right;
+    }
+
+    Identifier nameHint = llvh::isa<ESTree::IdentifierNode>(valueNode)
+        ? getNameFieldFromID(valueNode)
+        : Identifier{};
+
+    // FlowChecker already validated that the key is a non-computed identifier
+    // and that the field exists in srcType.
+    auto *keyId = llvh::cast<ESTree::IdentifierNode>(propNode->_key);
+    Identifier key = getNameFieldFromID(keyId);
+    auto optIdx = srcType->findField(key);
+    assert(optIdx.hasValue() && "FlowChecker should have rejected this");
+    size_t srcIdx = *optIdx;
+    consumed.set(srcIdx);
+
+    const auto &field = srcType->getFields()[srcIdx];
+    Value *loaded = Builder.createPrLoadInst(
+        source,
+        srcIdx,
+        Builder.getLiteralString(field.name),
+        flowTypeToIRType(field.type));
+    Value *optInit = emitOptionalInitialization(loaded, init, nameHint);
+    LReference lref = createLRef(valueNode, declInit);
+    lref.emitStore(optInit);
+  }
 }
 
 Value *ESTreeIRGen::emitOptionalInitialization(

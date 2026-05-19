@@ -1934,6 +1934,10 @@ bool FlowChecker::expandObjectDestructuring(
     ESTree::ObjectPatternNode *obj,
     ExactObjectType *objType,
     OnChildCB onChild) {
+  // Track which fields of \p objType have been consumed by named
+  // properties, so a trailing rest element can be typed as an exact object
+  // of the remaining fields.
+  llvh::BitVector consumed(objType->getFields().size());
   for (ESTree::Node &propNode : obj->_properties) {
     if (auto *prop = llvh::dyn_cast<ESTree::PropertyNode>(&propNode)) {
       if (prop->_computed) {
@@ -1957,12 +1961,21 @@ bool FlowChecker::expandObjectDestructuring(
             "ft: property '" + propName.str() + "' not found in object type");
         return false;
       }
+      consumed.set(*optFieldIdx);
       Type *fieldType = objType->getFields()[*optFieldIdx].type;
       onChild(prop->_value, fieldType);
     } else if (
         auto *rest = llvh::dyn_cast<ESTree::RestElementNode>(&propNode)) {
-      sm_.error(rest->getSourceRange(), "ft: rest elements not supported");
-      return false;
+      // The parser guarantees a rest element is the last property.
+      llvh::SmallVector<ExactObjectType::Field, 4> restFields;
+      for (size_t i = 0, e = objType->getFields().size(); i < e; ++i) {
+        if (!consumed.test(i))
+          restFields.push_back(objType->getFields()[i]);
+      }
+      Type *restType =
+          flowContext_.createType(flowContext_.createExactObject(restFields));
+      onChild(rest->_argument, restType);
+      break;
     }
   }
   return true;
@@ -2292,9 +2305,7 @@ class FlowChecker::AnnotateScopeDecls {
             } else if (
                 auto *rest =
                     llvh::dyn_cast<ESTree::RestElementNode>(&propNode)) {
-              outer.sm_.error(
-                  rest->getSourceRange(), "ft: rest elements not supported");
-              continue;
+              worklist.emplace_back(rest->_argument, t);
             }
           }
         } else {

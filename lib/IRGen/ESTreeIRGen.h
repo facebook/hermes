@@ -1758,6 +1758,15 @@ class ESTreeIRGen {
       ESTree::ObjectPatternNode *target,
       Value *source);
 
+  /// Generate code for destructuring assignment to ObjectPattern from a typed
+  /// exact object. Uses PrLoad for each named property and builds the rest
+  /// object (if any) with the correct typed layout using PrLoad/PrStore.
+  void emitDestructuringTypedObject(
+      bool declInit,
+      ESTree::ObjectPatternNode *target,
+      flow::ExactObjectType *srcType,
+      Value *source);
+
   /// Generate code for assigning to the "rest" property in an object
   /// destructuring pattern. \p excludedItems is a list of the keys that have
   /// been destructured so far, so they can be excluded from the rest property.
