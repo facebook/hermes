@@ -8,3 +8,12 @@ add_hermes_tool(interp-dispatch-bench
   ${ALL_HEADER_FILES}
   LINK_LIBS hermesvm_a
   )
+
+set(HERMES_ENABLE_EH ON)
+add_hermes_tool(serialization-json-bench
+  serialization-json-bench.cpp
+  ${ALL_HEADER_FILES}
+  LINK_OBJLIBS hermesvm_a timerStats
+  )
+target_include_directories(serialization-json-bench PRIVATE ${CMAKE_SOURCE_DIR})
+set(HERMES_ENABLE_EH OFF)
