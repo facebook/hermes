@@ -15,5 +15,7 @@ add_hermes_tool(serialization-json-bench
   ${ALL_HEADER_FILES}
   LINK_OBJLIBS hermesvm_a timerStats
   )
-target_include_directories(serialization-json-bench PRIVATE ${CMAKE_SOURCE_DIR})
+target_include_directories(serialization-json-bench PRIVATE
+  ${PROJECT_SOURCE_DIR}/experimental
+  )
 set(HERMES_ENABLE_EH OFF)

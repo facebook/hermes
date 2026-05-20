@@ -20,6 +20,7 @@
 #include "llvh/ADT/ArrayRef.h"
 
 #include <cassert>
+#include <cmath>
 #include <cstdint>
 #include <limits>
 #include <string>
@@ -47,8 +48,9 @@ class JSONValueMaterializer {
   ///
   /// After this returns, \p value must be treated as consumed. This is the safe
   /// ownership-transfer version of "reuse C string memory": Hermes may adopt
-  /// moved std::string storage for ASCII strings, and non-ASCII UTF-8 still
-  /// goes through Hermes' UTF-8 decoder.
+  /// moved std::string storage for ASCII strings and moved std::u16string
+  /// storage for UTF-16 strings. UTF-8 strings still go through Hermes' UTF-8
+  /// decoder.
   CallResult<HermesValue> materializeAndConsume(
       Runtime &runtime,
       JSONValue &value) {
@@ -119,6 +121,9 @@ class JSONValueMaterializer {
       case JSONValue::Kind::Bool:
         return HermesValue::encodeBoolValue(value.boolValue);
       case JSONValue::Kind::Number:
+        if (!std::isfinite(value.numberValue)) {
+          return runtime.raiseRangeError("JSON numbers must be finite");
+        }
         return HermesValue::encodeUntrustedNumberValue(value.numberValue);
       case JSONValue::Kind::String:
         return createString(runtime, value, context.consumeStringValues);

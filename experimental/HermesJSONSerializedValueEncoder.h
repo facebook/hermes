@@ -10,6 +10,8 @@
 #include "hermes/VM/SerializedValue.h"
 #include "jsi/jsi.h"
 
+#include "llvh/Support/ConvertUTF.h"
+
 #include <cassert>
 #include <cmath>
 #include <cstdint>
@@ -33,9 +35,18 @@ class JSONSerializedValueEncoder {
   SerializedValue encode(const JSONValue &value) {
     SerializedValue result;
     out_ = &result;
+    struct ResetOutput {
+      explicit ResetOutput(JSONSerializedValueEncoder &encoder)
+          : encoder_(encoder) {}
+      ~ResetOutput() {
+        encoder_.out_ = nullptr;
+      }
+
+      JSONSerializedValueEncoder &encoder_;
+    } reset{*this};
+
     stringIds_.clear();
     writeValue(value);
-    out_ = nullptr;
     return result;
   }
 
@@ -60,54 +71,21 @@ class JSONSerializedValueEncoder {
     appendPod<uint64_t>(buffer, bits);
   }
 
-  static bool isASCII(std::string_view value) {
-    for (unsigned char c : value) {
-      if (c > 0x7f) {
-        return false;
-      }
+  static uint32_t checkedUint32(size_t value, const char *message) {
+    if (value > std::numeric_limits<uint32_t>::max()) {
+      throw std::overflow_error(message);
     }
-    return true;
+    return static_cast<uint32_t>(value);
   }
 
-  static void appendUTF8AsUTF16(
-      std::vector<uint8_t> &buffer,
-      std::string_view value) {
-    auto appendCodeUnit = [&buffer](char16_t unit) {
-      appendPod<char16_t>(buffer, unit);
-    };
+  uint32_t nextRecordID() const {
+    return checkedUint32(
+        out_->offsets.size(), "Serialized value has too many records");
+  }
 
-    for (size_t i = 0; i < value.size();) {
-      const uint8_t c = static_cast<uint8_t>(value[i++]);
-      uint32_t codePoint;
-      if (c < 0x80) {
-        codePoint = c;
-      } else if ((c >> 5) == 0x6 && i < value.size()) {
-        const uint8_t c1 = static_cast<uint8_t>(value[i++]);
-        codePoint = ((c & 0x1f) << 6) | (c1 & 0x3f);
-      } else if ((c >> 4) == 0xe && i + 1 < value.size()) {
-        const uint8_t c1 = static_cast<uint8_t>(value[i++]);
-        const uint8_t c2 = static_cast<uint8_t>(value[i++]);
-        codePoint = ((c & 0x0f) << 12) | ((c1 & 0x3f) << 6) | (c2 & 0x3f);
-      } else if ((c >> 3) == 0x1e && i + 2 < value.size()) {
-        const uint8_t c1 = static_cast<uint8_t>(value[i++]);
-        const uint8_t c2 = static_cast<uint8_t>(value[i++]);
-        const uint8_t c3 = static_cast<uint8_t>(value[i++]);
-        codePoint = ((c & 0x07) << 18) | ((c1 & 0x3f) << 12) |
-            ((c2 & 0x3f) << 6) | (c3 & 0x3f);
-      } else {
-        throw std::invalid_argument("Invalid UTF-8 JSON string");
-      }
-
-      if (codePoint <= 0xffff) {
-        appendCodeUnit(static_cast<char16_t>(codePoint));
-      } else if (codePoint <= 0x10ffff) {
-        codePoint -= 0x10000;
-        appendCodeUnit(static_cast<char16_t>(0xd800 + (codePoint >> 10)));
-        appendCodeUnit(static_cast<char16_t>(0xdc00 + (codePoint & 0x3ff)));
-      } else {
-        throw std::invalid_argument("Invalid UTF-8 JSON string");
-      }
-    }
+  void pushOffset(size_t offset) {
+    out_->offsets.push_back(
+        checkedUint32(offset, "Serialized value buffer is too large"));
   }
 
   static void appendUTF16(
@@ -119,32 +97,31 @@ class JSONSerializedValueEncoder {
         reinterpret_cast<const uint8_t *>(value.data() + value.size()));
   }
 
-  static uint32_t utf16LengthFromUTF8(std::string_view value) {
-    uint32_t len = 0;
-    for (size_t i = 0; i < value.size();) {
-      const uint8_t c = static_cast<uint8_t>(value[i++]);
-      uint32_t codePoint;
-      if (c < 0x80) {
-        codePoint = c;
-      } else if ((c >> 5) == 0x6 && i < value.size()) {
-        const uint8_t c1 = static_cast<uint8_t>(value[i++]);
-        codePoint = ((c & 0x1f) << 6) | (c1 & 0x3f);
-      } else if ((c >> 4) == 0xe && i + 1 < value.size()) {
-        const uint8_t c1 = static_cast<uint8_t>(value[i++]);
-        const uint8_t c2 = static_cast<uint8_t>(value[i++]);
-        codePoint = ((c & 0x0f) << 12) | ((c1 & 0x3f) << 6) | (c2 & 0x3f);
-      } else if ((c >> 3) == 0x1e && i + 2 < value.size()) {
-        const uint8_t c1 = static_cast<uint8_t>(value[i++]);
-        const uint8_t c2 = static_cast<uint8_t>(value[i++]);
-        const uint8_t c3 = static_cast<uint8_t>(value[i++]);
-        codePoint = ((c & 0x07) << 18) | ((c1 & 0x3f) << 12) |
-            ((c2 & 0x3f) << 6) | (c3 & 0x3f);
-      } else {
-        throw std::invalid_argument("Invalid UTF-8 JSON string");
-      }
-      len += codePoint <= 0xffff ? 1 : 2;
+  static std::u16string convertUTF8ToUTF16(std::string_view value) {
+    if (value.empty()) {
+      return {};
     }
-    return len;
+
+    std::u16string out;
+    out.resize(value.size());
+
+    const auto *sourceStart =
+        reinterpret_cast<const llvh::UTF8 *>(value.data());
+    const auto *sourceEnd = sourceStart + value.size();
+    auto *targetStart = reinterpret_cast<llvh::UTF16 *>(out.data());
+    auto *targetEnd = targetStart + out.size();
+    llvh::ConversionResult result = llvh::ConvertUTF8toUTF16(
+        &sourceStart,
+        sourceEnd,
+        &targetStart,
+        targetEnd,
+        llvh::strictConversion);
+    if (result != llvh::ConversionResult::conversionOK) {
+      throw std::invalid_argument("Invalid UTF-8 JSON string");
+    }
+
+    out.resize(reinterpret_cast<char16_t *>(targetStart) - out.data());
+    return out;
   }
 
   static std::string makeStringKey(const JSONValue &value) {
@@ -167,17 +144,23 @@ class JSONSerializedValueEncoder {
       return it->second;
     }
 
-    const uint32_t id = out_->offsets.size();
+    const uint32_t id = nextRecordID();
     stringIds_.emplace(std::move(key), id);
-    out_->offsets.push_back(out_->strings.size());
+    pushOffset(out_->strings.size());
 
+    std::u16string utf16Storage;
     const bool ascii = value.stringEncoding == JSONValue::StringEncoding::ASCII;
+    if (value.stringEncoding == JSONValue::StringEncoding::UTF8) {
+      utf16Storage = convertUTF8ToUTF16(value.stringValue);
+    }
+
     out_->strings.push_back(ascii ? 1 : 0);
     const uint32_t length = ascii
-        ? static_cast<uint32_t>(value.stringValue.size())
+        ? checkedUint32(value.stringValue.size(), "JSON string is too large")
         : value.stringEncoding == JSONValue::StringEncoding::UTF16
-        ? static_cast<uint32_t>(value.utf16StringValue.size())
-        : utf16LengthFromUTF8(value.stringValue);
+        ? checkedUint32(
+              value.utf16StringValue.size(), "JSON string is too large")
+        : checkedUint32(utf16Storage.size(), "JSON string is too large");
     appendPod<uint32_t>(out_->strings, length);
 
     if (ascii) {
@@ -192,7 +175,7 @@ class JSONSerializedValueEncoder {
       if (value.stringEncoding == JSONValue::StringEncoding::UTF16) {
         appendUTF16(out_->strings, value.utf16StringValue);
       } else {
-        appendUTF8AsUTF16(out_->strings, value.stringValue);
+        appendUTF16(out_->strings, utf16Storage);
       }
     }
 
@@ -237,8 +220,8 @@ class JSONSerializedValueEncoder {
   }
 
   uint32_t beginObjectRecord(SerializedValue::Type type) {
-    const uint32_t id = out_->offsets.size();
-    out_->offsets.push_back(out_->content.size());
+    const uint32_t id = nextRecordID();
+    pushOffset(out_->content.size());
     out_->content.push_back(typeByte(type));
     appendPod<uint32_t>(out_->content, id);
     return id;

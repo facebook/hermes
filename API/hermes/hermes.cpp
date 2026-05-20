@@ -7,7 +7,7 @@
 
 #include <hermes/hermes.h>
 
-#include "experimental/HermesJSONValueMaterializer.h"
+#include "HermesJSONValueMaterializer.h"
 
 #include "llvh/Support/Compiler.h"
 
@@ -35,7 +35,7 @@
 #include "hermes/VM/JSError.h"
 #include "hermes/VM/JSLib.h"
 #include "hermes/VM/JSLib/JSLibStorage.h"
-#include "lib/VM/JSLib/Object.h"
+#include "Object.h"
 #include "hermes/VM/JSLib/RuntimeJSONParse.h"
 #include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/NativeState.h"

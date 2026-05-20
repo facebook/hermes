@@ -256,7 +256,8 @@ struct JSI_EXPORT JSONValue {
   static JSONValue asciiString(std::string value) {
     JSONValue result;
     result.kind = Kind::String;
-    result.stringEncoding = StringEncoding::ASCII;
+    result.stringEncoding =
+        isASCII(value) ? StringEncoding::ASCII : StringEncoding::UTF8;
     result.stringValue = std::move(value);
     return result;
   }

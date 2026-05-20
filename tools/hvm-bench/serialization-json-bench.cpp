@@ -21,8 +21,8 @@
 #include "hermes/VM/SerializedValue.h"
 #include "hermes/hermes.h"
 
-#include "experimental/HermesJSONValueMaterializer.h"
-#include "experimental/HermesJSONSerializedValueEncoder.h"
+#include "HermesJSONSerializedValueEncoder.h"
+#include "HermesJSONValueMaterializer.h"
 
 #include "llvh/Support/CommandLine.h"
 #include "llvh/Support/InitLLVM.h"
@@ -67,8 +67,8 @@ static llvh::cl::opt<uint32_t> ValuesPerItem{
     llvh::cl::init(8),
     llvh::cl::desc("Values per item, or nesting depth for --shape=deep")};
 
-static llvh::cl::opt<uint32_t> LeakCheckRepetitions{
-    "leak-check-repetitions",
+static llvh::cl::opt<uint32_t> ValidateRepetitions{
+    "validate-repetitions",
     llvh::cl::init(0),
     llvh::cl::desc("Run cross-runtime validation repeatedly and exit")};
 
@@ -522,13 +522,13 @@ int main(int argc, char **argv) {
   }
 
   BenchPayload benchPayload = makePayload(Shape, Items, ValuesPerItem);
-  if (LeakCheckRepetitions != 0) {
-    for (uint32_t i = 0; i < LeakCheckRepetitions; ++i) {
+  if (ValidateRepetitions != 0) {
+    for (uint32_t i = 0; i < ValidateRepetitions; ++i) {
       if (!validateCrossRuntimeRoundTrips(benchPayload)) {
         return EXIT_FAILURE;
       }
     }
-    llvh::outs() << "leak_check_repetitions=" << LeakCheckRepetitions
+    llvh::outs() << "validate_repetitions=" << ValidateRepetitions
                  << ", shape=" << Shape << ", items=" << Items
                  << ", values_per_item=" << ValuesPerItem << '\n';
     return EXIT_SUCCESS;

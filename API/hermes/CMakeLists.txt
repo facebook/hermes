@@ -90,7 +90,10 @@ add_hermes_library(hermesapi
   LINK_OBJLIBS hermesPublic LINK_LIBS jsi ${CDP_DEPS}
   )
 target_include_directories(hermesapi_obj PUBLIC ..)
-target_include_directories(hermesapi_obj PRIVATE ${PROJECT_SOURCE_DIR})
+target_include_directories(hermesapi_obj PRIVATE
+  ${PROJECT_SOURCE_DIR}/experimental
+  ${PROJECT_SOURCE_DIR}/lib/VM/JSLib
+  )
 
 # Pass core extensions flag to C++ code.
 if(HERMES_ENABLE_CORE_EXTENSIONS)
