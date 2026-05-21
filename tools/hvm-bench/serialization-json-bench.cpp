@@ -647,13 +647,23 @@ int main(int argc, char **argv) {
 
   auto vmRuntime = vm::Runtime::create(vm::RuntimeConfig::Builder().build());
   vm::GCScope vmGCScope{*vmRuntime};
+  struct : vm::Locals {
+    vm::PinnedValue<> checkValue;
+  } vmLv;
+  vm::LocalsRAII vmLRAII{*vmRuntime, &vmLv};
+
   llvh::ArrayRef<uint8_t> jsonRef{
       reinterpret_cast<const uint8_t *>(json.data()), json.size()};
   auto vmCheckRes = materializer.materialize(*vmRuntime, benchPayload.value);
-  if (vmCheckRes == vm::ExecutionStatus::EXCEPTION ||
-      !vmCheckRes->isObject() ||
+  if (vmCheckRes == vm::ExecutionStatus::EXCEPTION) {
+    llvh::errs() << "JSON tree materializer produced an unexpected value.\n";
+    return EXIT_FAILURE;
+  }
+  vmLv.checkValue = *vmCheckRes;
+  if (!vmLv.checkValue->isObject() ||
       vm::JSArray::getLength(
-          vm::vmcast<vm::JSArray>(vmCheckRes->getObject(*vmRuntime)),
+          vm::vmcast<vm::JSArray>(
+              vmLv.checkValue.getHermesValue().getObject(*vmRuntime)),
           *vmRuntime) !=
           benchPayload.rootLength) {
     llvh::errs() << "JSON tree materializer produced an unexpected value.\n";
