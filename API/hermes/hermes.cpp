@@ -7,7 +7,7 @@
 
 #include <hermes/hermes.h>
 
-#include "JSONValueMaterializer.h"
+#include "JSONValue.h"
 
 #include "llvh/Support/Compiler.h"
 
@@ -35,7 +35,6 @@
 #include "hermes/VM/JSError.h"
 #include "hermes/VM/JSLib.h"
 #include "hermes/VM/JSLib/JSLibStorage.h"
-#include "JSLib/Object.h"
 #include "hermes/VM/JSLib/RuntimeJSONParse.h"
 #include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/NativeState.h"
@@ -1597,182 +1596,6 @@ jsi::ICast *HermesRuntimeImpl::castInterface(const jsi::UUID &interfaceUUID) {
   return nullptr;
 }
 
-namespace {
-
-jsi::JSONValue jsonTreeStringToJSONValue(
-    vm::Runtime &runtime,
-    vm::Handle<vm::StringPrimitive> str) {
-  auto view = vm::StringPrimitive::createStringView(runtime, str);
-  if (view.isASCII()) {
-    return jsi::JSONValue::asciiString(
-        std::string{view.castToCharPtr(), view.length()});
-  }
-
-  return jsi::JSONValue::utf16String(
-      std::u16string{view.castToChar16Ptr(), view.length()});
-}
-
-std::string jsonTreeStringToUTF8(
-    vm::Runtime &runtime,
-    vm::Handle<vm::StringPrimitive> str) {
-  auto view = vm::StringPrimitive::createStringView(runtime, str);
-  if (view.isASCII()) {
-    return std::string{view.castToCharPtr(), view.length()};
-  }
-
-  std::string result;
-  ::hermes::convertUTF16ToUTF8WithReplacements(
-      result, llvh::ArrayRef{view.castToChar16Ptr(), view.length()});
-  return result;
-}
-
-bool jsonTreeContainsAncestor(
-    const std::vector<vm::Handle<vm::JSObject>> &ancestors,
-    vm::Handle<vm::JSObject> object) {
-  for (auto ancestor : ancestors) {
-    if (*ancestor == *object) {
-      return true;
-    }
-  }
-  return false;
-}
-
-class JSONTreeAncestorScope {
- public:
-  JSONTreeAncestorScope(
-      std::vector<vm::Handle<vm::JSObject>> &ancestors,
-      vm::Handle<vm::JSObject> object)
-      : ancestors_(ancestors) {
-    ancestors_.push_back(object);
-  }
-
-  ~JSONTreeAncestorScope() {
-    ancestors_.pop_back();
-  }
-
- private:
-  std::vector<vm::Handle<vm::JSObject>> &ancestors_;
-};
-
-vm::CallResult<jsi::JSONValue> createJSONTreeFromHermesValue(
-    vm::Runtime &runtime,
-    vm::Handle<> value,
-    std::vector<vm::Handle<vm::JSObject>> &ancestors) {
-  if (value->isUndefined() || value->isNull()) {
-    return jsi::JSONValue::null();
-  }
-  if (value->isBool()) {
-    return jsi::JSONValue::boolean(value->getBool());
-  }
-  if (value->isNumber()) {
-    const double number = value->getNumber();
-    return std::isfinite(number) ? jsi::JSONValue::number(number)
-                                 : jsi::JSONValue::null();
-  }
-  if (value->isString()) {
-    return jsonTreeStringToJSONValue(
-        runtime, vm::Handle<vm::StringPrimitive>::vmcast(value));
-  }
-  if (value->isSymbol()) {
-    return runtime.raiseTypeError("Cannot create JSONValue from symbol");
-  }
-  if (value->isBigInt()) {
-    return runtime.raiseTypeError("Cannot create JSONValue from bigint");
-  }
-
-  assert(value->isObject() && "Unhandled HermesValue kind");
-
-  struct : public vm::Locals {
-    vm::PinnedValue<vm::JSObject> object;
-    vm::PinnedValue<vm::JSArray> array;
-    vm::PinnedValue<vm::JSArray> keys;
-    vm::PinnedValue<> key;
-    vm::PinnedValue<> child;
-  } lv;
-  vm::LocalsRAII lraii(runtime, &lv);
-
-  lv.object = vm::vmcast<vm::JSObject>(*value);
-  if (vm::vmisa<vm::Callable>(*lv.object)) {
-    return runtime.raiseTypeError("Cannot create JSONValue from function");
-  }
-  if (jsonTreeContainsAncestor(ancestors, lv.object)) {
-    return runtime.raiseTypeError("Cannot create JSONValue from cyclic object");
-  }
-
-  JSONTreeAncestorScope ancestorScope{ancestors, lv.object};
-
-  vm::Handle<vm::JSObject> objectHandle = lv.object;
-  if (auto array = vm::Handle<vm::JSArray>::dyn_vmcast(objectHandle)) {
-    const uint32_t len = vm::JSArray::getLength(*array, runtime);
-    std::vector<jsi::JSONValue> result;
-    result.reserve(len);
-
-    for (uint32_t i = 0; i < len; ++i) {
-      vm::GCScopeMarkerRAII marker{runtime};
-      auto element = array->at(runtime, i);
-      if (element.isEmpty()) {
-        result.push_back(jsi::JSONValue::null());
-        continue;
-      }
-
-      lv.child = element.unboxToHV(runtime);
-      auto childRes = createJSONTreeFromHermesValue(
-          runtime, lv.child, ancestors);
-      if (childRes == vm::ExecutionStatus::EXCEPTION) {
-        return vm::ExecutionStatus::EXCEPTION;
-      }
-      result.push_back(std::move(*childRes));
-    }
-
-    return jsi::JSONValue::array(std::move(result));
-  }
-
-  auto keysRes = vm::enumerableOwnProperties_RJS(
-      runtime, lv.object, vm::EnumerableOwnPropertiesKind::Key);
-  if (keysRes == vm::ExecutionStatus::EXCEPTION) {
-    return vm::ExecutionStatus::EXCEPTION;
-  }
-  lv.keys.castAndSetHermesValue<vm::JSArray>(*keysRes);
-
-  const uint32_t len = vm::JSArray::getLength(*lv.keys, runtime);
-  jsi::JSONValue::Object result;
-  result.reserve(len);
-
-  for (uint32_t i = 0; i < len; ++i) {
-    vm::GCScopeMarkerRAII marker{runtime};
-    auto key = lv.keys->at(runtime, i);
-    if (key.isEmpty()) {
-      continue;
-    }
-    lv.key = key.unboxToHV(runtime);
-    if (!lv.key->isString()) {
-      return runtime.raiseTypeError("Enumerable object key is not a string");
-    }
-
-    auto propRes = vm::JSObject::getComputed_RJS(
-        lv.object, runtime, lv.key);
-    if (propRes == vm::ExecutionStatus::EXCEPTION) {
-      return vm::ExecutionStatus::EXCEPTION;
-    }
-    lv.child = std::move(*propRes);
-
-    auto childRes = createJSONTreeFromHermesValue(
-        runtime, lv.child, ancestors);
-    if (childRes == vm::ExecutionStatus::EXCEPTION) {
-      return vm::ExecutionStatus::EXCEPTION;
-    }
-
-    result.emplace_back(
-        jsonTreeStringToUTF8(
-            runtime, vm::Handle<vm::StringPrimitive>::vmcast(&lv.key)),
-        std::move(*childRes));
-  }
-
-  return jsi::JSONValue::object(std::move(result));
-}
-
-} // namespace
-
 jsi::Value HermesRuntimeImpl::createValueFromJSONTree(
     const jsi::JSONValue &value) {
   vm::GCScope gcScope(runtime_);
@@ -1795,9 +1618,8 @@ jsi::JSONValue HermesRuntimeImpl::createJSONTreeFromValue(
     const jsi::Value &value) {
   vm::GCScope gcScope(runtime_);
   vm::PinnedHermesValue numberStorage;
-  std::vector<vm::Handle<vm::JSObject>> ancestors;
-  auto res = createJSONTreeFromHermesValue(
-      runtime_, vmHandleFromValue(value, &numberStorage), ancestors);
+  auto res = vm::createJSONValueFromHermesValue(
+      runtime_, vmHandleFromValue(value, &numberStorage));
   checkStatus(res.getStatus());
   return std::move(*res);
 }

@@ -25,10 +25,20 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <vector>
 
 namespace hermes::vm {
 
 using JSONValue = ::facebook::jsi::JSONValue;
+
+/// Create a JSONValue tree from a Hermes value.
+///
+/// This walks arrays and own enumerable object properties. Values that do not
+/// have a JSONValue representation, such as functions, symbols, bigints, and
+/// cyclic objects, throw.
+CallResult<JSONValue> createJSONValueFromHermesValue(
+    Runtime &runtime,
+    Handle<> value);
 
 /// Materializes a JSONValue tree directly into Hermes VM values.
 ///

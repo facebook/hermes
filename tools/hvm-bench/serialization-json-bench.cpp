@@ -22,7 +22,7 @@
 #include "hermes/hermes.h"
 
 #include "JSONSerializedValueEncoder.h"
-#include "JSONValueMaterializer.h"
+#include "JSONValue.h"
 
 #include "llvh/Support/CommandLine.h"
 #include "llvh/Support/InitLLVM.h"
