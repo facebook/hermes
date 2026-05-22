@@ -16,6 +16,6 @@ add_hermes_tool(serialization-json-bench
   LINK_OBJLIBS hermesvm_a timerStats
   )
 target_include_directories(serialization-json-bench PRIVATE
-  ${PROJECT_SOURCE_DIR}/experimental
+  ${PROJECT_SOURCE_DIR}/lib/VM
   )
 set(HERMES_ENABLE_EH OFF)

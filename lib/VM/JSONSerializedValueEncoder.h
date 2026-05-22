@@ -24,7 +24,7 @@
 #include <utility>
 #include <vector>
 
-namespace hermes::vm::experimental {
+namespace hermes::vm {
 
 using JSONValue = ::facebook::jsi::JSONValue;
 
@@ -255,4 +255,4 @@ class JSONSerializedValueEncoder {
   }
 };
 
-} // namespace hermes::vm::experimental
+} // namespace hermes::vm

@@ -7,8 +7,6 @@
 
 #pragma once
 
-#include "HermesJSONSerializedValueEncoder.h"
-
 #include "hermes/VM/Handle.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSObject.h"
@@ -16,6 +14,7 @@
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/SmallHermesValue-inline.h"
 #include "hermes/VM/StringPrimitive.h"
+#include "jsi/jsi.h"
 
 #include "llvh/ADT/ArrayRef.h"
 
@@ -27,7 +26,9 @@
 #include <string_view>
 #include <unordered_map>
 
-namespace hermes::vm::experimental {
+namespace hermes::vm {
+
+using JSONValue = ::facebook::jsi::JSONValue;
 
 /// Materializes a JSONValue tree directly into Hermes VM values.
 ///
@@ -234,4 +235,4 @@ class JSONValueMaterializer {
   }
 };
 
-} // namespace hermes::vm::experimental
+} // namespace hermes::vm

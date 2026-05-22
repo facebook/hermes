@@ -21,8 +21,8 @@
 #include "hermes/VM/SerializedValue.h"
 #include "hermes/hermes.h"
 
-#include "HermesJSONSerializedValueEncoder.h"
-#include "HermesJSONValueMaterializer.h"
+#include "JSONSerializedValueEncoder.h"
+#include "JSONValueMaterializer.h"
 
 #include "llvh/Support/CommandLine.h"
 #include "llvh/Support/InitLLVM.h"
@@ -42,7 +42,7 @@
 
 namespace fbhermes = facebook::hermes;
 namespace jsi = facebook::jsi;
-namespace ser = hermes::vm::experimental;
+namespace ser = hermes::vm;
 namespace vm = ::hermes::vm;
 
 namespace {

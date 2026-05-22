@@ -7,7 +7,7 @@
 
 #include <hermes/hermes.h>
 
-#include "HermesJSONValueMaterializer.h"
+#include "JSONValueMaterializer.h"
 
 #include "llvh/Support/Compiler.h"
 
@@ -1776,7 +1776,7 @@ vm::CallResult<jsi::JSONValue> createJSONTreeFromHermesValue(
 jsi::Value HermesRuntimeImpl::createValueFromJSONTree(
     const jsi::JSONValue &value) {
   vm::GCScope gcScope(runtime_);
-  vm::experimental::JSONValueMaterializer materializer;
+  vm::JSONValueMaterializer materializer;
   auto res = materializer.materialize(runtime_, value);
   checkStatus(res.getStatus());
   return valueFromHermesValue(*res);
@@ -1785,7 +1785,7 @@ jsi::Value HermesRuntimeImpl::createValueFromJSONTree(
 jsi::Value HermesRuntimeImpl::createValueFromJSONTreeAndConsume(
     jsi::JSONValue &value) {
   vm::GCScope gcScope(runtime_);
-  vm::experimental::JSONValueMaterializer materializer;
+  vm::JSONValueMaterializer materializer;
   auto res = materializer.materializeAndConsume(runtime_, value);
   checkStatus(res.getStatus());
   return valueFromHermesValue(*res);
