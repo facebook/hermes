@@ -35,7 +35,7 @@
 #include "hermes/VM/JSError.h"
 #include "hermes/VM/JSLib.h"
 #include "hermes/VM/JSLib/JSLibStorage.h"
-#include "Object.h"
+#include "JSLib/Object.h"
 #include "hermes/VM/JSLib/RuntimeJSONParse.h"
 #include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/NativeState.h"

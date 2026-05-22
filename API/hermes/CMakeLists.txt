@@ -92,7 +92,7 @@ add_hermes_library(hermesapi
 target_include_directories(hermesapi_obj PUBLIC ..)
 target_include_directories(hermesapi_obj PRIVATE
   ${PROJECT_SOURCE_DIR}/experimental
-  ${PROJECT_SOURCE_DIR}/lib/VM/JSLib
+  ${PROJECT_SOURCE_DIR}/lib/VM
   )
 
 # Pass core extensions flag to C++ code.
