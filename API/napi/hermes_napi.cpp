@@ -100,30 +100,39 @@ void napi_env__::queuePendingFinalizer(
     napi_finalize cb,
     void *data,
     void *hint) {
+  std::lock_guard<std::mutex> lock(pendingFinalizersMutex_);
   pendingFinalizers_.push_back({cb, data, hint});
 }
 
 void napi_env__::drainPendingFinalizers() {
-  if (drainingFinalizers_ || pendingFinalizers_.empty())
-    return;
-  drainingFinalizers_ = true;
+  std::vector<PendingFinalizer> batch;
+  {
+    std::lock_guard<std::mutex> lock(pendingFinalizersMutex_);
+    if (drainingFinalizers_ || pendingFinalizers_.empty())
+      return;
+    drainingFinalizers_ = true;
+    batch.swap(pendingFinalizers_);
+  }
 
   // Process in batches: swap out the current queue so callbacks that
   // trigger further GC (adding new entries) don't invalidate our
   // iteration. Loop until the queue is fully drained.
-  while (!pendingFinalizers_.empty()) {
-    std::vector<PendingFinalizer> batch;
-    batch.swap(pendingFinalizers_);
-
+  while (true) {
     napi_handle_scope scope = nullptr;
     napi_open_handle_scope(this, &scope);
     for (auto &pf : batch) {
       pf.cb(this, pf.data, pf.hint);
     }
     napi_close_handle_scope(this, scope);
-  }
 
-  drainingFinalizers_ = false;
+    std::lock_guard<std::mutex> lock(pendingFinalizersMutex_);
+    if (pendingFinalizers_.empty()) {
+      drainingFinalizers_ = false;
+      break;
+    }
+    batch.clear();
+    batch.swap(pendingFinalizers_);
+  }
 }
 
 napi_env__::~napi_env__() {

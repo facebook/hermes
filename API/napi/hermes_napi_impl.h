@@ -17,6 +17,7 @@
 #include <cassert>
 #include <deque>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -460,6 +461,10 @@ struct napi_env__ {
   /// callbacks here. The queue is drained at safe points via
   /// drainPendingFinalizers().
   std::vector<PendingFinalizer> pendingFinalizers_;
+
+  /// Guards pendingFinalizers_ and drainingFinalizers_. Hades GC can queue
+  /// finalizers from a background thread while the JS thread drains them.
+  std::mutex pendingFinalizersMutex_;
 
   /// True while drainPendingFinalizers() is executing, to prevent
   /// re-entrant draining (a callback may trigger GC which queues more).
