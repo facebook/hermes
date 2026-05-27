@@ -242,6 +242,79 @@ TEST(SpillRegisterTest, NoStoreUnspilling) {
   EXPECT_EQ(sizeBefore, BB->size());
 }
 
+TEST(SpillRegisterTest, CreateClassSpillsOutputAfterHomeObject) {
+  auto Ctx = std::make_shared<Context>();
+  Module M(Ctx);
+  IRBuilder builder(&M);
+
+  auto *F = builder.createTopLevelFunction("global", true);
+  auto *BB = builder.createBasicBlock(F);
+  builder.setInsertionBlock(BB);
+
+  // Create a minimal base class instruction. Its instruction result is the
+  // constructor, and its home-object output is written through an AllocStack.
+  auto *varScope = builder.createVariableScope(nullptr);
+  auto *scope =
+      builder.createCreateScopeInst(varScope, builder.getLiteralUndefined());
+  auto *constructor = builder.createFunction(
+      "C", Function::DefinitionKind::ES6BaseConstructor, true);
+  auto *homeObject =
+      builder.createAllocStackInst("homeObject", Type::createObject());
+  auto *createClass = builder.createCreateClassInst(
+      scope, constructor, builder.getEmptySentinel(), homeObject);
+  builder.createReturnInst(createClass);
+
+  HVMRegisterAllocator RA(F);
+  auto PO = postOrderAnalysis(F);
+  llvh::SmallVector<BasicBlock *, 16> order(PO.rbegin(), PO.rend());
+  RA.allocate(order);
+  RA.allocateParameterCount(256);
+
+  // Reproduce the problematic allocation shape: both CreateClass outputs are
+  // assigned to the same high register, so SpillRegisters must preserve the
+  // instruction's write order when it inserts post-instruction stores.
+  Register spilledReg(RegClass::Other, 256);
+  RA.updateRegister(createClass, spilledReg);
+  RA.updateRegister(homeObject, spilledReg);
+
+  PassManager PM;
+  PM.addPass(new SpillRegisters(RA));
+  PM.run(F);
+
+  auto *homeObjectSpill =
+      llvh::cast<LIRSpillMovInst>(createClass->getHomeObjectOutput());
+  std::vector<LIRSpillMovInst *> spillStores;
+  bool afterCreateClass = false;
+  // Collect the high-register stores emitted after CreateClass. Other
+  // LIRSpillMovInsts can be low-register loads before the instruction.
+  for (auto &inst : *BB) {
+    if (&inst == createClass) {
+      afterCreateClass = true;
+      continue;
+    }
+    if (!afterCreateClass) {
+      continue;
+    }
+
+    auto *spill = llvh::dyn_cast<LIRSpillMovInst>(&inst);
+    if (spill &&
+        !SpillRegisters::isShort(
+            RA.getHVMRegisterIndex(RA.getRegister(spill)))) {
+      spillStores.push_back(spill);
+    }
+  }
+
+  ASSERT_EQ(2u, spillStores.size());
+  EXPECT_EQ(RA.getRegister(spillStores[0]), RA.getRegister(spillStores[1]));
+  EXPECT_FALSE(
+      SpillRegisters::isShort(
+          RA.getHVMRegisterIndex(RA.getRegister(spillStores[0]))));
+  // The home object must be stored first and the constructor last, matching the
+  // bytecode interpreter's behavior when the two outputs alias.
+  EXPECT_EQ(homeObjectSpill, spillStores[0]->getValue());
+  EXPECT_EQ(createClass, spillStores[1]->getValue());
+}
+
 TEST(HBCBytecodeGen, BytecodeFields) {
   std::string error;
   auto bytecode = bytecodeForSource("print('Hello World');");
