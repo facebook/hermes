@@ -764,7 +764,7 @@ bool SpillRegisters::runOnFunction(Function *F) {
 
       int tempReg = 0;
       toSpill.clear();
-      bool replaceWithFirstSpill = false;
+      bool replaceWithOutputSpill = false;
       builder.setLocation(inst.getLocation());
 
       auto myRegister = RA_.getRegister(&inst);
@@ -772,9 +772,7 @@ bool SpillRegisters::runOnFunction(Function *F) {
           !isShort(RA_.getHVMRegisterIndex(myRegister))) {
         auto temp = getReserved(tempReg++);
         RA_.updateRegister(&inst, temp);
-        toSpill.push_back(
-            std::pair<Instruction *, Register>(&inst, myRegister));
-        replaceWithFirstSpill = true;
+        replaceWithOutputSpill = true;
       }
 
       for (int i = 0, e = inst.getNumOperands(); i < e; i++) {
@@ -806,11 +804,18 @@ bool SpillRegisters::runOnFunction(Function *F) {
         }
       }
 
+      // Preserve the instruction's write order when its output aliases a
+      // writable operand output, such as CreateClassInst's home object.
+      if (replaceWithOutputSpill) {
+        toSpill.push_back(
+            std::pair<Instruction *, Register>(&inst, myRegister));
+      }
+
       if (toSpill.size()) {
         auto spillPoints = getInsertionPointsAfter(builder, &inst);
 
         assert(
-            (!replaceWithFirstSpill || spillPoints.size() <= 1) &&
+            (!replaceWithOutputSpill || spillPoints.size() <= 1) &&
             "Asked to spill the value of a TerminatorInst. Our terminators "
             "shouldn't produce values. It wouldn't have mattered, but it "
             "also has multiple branches so users might need PhiInsts.");
@@ -821,14 +826,14 @@ bool SpillRegisters::runOnFunction(Function *F) {
             auto *storeInst = builder.createLIRSpillMovInst(store.first);
             RA_.updateRegister(storeInst, store.second);
 
-            if (!replaceWithFirstSpill)
+            if (!replaceWithOutputSpill || store.first != &inst)
               continue;
             // Replace all uses of the inst with the spilling inst
             inst.replaceAllUsesWith(storeInst);
             // Except for the actual spill of course
             storeInst->setOperand(&inst, 0);
             // Disable now that the job is done.
-            replaceWithFirstSpill = false;
+            replaceWithOutputSpill = false;
           }
         }
       }
