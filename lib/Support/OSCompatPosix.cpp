@@ -65,6 +65,7 @@
 
 #ifdef __APPLE__
 #include <TargetConditionals.h>
+#include <time.h>
 #endif
 
 #include "llvh/Config/config.h"
@@ -812,6 +813,17 @@ std::vector<bool> sched_getaffinity() {
 int sched_getcpu() {
   // Not yet supported.
   return -1;
+}
+#endif
+
+#ifdef __APPLE__
+std::chrono::steady_clock::time_point sampling_clock_now() noexcept {
+  auto ns = static_cast<int64_t>(clock_gettime_nsec_np(CLOCK_UPTIME_RAW));
+  return std::chrono::steady_clock::time_point(std::chrono::nanoseconds(ns));
+}
+#else
+std::chrono::steady_clock::time_point sampling_clock_now() noexcept {
+  return std::chrono::steady_clock::now();
 }
 #endif
 
