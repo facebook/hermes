@@ -554,6 +554,10 @@ int sched_getcpu() {
   return -1;
 }
 
+std::chrono::steady_clock::time_point sampling_clock_now() noexcept {
+  return std::chrono::steady_clock::now();
+}
+
 bool set_env(const char *name, const char *value) {
   // Setting an env var to empty requires a lot of hacks on Windows
   assert(*value != '\0' && "value cannot be empty string");
