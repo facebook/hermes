@@ -253,11 +253,11 @@ using ScheduleCallbackFunc = std::function<void(EventLoopCallback)>;
 class HermesRuntimeImpl final : public HermesRuntime,
                                 private IHermesTestHelpers,
                                 private InstallHermesFatalErrorHandler,
-                                private jsi::Instrumentation
+                                private jsi::Instrumentation,
+                                public ISetEventLoopControl
 #ifdef JSI_UNSTABLE
     ,
                                 public jsi::ISerialization,
-                                public ISetEventLoopControl,
                                 private IHermesTracingHelpers
 #endif
 {
@@ -720,10 +720,10 @@ class HermesRuntimeImpl final : public HermesRuntime,
       const jsi::Serialized &serialized) const override;
   const std::shared_ptr<jsi::Serialized> makeSerialized(
       vm::SerializedValue &value) const override;
+#endif
 
   void setEventLoopControl(IEventLoopControl *eventLoopControl) override;
   IEventLoopControl *getEventLoopControl() override;
-#endif
 
   // Concrete declarations of jsi::Runtime pure virtual methods
   std::shared_ptr<const jsi::PreparedJavaScript> prepareJavaScript(
@@ -1360,14 +1360,12 @@ class HermesRuntimeImpl final : public HermesRuntime,
   /// before the executor drains and joins.
   ::hermes::SerialExecutor finalizerExecutor_;
 
-#ifdef JSI_UNSTABLE
   /// Provided by the integrator for the Runtime to schedule a task. This is
   /// called whenever the Hermes Runtime wants to run a task, but should not
   /// determine when it should be run. This is particularly useful for the
   /// Worker implementation, where the Worker will queue a task for the main
   /// thread to check a posted message.
   IEventLoopControl *eventLoopControl_{nullptr};
-#endif
 
   /// Tracking status when the current execution enters/exits the mutator from
   /// JSI.
@@ -1630,10 +1628,11 @@ jsi::ICast *HermesRuntimeImpl::castInterface(const jsi::UUID &interfaceUUID) {
     return static_cast<ISerialization *>(this);
   } else if (interfaceUUID == IHermesTracingHelpers::uuid) {
     return static_cast<IHermesTracingHelpers *>(this);
-  } else if (interfaceUUID == ISetEventLoopControl::uuid) {
-    return static_cast<ISetEventLoopControl *>(this);
   }
 #endif
+  else if (interfaceUUID == ISetEventLoopControl::uuid) {
+    return static_cast<ISetEventLoopControl *>(this);
+  }
   return nullptr;
 }
 
@@ -1730,6 +1729,7 @@ const std::shared_ptr<jsi::Serialized> HermesRuntimeImpl::makeSerialized(
     ::hermes::vm::SerializedValue &value) const {
   return std::make_unique<HermesSerialized>(value);
 }
+#endif
 
 void HermesRuntimeImpl::setEventLoopControl(
     IEventLoopControl *eventLoopControl) {
@@ -1739,7 +1739,6 @@ void HermesRuntimeImpl::setEventLoopControl(
 IEventLoopControl *HermesRuntimeImpl::getEventLoopControl() {
   return eventLoopControl_;
 }
-#endif
 
 sampling_profiler::Profile HermesRuntimeImpl::dumpSampledTraceToProfile() {
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
