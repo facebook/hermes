@@ -17,25 +17,25 @@ namespace hermes {
 namespace hbc {
 
 /// Convert an IR Type to a TypeOfIsTypes bitmask for runtime type checking.
-static TypeOfIsTypes irTypeToTypeOfIsTypes(Type type) {
+static TypeOfIsTypes irTypeToTypeOfIsTypes(TypeContext &tc, Type type) {
   TypeOfIsTypes result;
   // Uninit maps to undefined at runtime.
-  if (type.canBeUndefined() || type.canBeUninit())
+  if (tc.canBeUndefined(type) || tc.canBeUninit(type))
     result = result.withUndefined(true);
-  if (type.canBeNull())
+  if (tc.canBeNull(type))
     result = result.withNull(true);
-  if (type.canBeBoolean())
+  if (tc.canBeBoolean(type))
     result = result.withBoolean(true);
-  if (type.canBeString())
+  if (tc.canBeString(type))
     result = result.withString(true);
-  if (type.canBeNumber())
+  if (tc.canBeNumber(type))
     result = result.withNumber(true);
-  if (type.canBeBigInt())
+  if (tc.canBeBigInt(type))
     result = result.withBigint(true);
-  if (type.canBeSymbol())
+  if (tc.canBeSymbol(type))
     result = result.withSymbol(true);
   // IR Object encompasses both objects and callables.
-  if (type.canBeObject()) {
+  if (tc.canBeObject(type)) {
     result = result.withObject(true);
     result = result.withFunction(true);
   }
@@ -108,11 +108,12 @@ class DoLower {
   Value *lowerCheckedTypeCast(CheckedTypeCastInst *inst) {
     destroyer_.add(inst);
     builder_.setInsertionPoint(inst);
-    if (inst->getCheckedValue()->getType().isSubsetOf(inst->getType())) {
+    TypeContext &tc = builder_.getTypeContext();
+    if (tc.isSubsetOf(inst->getCheckedValue()->getType(), inst->getType())) {
       // No need to do any work.
       return inst->getCheckedValue();
     }
-    TypeOfIsTypes types = irTypeToTypeOfIsTypes(inst->getType());
+    TypeOfIsTypes types = irTypeToTypeOfIsTypes(tc, inst->getType());
     auto *replace = builder_.createCallBuiltinInst(
         BuiltinMethod::HermesBuiltin_checkedTypeCast,
         {inst->getCheckedValue(), builder_.getLiteralNumber(types.getRaw())});

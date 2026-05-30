@@ -59,7 +59,7 @@ be omitted):
 | P2-S4 | Migrate IRGen (ESTreeIRGen-*.cpp) | P2-S1 | done | |
 | P2-S5 | Migrate InstSimplify pass | P2-S1 | done | |
 | P2-S6 | Migrate TypeInference pass (heaviest) | P2-S1 | done | |
-| P2-S7 | Migrate remaining optimizer + BCGen | P2-S1 |  | |
+| P2-S7 | Migrate remaining optimizer + BCGen | P2-S1 | done | |
 | P2-S8 | Migrate test fixtures | P2-S1 |  | |
 | P2-S9 | Remove TLS infrastructure | P2-S2..P2-S8 |  | |
 
@@ -73,6 +73,18 @@ be omitted):
   - The new helpers (`canBeAny`, `canBeType`, etc.) are also out-of-line for the same incomplete-type reason. Once Phase 2 is complete and Type loses its TLS-using methods, the layering can be revisited but it's not necessary.
   - `print` chosen over `format` for naming consistency with `Type::print` and `llvh::raw_ostream` conventions; `format` would have implied "build a string".
   - No callers migrated yet — the TLS-using methods on `Type` remain intact so the build stays green throughout P2-S2…P2-S8.
+
+### P2-S7: Migrate remaining optimizer + BCGen
+- **Files**: modified `lib/Optimizer/Scalar/{ObjectMergeNewStores,ObjectStackPromotion,TDZDedup,Inlining,FunctionAnalysis,Auditor}.cpp`, `lib/BCGen/{Lowering,RegAlloc}.cpp`, `lib/BCGen/HBC/{ISel,Passes}.cpp`, `lib/BCGen/HBC/Passes/PeepholeLowering.cpp`, `lib/BCGen/SH/{LowerNanBoxedUnionNarrowT,SHRegAlloc,RecreateCheapValues,SH}.cpp`, `lib/BCGen/facebook/Mins/{LowerNanBoxedUnionNarrowT,RecreateCheapValues,Mins}.cpp`.
+- **What was done**: Migrated all remaining TLS-using `Type` calls in the optimizer and BCGen subsystems. Three patterns:
+  1. Per-call lookup via an existing carrier: `builder.getTypeContext().foo(t)` (Lowering, ObjectMergeNewStores, RecreateCheapValues, LowerNanBoxedUnionNarrowT, ObjectStackPromotion, TDZDedup, Inlining), or `inst->getModule()->getTypeContext().foo(t)` (RegAlloc, ISel, SHRegAlloc, Auditor).
+  2. Stored member: SH.cpp's `InstrGen` got a `TypeContext &typeCtx_` initialized inline from `F_.getParent()->getTypeContext()`; PeepholeLowering threaded `tc` through `irTypeToTypeOfIsTypes` and used `builder_.getTypeContext()` in `lowerCheckedTypeCast`.
+  3. Threaded parameter: free helpers (`isAnalyzableVariable` in FunctionAnalysis, `canCompareStrictEqualityRaw` in SH.cpp and Mins.cpp) gained a leading `TypeContext &tc` parameter.
+  Replaced two more inline `Type::unionTy(Object, Undefined)` and `Type::unionTy(Empty, Uninit)` sites with the well-known constexpr factories from P2-S3.
+- **Decisions**:
+  - SH.cpp's `_typeCastHelper` now iterates `typeCtx_.arms(checkTypes)` instead of relying on `Type::iterator`'s TLS-using dereference. This was the single user of that iterator outside of the Type class itself.
+  - Marked the unused `canCompareStrictEqualityRaw` in `lib/BCGen/facebook/Mins/Mins.cpp` as `[[maybe_unused]]`. It was already dead but still compiled (no static-unused warning was firing); migrating preserves it for whenever the Mins backend wires it back up.
+  - Dropped the redundant `assert` in `setInvalidTypes` in P2-S3 already; the corresponding asserts in `_typeCastHelper`/`generateThrowIfInst` (which still exist) now use the explicit context.
 
 ### P2-S6: Migrate TypeInference pass
 - **Files**: modified `lib/Optimizer/Scalar/TypeInference.cpp`.

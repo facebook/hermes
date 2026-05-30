@@ -1335,7 +1335,8 @@ void HBCISel::generateStoreFrameInst(StoreFrameInst *Inst, BasicBlock *next) {
   auto valueReg = encodeValue(Inst->getValue());
   auto envReg = encodeValue(Inst->getScope());
   auto varIdx = encodeValue(var);
-  if (Inst->getValue()->getType().isNonPtr()) {
+  if (Inst->getModule()->getTypeContext().isNonPtr(
+          Inst->getValue()->getType())) {
     if (varIdx <= UINT8_MAX) {
       BCFGen_->emitStoreNPToEnvironment(envReg, varIdx, valueReg);
     } else {

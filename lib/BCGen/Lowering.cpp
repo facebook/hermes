@@ -202,7 +202,11 @@ bool LowerAllocObjectLiteral::lowerAllocObjectBuffer(
         // If we haven't encountered a numeric property, we can store
         // directly into a slot.
         builder.createPrStoreInst(
-            propVal, allocInst, i, propKey, propVal->getType().isNonPtr());
+            propVal,
+            allocInst,
+            i,
+            propKey,
+            builder.getTypeContext().isNonPtr(propVal->getType()));
       }
     }
   }

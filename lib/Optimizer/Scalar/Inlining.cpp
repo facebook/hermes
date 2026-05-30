@@ -615,7 +615,8 @@ bool Inlining::runOnModule(Module *M) {
       // potentially undefined, we can proceed with speculative inlining as long
       // as the callee and new.target are the same.
       if (CI->getNewTarget() != CI->getCallee() &&
-          CI->getNewTarget()->getType().canBeUndefined() &&
+          builder.getTypeContext().canBeUndefined(
+              CI->getNewTarget()->getType()) &&
           FC->getProhibitInvoke() == Function::ProhibitInvoke::ProhibitCall) {
         LLVM_DEBUG(
             llvh::dbgs() << "Cannot inline constructor '"

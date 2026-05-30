@@ -140,7 +140,7 @@ bool TDZDedupContext::processNode(StackNode *SN) {
         continue;
       // Check whether it is setting the target to empty, in which case we
       // mark it is "unavailable".
-      if (SF->getValue()->getType().canBeEmpty()) {
+      if (builder_.getTypeContext().canBeEmpty(SF->getValue()->getType())) {
         availableValues_.setInCurrentScope(tdzStorage, false);
         continue;
       }
@@ -150,7 +150,7 @@ bool TDZDedupContext::processNode(StackNode *SN) {
       if (!tdzState_.count(tdzStorage))
         continue;
       // Check whether it is setting the target to non-empty.
-      if (SS->getValue()->getType().canBeEmpty()) {
+      if (builder_.getTypeContext().canBeEmpty(SS->getValue()->getType())) {
         availableValues_.setInCurrentScope(tdzStorage, false);
         continue;
       }

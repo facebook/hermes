@@ -448,23 +448,23 @@ struct ModuleGen {
 
 /// \return true if the SHLegacyValue representations of values \p a and \p b
 /// can be compared directly (bitwise).
-static bool canCompareStrictEqualityRaw(Value *a, Value *b) {
+static bool canCompareStrictEqualityRaw(TypeContext &tc, Value *a, Value *b) {
   Type aType = a->getType();
   Type bType = b->getType();
 
   // If both can be numbers, then we can't compare because `-0` and `0` have
   // different bitwise representations.
-  if (aType.canBeNumber() && bType.canBeNumber())
+  if (tc.canBeNumber(aType) && tc.canBeNumber(bType))
     return false;
 
   // If both can be bigint, then we can't compare because BigInts are compared
   // by values which are stored on the heap.
-  if (aType.canBeBigInt() && bType.canBeBigInt())
+  if (tc.canBeBigInt(aType) && tc.canBeBigInt(bType))
     return false;
 
   // If both can be strings, then we can't compare because strings are compared
   // by their contents which are stored on the heap.
-  if (aType.canBeString() && bType.canBeString())
+  if (tc.canBeString(aType) && tc.canBeString(bType))
     return false;
 
   // Otherwise, we can compare.
@@ -534,6 +534,9 @@ class InstrGen {
 
   // The function being compiled.
   Function &F_;
+
+  /// IR type context for the module being compiled.
+  TypeContext &typeCtx_{F_.getParent()->getTypeContext()};
 
   // Info related to native compilation.
   NativeContext &nativeContext_;
@@ -1104,7 +1107,9 @@ class InstrGen {
         if (bothDouble) {
           infixDoubleOp = "!=";
         } else if (canCompareStrictEqualityRaw(
-                       inst.getLeftHandSide(), inst.getRightHandSide())) {
+                       typeCtx_,
+                       inst.getLeftHandSide(),
+                       inst.getRightHandSide())) {
           infixRawOp = "!=";
         } else {
           funcUntypedOp = options_.smallC ? "!_sh_ljs_strict_equal"
@@ -1117,7 +1122,9 @@ class InstrGen {
         if (bothDouble) {
           infixDoubleOp = "==";
         } else if (canCompareStrictEqualityRaw(
-                       inst.getLeftHandSide(), inst.getRightHandSide())) {
+                       typeCtx_,
+                       inst.getLeftHandSide(),
+                       inst.getRightHandSide())) {
           infixRawOp = "==";
         } else {
           funcUntypedOp = options_.smallC ? "_sh_ljs_strict_equal"
@@ -2308,9 +2315,11 @@ class InstrGen {
 
   /// \return the name of the SH function for checking whether a value is of
   /// a specific type.
-  static llvh::StringLiteral nameOfFunctionCheckingForType(Type type) {
+  static llvh::StringLiteral nameOfFunctionCheckingForType(
+      TypeContext &tc,
+      Type type) {
     assert(!type.isNoType() && "type must be non-zero");
-    switch (type.getFirstTypeKind()) {
+    switch (tc.getFirstKind(type)) {
       case TypeKind::Empty:
         return "_sh_ljs_is_empty";
       case TypeKind::Uninit:
@@ -2355,7 +2364,7 @@ class InstrGen {
     // Are there fewer "bad" types than "good" types? That determines which we
     // check.
     auto [checkTypes, negativeCheck] =
-        badTypes.countTypes() < resultType.countTypes()
+        typeCtx_.countKinds(badTypes) < typeCtx_.countKinds(resultType)
         ? std::make_pair(badTypes, true)
         : std::make_pair(resultType, false);
 
@@ -2363,10 +2372,10 @@ class InstrGen {
       os_ << "!(";
     {
       bool first = true;
-      for (Type t : checkTypes) {
+      for (Type t : typeCtx_.arms(checkTypes)) {
         if (!first)
           os_ << " || ";
-        os_ << nameOfFunctionCheckingForType(t) << '(';
+        os_ << nameOfFunctionCheckingForType(typeCtx_, t) << '(';
         generateRegister(srcReg);
         os_ << ')';
         first = false;
@@ -2397,7 +2406,7 @@ class InstrGen {
     sh::Register dstReg = ra_.getRegister(&inst);
 
     // Are the input and output type the same?
-    if (inputType.isSubsetOf(resultType)) {
+    if (typeCtx_.isSubsetOf(inputType, resultType)) {
       // If so, just move the value, but do nothing if the registers are the
       // same.
       if (dstReg != srcReg) {
@@ -2413,7 +2422,7 @@ class InstrGen {
     // TODO: generate a type-specific error.
     _typeCastHelper(
         resultType,
-        Type::subtractTy(inputType, resultType),
+        typeCtx_.subtractTy(inputType, resultType),
         dstReg,
         srcReg,
         "_sh_throw_type_error_ascii(shr, \"Checked cast failed\")");
@@ -2426,8 +2435,7 @@ class InstrGen {
     Type badTypes = inst.getInvalidTypes()->getData();
     assert(
         !badTypes.isNoType() &&
-        badTypes.isSubsetOf(
-            Type::unionTy(Type::createEmpty(), Type::createUninit())) &&
+        typeCtx_.isSubsetOf(badTypes, Type::createEmptyOrUninit()) &&
         "invalidTypes set can only contain Empty or Uninit");
 
     _typeCastHelper(

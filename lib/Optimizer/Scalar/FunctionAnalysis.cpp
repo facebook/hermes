@@ -83,7 +83,8 @@ bool canEscapeThroughCall(Instruction *C, Function *F, BaseCallInst *CI) {
 /// that will throw when called (e.g. undefined, null, etc.). This can be used
 /// to determine whether a type-check is needed before directly calling or
 /// inlining the target function.
-std::pair<bool, bool> isAnalyzableVariable(Variable *V, Value *val) {
+std::pair<bool, bool>
+isAnalyzableVariable(TypeContext &tc, Variable *V, Value *val) {
   bool noOtherValues = true;
   for (auto *U : V->getUsers()) {
     if (llvh::isa<LoadFrameInst>(U))
@@ -97,14 +98,13 @@ std::pair<bool, bool> isAnalyzableVariable(Variable *V, Value *val) {
 
     // Storing empty or uninit is fine, because we are guaranteed to check for
     // them before a call.
-    if (SF->getValue()->getType().isSubsetOf(
-            Type::unionTy(Type::createEmpty(), Type::createUninit())))
+    if (tc.isSubsetOf(SF->getValue()->getType(), Type::createEmptyOrUninit()))
       continue;
 
     // Storing any other value that is definitely not an object is fine since
     // there will still only be one possible call target once the type is
     // checked.
-    if (!SF->getValue()->getType().canBeObject()) {
+    if (!tc.canBeObject(SF->getValue()->getType())) {
       noOtherValues = false;
       continue;
     }
@@ -283,19 +283,19 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
         continue;
       }
 
+      TypeContext &tc = builder.getTypeContext();
       // UnionNarrowTrustedInst is a cast, the result is the same as its input.
       // That means we can add it to the worklist to follow it.
       if (llvh::isa<UnionNarrowTrustedInst>(closureUser)) {
         assert(
-            llvh::cast<UnionNarrowTrustedInst>(closureUser)
-                ->getSingleOperand()
-                ->getType()
-                .canBeObject() &&
+            tc.canBeObject(
+                llvh::cast<UnionNarrowTrustedInst>(closureUser)
+                    ->getSingleOperand()
+                    ->getType()) &&
             "closure type is not object");
         assert(
-            llvh::cast<UnionNarrowTrustedInst>(closureUser)
-                ->getType()
-                .canBeObject() &&
+            tc.canBeObject(
+                llvh::cast<UnionNarrowTrustedInst>(closureUser)->getType()) &&
             "The result UnionNarrowTrusted of closure is not object");
         worklist.push_back(
             {closureUser, isAlwaysClosure, knownScope, knownVarScope});
@@ -308,9 +308,9 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
       // worklist to follow it.
       if (auto *CC = llvh::dyn_cast<CheckedTypeCastInst>(closureUser)) {
         assert(
-            CC->getCheckedValue()->getType().canBeObject() &&
+            tc.canBeObject(CC->getCheckedValue()->getType()) &&
             "closure type is not object");
-        if (CC->getType().canBeObject()) {
+        if (tc.canBeObject(CC->getType())) {
           worklist.push_back(
               {closureUser, isAlwaysClosure, knownScope, knownVarScope});
           continue;
@@ -320,9 +320,9 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
       // Like CheckedTypeCast, ThrowIf's result is the same as its input.
       if (auto *TII = llvh::dyn_cast<ThrowIfInst>(closureUser)) {
         assert(
-            TII->getCheckedValue()->getType().canBeObject() &&
+            tc.canBeObject(TII->getCheckedValue()->getType()) &&
             "closure type is not object");
-        if (TII->getType().canBeObject()) {
+        if (tc.canBeObject(TII->getType())) {
           worklist.push_back(
               {closureUser, isAlwaysClosure, knownScope, knownVarScope});
           continue;
@@ -334,7 +334,7 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
       if (auto *store = llvh::dyn_cast<StoreFrameInst>(closureUser)) {
         Variable *var = store->getVariable();
         auto [storeIsOnlyClosure, noOtherValues] =
-            isAnalyzableVariable(var, store->getValue());
+            isAnalyzableVariable(tc, var, store->getValue());
         if (!storeIsOnlyClosure) {
           F->getAttributesRef(M)._allCallsitesKnownInStrictMode = false;
           continue;

@@ -520,8 +520,9 @@ RegClass RegisterAllocator::getRegClass(Instruction *inst) {
   // handle exceptions, and the setjmp will be at the start of the function.
   if (hasTry_)
     return RegClass::LocalPtr;
-  return inst->getType().isNonPtr() ? RegClass::LocalNonPtr
-                                    : RegClass::LocalPtr;
+  return inst->getModule()->getTypeContext().isNonPtr(inst->getType())
+      ? RegClass::LocalNonPtr
+      : RegClass::LocalPtr;
 }
 
 Register RegisterAllocator::allocateInstruction(Instruction *inst) {
