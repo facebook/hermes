@@ -27,7 +27,7 @@ struct LivenessRegAllocIRPrinter : irdumper::IRPrinter {
       RegisterAllocator &RA,
       llvh::raw_ostream &ost,
       bool escape = false)
-      : IRPrinter(RA.getContext(), ost, escape), allocator(RA) {}
+      : IRPrinter(*RA.getModule(), ost, escape), allocator(RA) {}
 
   bool printInstructionDestination(Instruction *I) override {
     const auto &codeGenOpts = I->getContext().getCodeGenerationSettings();

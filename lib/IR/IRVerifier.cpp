@@ -1841,9 +1841,8 @@ bool hermes::verifyModule(
   raw_null_ostream NullStr;
   NullStr.SetUnbuffered();
   raw_ostream &stream = OS ? *OS : NullStr;
-  Context &Ctx = M.getContext();
   irdumper::IRPrinter printer(
-      Ctx, stream, /*escape*/ false, /*labelAllInsts*/ true);
+      M, stream, /*escape*/ false, /*labelAllInsts*/ true);
   Verifier V(M, stream, mode, printer);
   bool result = V.verify();
   return result;

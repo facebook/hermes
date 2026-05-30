@@ -337,7 +337,7 @@ BasicBlock::BasicBlock(Function *parent)
 }
 
 void BasicBlock::dump(llvh::raw_ostream &os) const {
-  irdumper::IRPrinter D(getParent()->getContext(), os);
+  irdumper::IRPrinter D(*getParent()->getParent(), os);
   D.visit(*this);
 }
 
@@ -348,7 +348,7 @@ void BasicBlock::printAsOperand(llvh::raw_ostream &OS, bool) const {
 }
 
 void Instruction::dump(llvh::raw_ostream &os) const {
-  irdumper::IRPrinter D(getParent()->getContext(), os);
+  irdumper::IRPrinter D(*getModule(), os);
   D.visit(*this);
 }
 
@@ -855,7 +855,7 @@ uint32_t JSDynamicParam::getIndexInParamList() const {
 }
 
 void Function::dump(llvh::raw_ostream &os) const {
-  irdumper::IRPrinter D(getParent()->getContext(), os);
+  irdumper::IRPrinter D(*getParent(), os);
   D.visit(*this);
 }
 
@@ -981,7 +981,7 @@ void Module::viewGraph() {
 }
 
 void Module::dump(llvh::raw_ostream &os) const {
-  irdumper::IRPrinter D(getContext(), os);
+  irdumper::IRPrinter D(*this, os);
   D.visit(*this);
 }
 

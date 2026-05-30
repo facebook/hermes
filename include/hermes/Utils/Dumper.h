@@ -237,24 +237,30 @@ class IRPrinter : public IRVisitor<IRPrinter, void> {
   /// then instructions that don't have an output will not have a label printed.
   bool labelAllInsts_;
 
-  /// \param ctx  the Context
+  /// The Module being printed. Bound at construction; the printer is
+  /// always scoped to a single Module. Used to reach the TypeContext
+  /// for pretty-printing type names.
+  const Module &module_;
+
+  /// \param M  the Module being printed; the IRPrinter is scoped to this
+  ///           Module and uses its TypeContext to format type names.
   /// \param usePersistent whether to use the persistent namer from Context
   /// \param ost  output stream
   /// \param escape whether to escape the quote mark.
   /// \param labelAllInsts whether to include labels on all instructions
   explicit IRPrinter(
-      Context &ctx,
+      const Module &M,
       bool usePersistent,
       llvh::raw_ostream &ost,
       bool escape,
       bool labelAllInsts);
 
   explicit IRPrinter(
-      Context &ctx,
+      const Module &M,
       llvh::raw_ostream &ost,
       bool escape = false,
       bool labelAllInsts = false)
-      : IRPrinter(ctx, true, ost, escape, labelAllInsts) {}
+      : IRPrinter(M, true, ost, escape, labelAllInsts) {}
 
   /// Force colors to off.
   void disableColors() {
