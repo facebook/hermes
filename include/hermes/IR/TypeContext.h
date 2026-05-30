@@ -27,8 +27,6 @@ class raw_ostream;
 
 namespace hermes {
 
-class Type;
-
 /// Kinds of types in the IR type system.
 enum class TypeKind : uint8_t {
   // --- Leaf kinds (no sub-type data) ---
@@ -534,6 +532,17 @@ class Type::iterator {
   Type operator*() const;
 };
 
+/// A streamable wrapper around a Type that pretty-prints through a
+/// TypeContext. Produced by `TypeContext::fmt(t)`. Lets chained `<<`
+/// expressions format a Type by pretty name without splitting the
+/// expression. Holds the context by pointer and the Type by value;
+/// the referenced TypeContext must outlive the wrapper (which is
+/// normally just a temporary in a single streaming expression).
+struct PrintedType {
+  const TypeContext *tc;
+  Type t;
+};
+
 /// Owns the type table for a Module and provides type operations.
 ///
 /// The constructor pre-allocates entries for all well-known types (primitives
@@ -653,6 +662,11 @@ class TypeContext {
   /// The TypeContext must outlive the returned range.
   llvh::iterator_range<Type::iterator> arms(Type t) const;
 
+  /// Wrap \p t as a streamable value that pretty-prints through this
+  /// context. Lets chained `<<` expressions format Types by pretty name:
+  ///   `OS << "x = " << tc.fmt(t) << "\n";`
+  PrintedType fmt(Type t) const;
+
  private:
   friend class Type;
   friend class TypeContextRAII;
@@ -715,6 +729,15 @@ class TypeContextRAII {
  private:
   TypeContext *saved_;
 };
+
+inline llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, PrintedType pt) {
+  pt.tc->print(OS, pt.t);
+  return OS;
+}
+
+inline PrintedType TypeContext::fmt(Type t) const {
+  return PrintedType{this, t};
+}
 
 } // namespace hermes
 

@@ -58,11 +58,14 @@ namespace {
 
 /// \return if the given \p type is a BigInt|Object, which used to determine if
 /// unary/binary operations may have a BigInt result.
-static bool isBigIntOrObject(Type type) {
-  return type.canBeBigInt() || type.canBeObject();
+static bool isBigIntOrObject(TypeContext &tc, Type type) {
+  return tc.canBeBigInt(type) || tc.canBeObject(type);
 }
 
-static Type inferUnaryArith(UnaryOperatorInst *UOI, Type numberResultType) {
+static Type inferUnaryArith(
+    TypeContext &tc,
+    UnaryOperatorInst *UOI,
+    Type numberResultType) {
   Value *op = UOI->getSingleOperand();
 
   if (op->getType().isNumberType()) {
@@ -73,31 +76,31 @@ static Type inferUnaryArith(UnaryOperatorInst *UOI, Type numberResultType) {
     return Type::createBigInt();
   }
 
-  Type mayBeBigInt = isBigIntOrObject(op->getType()) ? Type::createBigInt()
-                                                     : Type::createNoType();
+  Type mayBeBigInt = isBigIntOrObject(tc, op->getType()) ? Type::createBigInt()
+                                                         : Type::createNoType();
 
   // - ?? => Number|?BigInt. BigInt is only possible if op.Type is
   // BigInt|Object.
-  return Type::unionTy(numberResultType, mayBeBigInt);
+  return tc.unionTy(numberResultType, mayBeBigInt);
 }
 
-static Type inferUnaryArithDefault(UnaryOperatorInst *UOI) {
+static Type inferUnaryArithDefault(TypeContext &tc, UnaryOperatorInst *UOI) {
   // - Number => Number
   // - BigInt => BigInt
   // - ?? => Number|BigInt
-  return inferUnaryArith(UOI, Type::createNumber());
+  return inferUnaryArith(tc, UOI, Type::createNumber());
 }
 
-static Type inferTilde(UnaryOperatorInst *UOI) {
+static Type inferTilde(TypeContext &tc, UnaryOperatorInst *UOI) {
   // ~ Number => Int32
   // ~ BigInt => BigInt
   // ~ ?? => Int32|BigInt
-  return inferUnaryArith(UOI, Type::createInt32());
+  return inferUnaryArith(tc, UOI, Type::createInt32());
 }
 
 /// Try to infer the type of the value that's stored into \p addr. \p addr is
 /// either a stack location or a variable.
-static Type inferMemoryLocationType(Value *addr) {
+static Type inferMemoryLocationType(TypeContext &tc, Value *addr) {
   Type T = addr->getType();
 
   for (auto *U : addr->getUsers()) {
@@ -131,7 +134,7 @@ static Type inferMemoryLocationType(Value *addr) {
 
     Type storedType = storedVal->getType();
 
-    T = Type::unionTy(T, storedType);
+    T = tc.unionTy(T, storedType);
   }
 
   return T;
@@ -162,6 +165,7 @@ static void collectPHIInputs(
 }
 
 static Type inferBinaryArith(
+    TypeContext &tc,
     BinaryOperatorInst *BOI,
     Type numberType = Type::createNumber()) {
   Type LeftTy = BOI->getLeftHandSide()->getType();
@@ -177,29 +181,30 @@ static Type inferBinaryArith(
     return Type::createBigInt();
   }
 
-  Type mayBeBigInt = (isBigIntOrObject(LeftTy) && isBigIntOrObject(RightTy))
+  Type mayBeBigInt =
+      (isBigIntOrObject(tc, LeftTy) && isBigIntOrObject(tc, RightTy))
       ? Type::createBigInt()
       : Type::createNoType();
 
   // ?? - ?? => Number|?BigInt. BigInt is only possible if both operands are
   // BigInt|Object due to the no automatic BigInt conversion.
-  return Type::unionTy(numberType, mayBeBigInt);
+  return tc.unionTy(numberType, mayBeBigInt);
 }
 
-static Type inferBinaryBitwise(BinaryOperatorInst *BOI) {
+static Type inferBinaryBitwise(TypeContext &tc, BinaryOperatorInst *BOI) {
   Type LeftTy = BOI->getLeftHandSide()->getType();
   Type RightTy = BOI->getRightHandSide()->getType();
 
-  Type mayBeBigInt = LeftTy.canBeBigInt() && RightTy.canBeBigInt()
+  Type mayBeBigInt = tc.canBeBigInt(LeftTy) && tc.canBeBigInt(RightTy)
       ? Type::createBigInt()
       : Type::createNoType();
 
   // ?? - ?? => Int32|?BigInt. BigInt is only possible if both operands can be
   // BigInt due to the no automatic BigInt conversion.
-  return Type::unionTy(Type::createInt32(), mayBeBigInt);
+  return tc.unionTy(Type::createInt32(), mayBeBigInt);
 }
 
-static Type inferBinaryInst(BinaryOperatorInst *BOI) {
+static Type inferBinaryInst(TypeContext &tc, BinaryOperatorInst *BOI) {
   switch (BOI->getKind()) {
     // The following operations always return a boolean result.
     // They may throw, they may read/write memory, but the result of the
@@ -232,10 +237,10 @@ static Type inferBinaryInst(BinaryOperatorInst *BOI) {
     case ValueKind::BinaryLeftShiftInstKind:
     // https://tc39.es/ecma262/#sec-signed-right-shift-operator
     case ValueKind::BinaryRightShiftInstKind:
-      return inferBinaryArith(BOI);
+      return inferBinaryArith(tc, BOI);
 
     case ValueKind::BinaryModuloInstKind:
-      return inferBinaryArith(BOI, Type::createInt32());
+      return inferBinaryArith(tc, BOI, Type::createInt32());
 
     // https://es5.github.io/#x11.7.3
     case ValueKind::BinaryUnsignedRightShiftInstKind:
@@ -265,30 +270,31 @@ static Type inferBinaryInst(BinaryOperatorInst *BOI) {
       // ?BigInt + ?BigInt => ?BigInt. Both operands need to "may be a BigInt"
       // for a possible BigInt result from this operator. This is true because
       // there's no automative BigInt type conversion.
-      Type mayBeBigInt = (isBigIntOrObject(LeftTy) && isBigIntOrObject(RightTy))
+      Type mayBeBigInt =
+          (isBigIntOrObject(tc, LeftTy) && isBigIntOrObject(tc, RightTy))
           ? Type::createBigInt()
           : Type::createNoType();
 
       // handy alias for number|maybe(BigInt).
-      Type numeric = Type::unionTy(Type::createNumber(), mayBeBigInt);
+      Type numeric = tc.unionTy(Type::createNumber(), mayBeBigInt);
 
       // If both sides of the binary operand are known and both sides are known
       // to be non-string (and can't be converted to strings) then the result
       // must be of a numeric type.
-      if (LeftTy.isPrimitive() && RightTy.isPrimitive() &&
-          !LeftTy.canBeString() && !RightTy.canBeString()) {
+      if (tc.isPrimitive(LeftTy) && tc.isPrimitive(RightTy) &&
+          !tc.canBeString(LeftTy) && !tc.canBeString(RightTy)) {
         return numeric;
       }
 
       // The plus operator always returns a number, bigint, or a string.
-      return Type::unionTy(numeric, Type::createString());
+      return tc.unionTy(numeric, Type::createString());
     }
 
     // https://tc39.es/ecma262/#sec-binary-bitwise-operators
     case ValueKind::BinaryAndInstKind:
     case ValueKind::BinaryOrInstKind:
     case ValueKind::BinaryXorInstKind:
-      return inferBinaryBitwise(BOI);
+      return inferBinaryBitwise(tc, BOI);
 
     default:
       LLVM_DEBUG(
@@ -317,15 +323,25 @@ static Type inferBinaryInst(BinaryOperatorInst *BOI) {
 /// Importantly, the Phi instruction is handled separately from the usual
 /// dispatch mechanism.
 class TypeInferenceImpl {
+  /// The module being analyzed.
+  Module *M_;
+
   /// Map from various values to their types prior to the pass.
   /// Store types for Instruction, Parameter, Variable.
   /// Store return type for Function.
   llvh::DenseMap<Value *, Type> prePassTypes_{};
 
+  /// IR type context for the module being analyzed. Bound to M_ at
+  /// construction.
+  TypeContext &typeCtx_;
+
  public:
+  explicit TypeInferenceImpl(Module *M)
+      : M_(M), typeCtx_(M->getTypeContext()) {}
+
   /// Run type inference on every instruction in the module.
   /// \return true when some types were changed.
-  bool runOnModule(Module *M);
+  bool runOnModule();
 
  private:
   /// Run type inference on an instruction.
@@ -392,8 +408,8 @@ class TypeInferenceImpl {
     if (changed) {
       ++NumTI;
       LLVM_DEBUG(
-          dbgs() << "Inferred " << inst->getName() << ": " << inst->getType()
-                 << "\n");
+          dbgs() << "Inferred " << inst->getName() << ": "
+                 << typeCtx_.fmt(inst->getType()) << "\n");
     }
 
     return changed;
@@ -420,7 +436,7 @@ class TypeInferenceImpl {
 
     // Union all possible incoming values into this phi:
     for (auto *input : values) {
-      newTy = Type::unionTy(input->getType(), newTy);
+      newTy = typeCtx_.unionTy(input->getType(), newTy);
     }
 
     inst->setType(newTy);
@@ -444,10 +460,10 @@ class TypeInferenceImpl {
     if (t.isSymbolType()) {
       return Type::createSymbol();
     }
-    if (t.isPrimitive() && !t.canBeSymbol()) {
+    if (typeCtx_.isPrimitive(t) && !typeCtx_.canBeSymbol(t)) {
       return Type::createString();
     }
-    return Type::unionTy(Type::createString(), Type::createSymbol());
+    return Type::createStringOrSymbol();
   }
   Type inferCreatePrivateNameInst(CreatePrivateNameInst *inst) {
     return *inst->getInherentType();
@@ -496,10 +512,10 @@ class TypeInferenceImpl {
       case ValueKind::UnaryDecInstKind: // --
       // https://tc39.es/ecma262/#sec-unary-minus-operator
       case ValueKind::UnaryMinusInstKind: // -
-        return inferUnaryArithDefault(inst);
+        return inferUnaryArithDefault(typeCtx_, inst);
       // https://tc39.es/ecma262/#sec-bitwise-not-operator
       case ValueKind::UnaryTildeInstKind: // ~
-        return inferTilde(inst);
+        return inferTilde(typeCtx_, inst);
       case ValueKind::UnaryBangInstKind: // !
         return Type::createBoolean();
       default:
@@ -550,7 +566,7 @@ class TypeInferenceImpl {
     hermes_fatal("Phis are to be handled specially by inferPhi()");
   }
   Type inferBinaryOperatorInst(BinaryOperatorInst *inst) {
-    return inferBinaryInst(inst);
+    return inferBinaryInst(typeCtx_, inst);
   }
   Type inferStorePropertyWithReceiverInst(StorePropertyWithReceiverInst *inst) {
     return Type::createNoType();
@@ -620,7 +636,7 @@ class TypeInferenceImpl {
     // we can't infer anything, ending up with "notype". But we can't allow an
     // instruction with an output to have type "notype". So, if there are no
     // users, just assume the type is "any" as a convenience.
-    return inst->hasUsers() ? inferMemoryLocationType(inst)
+    return inst->hasUsers() ? inferMemoryLocationType(typeCtx_, inst)
                             : Type::createAnyType();
   }
   Type inferAllocArrayInst(AllocArrayInst *inst) {
@@ -685,7 +701,7 @@ class TypeInferenceImpl {
       return inst->getSavedResultType();
     }
 
-    return Type::subtractTy(type, Type::createEmpty());
+    return typeCtx_.subtractTy(type, Type::createEmpty());
   }
   Type inferThrowIfThisInitializedInst(ThrowIfThisInitializedInst *inst) {
     return Type::createNoType();
@@ -846,7 +862,7 @@ class TypeInferenceImpl {
     return *inst->getInherentType();
   }
   Type inferCreateThisInst(CreateThisInst *inst) {
-    return Type::unionTy(Type::createObject(), Type::createUndefined());
+    return Type::createObjectOrUndef();
   }
   Type inferHBCGetArgumentsPropByValInst(HBCGetArgumentsPropByValInst *inst) {
     hermes_fatal("This is not a concrete instruction");
@@ -934,7 +950,7 @@ class TypeInferenceImpl {
     hermes_fatal("typed instruction");
   }
   Type inferUnionNarrowTrustedInst(UnionNarrowTrustedInst *inst) {
-    auto res = Type::intersectTy(
+    auto res = typeCtx_.intersectTy(
         inst->getSavedResultType(), inst->getSingleOperand()->getType());
 
     // It may be possible that the input value would be proven to always be
@@ -951,7 +967,7 @@ class TypeInferenceImpl {
         !inputType.isNoType() && "input to CheckedTypeCast cannot be NoType");
 
     Type resultType =
-        Type::intersectTy(inst->getSpecifiedType()->getData(), inputType);
+        typeCtx_.intersectTy(inst->getSpecifiedType()->getData(), inputType);
 
     if (LLVM_UNLIKELY(resultType.isNoType())) {
       // Some checked casts can be proven at compile time to always throw. In
@@ -1019,9 +1035,9 @@ class TypeInferenceImpl {
 
         LLVM_DEBUG(
             dbgs() << F->getInternalName().c_str()
-                   << "::" << P->getName().c_str()
-                   << " found arg of type: " << arg->getType() << '\n');
-        paramTy = Type::unionTy(paramTy, arg->getType());
+                   << "::" << P->getName().c_str() << " found arg of type: "
+                   << typeCtx_.fmt(arg->getType()) << '\n');
+        paramTy = typeCtx_.unionTy(paramTy, arg->getType());
       }
 
       P->setType(paramTy);
@@ -1030,9 +1046,8 @@ class TypeInferenceImpl {
       if (P->getType() != originalTy) {
         LLVM_DEBUG(
             dbgs() << F->getInternalName().c_str()
-                   << "::" << P->getName().c_str() << " changed to ");
-        LLVM_DEBUG(P->getType().print(dbgs()));
-        LLVM_DEBUG(dbgs() << "\n");
+                   << "::" << P->getName().c_str() << " changed to "
+                   << typeCtx_.fmt(P->getType()) << "\n");
         changed = true;
       }
     }
@@ -1059,7 +1074,8 @@ class TypeInferenceImpl {
     for (auto &bbit : *F) {
       if (auto *returnInst =
               llvh::dyn_cast_or_null<ReturnInst>(bbit.getTerminator())) {
-        returnTy = Type::unionTy(returnTy, returnInst->getValue()->getType());
+        returnTy =
+            typeCtx_.unionTy(returnTy, returnInst->getValue()->getType());
       }
     }
     F->setReturnType(returnTy);
@@ -1071,7 +1087,7 @@ class TypeInferenceImpl {
   /// \return true if the type changed.
   bool inferMemoryType(Value *V) {
     Type originalTy = V->getType();
-    Type T = inferMemoryLocationType(V);
+    Type T = inferMemoryLocationType(typeCtx_, V);
 
     // We were able to identify the type of the value. Record this info.
     if (T != V->getType()) {
@@ -1186,12 +1202,13 @@ class TypeInferenceImpl {
       return false;
     }
     if (it->second != originalTy) {
-      Type intersection = Type::intersectTy(it->second, originalTy);
+      Type intersection = typeCtx_.intersectTy(it->second, originalTy);
       // Narrow the type to include what we knew before the pass.
       LLVM_DEBUG(
           llvh::errs() << "Intersecting type of " << val->getKindStr()
-                       << " from " << val->getType() << " with " << it->second
-                       << " to " << intersection << '\n');
+                       << " from " << typeCtx_.fmt(val->getType()) << " with "
+                       << typeCtx_.fmt(it->second) << " to "
+                       << typeCtx_.fmt(intersection) << '\n');
       if (auto *func = llvh::dyn_cast<Function>(val)) {
         func->setReturnType(intersection);
       } else {
@@ -1384,11 +1401,11 @@ static std::vector<Partition> partitionFunctionsAndVars(Module *M) {
   return res;
 }
 
-bool TypeInferenceImpl::runOnModule(Module *M) {
+bool TypeInferenceImpl::runOnModule() {
   bool changed = false;
   LLVM_DEBUG(dbgs() << "\nStart Type Inference on Module\n");
 
-  auto partitionedFuncsAndVars = partitionFunctionsAndVars(M);
+  auto partitionedFuncsAndVars = partitionFunctionsAndVars(M_);
   for (const auto &[funcs, vars] : partitionedFuncsAndVars) {
     changed |= runOnFunctionsAndVars(funcs, vars);
   }
@@ -1398,8 +1415,8 @@ bool TypeInferenceImpl::runOnModule(Module *M) {
 } // anonymous namespace
 
 bool TypeInference::runOnModule(Module *M) {
-  TypeInferenceImpl impl{};
-  return impl.runOnModule(M);
+  TypeInferenceImpl impl{M};
+  return impl.runOnModule();
 }
 
 Pass *hermes::createTypeInference() {

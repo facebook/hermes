@@ -58,7 +58,7 @@ be omitted):
 | P2-S3 | Migrate Instrs.{h,cpp} and IR.cpp | P2-S1 | done | |
 | P2-S4 | Migrate IRGen (ESTreeIRGen-*.cpp) | P2-S1 | done | |
 | P2-S5 | Migrate InstSimplify pass | P2-S1 | done | |
-| P2-S6 | Migrate TypeInference pass (heaviest) | P2-S1 |  | |
+| P2-S6 | Migrate TypeInference pass (heaviest) | P2-S1 | done | |
 | P2-S7 | Migrate remaining optimizer + BCGen | P2-S1 |  | |
 | P2-S8 | Migrate test fixtures | P2-S1 |  | |
 | P2-S9 | Remove TLS infrastructure | P2-S2..P2-S8 |  | |
@@ -73,6 +73,13 @@ be omitted):
   - The new helpers (`canBeAny`, `canBeType`, etc.) are also out-of-line for the same incomplete-type reason. Once Phase 2 is complete and Type loses its TLS-using methods, the layering can be revisited but it's not necessary.
   - `print` chosen over `format` for naming consistency with `Type::print` and `llvh::raw_ostream` conventions; `format` would have implied "build a string".
   - No callers migrated yet — the TLS-using methods on `Type` remain intact so the build stays green throughout P2-S2…P2-S8.
+
+### P2-S6: Migrate TypeInference pass
+- **Files**: modified `lib/Optimizer/Scalar/TypeInference.cpp`.
+- **What was done**: Added `TypeContext &typeCtx_` member to `TypeInferenceImpl` (initialized via `M->getTypeContext()` in a new explicit constructor) and updated `TypeInference::runOnModule` to pass the Module. Threaded `TypeContext &tc` as the first parameter through eight file-scope helpers: `isBigIntOrObject`, `inferUnaryArith`, `inferUnaryArithDefault`, `inferTilde`, `inferMemoryLocationType`, `inferBinaryArith`, `inferBinaryBitwise`, `inferBinaryInst`. Migrated the remaining inline call sites in member methods (`inferPhi` union, `inferToPropertyKeyInst`, `inferThrowIfInst`, `inferUnionNarrowTrustedInst`, `inferCheckedTypeCastInst`, parameter type union, return type union, and the post-pass intersection in the prePassTypes narrowing).
+- **Decisions**:
+  - Threaded `TypeContext &tc` as a parameter to the file-scope helpers rather than moving them into the impl class. The helpers are already self-contained and just gained one extra leading parameter; relocating would have meant a larger restructure for marginal benefit.
+  - Replaced one inline `Type::unionTy(Type::createObject(), Type::createUndefined())` with the well-known `Type::createObjectOrUndef()` factory added in P2-S3, and one `Type::unionTy(String, Symbol)` with `Type::createStringOrSymbol()` — both eliminate context lookups for fixed types.
 
 ### P2-S5: Migrate InstSimplify pass
 - **Files**: modified `lib/Optimizer/Scalar/InstSimplify.cpp`.
