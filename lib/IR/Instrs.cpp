@@ -72,7 +72,8 @@ ValueKind UnaryOperatorInst::parseOperator(llvh::StringRef op) {
 }
 
 SideEffect UnaryOperatorInst::getSideEffectImpl() const {
-  if (getSingleOperand()->getType().isPrimitive()) {
+  if (getModule()->getTypeContext().isPrimitive(
+          getSingleOperand()->getType())) {
     return SideEffect{}.setIdempotent();
   }
 
@@ -107,6 +108,7 @@ ValueKind BinaryOperatorInst::parseAssignmentOperator(llvh::StringRef op) {
 }
 
 SideEffect BinaryOperatorInst::getBinarySideEffect(
+    TypeContext &tc,
     Type leftTy,
     Type rightTy,
     ValueKind op) {
@@ -135,7 +137,7 @@ SideEffect BinaryOperatorInst::getBinarySideEffect(
     case ValueKind::BinaryGreaterThanOrEqualInstKind:
       // This instruction does not read/write memory if the LHS and RHS types
       // are known to be primitive.
-      if (leftTy.isPrimitive() && rightTy.isPrimitive())
+      if (tc.isPrimitive(leftTy) && tc.isPrimitive(rightTy))
         return SideEffect{}.setIdempotent();
       break;
 
@@ -144,21 +146,21 @@ SideEffect BinaryOperatorInst::getBinarySideEffect(
     case ValueKind::BinaryModuloInstKind:
     case ValueKind::BinaryExponentiationInstKind:
       // We can only reason about primitive types.
-      if (!leftTy.isPrimitive() || !rightTy.isPrimitive())
+      if (!tc.isPrimitive(leftTy) || !tc.isPrimitive(rightTy))
         break;
       // if either of the operands can be a BigInt, this instruction may throw
       // for one of the following reasons:
       // - BigInt doesn't have unsigned right shift.
       // - BigInt division by zero.
       // - BigInt as exponent can't be negative
-      if (leftTy.canBeBigInt() || rightTy.canBeBigInt())
+      if (tc.canBeBigInt(leftTy) || tc.canBeBigInt(rightTy))
         return SideEffect{}.setThrow();
       // We have primitive operands that are not BigInt.
       return SideEffect{}.setIdempotent();
 
     case ValueKind::BinaryAddInstKind:
       // We can only reason about primitive types.
-      if (!leftTy.isPrimitive() || !rightTy.isPrimitive())
+      if (!tc.isPrimitive(leftTy) || !tc.isPrimitive(rightTy))
         break;
       // If one of the operands is a string, it is side effect free.
       if (leftTy.isStringType() || rightTy.isStringType())
@@ -173,13 +175,13 @@ SideEffect BinaryOperatorInst::getBinarySideEffect(
     case ValueKind::BinaryXorInstKind:
     case ValueKind::BinaryAndInstKind:
       // We can only reason about primitive types.
-      if (!leftTy.isPrimitive() || !rightTy.isPrimitive())
+      if (!tc.isPrimitive(leftTy) || !tc.isPrimitive(rightTy))
         break;
       // If both operands are BigInt, it is side effect free.
       if (leftTy.isBigIntType() && rightTy.isBigIntType())
         return SideEffect{}.setIdempotent();
       // However BigInt arithmetic operands don't mix with any other type.
-      if (leftTy.canBeBigInt() || rightTy.canBeBigInt())
+      if (tc.canBeBigInt(leftTy) || tc.canBeBigInt(rightTy))
         return SideEffect{}.setThrow();
       // We have primitive operands that are not BigInt.
       return SideEffect{}.setIdempotent();
@@ -258,7 +260,8 @@ PhiInst::PhiInst(const ValueListType &values, const BasicBlockListType &blocks)
     pushOperand(values[i]);
     pushOperand(blocks[i]);
   }
-  recalculateResultType();
+  // Result type is computed by the builder after insertion, since
+  // recalculateResultType requires getModule() (parent chain).
 }
 
 unsigned PhiInst::getNumEntries() const {
@@ -286,7 +289,7 @@ void PhiInst::updateEntry(unsigned i, Value *val, BasicBlock *BB) {
 void PhiInst::addEntry(Value *val, BasicBlock *BB) {
   pushOperand(val);
   pushOperand(BB);
-  setType(Type::unionTy(getType(), val->getType()));
+  setType(getModule()->getTypeContext().unionTy(getType(), val->getType()));
 }
 
 void PhiInst::removeEntry(unsigned index) {
@@ -324,13 +327,14 @@ void PhiInst::removeEntryHelper(unsigned index) {
 }
 
 void PhiInst::recalculateResultType() {
+  TypeContext &tc = getModule()->getTypeContext();
   Type res = Type::createNoType();
   for (unsigned i = 0, e = getNumEntries(); i != e; ++i) {
     // It's possible the Phi has a nullptr operand,
     // e.g. if the value was erased but this Phi wasn't erased yet.
     // setOperand handles this scenario gracefully, so Phi must as well.
     if (getEntry(i).first) {
-      res = Type::unionTy(res, getEntry(i).first->getType());
+      res = tc.unionTy(res, getEntry(i).first->getType());
     }
   }
   setType(res);

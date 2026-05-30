@@ -826,10 +826,41 @@ TypeContext::TypeContext() {
     assert(id == kNullOrUndefId);
   }
 
+  // 22: StringOrSymbol — String | Symbol.
+  {
+    uint32_t arms[] = {kStringId, kSymbolId};
+    uint32_t id = addUnionEntry(arms);
+    (void)id;
+    assert(id == kStringOrSymbolId);
+  }
+
+  // 23: EmptyOrUninit — Empty | Uninit.
+  {
+    uint32_t arms[] = {kEmptyId, kUninitId};
+    uint32_t id = addUnionEntry(arms);
+    (void)id;
+    assert(id == kEmptyOrUninitId);
+  }
+
+  // 24: ObjectOrNull — Null | Object (sorted by ID).
+  {
+    uint32_t arms[] = {kNullId, kObjectId};
+    uint32_t id = addUnionEntry(arms);
+    (void)id;
+    assert(id == kObjectOrNullId);
+  }
+
+  // 25: ObjectOrUndef — Undefined | Object (sorted by ID).
+  {
+    uint32_t arms[] = {kUndefinedId, kObjectId};
+    uint32_t id = addUnionEntry(arms);
+    (void)id;
+    assert(id == kObjectOrUndefId);
+  }
+
   // Pre-populate intern table with well-known unions.
   // TypeContext is a friend of Type, so we can access Type::id_.
-  for (uint32_t id :
-       {kAnyTypeId, kNumericId, kAnyEmptyUninitId, kNullOrUndefId}) {
+  for (uint32_t id = _kFirstUnionId; id != _kLastUnionId; ++id) {
     auto arms = getUnionArms(Type{id});
     UnionInternKey key;
     key.arms.reserve(arms.size());

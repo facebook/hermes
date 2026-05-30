@@ -55,7 +55,7 @@ be omitted):
 | P1-S8 | Rewrite Type class | P1-S4, P1-S7.5 | done | |
 | P2-S1 | Foundation: accessors and conventions | P1-S8 | done | |
 | P2-S2 | Migrate IRVerifier to explicit context | P2-S1 | done | |
-| P2-S3 | Migrate Instrs.{h,cpp} and IR.cpp | P2-S1 |  | |
+| P2-S3 | Migrate Instrs.{h,cpp} and IR.cpp | P2-S1 | done | |
 | P2-S4 | Migrate IRGen (ESTreeIRGen-*.cpp) | P2-S1 |  | |
 | P2-S5 | Migrate InstSimplify pass | P2-S1 |  | |
 | P2-S6 | Migrate TypeInference pass (heaviest) | P2-S1 |  | |
@@ -73,6 +73,22 @@ be omitted):
   - The new helpers (`canBeAny`, `canBeType`, etc.) are also out-of-line for the same incomplete-type reason. Once Phase 2 is complete and Type loses its TLS-using methods, the layering can be revisited but it's not necessary.
   - `print` chosen over `format` for naming consistency with `Type::print` and `llvh::raw_ostream` conventions; `format` would have implied "build a string".
   - No callers migrated yet — the TLS-using methods on `Type` remain intact so the build stays green throughout P2-S2…P2-S8.
+
+### P2-S3: Migrate Instrs.{h,cpp} and IR.cpp
+- **Files**: modified `include/hermes/IR/TypeContext.h`, `lib/IR/TypeContext.cpp`, `include/hermes/IR/IR.h`, `include/hermes/IR/Instrs.h`, `lib/IR/IR.cpp`, `lib/IR/Instrs.cpp`, `lib/IR/IRBuilder.cpp`, `unittests/IR/TypeContextTest.cpp`.
+- **What was done**:
+  - Added 4 new well-known union IDs to `TypeContext`: `kStringOrSymbolId`, `kEmptyOrUninitId`, `kObjectOrNullId`, `kObjectOrUndefId`. Each is pre-allocated in the constructor and added to the intern table. Added matching `Type::createXxx()` constexpr factories.
+  - Replaced inline header `Type::unionTy(constant, constant)` calls with the new constexpr factories: `ToPropertyKeyInst`, `LoadParentNoTrapsInst::getInherentTypeImpl`, `functionNewTargetType` (in IR.cpp).
+  - `ThrowIfInst`: removed the constructor-side `Type::subtractTy` call and the assertion that uses TLS-based `.isSubsetOf`. Added a `resultType` parameter to the constructor; `IRBuilder::createThrowIfInst` now computes the result type via `tc.subtractTy` and asserts the precondition. Dropped the now-redundant assert in `setInvalidTypes` (only one external caller, InstSimplify, and it derives `invalidSubset` via `intersectTy` so the invariant is preserved).
+  - `BinaryOperatorInst::getBinarySideEffect`: added `TypeContext &tc` as the first parameter; updated the two callers (in `Instrs.h`) to pass `getModule()->getTypeContext()`.
+  - `UnaryOperatorInst::getSideEffectImpl`, `PhiInst::addEntry`, `PhiInst::recalculateResultType`: switched from TLS-using calls to `getModule()->getTypeContext()`.
+  - `PhiInst::PhiInst` constructor: removed the implicit `recalculateResultType()` call (it would crash because the inst has no parent yet). The builder now calls `recalculateResultType()` after `insert()`. Made the method public for that.
+  - Updated `ReservedSlots` test to scan from `kObjectOrUndefId + 1`.
+- **Decisions**:
+  - Added well-known IDs for fixed-shape unions used in inline headers. Avoids both threading TypeContext through dozens of constructors and creating fresh union entries at runtime; result is constexpr.
+  - Moved the type computation for `ThrowIfInst` into the builder rather than threading TypeContext through its constructor. The constructor's only computed type was `subtractTy(operand, invalidTypes)` — easier to do once at construction time in the builder than to thread context everywhere.
+  - Made `PhiInst::recalculateResultType` public rather than friending IRBuilder. It is logically a public operation (already exposed via `addEntry`/`removeEntry` side effects).
+  - For static helpers like `getBinarySideEffect`, threading `TypeContext &` as the first parameter is the natural fit — alternative (lookup via `getModule()` on a passed-in inst) would require passing the inst too.
 
 ### P2-S2: Migrate IRVerifier to explicit context
 - **Files**: modified `include/hermes/IR/IR.h`, `lib/IR/IRVerifier.cpp`.

@@ -153,7 +153,7 @@ TEST_F(TypeContextTest, ReservedSlots) {
   TypeContext ctx;
   // Padding slots between the last well-known union and kFirstDynamicId
   // should be NoType placeholders.
-  for (uint32_t i = kNullOrUndefId + 1; i < kFirstDynamicId; ++i) {
+  for (uint32_t i = _kLastUnionId + 1; i < kFirstDynamicId; ++i) {
     EXPECT_EQ(ctx.getKind(asType(i)), TypeKind::NoType)
         << "Reserved slot " << i << " should be NoType";
   }

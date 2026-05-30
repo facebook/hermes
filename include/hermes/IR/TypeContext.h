@@ -173,14 +173,24 @@ enum : uint32_t {
   kUint32Id,
   /// Int32 ∩ Uint32: integer in [0, 2^31 - 1].
   kUInt31Id,
+  _kFirstUnionId,
   /// Union of all JS-observable types.
-  kAnyTypeId,
+  kAnyTypeId = _kFirstUnionId,
   /// Number | BigInt.
   kNumericId,
   /// any | Empty | Uninit.
   kAnyEmptyUninitId,
   /// Null | Undefined.
   kNullOrUndefId,
+  /// String | Symbol (property keys after ToPropertyKey).
+  kStringOrSymbolId,
+  /// Empty | Uninit (TDZ check input set).
+  kEmptyOrUninitId,
+  /// Object | Null (LoadParent result).
+  kObjectOrNullId,
+  /// Object | Undefined (ES5 new.target).
+  kObjectOrUndefId,
+  _kLastUnionId = kObjectOrUndefId,
 
   /// IDs below this are reserved for well-known types.
   kFirstDynamicId = 32,
@@ -310,6 +320,18 @@ class Type {
   }
   static constexpr Type createNullOrUndef() {
     return Type(kNullOrUndefId);
+  }
+  static constexpr Type createStringOrSymbol() {
+    return Type(kStringOrSymbolId);
+  }
+  static constexpr Type createEmptyOrUninit() {
+    return Type(kEmptyOrUninitId);
+  }
+  static constexpr Type createObjectOrNull() {
+    return Type(kObjectOrNullId);
+  }
+  static constexpr Type createObjectOrUndef() {
+    return Type(kObjectOrUndefId);
   }
   /// @}
 

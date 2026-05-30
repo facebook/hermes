@@ -174,7 +174,7 @@ std::string Attributes::getDescriptionStr() const {
 static Type functionNewTargetType(Function::DefinitionKind defKind) {
   switch (defKind) {
     case Function::DefinitionKind::ES5Function:
-      return Type::unionTy(Type::createObject(), Type::createUndefined());
+      return Type::createObjectOrUndef();
     case Function::DefinitionKind::ES6BaseConstructor:
     case Function::DefinitionKind::ES6DerivedConstructor:
       return Type::createObject();

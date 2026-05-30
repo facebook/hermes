@@ -842,7 +842,14 @@ GetNewTargetInst *IRBuilder::createGetNewTargetInst(Value *newTargetParam) {
 ThrowIfInst *IRBuilder::createThrowIfInst(
     Value *checkedValue,
     Type invalidTypes) {
-  auto *inst = new ThrowIfInst(checkedValue, getLiteralIRType(invalidTypes));
+  TypeContext &tc = getTypeContext();
+  assert(
+      !invalidTypes.isNoType() &&
+      tc.isSubsetOf(invalidTypes, Type::createEmptyOrUninit()) &&
+      "invalidTypes set can only contain Empty or Uninit");
+  Type resultType = tc.subtractTy(checkedValue->getType(), invalidTypes);
+  auto *inst =
+      new ThrowIfInst(checkedValue, getLiteralIRType(invalidTypes), resultType);
   insert(inst);
   return inst;
 }
@@ -919,6 +926,9 @@ PhiInst *IRBuilder::createPhiInst(
     const PhiInst::BasicBlockListType &blocks) {
   auto PI = new PhiInst(values, blocks);
   insert(PI);
+  // Compute the result type now that the inst is in a block (so getModule()
+  // works inside recalculateResultType).
+  PI->recalculateResultType();
   return PI;
 }
 
