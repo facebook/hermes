@@ -60,7 +60,7 @@ be omitted):
 | P2-S5 | Migrate InstSimplify pass | P2-S1 | done | |
 | P2-S6 | Migrate TypeInference pass (heaviest) | P2-S1 | done | |
 | P2-S7 | Migrate remaining optimizer + BCGen | P2-S1 | done | |
-| P2-S8 | Migrate test fixtures | P2-S1 |  | |
+| P2-S8 | Migrate test fixtures | P2-S1 | done | |
 | P2-S9 | Remove TLS infrastructure | P2-S2..P2-S8 |  | |
 
 ## Context Notes
@@ -73,6 +73,14 @@ be omitted):
   - The new helpers (`canBeAny`, `canBeType`, etc.) are also out-of-line for the same incomplete-type reason. Once Phase 2 is complete and Type loses its TLS-using methods, the layering can be revisited but it's not necessary.
   - `print` chosen over `format` for naming consistency with `Type::print` and `llvh::raw_ostream` conventions; `format` would have implied "build a string".
   - No callers migrated yet — the TLS-using methods on `Type` remain intact so the build stays green throughout P2-S2…P2-S8.
+
+### P2-S8: Migrate test fixtures (and a stray IREval helper)
+- **Files**: modified `unittests/IR/BuilderTest.cpp`, `lib/IR/IREval.cpp`.
+- **What was done**: Migrated the only two TLS-using `Type` calls left in test code: `X->getType().isPrimitive()` in `BuilderTest::TestValueTypes` (now `M.getTypeContext().isPrimitive(...)`) and the body of `BuilderTest::Types` (now uses a local `TypeContext tc;` and calls `tc.unionTy(...)` / `tc.isPrimitive(...)` directly, dropping the now-unnecessary RAII guard for that test). All other test-fixture call sites already used the new explicit-context API; they only retain `TypeContextRAII` install lines, which P2-S9 deletes.
+- **Bonus**: `lib/IR/IREval.cpp::disjointComparisonTypes` was a free helper missed by earlier passes (it is in `lib/IR`, not `lib/Optimizer` or `lib/BCGen`). Threaded `TypeContext &tc` as the first parameter; the single caller in `evalBinaryOperator` passes `builder.getTypeContext()`.
+- **Decisions**:
+  - Left the per-fixture `TypeContextRAII typeContextGuard(M.getTypeContext())` lines untouched. They still keep TLS valid for the unmigrated `Type` delegation methods that remain in P2-S8 state. P2-S9 deletes both the RAII class and these install sites in one motion.
+  - In `BuilderTest::Types` the test never wraps a Module — it constructed a standalone `TypeContext` and installed the RAII guard purely to support `Type::unionTy`. With the explicit API the RAII guard is redundant; it is removed in this step (the only test fixture in P2-S8 that drops a guard early).
 
 ### P2-S7: Migrate remaining optimizer + BCGen
 - **Files**: modified `lib/Optimizer/Scalar/{ObjectMergeNewStores,ObjectStackPromotion,TDZDedup,Inlining,FunctionAnalysis,Auditor}.cpp`, `lib/BCGen/{Lowering,RegAlloc}.cpp`, `lib/BCGen/HBC/{ISel,Passes}.cpp`, `lib/BCGen/HBC/Passes/PeepholeLowering.cpp`, `lib/BCGen/SH/{LowerNanBoxedUnionNarrowT,SHRegAlloc,RecreateCheapValues,SH}.cpp`, `lib/BCGen/facebook/Mins/{LowerNanBoxedUnionNarrowT,RecreateCheapValues,Mins}.cpp`.

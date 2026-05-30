@@ -18,12 +18,12 @@ namespace {
 
 /// \returns true when the types \p A and \p B prove that the instances can't
 /// be strictly equal.
-bool disjointComparisonTypes(Type A, Type B) {
-  if (!A.isPrimitive() || !B.isPrimitive())
+bool disjointComparisonTypes(TypeContext &tc, Type A, Type B) {
+  if (!tc.isPrimitive(A) || !tc.isPrimitive(B))
     return false;
 
   // Check if types are disjoint.
-  return Type::intersectTy(A, B).isNoType();
+  return tc.intersectTy(A, B).isNoType();
 }
 
 bool isNaN(Literal *lit) {
@@ -303,7 +303,7 @@ Literal *hermes::evalBinaryOperator(
       }
 
       // Operands of different types can't be strictly equal.
-      if (disjointComparisonTypes(leftTy, rightTy))
+      if (disjointComparisonTypes(builder.getTypeContext(), leftTy, rightTy))
         return builder.getLiteralBool(false);
 
       // Handle numeric comparisons:

@@ -197,7 +197,7 @@ TEST(BuilderTest, TestValueTypes) {
   X->setType(Type::createBoolean());
   EXPECT_FALSE(X->getType().isNumberType());
   EXPECT_TRUE(X->getType().isBooleanType());
-  EXPECT_TRUE(X->getType().isPrimitive());
+  EXPECT_TRUE(M.getTypeContext().isPrimitive(X->getType()));
   EXPECT_FALSE(X->getType().isNullType());
 
   X->setType(Type::createBoolean());
@@ -206,33 +206,33 @@ TEST(BuilderTest, TestValueTypes) {
 }
 
 TEST(BuilderTest, Types) {
-  TypeContext typeContext;
-  TypeContextRAII typeContextGuard(typeContext);
+  TypeContext tc;
   Type T = Type::createAnyEmptyUninit();
   EXPECT_FALSE(T.isNoType());
   EXPECT_TRUE(T.isAnyEmptyUninitType());
 
-  Type W = Type::unionTy(Type::createNumber(), Type::createBoolean());
+  Type W = tc.unionTy(Type::createNumber(), Type::createBoolean());
   EXPECT_FALSE(W.isAnyEmptyUninitType());
-  EXPECT_TRUE(W.isPrimitive());
+  EXPECT_TRUE(tc.isPrimitive(W));
   EXPECT_FALSE(W.isStringType());
   EXPECT_FALSE(W.isObjectType());
 
   EXPECT_EQ(
       Type::createAnyEmptyUninit(),
-      Type::unionTy(Type::createAnyEmptyUninit(), Type::createBoolean()));
+      tc.unionTy(Type::createAnyEmptyUninit(), Type::createBoolean()));
 
+  // Interning: two calls with the same operands return the same Type value.
   EXPECT_EQ(
-      Type::createAnyEmptyUninit(),
-      Type::unionTy(Type::createAnyEmptyUninit(), Type::createBoolean()));
+      tc.unionTy(Type::createNumber(), Type::createString()),
+      tc.unionTy(Type::createNumber(), Type::createString()));
 
-  Type U = Type::unionTy(Type::createUndefined(), Type::createObject());
+  Type U = tc.unionTy(Type::createUndefined(), Type::createObject());
   EXPECT_FALSE(U.isObjectType());
   EXPECT_FALSE(U.isBooleanType());
 
-  Type R = Type::unionTy(Type::createNumber(), Type::createObject());
+  Type R = tc.unionTy(Type::createNumber(), Type::createObject());
   EXPECT_FALSE(R.isAnyEmptyUninitType());
-  EXPECT_FALSE(R.isPrimitive());
+  EXPECT_FALSE(tc.isPrimitive(R));
   EXPECT_FALSE(R.isNumberType());
   EXPECT_FALSE(R.isObjectType());
 }
