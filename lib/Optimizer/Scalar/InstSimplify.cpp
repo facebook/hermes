@@ -40,26 +40,10 @@ namespace {
 
 const Type kNullOrUndef = Type::createNullOrUndef();
 
-/// \return true if the value is known to not be NaN. Note that it may still
-///    be convertible to NaN.
-bool notNaN(Value *value) {
-  // Only numbers can be NaN.
-  if (!value->getType().canBeNumber()) {
-    return true;
-  }
-
-  // If it is a literal, we can simply check.
-  if (auto *literalNumber = llvh::dyn_cast<LiteralNumber>(value)) {
-    return !std::isnan(literalNumber->getValue());
-  }
-
-  // The value could be a number, so it could be NaN.
-  return false;
-}
-
 class InstSimplifyImpl {
  public:
-  InstSimplifyImpl(Function *F) : F_(F), builder_(F_) {}
+  InstSimplifyImpl(Function *F)
+      : F_(F), builder_(F_), typeCtx_(builder_.getTypeContext()) {}
 
   bool run() {
     bool changed = false;
@@ -243,7 +227,7 @@ class InstSimplifyImpl {
     // Try to simplify based on type information.
     switch (kind) {
       case ValueKind::UnaryBangInstKind:
-        if (op->getType().isSubsetOf(kNullOrUndef)) {
+        if (typeCtx_.isSubsetOf(op->getType(), kNullOrUndef)) {
           return builder_.getLiteralBool(true);
         }
         break;
@@ -395,7 +379,8 @@ class InstSimplifyImpl {
     // expressions.
     Type leftTy = lhs->getType();
     Type rightTy = rhs->getType();
-    const bool primitiveTypes = leftTy.isPrimitive() && rightTy.isPrimitive();
+    const bool primitiveTypes =
+        typeCtx_.isPrimitive(leftTy) && typeCtx_.isPrimitive(rightTy);
 
     // This flag helps to simplify equality comparisons (==, ===, !=, !===).
     // Indicate that the operands are the same value which has a primitive type
@@ -416,7 +401,7 @@ class InstSimplifyImpl {
     // performed before toNumeric(). So the only case that for NaN that remains
     // is "undefined".
     bool identicalForRelational =
-        identicalForEquality && !leftTy.canBeUndefined();
+        identicalForEquality && !typeCtx_.canBeUndefined(leftTy);
 
     switch (kind) {
       case ValueKind::BinaryEqualInstKind: // ==
@@ -427,16 +412,16 @@ class InstSimplifyImpl {
 
         // Promote equality to strict equality if we know that the types are
         // identical primitive types.
-        if (leftTy.isKnownPrimitiveType() && rightTy == leftTy) {
+        if (typeCtx_.isKnownPrimitiveType(leftTy) && rightTy == leftTy) {
           return builder_.createBinaryOperatorInst(
               lhs, rhs, ValueKind::BinaryStrictlyEqualInstKind);
         }
 
         // ~(null|undefined) == null|undefined is always false.
-        if ((Type::intersectTy(leftTy, kNullOrUndef).isNoType() &&
-             rightTy.isSubsetOf(kNullOrUndef)) ||
-            (Type::intersectTy(rightTy, kNullOrUndef).isNoType() &&
-             leftTy.isSubsetOf(kNullOrUndef))) {
+        if ((typeCtx_.intersectTy(leftTy, kNullOrUndef).isNoType() &&
+             typeCtx_.isSubsetOf(rightTy, kNullOrUndef)) ||
+            (typeCtx_.intersectTy(rightTy, kNullOrUndef).isNoType() &&
+             typeCtx_.isSubsetOf(leftTy, kNullOrUndef))) {
           return builder_.getLiteralBool(false);
         }
         break;
@@ -449,16 +434,16 @@ class InstSimplifyImpl {
 
         // Promote inequality to strict inequality if we know that the types are
         // identical primitive types.
-        if (leftTy.isKnownPrimitiveType() && rightTy == leftTy) {
+        if (typeCtx_.isKnownPrimitiveType(leftTy) && rightTy == leftTy) {
           return builder_.createBinaryOperatorInst(
               lhs, rhs, ValueKind::BinaryStrictlyNotEqualInstKind);
         }
 
         // ~(null|undefined) != null|undefined is always true.
-        if ((Type::intersectTy(leftTy, kNullOrUndef).isNoType() &&
-             rightTy.isSubsetOf(kNullOrUndef)) ||
-            (Type::intersectTy(rightTy, kNullOrUndef).isNoType() &&
-             leftTy.isSubsetOf(kNullOrUndef))) {
+        if ((typeCtx_.intersectTy(leftTy, kNullOrUndef).isNoType() &&
+             typeCtx_.isSubsetOf(rightTy, kNullOrUndef)) ||
+            (typeCtx_.intersectTy(rightTy, kNullOrUndef).isNoType() &&
+             typeCtx_.isSubsetOf(leftTy, kNullOrUndef))) {
           return builder_.getLiteralBool(true);
         }
         break;
@@ -470,7 +455,7 @@ class InstSimplifyImpl {
         }
 
         // Operands of different types can't be strictly equal.
-        if (Type::intersectTy(leftTy, rightTy).isNoType()) {
+        if (typeCtx_.intersectTy(leftTy, rightTy).isNoType()) {
           return builder_.getLiteralBool(false);
         }
         break;
@@ -481,7 +466,7 @@ class InstSimplifyImpl {
           return builder_.getLiteralBool(false);
         }
         // Operands of different types can't be strictly equal.
-        if (Type::intersectTy(leftTy, rightTy).isNoType()) {
+        if (typeCtx_.intersectTy(leftTy, rightTy).isNoType()) {
           return builder_.getLiteralBool(true);
         }
         break;
@@ -716,7 +701,8 @@ class InstSimplifyImpl {
     // object. In that case, it would be invalid to replace
     // GetConstructedObject, which is of type object, with ThisValue, which is
     // not of type object.
-    if (!opTy.canBeObject() && GCOI->getThisValue()->getType().isObjectType())
+    if (!typeCtx_.canBeObject(opTy) &&
+        GCOI->getThisValue()->getType().isObjectType())
       return GCOI->getThisValue();
     return nullptr;
   }
@@ -803,7 +789,7 @@ class InstSimplifyImpl {
     auto *operand = coerce->getSingleOperand();
 
     // null or undefined produce global scope.
-    if (operand->getType().isSubsetOf(kNullOrUndef)) {
+    if (typeCtx_.isSubsetOf(operand->getType(), kNullOrUndef)) {
       return builder_.getGlobalObject();
     }
 
@@ -827,7 +813,7 @@ class InstSimplifyImpl {
 
     // The subset of invalid types that the operand could actually be.
     Type invalidSubset =
-        Type::intersectTy(TIE->getCheckedValue()->getType(), invalidTypes);
+        typeCtx_.intersectTy(TIE->getCheckedValue()->getType(), invalidTypes);
     // If all invalid types are possible, there is nothing we can optimize.
     if (invalidSubset == invalidTypes)
       return nullptr;
@@ -995,7 +981,7 @@ class InstSimplifyImpl {
   ///   - nullptr if the instruction cannot be simplified.
   ///   - a new value to replace the original one
   OptValue<Value *> simplifyUnionNarrowTrusted(UnionNarrowTrustedInst *UNT) {
-    if (UNT->getSingleOperand()->getType().isSubsetOf(UNT->getType()))
+    if (typeCtx_.isSubsetOf(UNT->getSingleOperand()->getType(), UNT->getType()))
       return UNT->getSingleOperand();
     return nullptr;
   }
@@ -1004,13 +990,13 @@ class InstSimplifyImpl {
   ///   - a new value to replace the original one
   OptValue<Value *> simplifyCheckedTypeCast(CheckedTypeCastInst *ctc) {
     Type resType =
-        Type::intersectTy(ctc->getType(), ctc->getCheckedValue()->getType());
+        typeCtx_.intersectTy(ctc->getType(), ctc->getCheckedValue()->getType());
     // This is a cast that always fails. Do nothing.
     if (resType.isNoType())
       return nullptr;
 
     // A widening checked cast is pointless.
-    if (ctc->getCheckedValue()->getType().isSubsetOf(ctc->getType()))
+    if (typeCtx_.isSubsetOf(ctc->getCheckedValue()->getType(), ctc->getType()))
       return ctc->getCheckedValue();
 
     // If the result type is wider than necessary, narrow it.
@@ -1136,11 +1122,31 @@ class InstSimplifyImpl {
   }
 
  private:
+  /// \return true if the value is known to not be NaN. Note that it may still
+  ///    be convertible to NaN.
+  bool notNaN(Value *value) {
+    // Only numbers can be NaN.
+    if (!typeCtx_.canBeNumber(value->getType())) {
+      return true;
+    }
+
+    // If it is a literal, we can simply check.
+    if (auto *literalNumber = llvh::dyn_cast<LiteralNumber>(value)) {
+      return !std::isnan(literalNumber->getValue());
+    }
+
+    // The value could be a number, so it could be NaN.
+    return false;
+  }
+
   /// The function being optimized.
   Function *F_;
 
   /// Shared builder used for creating the optimized instructions.
   IRBuilder builder_;
+
+  /// IR type context for the module being optimized.
+  TypeContext &typeCtx_;
 };
 
 } // namespace

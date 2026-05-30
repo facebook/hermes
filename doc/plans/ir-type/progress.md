@@ -57,7 +57,7 @@ be omitted):
 | P2-S2 | Migrate IRVerifier to explicit context | P2-S1 | done | |
 | P2-S3 | Migrate Instrs.{h,cpp} and IR.cpp | P2-S1 | done | |
 | P2-S4 | Migrate IRGen (ESTreeIRGen-*.cpp) | P2-S1 | done | |
-| P2-S5 | Migrate InstSimplify pass | P2-S1 |  | |
+| P2-S5 | Migrate InstSimplify pass | P2-S1 | done | |
 | P2-S6 | Migrate TypeInference pass (heaviest) | P2-S1 |  | |
 | P2-S7 | Migrate remaining optimizer + BCGen | P2-S1 |  | |
 | P2-S8 | Migrate test fixtures | P2-S1 |  | |
@@ -73,6 +73,13 @@ be omitted):
   - The new helpers (`canBeAny`, `canBeType`, etc.) are also out-of-line for the same incomplete-type reason. Once Phase 2 is complete and Type loses its TLS-using methods, the layering can be revisited but it's not necessary.
   - `print` chosen over `format` for naming consistency with `Type::print` and `llvh::raw_ostream` conventions; `format` would have implied "build a string".
   - No callers migrated yet — the TLS-using methods on `Type` remain intact so the build stays green throughout P2-S2…P2-S8.
+
+### P2-S5: Migrate InstSimplify pass
+- **Files**: modified `lib/Optimizer/Scalar/InstSimplify.cpp`.
+- **What was done**: Added `TypeContext &typeCtx_` member to `InstSimplifyImpl`, initialized from `builder_.getTypeContext()` in the constructor. Migrated the 12 TLS-using call sites: `canBeNumber`, `isPrimitive` (×2), `canBeUndefined`, `canBeObject`, `isSubsetOf` (×6 — equality/inequality fast paths, CoerceThisNS short-circuit, UnionNarrowTrusted no-op, CheckedTypeCast widening), `intersectTy` (×6 — strict equality, ThrowIf invalidation, CheckedTypeCast result computation), `isKnownPrimitiveType` (×2 — equality promotion). The free `notNaN` helper grew a `TypeContext &` parameter (only one caller, threaded `typeCtx_`).
+- **Decisions**:
+  - Stored `TypeContext &` directly even though `builder_.getTypeContext()` is one indirection: 12 use sites and the InstSimplifyImpl is constructed once per function, so caching reduces repetition without measurable cost.
+  - The `kNullOrUndef` constexpr at file scope is unchanged — it is just a cheap constant Type tag and works fine as a constexpr.
 
 ### P2-S4: Migrate IRGen (ESTreeIRGen-*.cpp)
 - **Files**: modified `lib/IRGen/ESTreeIRGen.h`, `lib/IRGen/ESTreeIRGen.cpp`, `lib/IRGen/ESTreeIRGen-func.cpp`, `lib/IRGen/ESTreeIRGen-expr.cpp`, `lib/IRGen/ESTreeIRGen-typed-class.cpp`.
