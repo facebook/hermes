@@ -2026,7 +2026,6 @@ CompileResult processSourceFiles(
   }
 
   auto M = std::make_shared<Module>(context);
-  TypeContextRAII typeContextGuard(M->getTypeContext());
   auto semCtx = std::make_shared<sema::SemContext>(*context);
 
   if (context->getUseCJSModules()) {

@@ -39,12 +39,10 @@ TEST(IRHashTest, SameModuleTest) {
   Function *FIgnored;
   auto Ctx0 = std::make_shared<Context>();
   Module M0{Ctx0};
-  TypeContextRAII typeContextGuard0(M0.getTypeContext());
   makeSimpleModule0(M0, FIgnored);
 
   auto Ctx1 = std::make_shared<Context>();
   Module M1{Ctx1};
-  TypeContextRAII typeContextGuard1(M1.getTypeContext());
   makeSimpleModule0(M1, FIgnored);
 
   EXPECT_EQ(M0.hash(), M1.hash());
@@ -58,7 +56,6 @@ TEST(IRHashTest, SameModuleTest) {
 TEST(IRHashTest, AddDelInstructionTest) {
   auto Ctx = std::make_shared<Context>();
   Module M{Ctx};
-  TypeContextRAII typeContextGuard(M.getTypeContext());
   Function *F;
   makeSimpleModule0(M, F);
   IRBuilder Builder(&M);
@@ -108,7 +105,6 @@ void makeSimpleModule1(Module &M, Function *&F) {
 TEST(IRHashTest, SwapInstructionTest) {
   auto Ctx = std::make_shared<Context>();
   Module M{Ctx};
-  TypeContextRAII typeContextGuard(M.getTypeContext());
   Function *F;
   makeSimpleModule1(M, F);
   IRBuilder Builder(&M);
@@ -128,7 +124,6 @@ TEST(IRHashTest, SwapInstructionTest) {
 TEST(IRHashTest, SwapArgumentsTest) {
   auto Ctx = std::make_shared<Context>();
   Module M{Ctx};
-  TypeContextRAII typeContextGuard(M.getTypeContext());
   Function *F;
   makeSimpleModule1(M, F);
   IRBuilder Builder(&M);
@@ -151,7 +146,6 @@ TEST(IRHashTest, SwapArgumentsTest) {
 TEST(IRHashTest, JSSpecialParamTest) {
   auto Ctx = std::make_shared<Context>();
   Module M{Ctx};
-  TypeContextRAII typeContextGuard(M.getTypeContext());
   IRBuilder Builder(&M);
   Function *F = Builder.createFunction(
       "foo", Function::DefinitionKind::ES5Function, true);
@@ -172,7 +166,6 @@ TEST(IRHashTest, JSSpecialParamTest) {
 TEST(IRHashTest, JSFunctionAsValueTest) {
   auto Ctx = std::make_shared<Context>();
   Module M{Ctx};
-  TypeContextRAII typeContextGuard(M.getTypeContext());
   IRBuilder Builder(&M);
   Function *F0 =
       Builder.createFunction("f0", Function::DefinitionKind::ES5Function, true);

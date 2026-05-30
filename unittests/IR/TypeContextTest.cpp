@@ -695,7 +695,6 @@ TEST_F(TypeContextTest, PrintDynamicUnion) {
 
 TEST_F(TypeContextTest, PrintAnySupersetShowsExtraArms) {
   TypeContext ctx;
-  TypeContextRAII guard(ctx);
   auto fmt = [&](Type t) -> std::string {
     std::string s;
     llvh::raw_string_ostream os(s);
@@ -755,31 +754,8 @@ TEST_F(TypeContextTest, CanBeAnyAndConveniences) {
   EXPECT_FALSE(ctx.isKnownPrimitiveType(Type::createObject()));
 }
 
-TEST_F(TypeContextTest, CurrentWithGuard) {
-  TypeContext ctx;
-  TypeContextRAII guard(ctx);
-  EXPECT_EQ(&TypeContext::current(), &ctx);
-}
-
-TEST_F(TypeContextTest, NestedGuards) {
-  TypeContext outer;
-  TypeContext inner;
-
-  TypeContextRAII outerGuard(outer);
-  EXPECT_EQ(&TypeContext::current(), &outer);
-
-  {
-    TypeContextRAII innerGuard(inner);
-    EXPECT_EQ(&TypeContext::current(), &inner);
-  }
-
-  // Outer context restored after inner guard destruction.
-  EXPECT_EQ(&TypeContext::current(), &outer);
-}
-
-TEST(TypeContextNoGuardTest, PrintWithoutGuardFallback) {
-  // Type::print() should not crash when no TypeContextRAII guard is
-  // installed. Instead it prints a fallback "type#<id>" string.
+TEST(TypeContextNoGuardTest, PrintFallback) {
+  // Without a TypeContext, Type::print emits a "type#<id>" placeholder.
   std::string s;
   llvh::raw_string_ostream os(s);
   Type::createNumber().print(os);

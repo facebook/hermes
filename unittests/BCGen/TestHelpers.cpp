@@ -44,7 +44,6 @@ std::unique_ptr<hbc::BytecodeModule> hermes::bytecodeModuleForSource(
 
   /* Generate IR */
   Module M(context);
-  TypeContextRAII typeContextGuard(M.getTypeContext());
   hermes::generateIRFromESTree(&M, semCtx, ast);
 
   if (optimize)

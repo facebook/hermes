@@ -23,7 +23,6 @@ namespace {
 TEST(IRUtilsTest, Dominators1) {
   auto Ctx = std::make_shared<Context>();
   Module M{Ctx};
-  TypeContextRAII typeContextGuard(M.getTypeContext());
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
       "testDominators1", Function::DefinitionKind::ES5Function, true);
@@ -60,7 +59,6 @@ TEST(IRUtilsTest, Dominators1) {
 TEST(IRUtilsTest, Dominators2) {
   auto Ctx = std::make_shared<Context>();
   Module M{Ctx};
-  TypeContextRAII typeContextGuard(M.getTypeContext());
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
       "testDominators1", Function::DefinitionKind::ES5Function, true);
@@ -86,7 +84,6 @@ TEST(IRUtilsTest, Dominators2) {
 TEST(Numerics, IntegerConversion) {
   auto Ctx = std::make_shared<Context>();
   Module M{Ctx};
-  TypeContextRAII typeContextGuard(M.getTypeContext());
   IRBuilder Builder(&M);
 
   double mx = std::numeric_limits<double>::max();

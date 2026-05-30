@@ -17,8 +17,6 @@
 
 namespace hermes {
 
-thread_local TypeContext *TypeContext::current_ = nullptr;
-
 namespace {
 
 /// \return true if \p k is a number kind (including subtypes).
@@ -876,98 +874,14 @@ TypeContext::TypeContext() {
   assert(entries_.size() == kFirstDynamicId);
 }
 
-// Type delegation methods: forward to TypeContext::current().
-
-Type Type::unionTy(Type A, Type B) {
-  return TypeContext::current().unionTy(A, B);
-}
-
-Type Type::intersectTy(Type A, Type B) {
-  return TypeContext::current().intersectTy(A, B);
-}
-
-Type Type::subtractTy(Type A, Type B) {
-  return TypeContext::current().subtractTy(A, B);
-}
-
-TypeKind Type::getFirstTypeKind() const {
-  return TypeContext::current().getFirstKind(*this);
-}
-
-unsigned Type::countTypes() const {
-  return TypeContext::current().countKinds(*this);
-}
-
-bool Type::isPrimitive() const {
-  return TypeContext::current().isPrimitive(*this);
-}
-
-bool Type::canBePrimitive() const {
-  return TypeContext::current().canBePrimitive(*this);
-}
-
-bool Type::isNonPtr() const {
-  return TypeContext::current().isNonPtr(*this);
-}
-
-bool Type::isSubsetOf(Type t) const {
-  return TypeContext::current().isSubsetOf(*this, t);
-}
-
-bool Type::canBeString() const {
-  return TypeContext::current().canBeString(*this);
-}
-
-bool Type::canBeBigInt() const {
-  return TypeContext::current().canBeBigInt(*this);
-}
-
-bool Type::canBeSymbol() const {
-  return TypeContext::current().canBeSymbol(*this);
-}
-
-bool Type::canBeNumber() const {
-  return TypeContext::current().canBeNumber(*this);
-}
-
-bool Type::canBeObject() const {
-  return TypeContext::current().canBeObject(*this);
-}
-
-bool Type::canBeBoolean() const {
-  return TypeContext::current().canBeBoolean(*this);
-}
-
-bool Type::canBeEmpty() const {
-  return TypeContext::current().canBeEmpty(*this);
-}
-
-bool Type::canBeUninit() const {
-  return TypeContext::current().canBeUninit(*this);
-}
-
-bool Type::canBeUndefined() const {
-  return TypeContext::current().canBeUndefined(*this);
-}
-
-bool Type::canBeNull() const {
-  return TypeContext::current().canBeNull(*this);
-}
-
-bool Type::canBeAny() const {
-  return TypeContext::current().isSubsetOf(Type::createAnyType(), *this);
-}
+// All Type operations now go through TypeContext explicitly. The only
+// out-of-line Type method that remains here is the trivial print fallback,
+// which is used by the operator<<(raw_ostream &, Type) overload in IR.cpp
+// for diagnostic streams that do not have a TypeContext available.
 
 void Type::print(llvh::raw_ostream &OS) const {
-  if (TypeContext::hasCurrent()) {
-    TypeContext::current().print(OS, *this);
-  } else {
-    OS << "type#" << id_;
-  }
+  OS << "type#" << id_;
 }
-
-Type::iterator::iterator(Type type, unsigned index)
-    : ctx_(&TypeContext::current()), type_(type), index_(index) {}
 
 Type Type::iterator::operator*() const {
   if (ctx_->entries_[type_.id_].kind != TypeKind::Union) {
@@ -975,20 +889,6 @@ Type Type::iterator::operator*() const {
     return type_;
   }
   return ctx_->getUnionArms(type_)[index_];
-}
-
-Type::iterator Type::begin() const {
-  if (isNoType())
-    return end();
-  return iterator(*this, 0);
-}
-
-Type::iterator Type::end() const {
-  auto &ctx = TypeContext::current();
-  if (ctx.entries_[id_].kind == TypeKind::Union)
-    return iterator(*this, ctx.getUnionArms(*this).size());
-  // Non-union: end is index 1 for non-NoType, 0 for NoType.
-  return iterator(*this, isNoType() ? 0 : 1);
 }
 
 Type::iterator Type::begin(const TypeContext &ctx) const {

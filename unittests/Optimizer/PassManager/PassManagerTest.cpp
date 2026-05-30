@@ -44,7 +44,6 @@ class PassManagerTest : public ::testing::Test {
   SourceErrorManager em_;
   std::shared_ptr<Context> context_;
   Module module_;
-  TypeContextRAII typeContextGuard_{module_.getTypeContext()};
   IRBuilder builder_;
   Function *function_;
   BasicBlock *block_;

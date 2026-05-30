@@ -227,13 +227,14 @@ struct UnionInternKeyInfo {
 };
 
 class TypeContext;
-class TypeContextRAII;
 class TypeContextTest;
 
 /// Representation of a type in the IR. A Type is an opaque 4-byte handle
-/// (index) into the type table owned by TypeContext. All non-trivial type
-/// operations delegate to TypeContext::current() (TLS) or to an explicit
-/// TypeContext when one is provided.
+/// (index) into the type table owned by a TypeContext. Only trivial,
+/// constexpr identity operations live on Type itself (well-known ID
+/// factories, id-equality checks, hashing); every non-trivial query or
+/// operation requires an explicit TypeContext (typically reached via the
+/// owning Module, e.g. `inst->getModule()->getTypeContext()`).
 class Type {
   friend class TypeContext;
   /// Test fixture is a friend so it can construct Type from a raw
@@ -247,13 +248,6 @@ class Type {
   constexpr explicit Type(uint32_t id) : id_(id) {}
 
  public:
-  /// \name Static operations (delegate to TypeContext::current()).
-  /// @{
-  static Type unionTy(Type A, Type B);
-  static Type intersectTy(Type A, Type B);
-  static Type subtractTy(Type A, Type B);
-  /// @}
-
   /// \name Static well-known constructors (constexpr, no context needed).
   /// @{
   static constexpr Type createNoType() {
@@ -385,71 +379,9 @@ class Type {
   }
   /// @}
 
-  /// \name Instance predicates (delegate to TypeContext::current()).
-  /// @{
-
-  /// \return the TypeKind of the first type in this Type. For unions,
-  /// returns the kind of the first arm. For NoType, returns
-  /// TypeKind::NoType.
-  TypeKind getFirstTypeKind() const;
-
-  /// \return how many valid types are represented by this (union) type.
-  unsigned countTypes() const;
-
-  /// \return true if the type is one of the known javascript primitive types:
-  /// Number, BigInt, Null, Boolean, String, Undefined.
-  bool isKnownPrimitiveType() const {
-    return isPrimitive() && 1 == countTypes();
-  }
-
-  bool isPrimitive() const;
-
-  /// \return true if any of the types are primitive.
-  bool canBePrimitive() const;
-
-  /// \return true if the type is not referenced by a pointer in javascript.
-  bool isNonPtr() const;
-
-  /// \returns true if this type is a subset of \p t.
-  bool isSubsetOf(Type t) const;
-
-  /// \returns true if the type \p t can be any of the types that this type
-  /// represents. For example, if this type is "string|number" and \p t is
-  /// a string the result is true because this type can represent strings.
-  bool canBeType(Type t) const {
-    return t.isSubsetOf(*this);
-  }
-
-  /// \returns true if this type can represent a string value.
-  bool canBeString() const;
-  /// \returns true if this type can represent a bigint value.
-  bool canBeBigInt() const;
-  /// \returns true if this type can represent a symbol value.
-  bool canBeSymbol() const;
-  /// \returns true if this type can represent a number value.
-  bool canBeNumber() const;
-  /// \returns true if this type can represent an object.
-  bool canBeObject() const;
-  /// \returns true if this type can represent a boolean value.
-  bool canBeBoolean() const;
-  /// \returns true if this type can represent an "empty" value.
-  bool canBeEmpty() const;
-  /// \returns true if this type can represent an "uninit" value.
-  bool canBeUninit() const;
-  /// \returns true if this type can represent an undefined value.
-  bool canBeUndefined() const;
-  /// \returns true if this type can represent a null value.
-  bool canBeNull() const;
-  /// \returns true if this type can represent an "any" type value.
-  bool canBeAny() const;
-
-  /// Return true if this type is a proper subset of \p t. A "proper subset"
-  /// means that it is a subset but is not equal.
-  bool isProperSubsetOf(Type t) const {
-    return id_ != t.id_ && isSubsetOf(t);
-  }
-  /// @}
-
+  /// Diagnostic placeholder used by streams that have no TypeContext
+  /// available; prints `type#<id>`. For pretty names use
+  /// `TypeContext::print(OS, t)` or `tc.fmt(t)` in a chained stream.
   void print(llvh::raw_ostream &OS) const;
 
   /// The hash of a Type is the hash of its opaque value.
@@ -466,16 +398,10 @@ class Type {
 
   class iterator;
 
-  /// Return an iterator over the types in this Type, using
-  /// TypeContext::current() (TLS) for arm lookup.
-  iterator begin() const;
-  /// Return an "end" iterator over the types in this Type, using
-  /// TypeContext::current() (TLS) for arm lookup.
-  iterator end() const;
-  /// Return an iterator over the types in this Type, using \p ctx
-  /// explicitly for arm lookup. Prefer this over the no-arg overload.
+  /// Return an iterator over the types in this Type, using \p ctx for
+  /// arm lookup.
   iterator begin(const TypeContext &ctx) const;
-  /// Return an "end" iterator using \p ctx explicitly.
+  /// Return an "end" iterator using \p ctx for arm lookup.
   iterator end(const TypeContext &ctx) const;
 
   /// Allow Type to be used as a llvh::FoldingSet.
@@ -488,16 +414,13 @@ static_assert(sizeof(Type) == 4, "Type must be 4 bytes");
 
 /// An iterator over the types in a Type. For non-union types, yields
 /// the type itself as the single element. For unions, fetches arms fresh
-/// from a TypeContext on each dereference. The context is bound at
-/// construction time — either passed explicitly (preferred) or resolved
-/// once via TypeContext::current() (TLS — the no-arg-context constructor
-/// disappears in P2-S9). Safe under TypeContext mutation because
-/// typeArrays_ is append-only and a union's armOffset/armCount are
-/// immutable once the union entry is created.
+/// from a TypeContext on each dereference. Safe under TypeContext
+/// mutation because typeArrays_ is append-only and a union's
+/// armOffset/armCount are immutable once the union entry is created.
 class Type::iterator {
   friend class Type;
 
-  /// TypeContext for arm lookup. Always non-null; bound at construction.
+  /// TypeContext for arm lookup. Always non-null.
   const TypeContext *ctx_;
   /// The type being iterated.
   Type type_;
@@ -505,9 +428,6 @@ class Type::iterator {
   /// For union types: index into the arm array.
   unsigned index_;
 
-  /// Resolves \c ctx_ from TypeContext::current() at construction time.
-  /// Defined out-of-line because TypeContext is incomplete here.
-  iterator(Type type, unsigned index);
   iterator(const TypeContext &ctx, Type type, unsigned index)
       : ctx_(&ctx), type_(type), index_(index) {}
 
@@ -551,18 +471,6 @@ struct PrintedType {
 class TypeContext {
  public:
   TypeContext();
-
-  /// \return true if a thread-local TypeContext is currently installed.
-  static bool hasCurrent() {
-    return current_ != nullptr;
-  }
-
-  /// \return the current thread-local TypeContext. Asserts that one has been
-  /// installed via TypeContextRAII.
-  static TypeContext &current() {
-    assert(current_ && "No TypeContext installed on this thread");
-    return *current_;
-  }
 
   /// Return the kind of the type entry for \p t.
   TypeKind getKind(Type t) const;
@@ -669,10 +577,6 @@ class TypeContext {
 
  private:
   friend class Type;
-  friend class TypeContextRAII;
-
-  /// Thread-local pointer to the current context.
-  static thread_local TypeContext *current_;
 
   /// Type table. Index 0 = NoType. Pre-allocated entries for primitives.
   std::vector<TypeEntry> entries_;
@@ -708,28 +612,6 @@ class TypeContext {
   uint32_t createUnionFromLeafArms(llvh::ArrayRef<uint32_t> arms);
 };
 
-/// RAII guard that installs an TypeContext as the current thread-local
-/// context. The previous context (if any) is restored on destruction.
-/// Non-copyable, non-movable.
-class TypeContextRAII {
- public:
-  explicit TypeContextRAII(TypeContext &ctx) : saved_(TypeContext::current_) {
-    TypeContext::current_ = &ctx;
-  }
-
-  ~TypeContextRAII() {
-    TypeContext::current_ = saved_;
-  }
-
-  TypeContextRAII(const TypeContextRAII &) = delete;
-  TypeContextRAII &operator=(const TypeContextRAII &) = delete;
-  TypeContextRAII(TypeContextRAII &&) = delete;
-  TypeContextRAII &operator=(TypeContextRAII &&) = delete;
-
- private:
-  TypeContext *saved_;
-};
-
 inline llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, PrintedType pt) {
   pt.tc->print(OS, pt.t);
   return OS;
@@ -738,7 +620,6 @@ inline llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, PrintedType pt) {
 inline PrintedType TypeContext::fmt(Type t) const {
   return PrintedType{this, t};
 }
-
 } // namespace hermes
 
 namespace llvh {

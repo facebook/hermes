@@ -131,7 +131,6 @@ static void compileLazyFunctionWorker(void *argPtr) {
   assert(F && "no lazy IR for lazy function");
 
   Module *lazyModule = F->getParent();
-  TypeContextRAII typeContextGuard(lazyModule->getTypeContext());
 
   SourceErrorManager &manager =
       lazyModule->getContext().getSourceErrorManager();
@@ -269,7 +268,6 @@ static void compileEvalWorker(void *argPtr) {
   }
 
   Module *evalModule = F->getParent();
-  TypeContextRAII typeContextGuard(evalModule->getTypeContext());
 
   SourceErrorManager &manager =
       evalModule->getContext().getSourceErrorManager();

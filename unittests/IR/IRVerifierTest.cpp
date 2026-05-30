@@ -26,7 +26,6 @@ namespace {
 TEST(IRVerifierTest, BasicBlockTest) {
   auto Ctx = std::make_shared<Context>();
   Module M{Ctx};
-  TypeContextRAII typeContextGuard(M.getTypeContext());
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
       "forEach", Function::DefinitionKind::ES5Function, true);
@@ -64,7 +63,6 @@ TEST(IRVerifierTest, BasicBlockTest) {
 TEST(IRVerifierTest, ReturnInstTest) {
   auto Ctx = std::make_shared<Context>();
   Module M{Ctx};
-  TypeContextRAII typeContextGuard(M.getTypeContext());
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
       "testReturn", Function::DefinitionKind::ES5Function, true);
@@ -86,7 +84,6 @@ TEST(IRVerifierTest, ReturnInstTest) {
 TEST(IRVerifierTest, BranchInstTest) {
   auto Ctx = std::make_shared<Context>();
   Module M{Ctx};
-  TypeContextRAII typeContextGuard(M.getTypeContext());
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
       "testBranch", Function::DefinitionKind::ES5Function, true);
@@ -116,7 +113,6 @@ TEST(IRVerifierTest, BranchInstTest) {
 TEST(IRVerifierTest, DominanceTest) {
   auto Ctx = std::make_shared<Context>();
   Module M{Ctx};
-  TypeContextRAII typeContextGuard(M.getTypeContext());
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
       "testBranch", Function::DefinitionKind::ES5Function, true);
@@ -137,7 +133,6 @@ TEST(IRVerifierTest, DominanceTest) {
 TEST(IRVerifierTest, TryStructureTest) {
   auto Ctx = std::make_shared<Context>();
   Module M{Ctx};
-  TypeContextRAII typeContextGuard(M.getTypeContext());
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
       "testBranch", Function::DefinitionKind::ES5Function, true);

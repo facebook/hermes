@@ -50,7 +50,6 @@ std::vector<uint8_t> hermes::bytecodeForSource(
 
   /* Generate IR */
   Module M(context);
-  TypeContextRAII typeContextGuard(M.getTypeContext());
   hermes::generateIRFromESTree(&M, semCtx, ast);
 
   /* Generate and serialize bytecode module */

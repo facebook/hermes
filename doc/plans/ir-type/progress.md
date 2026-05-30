@@ -61,7 +61,8 @@ be omitted):
 | P2-S6 | Migrate TypeInference pass (heaviest) | P2-S1 | done | |
 | P2-S7 | Migrate remaining optimizer + BCGen | P2-S1 | done | |
 | P2-S8 | Migrate test fixtures | P2-S1 | done | |
-| P2-S9 | Remove TLS infrastructure | P2-S2..P2-S8 |  | |
+| P2-S8.5 | Migrate IRPrinter (Dumper) off TLS Type printing | P2-S1 | done | |
+| P2-S9 | Remove TLS infrastructure | P2-S8.5 | done | |
 
 ## Context Notes
 
@@ -73,6 +74,28 @@ be omitted):
   - The new helpers (`canBeAny`, `canBeType`, etc.) are also out-of-line for the same incomplete-type reason. Once Phase 2 is complete and Type loses its TLS-using methods, the layering can be revisited but it's not necessary.
   - `print` chosen over `format` for naming consistency with `Type::print` and `llvh::raw_ostream` conventions; `format` would have implied "build a string".
   - No callers migrated yet — the TLS-using methods on `Type` remain intact so the build stays green throughout P2-S2…P2-S8.
+
+### P2-S8.5: Migrate IRPrinter (Dumper) off TLS Type printing
+- **Files**: modified `include/hermes/Utils/Dumper.h`, `lib/Utils/Dumper.cpp`.
+- **What was done**: Added a `Module *currentModule_` member to `IRPrinter`, set in `visitFunction` from `F.getParent()`. Migrated the three sites that previously relied on `Type::print(OS)`'s TLS lookup to format pretty type names: `printTypeLabel` (value types), `printFunctionHeader` (function return types), and the `LiteralIRType` operand branch in `printValueLabel` (the `type(...)` syntax in IR dumps). Each new path uses `currentModule_->getTypeContext().print(os_, t)`; falls back to the old `os_ << t` path when `currentModule_` is null.
+- **Decisions**:
+  - This is a missed migration step — should have happened during P2-S2…P2-S8 alongside the rest of the subsystem migrations. The greps used to find TLS callers searched for `Type::xxx` and `t.canBeX()` patterns and missed the implicit `os << type` pattern through `operator<<(raw_ostream &, Type)`. Adding it as P2-S8.5 keeps the cleanup commit (P2-S9) a pure dead-code deletion.
+  - No behavior change: while TLS is still installed (which it is up through this commit), both the new `currentModule_` path and the old `operator<<` path produce the same pretty-printed names.
+
+### P2-S9: Remove TLS infrastructure
+- **Files**: modified `include/hermes/IR/IR.h`, `include/hermes/IR/TypeContext.h`, `lib/IR/TypeContext.cpp`, `unittests/IR/TypeContextTest.cpp`. Deleted `TypeContextRAII typeContextGuard(...)` lines from 4 production files (`lib/BCGen/HBC/HBC.cpp`, `lib/BCGen/HBC/BCProviderFromSrc.cpp`, `lib/CompilerDriver/CompilerDriver.cpp`, `tools/shermes/shermes.cpp`) and 17 unittests/API files via sed.
+- **What was deleted**:
+  - `TypeContextRAII` class entirely.
+  - `TypeContext::current_`, `current()`, `hasCurrent()`.
+  - All TLS-using `Type::xxx` delegation methods: `unionTy`, `intersectTy`, `subtractTy`, `getFirstTypeKind`, `countTypes`, `isPrimitive`, `canBePrimitive`, `isNonPtr`, `isSubsetOf`, `canBeString/BigInt/Symbol/Number/Object/Boolean/Empty/Uninit/Undefined/Null/Any`. Convenience inline methods on Type that built on these (`isKnownPrimitiveType`, `canBeType`, `isProperSubsetOf`) also removed.
+  - `Type::iterator` class entirely.
+  - Two TLS-specific tests in `TypeContextTest.cpp` (`CurrentWithGuard`, `NestedGuards`); the `PrintWithoutGuardFallback` test renamed to `PrintFallback` and rewritten to assert the unconditional placeholder format.
+- **What was kept on Type**:
+  - All `is*Type()` (id-equality), `operator==/!=`, `hash`, `Profile`, all `createXxx()` constexpr factories.
+  - `Type::print(OS)` retained as a minimal placeholder (`type#<id>`) for diagnostic streams that have no `TypeContext` available.
+- **Decisions**:
+  - The `operator<<(raw_ostream &, Type)` overload (in `IR.cpp`) was kept and now always prints the `type#<id>` placeholder. Pretty-printed type names require an explicit `TypeContext::print(os, t)` call (or for IR dumps, the `IRPrinter::currentModule_` plumbing added in P2-S8.5).
+  - `TypeInference`'s `LLVM_DEBUG(dbgs() << inst->getType())` calls were left as-is. They now print `type#<id>` instead of pretty names in `--debug-only=typeinference` output, which is acceptable for debug-only diagnostics.
 
 ### P2-S8: Migrate test fixtures (and a stray IREval helper)
 - **Files**: modified `unittests/IR/BuilderTest.cpp`, `lib/IR/IREval.cpp`.
