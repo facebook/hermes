@@ -598,7 +598,8 @@ Value *ESTreeIRGen::emitTypedClassAllocation(
       // Class element is a field.
       // Need to emit an IDZ check for types that can't have a primitive
       // default.
-      Value *initValue = flowTypeToIRType(field.type).canBePrimitive()
+      Value *initValue =
+          getTypeContext().canBePrimitive(flowTypeToIRType(field.type))
           ? getDefaultInitValue(field.type)
           : Builder.getLiteralUninit();
       propMap[*field.layoutSlotIR] = {name, initValue};
@@ -686,10 +687,11 @@ Type ESTreeIRGen::flowTypeToIRType(flow::TypeInfo *flowType) {
     case flow::TypeKind::Mixed:
       return Type::createAnyType();
     case flow::TypeKind::Union: {
+      TypeContext &tc = getTypeContext();
       Type res = Type::createNoType();
       for (flow::Type *elemType :
            llvh::cast<flow::UnionType>(flowType)->getTypes()) {
-        res = Type::unionTy(res, flowTypeToIRType(elemType));
+        res = tc.unionTy(res, flowTypeToIRType(elemType));
       }
       return res;
     }

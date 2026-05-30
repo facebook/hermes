@@ -56,7 +56,7 @@ be omitted):
 | P2-S1 | Foundation: accessors and conventions | P1-S8 | done | |
 | P2-S2 | Migrate IRVerifier to explicit context | P2-S1 | done | |
 | P2-S3 | Migrate Instrs.{h,cpp} and IR.cpp | P2-S1 | done | |
-| P2-S4 | Migrate IRGen (ESTreeIRGen-*.cpp) | P2-S1 |  | |
+| P2-S4 | Migrate IRGen (ESTreeIRGen-*.cpp) | P2-S1 | done | |
 | P2-S5 | Migrate InstSimplify pass | P2-S1 |  | |
 | P2-S6 | Migrate TypeInference pass (heaviest) | P2-S1 |  | |
 | P2-S7 | Migrate remaining optimizer + BCGen | P2-S1 |  | |
@@ -73,6 +73,14 @@ be omitted):
   - The new helpers (`canBeAny`, `canBeType`, etc.) are also out-of-line for the same incomplete-type reason. Once Phase 2 is complete and Type loses its TLS-using methods, the layering can be revisited but it's not necessary.
   - `print` chosen over `format` for naming consistency with `Type::print` and `llvh::raw_ostream` conventions; `format` would have implied "build a string".
   - No callers migrated yet — the TLS-using methods on `Type` remain intact so the build stays green throughout P2-S2…P2-S8.
+
+### P2-S4: Migrate IRGen (ESTreeIRGen-*.cpp)
+- **Files**: modified `lib/IRGen/ESTreeIRGen.h`, `lib/IRGen/ESTreeIRGen.cpp`, `lib/IRGen/ESTreeIRGen-func.cpp`, `lib/IRGen/ESTreeIRGen-expr.cpp`, `lib/IRGen/ESTreeIRGen-typed-class.cpp`.
+- **What was done**: Migrated every TLS-using `Type` call in IRGen to the explicit `getTypeContext().foo(t, ...)` form (or to a local `TypeContext &tc` reference where the same context is used multiple times in a small scope). Affected operations: `unionTy` (×7 sites in func and expr), `subtractTy` (×2 in ESTreeIRGen.cpp), `isSubsetOf` (×3 in expr), `canBePrimitive` (×2), `isNonPtr` (×4), and the assertion-flow comparison in `enforceExprType`.
+- **Decisions**:
+  - Made `ESTreeIRGen::flowTypeToIRType` non-static (was `static`). It needs `getTypeContext()` for the `Union` arm, and `static` would have meant either threading TypeContext through every caller or special-casing the union case. All callers were already on instances — no caller change required.
+  - Did not add new well-known unions for the TDZ shapes (`AnyType | Empty`, `irType | Undefined`, etc.) even though some appear three times. The dynamic forms (`irType | Undefined`) need real interning anyway, and the constant ones (`AnyType | Empty`) are infrequent enough that one extra well-known per shape is not worth the bloat.
+  - For methods that use the context just once, used `getTypeContext().foo(...)` inline. For the few sites that use it multiple times in short scope (`enforceExprType`, the union loop in `flowTypeToIRType`, the `Optional` field flow in expr.cpp), introduced a local `TypeContext &tc` reference.
 
 ### P2-S3: Migrate Instrs.{h,cpp} and IR.cpp
 - **Files**: modified `include/hermes/IR/TypeContext.h`, `lib/IR/TypeContext.cpp`, `include/hermes/IR/IR.h`, `include/hermes/IR/Instrs.h`, `lib/IR/IR.cpp`, `lib/IR/Instrs.cpp`, `lib/IR/IRBuilder.cpp`, `unittests/IR/TypeContextTest.cpp`.

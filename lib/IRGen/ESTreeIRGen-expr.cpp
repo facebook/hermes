@@ -22,13 +22,14 @@ Value *ESTreeIRGen::enforceExprType(hermes::Value *value, ESTree::Node *expr) {
 
   Type exprIRType = flowTypeToIRType(exprFlowType);
   Type valueType = value->getType();
+  TypeContext &tc = getTypeContext();
   // NOTE: equal sets are subsets of each other, but we want to do the fast
   // check first. In theory, it should catsh 100% of the cases when IRGen is
   // fully typed.
-  if (exprIRType == valueType || valueType.isSubsetOf(exprIRType))
+  if (exprIRType == valueType || tc.isSubsetOf(valueType, exprIRType))
     return value;
 
-  if (!exprIRType.isSubsetOf(valueType)) {
+  if (!tc.isSubsetOf(exprIRType, valueType)) {
     Mod->getContext().getSourceErrorManager().error(
         expr->getSourceRange(),
         "Internal error: Flow expr type is not a subset of value type");
@@ -1285,8 +1286,9 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
       if (optFieldLookup) {
         size_t fieldIndex = *optFieldLookup->getField()->layoutSlotIR;
         Type irType = flowTypeToIRType(optFieldLookup->getField()->type);
+        TypeContext &tc = getTypeContext();
         Instruction *inst;
-        if (irType.canBePrimitive()) {
+        if (tc.canBePrimitive(irType)) {
           // If the type can be a primitive, it will have a default value that
           // doesn't need IDZ.
           inst =
@@ -1298,7 +1300,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
                   baseValue,
                   fieldIndex,
                   propName,
-                  Type::unionTy(irType, Type::createUninit())),
+                  tc.unionTy(irType, Type::createUninit())),
               Type::createUninit());
         }
         return MemberExpressionResult{inst, nullptr, baseValue};
@@ -1419,7 +1421,8 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
     } else {
       auto *loadProp = Builder.createLoadPropertyInst(baseValue, propValue);
       loadProp->setType(
-          Type::unionTy(Type::createString(), Type::createUndefined()));
+          getTypeContext().unionTy(
+              Type::createString(), Type::createUndefined()));
       auto *cast =
           Builder.createCheckedTypeCastInst(loadProp, Type::createString());
       return MemberExpressionResult{cast, nullptr, baseValue};
@@ -1526,7 +1529,7 @@ void ESTreeIRGen::emitTypedFieldStore(
       object,
       fieldIndex,
       propName,
-      flowTypeToIRType(field->type).isNonPtr());
+      getTypeContext().isNonPtr(flowTypeToIRType(field->type)));
 }
 
 void ESTreeIRGen::emitMemberStore(
@@ -1635,7 +1638,7 @@ void ESTreeIRGen::emitMemberStore(
           baseValue,
           *optIndex,
           Builder.getLiteralString(propName),
-          flowTypeToIRType(field.type).isNonPtr());
+          getTypeContext().isNonPtr(flowTypeToIRType(field.type)));
       return;
     }
   }
@@ -1653,7 +1656,8 @@ void ESTreeIRGen::emitMemberStore(
           baseValue,
           ulen,
           Builder.getLiteralString(llvh::Twine(ulen)),
-          flowTypeToIRType(tupleType->getTypes()[ulen]).isNonPtr());
+          getTypeContext().isNonPtr(
+              flowTypeToIRType(tupleType->getTypes()[ulen])));
       return;
     }
     Mod->getContext().getSourceErrorManager().error(
@@ -2281,7 +2285,8 @@ Value *ESTreeIRGen::genTypedObjectExpr(
           result,
           idx,
           name,
-          flowTypeToIRType(type->getFields()[idx].type).isNonPtr());
+          getTypeContext().isNonPtr(
+              flowTypeToIRType(type->getFields()[idx].type)));
     }
   }
 
@@ -2766,7 +2771,8 @@ Value *ESTreeIRGen::genUpdateExpr(ESTree::UpdateExpressionNode *updateExpr) {
 
   // Postfix updates need to convert the original value to numeric before
   // Inc/Dec to ensure the updateExpr has the proper result value.
-  if (!isPrefix && !original->getType().isSubsetOf(Type::createNumeric()))
+  if (!isPrefix &&
+      !getTypeContext().isSubsetOf(original->getType(), Type::createNumeric()))
     original = Builder.createAsNumericInst(original);
 
   // Create the inc or dec.

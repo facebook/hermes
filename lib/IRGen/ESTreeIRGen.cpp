@@ -1515,13 +1515,14 @@ Instruction *ESTreeIRGen::emitLoad(Value *from, bool inhibitThrow) {
               Builder.getLiteralEmpty(), Type::createEmpty());
           // Pretend that the instruction, which always throws, returns a
           // value with the correct type.
-          thr->setType(Type::subtractTy(var->getType(), Type::createEmpty()));
+          thr->setType(
+              getTypeContext().subtractTy(var->getType(), Type::createEmpty()));
           thr->updateSavedResultType();
           res = thr;
         } else {
           res = Builder.createUnionNarrowTrustedInst(
               Builder.createLoadFrameInst(RSI, var),
-              Type::subtractTy(var->getType(), Type::createEmpty()));
+              getTypeContext().subtractTy(var->getType(), Type::createEmpty()));
         }
       } else {
         res = Builder.createThrowIfInst(
