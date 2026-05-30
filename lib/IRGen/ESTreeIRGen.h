@@ -680,6 +680,11 @@ class ESTreeIRGen {
       flow::FlowContext &flowContext,
       ESTree::Node *root);
 
+  /// \return the TypeContext owned by the Module.
+  TypeContext &getTypeContext() {
+    return Mod->getTypeContext();
+  }
+
   /// Perform IRGeneration for the whole module.
   /// \param topLevelFunctionName the name of the top-level function.
   void doIt(llvh::StringRef topLevelFunctionName);

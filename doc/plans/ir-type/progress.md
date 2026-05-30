@@ -53,8 +53,26 @@ be omitted):
 | P1-S7 | Install RAII guards at compilation entry points | P1-S5, P1-S6 | done | |
 | P1-S7.5 | Add RAII guards to unit tests | P1-S7 | done | |
 | P1-S8 | Rewrite Type class | P1-S4, P1-S7.5 | done | |
+| P2-S1 | Foundation: accessors and conventions | P1-S8 | done | |
+| P2-S2 | Migrate IRVerifier to explicit context | P2-S1 |  | |
+| P2-S3 | Migrate Instrs.{h,cpp} and IR.cpp | P2-S1 |  | |
+| P2-S4 | Migrate IRGen (ESTreeIRGen-*.cpp) | P2-S1 |  | |
+| P2-S5 | Migrate InstSimplify pass | P2-S1 |  | |
+| P2-S6 | Migrate TypeInference pass (heaviest) | P2-S1 |  | |
+| P2-S7 | Migrate remaining optimizer + BCGen | P2-S1 |  | |
+| P2-S8 | Migrate test fixtures | P2-S1 |  | |
+| P2-S9 | Remove TLS infrastructure | P2-S2..P2-S8 |  | |
 
 ## Context Notes
+
+### P2-S1: Foundation — accessors and conventions
+- **Files**: modified `include/hermes/IR/IRBuilder.h`, `lib/IRGen/ESTreeIRGen.h`, `include/hermes/IR/TypeContext.h`, `lib/IR/TypeContext.cpp`, `unittests/IR/TypeContextTest.cpp`.
+- **What was done**: Added `IRBuilder::getTypeContext()` and `ESTreeIRGen::getTypeContext()` accessors. Renamed `TypeContext::format` → `TypeContext::print` (matches `Type::print`). Added missing operations on TypeContext to reach API parity with TLS-using `Type` methods: `canBeAny`, `canBeType`, `isProperSubsetOf`, `isKnownPrimitiveType`, plus the `arms()` range adapter (returns `ArmRange` over a Type — yields the type itself for non-unions, each arm for unions, nothing for NoType). 4 new unit tests (42 total `TypeContextTest` cases). Phase 2 row added to status table for tracking.
+- **Decisions**:
+  - `ArmRange` and its iterator store the raw `uint32_t typeId_` instead of `Type` because `Type` is forward-declared in `TypeContext.h` (definition is in `IR.h`, which includes `TypeContext.h`). Methods that touch `Type` (`arms()`, `iterator::operator*`, `ArmRange::end`) are out-of-line in `TypeContext.cpp` where `Type` is complete. Same pattern as the existing `getUnionArms`.
+  - The new helpers (`canBeAny`, `canBeType`, etc.) are also out-of-line for the same incomplete-type reason. Once Phase 2 is complete and Type loses its TLS-using methods, the layering can be revisited but it's not necessary.
+  - `print` chosen over `format` for naming consistency with `Type::print` and `llvh::raw_ostream` conventions; `format` would have implied "build a string".
+  - No callers migrated yet — the TLS-using methods on `Type` remain intact so the build stays green throughout P2-S2…P2-S8.
 
 ### P1-S2: Type queries on TypeContext
 - **Files**: modified `include/hermes/IR/TypeContext.h`, `lib/IR/TypeContext.cpp`, `unittests/IR/TypeContextTest.cpp`.

@@ -631,12 +631,12 @@ TEST_F(TypeContextTest, GetFirstKind) {
   EXPECT_EQ(ctx.getFirstKind(Type::createNullOrUndef()), TypeKind::Undefined);
 }
 
-TEST_F(TypeContextTest, FormatLeafTypes) {
+TEST_F(TypeContextTest, PrintLeafTypes) {
   TypeContext ctx;
   auto fmt = [&](Type t) -> std::string {
     std::string s;
     llvh::raw_string_ostream os(s);
-    ctx.format(os, t);
+    ctx.print(os, t);
     return s;
   };
 
@@ -660,12 +660,12 @@ TEST_F(TypeContextTest, FormatLeafTypes) {
   EXPECT_EQ(fmt(asType(kUInt31Id)), "uint31");
 }
 
-TEST_F(TypeContextTest, FormatWellKnownUnions) {
+TEST_F(TypeContextTest, PrintWellKnownUnions) {
   TypeContext ctx;
   auto fmt = [&](Type t) -> std::string {
     std::string s;
     llvh::raw_string_ostream os(s);
-    ctx.format(os, t);
+    ctx.print(os, t);
     return s;
   };
 
@@ -679,12 +679,12 @@ TEST_F(TypeContextTest, FormatWellKnownUnions) {
   EXPECT_EQ(fmt(Type::createNullOrUndef()), "undefined|null");
 }
 
-TEST_F(TypeContextTest, FormatDynamicUnion) {
+TEST_F(TypeContextTest, PrintDynamicUnion) {
   TypeContext ctx;
   auto fmt = [&](Type t) -> std::string {
     std::string s;
     llvh::raw_string_ostream os(s);
-    ctx.format(os, t);
+    ctx.print(os, t);
     return s;
   };
 
@@ -693,13 +693,13 @@ TEST_F(TypeContextTest, FormatDynamicUnion) {
   EXPECT_EQ(fmt(numStr), "string|number");
 }
 
-TEST_F(TypeContextTest, FormatAnySupersetShowsExtraArms) {
+TEST_F(TypeContextTest, PrintAnySupersetShowsExtraArms) {
   TypeContext ctx;
   TypeContextRAII guard(ctx);
   auto fmt = [&](Type t) -> std::string {
     std::string s;
     llvh::raw_string_ostream os(s);
-    ctx.format(os, t);
+    ctx.print(os, t);
     return s;
   };
 
@@ -709,6 +709,50 @@ TEST_F(TypeContextTest, FormatAnySupersetShowsExtraArms) {
 
   // AnyEmptyUninit is any | empty | uninit.
   EXPECT_EQ(fmt(asType(kAnyEmptyUninitId)), "any|empty|uninit");
+}
+
+TEST_F(TypeContextTest, ArmsLeaf) {
+  TypeContext ctx;
+  llvh::SmallVector<Type, 4> v;
+  for (Type t : ctx.arms(Type::createNumber()))
+    v.push_back(t);
+  ASSERT_EQ(v.size(), 1u);
+  EXPECT_EQ(v[0], Type::createNumber());
+}
+
+TEST_F(TypeContextTest, ArmsNoType) {
+  TypeContext ctx;
+  llvh::SmallVector<Type, 4> v;
+  for (Type t : ctx.arms(Type::createNoType()))
+    v.push_back(t);
+  EXPECT_EQ(v.size(), 0u);
+}
+
+TEST_F(TypeContextTest, ArmsUnion) {
+  TypeContext ctx;
+  Type numStr = ctx.unionTy(Type::createNumber(), Type::createString());
+  llvh::SmallVector<Type, 4> v;
+  for (Type t : ctx.arms(numStr))
+    v.push_back(t);
+  ASSERT_EQ(v.size(), 2u);
+  // Sorted by ID: String (6), Number (7).
+  EXPECT_EQ(v[0], Type::createString());
+  EXPECT_EQ(v[1], Type::createNumber());
+}
+
+TEST_F(TypeContextTest, CanBeAnyAndConveniences) {
+  TypeContext ctx;
+  EXPECT_TRUE(ctx.canBeAny(Type::createAnyType()));
+  EXPECT_FALSE(ctx.canBeAny(Type::createNumber()));
+  EXPECT_TRUE(ctx.canBeType(Type::createAnyType(), Type::createNumber()));
+  EXPECT_FALSE(ctx.canBeType(Type::createNumber(), Type::createString()));
+  EXPECT_TRUE(
+      ctx.isProperSubsetOf(Type::createNumber(), Type::createAnyType()));
+  EXPECT_FALSE(
+      ctx.isProperSubsetOf(Type::createNumber(), Type::createNumber()));
+  EXPECT_TRUE(ctx.isKnownPrimitiveType(Type::createNumber()));
+  EXPECT_FALSE(ctx.isKnownPrimitiveType(Type::createAnyType()));
+  EXPECT_FALSE(ctx.isKnownPrimitiveType(Type::createObject()));
 }
 
 TEST_F(TypeContextTest, CurrentWithGuard) {

@@ -253,7 +253,7 @@ TypeKind TypeContext::getFirstKind(Type t) const {
   return entries_[arms[0].id_].kind;
 }
 
-void TypeContext::format(llvh::raw_ostream &OS, Type t) const {
+void TypeContext::print(llvh::raw_ostream &OS, Type t) const {
   assert(t.id_ < entries_.size() && "Type ID out of range");
   const auto &entry = entries_[t.id_];
 
@@ -289,6 +289,26 @@ void TypeContext::format(llvh::raw_ostream &OS, Type t) const {
       OS << '|';
     OS << kindName(entries_[arms[i].id_].kind);
   }
+}
+
+bool TypeContext::isKnownPrimitiveType(Type t) const {
+  return isPrimitive(t) && countKinds(t) == 1;
+}
+
+bool TypeContext::canBeAny(Type t) const {
+  return isSubsetOf(Type{kAnyTypeId}, t);
+}
+
+bool TypeContext::canBeType(Type a, Type b) const {
+  return isSubsetOf(b, a);
+}
+
+bool TypeContext::isProperSubsetOf(Type a, Type b) const {
+  return a != b && isSubsetOf(a, b);
+}
+
+llvh::iterator_range<Type::iterator> TypeContext::arms(Type t) const {
+  return {t.begin(*this), t.end(*this)};
 }
 
 bool TypeContext::canBeNumber(Type t) const {
@@ -909,19 +929,21 @@ bool Type::canBeAny() const {
 
 void Type::print(llvh::raw_ostream &OS) const {
   if (TypeContext::hasCurrent()) {
-    TypeContext::current().format(OS, *this);
+    TypeContext::current().print(OS, *this);
   } else {
     OS << "type#" << id_;
   }
 }
 
+Type::iterator::iterator(Type type, unsigned index)
+    : ctx_(&TypeContext::current()), type_(type), index_(index) {}
+
 Type Type::iterator::operator*() const {
-  auto &ctx = TypeContext::current();
-  if (ctx.entries_[type_.id_].kind != TypeKind::Union) {
+  if (ctx_->entries_[type_.id_].kind != TypeKind::Union) {
     // Non-union: yield the type itself.
     return type_;
   }
-  return ctx.getUnionArms(type_)[index_];
+  return ctx_->getUnionArms(type_)[index_];
 }
 
 Type::iterator Type::begin() const {
@@ -936,6 +958,18 @@ Type::iterator Type::end() const {
     return iterator(*this, ctx.getUnionArms(*this).size());
   // Non-union: end is index 1 for non-NoType, 0 for NoType.
   return iterator(*this, isNoType() ? 0 : 1);
+}
+
+Type::iterator Type::begin(const TypeContext &ctx) const {
+  if (isNoType())
+    return end(ctx);
+  return iterator(ctx, *this, 0);
+}
+
+Type::iterator Type::end(const TypeContext &ctx) const {
+  if (ctx.entries_[id_].kind == TypeKind::Union)
+    return iterator(ctx, *this, ctx.getUnionArms(*this).size());
+  return iterator(ctx, *this, isNoType() ? 0 : 1);
 }
 
 } // namespace hermes

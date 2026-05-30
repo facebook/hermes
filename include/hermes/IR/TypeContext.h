@@ -12,8 +12,10 @@
 
 #include "llvh/ADT/ArrayRef.h"
 #include "llvh/ADT/DenseMap.h"
+#include "llvh/ADT/FoldingSet.h"
 #include "llvh/ADT/Hashing.h"
 #include "llvh/ADT/SmallVector.h"
+#include "llvh/ADT/iterator_range.h"
 
 #include <cassert>
 #include <cstdint>
@@ -216,7 +218,299 @@ struct UnionInternKeyInfo {
   }
 };
 
+class TypeContext;
 class TypeContextRAII;
+class TypeContextTest;
+
+/// Representation of a type in the IR. A Type is an opaque 4-byte handle
+/// (index) into the type table owned by TypeContext. All non-trivial type
+/// operations delegate to TypeContext::current() (TLS) or to an explicit
+/// TypeContext when one is provided.
+class Type {
+  friend class TypeContext;
+  /// Test fixture is a friend so it can construct Type from a raw
+  /// well-known ID for refined-kind tests that have no public factory.
+  friend class TypeContextTest;
+
+  /// Index into TypeContext's type table.
+  uint32_t id_{kNoTypeId};
+
+  /// Private constructor from a type ID.
+  constexpr explicit Type(uint32_t id) : id_(id) {}
+
+ public:
+  /// \name Static operations (delegate to TypeContext::current()).
+  /// @{
+  static Type unionTy(Type A, Type B);
+  static Type intersectTy(Type A, Type B);
+  static Type subtractTy(Type A, Type B);
+  /// @}
+
+  /// \name Static well-known constructors (constexpr, no context needed).
+  /// @{
+  static constexpr Type createNoType() {
+    return Type(kNoTypeId);
+  }
+  static constexpr Type createAnyEmptyUninit() {
+    return Type(kAnyEmptyUninitId);
+  }
+  static constexpr Type createAnyType() {
+    return Type(kAnyTypeId);
+  }
+  /// Create an uninitialized TDZ type.
+  static constexpr Type createEmpty() {
+    return Type(kEmptyId);
+  }
+  static constexpr Type createUninit() {
+    return Type(kUninitId);
+  }
+  static constexpr Type createUndefined() {
+    return Type(kUndefinedId);
+  }
+  static constexpr Type createNull() {
+    return Type(kNullId);
+  }
+  static constexpr Type createBoolean() {
+    return Type(kBooleanId);
+  }
+  static constexpr Type createString() {
+    return Type(kStringId);
+  }
+  static constexpr Type createSymbol() {
+    return Type(kSymbolId);
+  }
+  static constexpr Type createObject() {
+    return Type(kObjectId);
+  }
+  static constexpr Type createNumber() {
+    return Type(kNumberId);
+  }
+  /// Alias for createNumber().
+  static constexpr Type createInt32() {
+    return createNumber();
+  }
+  /// Alias for createNumber().
+  static constexpr Type createUint32() {
+    return createNumber();
+  }
+  static constexpr Type createBigInt() {
+    return Type(kBigIntId);
+  }
+  static constexpr Type createNumeric() {
+    return Type(kNumericId);
+  }
+  static constexpr Type createEnvironment() {
+    return Type(kEnvironmentId);
+  }
+  static constexpr Type createPrivateName() {
+    return Type(kPrivateNameId);
+  }
+  static constexpr Type createFunctionCode() {
+    return Type(kFunctionCodeId);
+  }
+  static constexpr Type createNullOrUndef() {
+    return Type(kNullOrUndefId);
+  }
+  /// @}
+
+  /// \name Instance type checks (compare against well-known IDs, no context).
+  /// @{
+  constexpr bool isNoType() const {
+    return id_ == kNoTypeId;
+  }
+  constexpr bool isAnyEmptyUninitType() const {
+    return id_ == kAnyEmptyUninitId;
+  }
+  constexpr bool isAnyType() const {
+    return id_ == kAnyTypeId;
+  }
+  constexpr bool isEmptyType() const {
+    return id_ == kEmptyId;
+  }
+  constexpr bool isUninitType() const {
+    return id_ == kUninitId;
+  }
+  constexpr bool isUndefinedType() const {
+    return id_ == kUndefinedId;
+  }
+  constexpr bool isNullType() const {
+    return id_ == kNullId;
+  }
+  constexpr bool isBooleanType() const {
+    return id_ == kBooleanId;
+  }
+  constexpr bool isStringType() const {
+    return id_ == kStringId;
+  }
+  constexpr bool isObjectType() const {
+    return id_ == kObjectId;
+  }
+  constexpr bool isNumberType() const {
+    return id_ == kNumberId;
+  }
+  constexpr bool isBigIntType() const {
+    return id_ == kBigIntId;
+  }
+  constexpr bool isSymbolType() const {
+    return id_ == kSymbolId;
+  }
+  constexpr bool isEnvironmentType() const {
+    return id_ == kEnvironmentId;
+  }
+  constexpr bool isPrivateNameType() const {
+    return id_ == kPrivateNameId;
+  }
+  constexpr bool isFunctionCodeType() const {
+    return id_ == kFunctionCodeId;
+  }
+  /// @}
+
+  /// \name Instance predicates (delegate to TypeContext::current()).
+  /// @{
+
+  /// \return the TypeKind of the first type in this Type. For unions,
+  /// returns the kind of the first arm. For NoType, returns
+  /// TypeKind::NoType.
+  TypeKind getFirstTypeKind() const;
+
+  /// \return how many valid types are represented by this (union) type.
+  unsigned countTypes() const;
+
+  /// \return true if the type is one of the known javascript primitive types:
+  /// Number, BigInt, Null, Boolean, String, Undefined.
+  bool isKnownPrimitiveType() const {
+    return isPrimitive() && 1 == countTypes();
+  }
+
+  bool isPrimitive() const;
+
+  /// \return true if any of the types are primitive.
+  bool canBePrimitive() const;
+
+  /// \return true if the type is not referenced by a pointer in javascript.
+  bool isNonPtr() const;
+
+  /// \returns true if this type is a subset of \p t.
+  bool isSubsetOf(Type t) const;
+
+  /// \returns true if the type \p t can be any of the types that this type
+  /// represents. For example, if this type is "string|number" and \p t is
+  /// a string the result is true because this type can represent strings.
+  bool canBeType(Type t) const {
+    return t.isSubsetOf(*this);
+  }
+
+  /// \returns true if this type can represent a string value.
+  bool canBeString() const;
+  /// \returns true if this type can represent a bigint value.
+  bool canBeBigInt() const;
+  /// \returns true if this type can represent a symbol value.
+  bool canBeSymbol() const;
+  /// \returns true if this type can represent a number value.
+  bool canBeNumber() const;
+  /// \returns true if this type can represent an object.
+  bool canBeObject() const;
+  /// \returns true if this type can represent a boolean value.
+  bool canBeBoolean() const;
+  /// \returns true if this type can represent an "empty" value.
+  bool canBeEmpty() const;
+  /// \returns true if this type can represent an "uninit" value.
+  bool canBeUninit() const;
+  /// \returns true if this type can represent an undefined value.
+  bool canBeUndefined() const;
+  /// \returns true if this type can represent a null value.
+  bool canBeNull() const;
+  /// \returns true if this type can represent an "any" type value.
+  bool canBeAny() const;
+
+  /// Return true if this type is a proper subset of \p t. A "proper subset"
+  /// means that it is a subset but is not equal.
+  bool isProperSubsetOf(Type t) const {
+    return id_ != t.id_ && isSubsetOf(t);
+  }
+  /// @}
+
+  void print(llvh::raw_ostream &OS) const;
+
+  /// The hash of a Type is the hash of its opaque value.
+  llvh::hash_code hash() const {
+    return llvh::hash_value(id_);
+  }
+
+  constexpr bool operator==(Type RHS) const {
+    return id_ == RHS.id_;
+  }
+  constexpr bool operator!=(Type RHS) const {
+    return !(*this == RHS);
+  }
+
+  class iterator;
+
+  /// Return an iterator over the types in this Type, using
+  /// TypeContext::current() (TLS) for arm lookup.
+  iterator begin() const;
+  /// Return an "end" iterator over the types in this Type, using
+  /// TypeContext::current() (TLS) for arm lookup.
+  iterator end() const;
+  /// Return an iterator over the types in this Type, using \p ctx
+  /// explicitly for arm lookup. Prefer this over the no-arg overload.
+  iterator begin(const TypeContext &ctx) const;
+  /// Return an "end" iterator using \p ctx explicitly.
+  iterator end(const TypeContext &ctx) const;
+
+  /// Allow Type to be used as a llvh::FoldingSet.
+  void Profile(llvh::FoldingSetNodeID &ID) const {
+    ID.AddInteger(id_);
+  }
+};
+
+static_assert(sizeof(Type) == 4, "Type must be 4 bytes");
+
+/// An iterator over the types in a Type. For non-union types, yields
+/// the type itself as the single element. For unions, fetches arms fresh
+/// from a TypeContext on each dereference. The context is bound at
+/// construction time — either passed explicitly (preferred) or resolved
+/// once via TypeContext::current() (TLS — the no-arg-context constructor
+/// disappears in P2-S9). Safe under TypeContext mutation because
+/// typeArrays_ is append-only and a union's armOffset/armCount are
+/// immutable once the union entry is created.
+class Type::iterator {
+  friend class Type;
+
+  /// TypeContext for arm lookup. Always non-null; bound at construction.
+  const TypeContext *ctx_;
+  /// The type being iterated.
+  Type type_;
+  /// For non-union types: 0 = "this element", 1 = end.
+  /// For union types: index into the arm array.
+  unsigned index_;
+
+  /// Resolves \c ctx_ from TypeContext::current() at construction time.
+  /// Defined out-of-line because TypeContext is incomplete here.
+  iterator(Type type, unsigned index);
+  iterator(const TypeContext &ctx, Type type, unsigned index)
+      : ctx_(&ctx), type_(type), index_(index) {}
+
+ public:
+  bool operator==(const iterator &RHS) const {
+    return type_ == RHS.type_ && index_ == RHS.index_;
+  }
+  bool operator!=(const iterator &RHS) const {
+    return !(*this == RHS);
+  }
+
+  iterator &operator++() {
+    ++index_;
+    return *this;
+  }
+  iterator operator++(int) {
+    auto copy = *this;
+    ++*this;
+    return copy;
+  }
+
+  Type operator*() const;
+};
 
 /// Owns the type table for a Module and provides type operations.
 ///
@@ -287,8 +581,23 @@ class TypeContext {
   /// (Number, Boolean, Null, Undefined only). Returns false for NoType.
   bool isNonPtr(Type t) const;
 
+  /// \return true if \p t is a single known primitive type
+  /// (Number, BigInt, Null, Boolean, String, Undefined, Symbol).
+  bool isKnownPrimitiveType(Type t) const;
+
+  /// \return true if \p t is a superset of AnyType (i.e. it can hold "any"
+  /// JS-observable value).
+  bool canBeAny(Type t) const;
+
   /// \return true if all values of type \p a are also values of type \p b.
   bool isSubsetOf(Type a, Type b) const;
+
+  /// \return true if every value of \p b is a possible value of \p a.
+  /// Equivalent to `isSubsetOf(b, a)`.
+  bool canBeType(Type a, Type b) const;
+
+  /// \return true if \p a is a proper subset of \p b (subset and not equal).
+  bool isProperSubsetOf(Type a, Type b) const;
 
   /// \return true if types \p a and \p b have no values in common.
   bool areDisjoint(Type a, Type b) const;
@@ -314,7 +623,13 @@ class TypeContext {
   /// Print the human-readable type name to \p OS. Leaf kinds print their name
   /// (e.g. "number"). Unions print pipe-separated arms (e.g. "number|string").
   /// NoType prints "notype". AnyType prints "any".
-  void format(llvh::raw_ostream &OS, Type t) const;
+  void print(llvh::raw_ostream &OS, Type t) const;
+
+  /// \return a range over the component types of \p t, suitable for
+  /// range-for. For non-union types, yields the type itself as a single
+  /// element. For unions, yields each arm. For NoType, yields nothing.
+  /// The TypeContext must outlive the returned range.
+  llvh::iterator_range<Type::iterator> arms(Type t) const;
 
  private:
   friend class Type;
@@ -380,5 +695,14 @@ class TypeContextRAII {
 };
 
 } // namespace hermes
+
+namespace llvh {
+template <>
+struct FoldingSetTrait<hermes::Type> {
+  static inline void Profile(hermes::Type t, FoldingSetNodeID &ID) {
+    t.Profile(ID);
+  }
+};
+} // namespace llvh
 
 #endif // HERMES_IR_TYPECONTEXT_H
