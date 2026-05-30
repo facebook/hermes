@@ -37,6 +37,8 @@ class Verifier : public InstructionVisitor<Verifier, bool> {
 
   const Module &M;
   Context *Ctx{nullptr};
+  /// IR type context for the module being verified.
+  TypeContext &typeCtx_;
   raw_ostream &OS;
   VerificationMode verificationMode;
   irdumper::IRPrinter &printer;
@@ -78,7 +80,11 @@ class Verifier : public InstructionVisitor<Verifier, bool> {
       raw_ostream &OS,
       VerificationMode mode,
       irdumper::IRPrinter &printer)
-      : M(M), OS(OS), verificationMode(mode), printer(printer) {}
+      : M(M),
+        typeCtx_(M.getTypeContext()),
+        OS(OS),
+        verificationMode(mode),
+        printer(printer) {}
 
   bool verify() {
     Ctx = &M.getContext();
@@ -611,7 +617,7 @@ bool Verifier::verifyBeforeVisitInstruction(const Instruction &Inst) {
 
     // Scope instructions should only be stored in places where they can be
     // analyzed and are invisible to user code.
-    if (Operand->getType().canBeType(Type::createEnvironment())) {
+    if (typeCtx_.canBeType(Operand->getType(), Type::createEnvironment())) {
       AssertIWithMsg(
           Inst,
           Operand->getType().isEnvironmentType(),
@@ -632,10 +638,10 @@ bool Verifier::verifyBeforeVisitInstruction(const Instruction &Inst) {
           "Environments can only be an operand to certain instructions.");
     }
 
-    if (Operand->getType().canBeEmpty()) {
+    if (typeCtx_.canBeEmpty(Operand->getType())) {
       AssertIWithMsg(
           Inst, acceptsEmptyType, "Instruction does not accept empty type");
-    } else if (Operand->getType().canBeUninit()) {
+    } else if (typeCtx_.canBeUninit(Operand->getType())) {
       AssertIWithMsg(
           Inst, acceptsEmptyType, "Instruction does not accept uninit type");
     }
@@ -735,7 +741,7 @@ bool Verifier::visitAsNumericInst(const AsNumericInst &Inst) {
       "Non-terminator cannot be the last instruction of a basic block");
   AssertIWithMsg(
       Inst,
-      Inst.getType().isSubsetOf(Type::createNumeric()),
+      typeCtx_.isSubsetOf(Inst.getType(), Type::createNumeric()),
       "AsNumericInst must return a numeric type");
   return true;
 }
@@ -878,7 +884,7 @@ bool Verifier::visitStoreStackInst(const StoreStackInst &Inst) {
       "Storing the address of stack location");
   AssertIWithMsg(
       Inst,
-      Inst.getValue()->getType().isSubsetOf(Inst.getPtr()->getType()),
+      typeCtx_.isSubsetOf(Inst.getValue()->getType(), Inst.getPtr()->getType()),
       "Value type mismatch");
   AssertIWithMsg(
       Inst, !Inst.hasUsers(), "Store Instructions must not have users");
@@ -893,7 +899,8 @@ bool Verifier::visitStoreFrameInst(const StoreFrameInst &Inst) {
       Inst, scope->getType().isEnvironmentType(), "Wrong scope type");
   AssertIWithMsg(
       Inst,
-      Inst.getValue()->getType().isSubsetOf(Inst.getVariable()->getType()),
+      typeCtx_.isSubsetOf(
+          Inst.getValue()->getType(), Inst.getVariable()->getType()),
       "Value type mismatch");
   if (auto *BSI = llvh::dyn_cast<BaseScopeInst>(scope)) {
     AssertIWithMsg(
@@ -1662,8 +1669,9 @@ bool Verifier::visitThrowIfInst(const ThrowIfInst &Inst) {
   AssertIWithMsg(
       Inst,
       !invTypes.isNoType() &&
-          invTypes.isSubsetOf(
-              Type::unionTy(Type::createEmpty(), Type::createUninit())),
+          typeCtx_.isSubsetOf(
+              invTypes,
+              typeCtx_.unionTy(Type::createEmpty(), Type::createUninit())),
       "ThrowIfInst invalid types set can only contain Empty or Uninit");
 
   // Note: we are not performing a subtraction and equality check here, because
@@ -1671,7 +1679,7 @@ bool Verifier::visitThrowIfInst(const ThrowIfInst &Inst) {
   // TypeInference, we deliberately don't return NoType.
   AssertIWithMsg(
       Inst,
-      Type::intersectTy(Inst.getType(), invTypes).isNoType(),
+      typeCtx_.intersectTy(Inst.getType(), invTypes).isNoType(),
       "ThrowIfInst must throw away all invalid types");
 
   // A variable may only perform the following state transitions:
@@ -1681,7 +1689,7 @@ bool Verifier::visitThrowIfInst(const ThrowIfInst &Inst) {
   // So, it can never be empty after it has been checked for uninit.
   AssertIWithMsg(
       Inst,
-      !Inst.getType().canBeEmpty(),
+      !typeCtx_.canBeEmpty(Inst.getType()),
       "ThrowIfInst can never return type Empty");
   return true;
 }

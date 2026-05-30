@@ -54,7 +54,7 @@ be omitted):
 | P1-S7.5 | Add RAII guards to unit tests | P1-S7 | done | |
 | P1-S8 | Rewrite Type class | P1-S4, P1-S7.5 | done | |
 | P2-S1 | Foundation: accessors and conventions | P1-S8 | done | |
-| P2-S2 | Migrate IRVerifier to explicit context | P2-S1 |  | |
+| P2-S2 | Migrate IRVerifier to explicit context | P2-S1 | done | |
 | P2-S3 | Migrate Instrs.{h,cpp} and IR.cpp | P2-S1 |  | |
 | P2-S4 | Migrate IRGen (ESTreeIRGen-*.cpp) | P2-S1 |  | |
 | P2-S5 | Migrate InstSimplify pass | P2-S1 |  | |
@@ -73,6 +73,13 @@ be omitted):
   - The new helpers (`canBeAny`, `canBeType`, etc.) are also out-of-line for the same incomplete-type reason. Once Phase 2 is complete and Type loses its TLS-using methods, the layering can be revisited but it's not necessary.
   - `print` chosen over `format` for naming consistency with `Type::print` and `llvh::raw_ostream` conventions; `format` would have implied "build a string".
   - No callers migrated yet — the TLS-using methods on `Type` remain intact so the build stays green throughout P2-S2…P2-S8.
+
+### P2-S2: Migrate IRVerifier to explicit context
+- **Files**: modified `include/hermes/IR/IR.h`, `lib/IR/IRVerifier.cpp`.
+- **What was done**: Added `TypeContext &ctx_` member to the `Verifier` class, initialized from `M.getTypeContext()` in the constructor. Migrated 9 TLS-using call sites to the explicit `ctx_.foo(t, ...)` form (`canBeType`, `canBeEmpty` ×2, `canBeUninit`, `isSubsetOf` ×4, `unionTy`, `intersectTy`). Static factory calls (`Type::createNumber()` etc.) and `operator==` checks remain unchanged because they don't need a context.
+- **Decisions**:
+  - Made `Module::typeContext_` `mutable` and `Module::getTypeContext()` `const`. The Verifier holds `const Module &` (it doesn't mutate IR), but TypeContext is a side-cache whose intern table grows with each `unionTy`/`intersectTy` call — the standard "logical const" pattern. This unblocks any future const-Module consumer that needs type operations.
+  - Stored `TypeContext &` directly rather than calling `M.getTypeContext()` at each use site: it's used in many methods, the reference is cheap to store, and it documents the dependency.
 
 ### P1-S2: Type queries on TypeContext
 - **Files**: modified `include/hermes/IR/TypeContext.h`, `lib/IR/TypeContext.cpp`, `unittests/IR/TypeContextTest.cpp`.

@@ -2128,8 +2128,10 @@ class Module : public Value {
 
  private:
   std::shared_ptr<Context> Ctx;
-  /// Type context for the IR type system.
-  TypeContext typeContext_;
+  /// Type context for the IR type system. Marked mutable because type
+  /// operations may intern derived union entries (e.g. unionTy,
+  /// intersectTy) and must remain callable through a const Module.
+  mutable TypeContext typeContext_;
   /// Optionally specify the top level function, if it isn't the first one.
   Function *topLevelFunction_{};
 
@@ -2248,8 +2250,10 @@ class Module : public Value {
     return *Ctx;
   }
 
-  /// Return the IR type context for this module.
-  TypeContext &getTypeContext() {
+  /// Return the IR type context for this module. Returns a mutable reference
+  /// even from a const Module because type operations may intern derived
+  /// union entries.
+  TypeContext &getTypeContext() const {
     return typeContext_;
   }
 
