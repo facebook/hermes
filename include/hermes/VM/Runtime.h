@@ -471,7 +471,7 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
 
   /// Call the cleanup callbacks of alive JSFinalizationRegistry, on each dead
   /// registered target, w.r.t. ES16 9.12 CleanupFinalizationRegistry.
-  ExecutionStatus cleanUpFinalizationCallbacks();
+  LLVM_NODISCARD ExecutionStatus cleanUpFinalizationCallbacks();
 
   IdentifierTable &getIdentifierTable() {
     return identifierTable_;

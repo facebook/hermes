@@ -100,6 +100,23 @@ TEST_P(HermesRuntimeTest, StrictHostFunctionBindTest) {
                   .getBool());
 }
 
+TEST_P(HermesRuntimeTest, DrainMicrotasksThrowsFinalizationRegistryError) {
+  eval(R"(
+    var target = {};
+    globalThis.cleanupCount = 0;
+    globalThis.registry = new FinalizationRegistry(() => {
+      cleanupCount += 1;
+      throw new Error('cleanup boom');
+    });
+    registry.register(target, 'held');
+    target = null;
+  )");
+  eval("gc()");
+
+  EXPECT_THROW(rt->drainMicrotasks(), JSError);
+  EXPECT_EQ(eval("cleanupCount").asNumber(), 1);
+}
+
 TEST_P(HermesRuntimeTest, ResetTimezoneCache) {
   if (auto *hrt = castInterface<IHermes>(rt.get())) {
     EXPECT_NO_THROW({ hrt->resetTimezoneCache(); });

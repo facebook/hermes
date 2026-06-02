@@ -99,7 +99,12 @@ namespace microtask {
 /// Note that exceptions are directly printed to stderr.
 inline void performCheckpoint(vm::Runtime &runtime) {
   runtime.clearKeptObjects();
-  runtime.cleanUpFinalizationCallbacks();
+  if (LLVM_UNLIKELY(
+          runtime.cleanUpFinalizationCallbacks() ==
+          vm::ExecutionStatus::EXCEPTION)) {
+    runtime.printException(
+        llvh::errs(), runtime.makeHandle(runtime.getThrownValue()));
+  }
   if (!runtime.hasMicrotaskQueue())
     return;
 
