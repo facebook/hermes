@@ -841,11 +841,15 @@ if(HERMES_ENABLE_TEST_SUITE)
   if(HERMES_ENABLE_NAPI)
     list(APPEND HERMES_TEST_DEPS
       napi-runner
-      napi_test_addon
-      napi_ref_addon
-      napi_text_encoder_addon
-      napi_async_work_addon
     )
+    if(NOT WIN32)
+      list(APPEND HERMES_TEST_DEPS
+        napi_test_addon
+        napi_ref_addon
+        napi_text_encoder_addon
+        napi_async_work_addon
+      )
+    endif()
   endif()
 
   set(coverage_directory "")
