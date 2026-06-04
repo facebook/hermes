@@ -148,13 +148,13 @@ typedef hermes_napi_host hermes_napi_event_loop;
 /// The optional \p host provides host integration callbacks (async work,
 /// thread-safe functions, etc.); if nullptr, those APIs return
 /// napi_generic_failure.
-napi_env hermes_napi_create_env(
-    void *hermes_runtime,
-    hermes_napi_host *host = nullptr);
+NAPI_EXTERN napi_env NAPI_CDECL
+hermes_napi_create_env(void *hermes_runtime, hermes_napi_host *host = nullptr);
 
 /// Get the last module registered via the deprecated napi_module_register().
 /// Returns nullptr if no module has been registered.
-const napi_module *hermes_napi_get_last_registered_module();
+NAPI_EXTERN const napi_module *NAPI_CDECL
+hermes_napi_get_last_registered_module();
 
 /// Load a NAPI addon from a shared library at \p path.
 ///
@@ -172,7 +172,7 @@ const napi_module *hermes_napi_get_last_registered_module();
 ///
 /// Returns napi_ok on success, or an error status on failure (with a
 /// pending exception set on the env).
-napi_status
+NAPI_EXTERN napi_status NAPI_CDECL
 hermes_napi_load_module(napi_env env, const char *path, napi_value *result);
 
 //===========================================================================
@@ -215,7 +215,7 @@ struct hermes_run_script_flags {
 ///
 /// Returns napi_ok on success, napi_pending_exception on JS or
 /// compile error.
-napi_status hermes_run_script(
+NAPI_EXTERN napi_status NAPI_CDECL hermes_run_script(
     napi_env env,
     const uint8_t *data,
     size_t size,
@@ -256,7 +256,7 @@ struct hermes_bytecode_flags {
 ///
 /// Returns napi_ok on success, napi_pending_exception on JS error,
 /// or napi_generic_failure on bytecode validation failure.
-napi_status hermes_run_bytecode(
+NAPI_EXTERN napi_status NAPI_CDECL hermes_run_bytecode(
     napi_env env,
     const uint8_t *data,
     size_t size,
