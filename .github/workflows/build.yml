@@ -144,11 +144,11 @@ jobs:
           cd ..
           export CC=clang-16
           export CXX=clang++-16
-          cmake -S hermes -GNinja -B build -DCMAKE_BUILD_TYPE=Debug \
+          cmake -S "${{ github.event.repository.name }}" -GNinja -B build -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_SYSTEM_PROCESSOR=arm -DCMAKE_SYSTEM_NAME=Linux
           cmake --build build --target check-hermes all
 
-          cmake -S hermes -GNinja -B build_intl -DHERMES_ENABLE_INTL=ON \
+          cmake -S "${{ github.event.repository.name }}" -GNinja -B build_intl -DHERMES_ENABLE_INTL=ON \
             -DCMAKE_CXX_FLAGS=-O2 -DCMAKE_C_FLAGS=-O2 -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_SYSTEM_PROCESSOR=arm -DCMAKE_SYSTEM_NAME=Linux
           cmake --build ./build_intl
@@ -156,7 +156,7 @@ jobs:
           # Intl is built out: toLocaleLowerCase and toLocaleUpperCase are the two
           # main ones.
           # cmake --build ./build_intl --target check-hermes
-          python3 hermes/utils/test_runner.py --test-intl test262/test -b build_intl/bin
+          python3 "${{ github.event.repository.name }}/utils/test_runner.py" --test-intl test262/test -b build_intl/bin
 
   test-windows-test262:
     strategy:
