@@ -27,7 +27,7 @@ namespace {
 
 /// IR Verifier - the verifier checks some basic properties of the IR to make
 /// sure that it is not incorrect. For example, it checks that instructions are
-/// dominated by their oparands and that the entry block has no predecessors.
+/// dominated by their operands and that the entry block has no predecessors.
 ///
 /// The verifier also checks if the IR is in optimized form that allows bytecode
 /// generation. For example, it checks that there are no unreachable basic

@@ -24,7 +24,7 @@ Value *ESTreeIRGen::enforceExprType(hermes::Value *value, ESTree::Node *expr) {
   Type valueType = value->getType();
   TypeContext &tc = getTypeContext();
   // NOTE: equal sets are subsets of each other, but we want to do the fast
-  // check first. In theory, it should catsh 100% of the cases when IRGen is
+  // check first. In theory, it should catch 100% of the cases when IRGen is
   // fully typed.
   if (exprIRType == valueType || tc.isSubsetOf(valueType, exprIRType))
     return value;
@@ -1420,9 +1420,8 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
       }
     } else {
       auto *loadProp = Builder.createLoadPropertyInst(baseValue, propValue);
-      loadProp->setType(
-          getTypeContext().unionTy(
-              Type::createString(), Type::createUndefined()));
+      loadProp->setType(getTypeContext().unionTy(
+          Type::createString(), Type::createUndefined()));
       auto *cast =
           Builder.createCheckedTypeCastInst(loadProp, Type::createString());
       return MemberExpressionResult{cast, nullptr, baseValue};
