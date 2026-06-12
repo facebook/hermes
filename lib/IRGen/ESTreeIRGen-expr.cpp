@@ -1420,8 +1420,9 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
       }
     } else {
       auto *loadProp = Builder.createLoadPropertyInst(baseValue, propValue);
-      loadProp->setType(getTypeContext().unionTy(
-          Type::createString(), Type::createUndefined()));
+      loadProp->setType(
+          getTypeContext().unionTy(
+              Type::createString(), Type::createUndefined()));
       auto *cast =
           Builder.createCheckedTypeCastInst(loadProp, Type::createString());
       return MemberExpressionResult{cast, nullptr, baseValue};
