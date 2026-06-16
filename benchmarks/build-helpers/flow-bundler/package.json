@@ -5,7 +5,7 @@
   "license": "MIT",
   "private": true,
   "devDependencies": {
-    "@babel/core": "^7.23.3",
+    "@babel/core": "^7.29.6",
     "@babel/generator": "^7.23.5",
     "@babel/preset-env": "^7.23.3",
     "@babel/preset-flow": "^7.23.3",
