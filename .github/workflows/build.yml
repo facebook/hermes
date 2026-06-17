@@ -158,7 +158,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-2025, windows-11-arm]
+        os: [windows-2022, windows-11-arm]
         build_type: [Debug, Release]
         target_cpu: [x86_64, arm64]
         cmake_flags: ["", "-DBOOST_CONTEXT_IMPLEMENTATION=winfib"]
@@ -167,9 +167,9 @@ jobs:
             target_cpu: x86_64
           - os: windows-11-arm
             cmake_flags: ""
-          - os: windows-2025
+          - os: windows-2022
             target_cpu: arm64
-          - os: windows-2025
+          - os: windows-2022
             cmake_flags: "-DBOOST_CONTEXT_IMPLEMENTATION=winfib"
     runs-on: ${{ matrix.os }}
     steps:
