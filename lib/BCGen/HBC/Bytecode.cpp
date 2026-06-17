@@ -25,7 +25,7 @@ BytecodeModule::~BytecodeModule() {
   functions_.clear();
 
   // Clean up any other parts of the IR that are no longer used.
-  if (bcProviderFromSrc_) {
+  if (bcProviderFromSrc_ && bcProviderFromSrc_->getModule()) {
     bcProviderFromSrc_->getModule()->resetForMoreCompilation();
   }
 }

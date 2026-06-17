@@ -253,8 +253,15 @@ BCProviderFromSrc::create(
   if (context->getSourceErrorManager().getErrorCount() > 0) {
     return {nullptr, getErrorString()};
   }
-  auto result =
-      createFromBytecodeModule(std::move(BM), CompilationData{opts, M, semCtx});
+  bool keepCompilationData =
+      context->getDebugInfoSetting() == DebugInfoSetting::ALL ||
+      context->isLazyCompilation();
+  auto result = createFromBytecodeModule(
+      std::move(BM),
+      CompilationData{
+          opts,
+          keepCompilationData ? M : nullptr,
+          keepCompilationData ? semCtx : nullptr});
   if (compileFlags.requireSingleFunction &&
       !isSingleFunctionExpression(parsed.getValue())) {
     return {nullptr, "Invalid function expression"};
