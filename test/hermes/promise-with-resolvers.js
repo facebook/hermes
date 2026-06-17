@@ -20,8 +20,12 @@
 //   - resolve/reject are functions after construction returns
 //     (TypeError otherwise — §27.2.1.5 step 7-8).
 
+print('promise-with-resolvers');
+// CHECK-LABEL: promise-with-resolvers
 print('withResolvers' in Promise);
-// CHECK: true
+// CHECK-NEXT: true
+print('typeof Promise.withResolvers:', typeof Promise.withResolvers);
+// CHECK-NEXT: typeof Promise.withResolvers: function
 
 // Happy path: shape of the returned object.
 var wr = Promise.withResolvers();
@@ -39,6 +43,9 @@ class MyPromise extends Promise {}
 var wrSub = MyPromise.withResolvers();
 print('subclass instance:', wrSub.promise instanceof MyPromise);
 // CHECK-NEXT: subclass instance: true
+var wrSubCall = Promise.withResolvers.call(MyPromise);
+print('subclass call instance:', wrSubCall.promise instanceof MyPromise);
+// CHECK-NEXT: subclass call instance: true
 
 // Non-constructor `this` → TypeError per IsConstructor check.
 try {
