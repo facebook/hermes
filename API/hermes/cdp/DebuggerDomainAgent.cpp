@@ -497,6 +497,16 @@ void DebuggerDomainAgent::setBreakpointByUrl(
   sendResponseToClient(resp);
 }
 
+void DebuggerDomainAgent::getPossibleBreakpoints(
+    const m::debugger::GetPossibleBreakpointsRequest &req) {
+  // Compatibility stub: unconditionally return an empty set of locations. This
+  // patches spec-conformance so clients (e.g. VS Code) stop treating it as
+  // "method not found". Real breakpoint enumeration is TODO.
+  m::debugger::GetPossibleBreakpointsResponse resp;
+  resp.id = req.id;
+  sendResponseToClient(resp);
+}
+
 void DebuggerDomainAgent::removeBreakpoint(
     const m::debugger::RemoveBreakpointRequest &req) {
   if (!checkDebuggerEnabled(req)) {

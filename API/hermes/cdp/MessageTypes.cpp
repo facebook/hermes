@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved.
-// @generated SignedSource<<b6f23d499b731c057a44576d724cde32>>
+// @generated SignedSource<<330a0049c8eb8453a49b0b402e63aa47>>
 
 #include "MessageTypes.h"
 
@@ -94,6 +94,8 @@ std::unique_ptr<Request> Request::fromJson(const std::string &str) {
       {"Debugger.enable", tryMake<debugger::EnableRequest>},
       {"Debugger.evaluateOnCallFrame",
        tryMake<debugger::EvaluateOnCallFrameRequest>},
+      {"Debugger.getPossibleBreakpoints",
+       tryMake<debugger::GetPossibleBreakpointsRequest>},
       {"Debugger.pause", tryMake<debugger::PauseRequest>},
       {"Debugger.removeBreakpoint", tryMake<debugger::RemoveBreakpointRequest>},
       {"Debugger.resume", tryMake<debugger::ResumeRequest>},
@@ -372,6 +374,27 @@ JSONValue *runtime::ExceptionDetails::toJsonVal(JSONFactory &factory) const {
   put(props, "stackTrace", stackTrace, factory);
   put(props, "exception", exception, factory);
   put(props, "executionContextId", executionContextId, factory);
+  return factory.newObject(props.begin(), props.end());
+}
+
+std::unique_ptr<debugger::BreakLocation> debugger::BreakLocation::tryMake(
+    const JSONObject *obj) {
+  std::unique_ptr<debugger::BreakLocation> type =
+      std::make_unique<debugger::BreakLocation>();
+  TRY_ASSIGN(type->scriptId, obj, "scriptId");
+  TRY_ASSIGN(type->lineNumber, obj, "lineNumber");
+  TRY_ASSIGN(type->columnNumber, obj, "columnNumber");
+  TRY_ASSIGN(type->type, obj, "type");
+  return type;
+}
+
+JSONValue *debugger::BreakLocation::toJsonVal(JSONFactory &factory) const {
+  llvh::SmallVector<JSONFactory::Prop, 4> props;
+
+  put(props, "scriptId", scriptId, factory);
+  put(props, "lineNumber", lineNumber, factory);
+  put(props, "columnNumber", columnNumber, factory);
+  put(props, "type", type, factory);
   return factory.newObject(props.begin(), props.end());
 }
 
@@ -782,6 +805,53 @@ JSONValue *debugger::EvaluateOnCallFrameRequest::toJsonVal(
 }
 
 void debugger::EvaluateOnCallFrameRequest::accept(
+    RequestHandler &handler) const {
+  handler.handle(*this);
+}
+
+debugger::GetPossibleBreakpointsRequest::GetPossibleBreakpointsRequest()
+    : Request("Debugger.getPossibleBreakpoints") {}
+
+std::unique_ptr<debugger::GetPossibleBreakpointsRequest>
+debugger::GetPossibleBreakpointsRequest::tryMake(const JSONObject *obj) {
+  std::unique_ptr<debugger::GetPossibleBreakpointsRequest> req =
+      std::make_unique<debugger::GetPossibleBreakpointsRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *params = *convertResult;
+  TRY_ASSIGN(req->start, params, "start");
+  TRY_ASSIGN(req->end, params, "end");
+  TRY_ASSIGN(req->restrictToFunction, params, "restrictToFunction");
+  return req;
+}
+
+JSONValue *debugger::GetPossibleBreakpointsRequest::toJsonVal(
+    JSONFactory &factory) const {
+  llvh::SmallVector<JSONFactory::Prop, 3> paramsProps;
+  put(paramsProps, "start", start, factory);
+  put(paramsProps, "end", end, factory);
+  put(paramsProps, "restrictToFunction", restrictToFunction, factory);
+
+  llvh::SmallVector<JSONFactory::Prop, 1> props;
+  put(props, "id", id, factory);
+  put(props, "method", method, factory);
+  put(props,
+      "params",
+      factory.newObject(paramsProps.begin(), paramsProps.end()),
+      factory);
+  return factory.newObject(props.begin(), props.end());
+}
+
+void debugger::GetPossibleBreakpointsRequest::accept(
     RequestHandler &handler) const {
   handler.handle(*this);
 }
@@ -2200,6 +2270,39 @@ JSONValue *debugger::EvaluateOnCallFrameResponse::toJsonVal(
   llvh::SmallVector<JSONFactory::Prop, 2> resProps;
   put(resProps, "result", result, factory);
   put(resProps, "exceptionDetails", exceptionDetails, factory);
+
+  llvh::SmallVector<JSONFactory::Prop, 2> props;
+  put(props, "id", id, factory);
+  put(props,
+      "result",
+      factory.newObject(resProps.begin(), resProps.end()),
+      factory);
+  return factory.newObject(props.begin(), props.end());
+}
+
+std::unique_ptr<debugger::GetPossibleBreakpointsResponse>
+debugger::GetPossibleBreakpointsResponse::tryMake(const JSONObject *obj) {
+  std::unique_ptr<debugger::GetPossibleBreakpointsResponse> resp =
+      std::make_unique<debugger::GetPossibleBreakpointsResponse>();
+  TRY_ASSIGN(resp->id, obj, "id");
+
+  JSONValue *v = obj->get("result");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *res = *convertResult;
+  TRY_ASSIGN(resp->locations, res, "locations");
+  return resp;
+}
+
+JSONValue *debugger::GetPossibleBreakpointsResponse::toJsonVal(
+    JSONFactory &factory) const {
+  llvh::SmallVector<JSONFactory::Prop, 1> resProps;
+  put(resProps, "locations", locations, factory);
 
   llvh::SmallVector<JSONFactory::Prop, 2> props;
   put(props, "id", id, factory);
