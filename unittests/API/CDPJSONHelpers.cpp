@@ -448,6 +448,16 @@ m::debugger::BreakpointId ensureSetBreakpointByUrlResponse(
   return resp.breakpointId;
 }
 
+m::debugger::GetPossibleBreakpointsResponse
+ensureGetPossibleBreakpointsResponse(const std::string &message, int id) {
+  JSLexer::Allocator allocator;
+  JSONFactory factory(allocator);
+  auto resp = mustMake<m::debugger::GetPossibleBreakpointsResponse>(
+      mustParseStrAsJsonObj(message, factory));
+  EXPECT_EQ(resp.id, id);
+  return resp;
+}
+
 std::string serializeRuntimeCallFunctionOnRequest(
     const m::runtime::CallFunctionOnRequest &req) {
   return req.toJsonStr();

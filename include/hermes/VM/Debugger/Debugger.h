@@ -71,6 +71,7 @@ class Debugger {
   using LexicalInfo = ::facebook::hermes::debugger::LexicalInfo;
   using ScriptID = ::facebook::hermes::debugger::ScriptID;
   using AsyncPauseKind = ::facebook::hermes::debugger::AsyncPauseKind;
+  using BreakLocation = ::facebook::hermes::debugger::BreakLocation;
 
   Runtime &runtime_;
 
@@ -425,6 +426,19 @@ class Debugger {
 
   /// \return list of loaded scripts that haven't been garbage collected
   std::vector<SourceLocation> getLoadedScripts() const;
+
+  /// \return the possible breakpoint locations within the source range
+  /// [\p startLine:\p startColumn, \p endLine:\p endColumn) of the script
+  /// identified by \p scriptId. Lines and columns are 1-based. If \p endLine is
+  /// kInvalidLocation, the range extends to the end of the script. Only
+  /// already-compiled functions are considered; lazily-compiled functions have
+  /// no debug info yet and are not enumerated.
+  std::vector<BreakLocation> getPossibleBreakpoints(
+      ScriptID scriptId,
+      uint32_t startLine,
+      uint32_t startColumn,
+      uint32_t endLine,
+      uint32_t endColumn) const;
 
   /// Find the handler for an exception thrown at \p state.
   /// \return llvh::None if no handler is found, else return the state of the

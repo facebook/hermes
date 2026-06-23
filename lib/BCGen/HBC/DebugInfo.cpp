@@ -134,6 +134,71 @@ OptValue<DebugSearchResult> DebugInfo::getAddressForLocation(
   return best;
 }
 
+std::vector<DebugSearchResult> DebugInfo::getAllLocationsForRange(
+    uint32_t filenameId,
+    uint32_t startLine,
+    uint32_t startColumn,
+    OptValue<uint32_t> endLine,
+    uint32_t endColumn) const {
+  std::vector<DebugSearchResult> results;
+
+  // Find the [start, end) debug-offset window covering the requested file, the
+  // same way getAddressForLocation does.
+  uint32_t start = 0;
+  uint32_t end = 0;
+  bool foundFile = false;
+  for (const auto &cur : files_) {
+    if (foundFile) {
+      end = cur.fromAddress;
+      break;
+    }
+    if (cur.filenameId == filenameId) {
+      foundFile = true;
+      start = cur.fromAddress;
+      end = sourceLocationsData().size();
+    }
+  }
+  if (!foundFile) {
+    return results;
+  }
+
+  // A location is in range if it is at or after the (startLine, startColumn)
+  // lower bound and, when an upper bound is provided, strictly before the
+  // (endLine, endColumn) exclusive upper bound.
+  auto inRange = [&](uint32_t line, uint32_t column) -> bool {
+    if (line < startLine || (line == startLine && column < startColumn)) {
+      return false;
+    }
+    if (endLine.hasValue() &&
+        (line > *endLine || (line == *endLine && column >= endColumn))) {
+      return false;
+    }
+    return true;
+  };
+
+  uint32_t offset = start;
+  while (offset < end) {
+    FunctionDebugInfoDeserializer fdid(data_.getData(), offset);
+    while (!fdid.isDone()) {
+      auto loc = fdid.next();
+      if (!loc.hasValue()) {
+        continue;
+      }
+      if (inRange(loc->line, loc->column)) {
+        results.emplace_back(
+            fdid.getFunctionIndex(),
+            loc->address,
+            loc->line,
+            loc->column,
+            loc->statement);
+      }
+    }
+    offset = fdid.getOffset();
+  }
+
+  return results;
+}
+
 void DebugInfo::disassembleFilenames(llvh::raw_ostream &os) const {
   os << "Debug filename table:\n";
   for (uint32_t i = 0, e = getFilenameTable().size(); i < e; ++i) {

@@ -254,6 +254,20 @@ class HERMES_EXPORT Debugger {
   /// \return a list of extant breakpoints.
   std::vector<BreakpointID> getBreakpoints();
 
+  /// \return the possible breakpoint locations within the source range
+  /// [\p startLine:\p startColumn, \p endLine:\p endColumn) of the script
+  /// identified by \p scriptId. Lines and columns are 1-based. A \p startColumn
+  /// of 1 includes the whole start line. If \p endLine is kInvalidLocation, the
+  /// range extends to the end of the script; otherwise \p endColumn is the
+  /// exclusive end column on \p endLine. Returns an empty vector if the script
+  /// is unknown or has no debug info.
+  std::vector<BreakLocation> getPossibleBreakpoints(
+      ScriptID scriptId,
+      uint32_t startLine,
+      uint32_t startColumn,
+      uint32_t endLine,
+      uint32_t endColumn);
+
   /// Set whether the debugger should pause when an exception is thrown.
   void setPauseOnThrowMode(PauseOnThrowMode mode);
 
@@ -464,6 +478,14 @@ class Debugger {
   }
   std::vector<BreakpointID> getBreakpoints() {
     return std::vector<BreakpointID>();
+  }
+  std::vector<BreakLocation> getPossibleBreakpoints(
+      ScriptID scriptId,
+      uint32_t startLine,
+      uint32_t startColumn,
+      uint32_t endLine,
+      uint32_t endColumn) {
+    return {};
   }
   void setPauseOnThrowMode(PauseOnThrowMode mode) {}
   PauseOnThrowMode getPauseOnThrowMode() const {

@@ -191,6 +191,10 @@ struct DebugSearchResult {
   /// The actual column that the search found.
   uint32_t column{0};
 
+  /// The statement at the found location. 1-based per function; 0 if the
+  /// location is not part of any user-written statement.
+  uint32_t statement{0};
+
   DebugSearchResult() {}
 
   DebugSearchResult(
@@ -202,6 +206,18 @@ struct DebugSearchResult {
         bytecodeOffset(bytecodeOffset),
         line(line),
         column(column) {}
+
+  DebugSearchResult(
+      uint32_t functionIndex,
+      uint32_t bytecodeOffset,
+      uint32_t line,
+      uint32_t column,
+      uint32_t statement)
+      : functionIndex(functionIndex),
+        bytecodeOffset(bytecodeOffset),
+        line(line),
+        column(column),
+        statement(statement) {}
 };
 
 /// A data structure for storing debug info.
@@ -315,6 +331,20 @@ class DebugInfo {
       uint32_t filenameId,
       uint32_t targetLine,
       OptValue<uint32_t> targetColumn) const;
+
+  /// Find every distinct source location listed in the debug info for file
+  /// \p filenameId that falls within the half-open range
+  /// [\p startLine:\p startColumn, \p endLine:\p endColumn). Lines and columns
+  /// are 1-based. If \p endLine is None, the range extends to the end of the
+  /// file; \p endColumn is the exclusive end column on \p endLine and is
+  /// ignored when \p endLine is None. \return the matching locations, in
+  /// increasing bytecode order within each function.
+  std::vector<DebugSearchResult> getAllLocationsForRange(
+      uint32_t filenameId,
+      uint32_t startLine,
+      uint32_t startColumn,
+      OptValue<uint32_t> endLine,
+      uint32_t endColumn) const;
 
  private:
   /// \return the slice of data_ reflecting the source locations.

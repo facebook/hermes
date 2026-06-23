@@ -22,6 +22,7 @@
 #include "hermes/VM/RuntimeModule.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StringView.h"
+#include "llvh/ADT/DenseMap.h"
 
 #ifdef HERMES_ENABLE_DEBUGGER
 
@@ -1641,6 +1642,118 @@ auto Debugger::getLoadedScripts() const -> std::vector<SourceLocation> {
     loadedScripts.push_back(loc);
   }
   return loadedScripts;
+}
+
+auto Debugger::getPossibleBreakpoints(
+    ScriptID scriptId,
+    uint32_t startLine,
+    uint32_t startColumn,
+    uint32_t endLine,
+    uint32_t endColumn) const -> std::vector<BreakLocation> {
+  using fhd::kInvalidLocation;
+  std::vector<BreakLocation> result;
+
+  OptValue<uint32_t> endLineOpt = endLine == kInvalidLocation
+      ? OptValue<uint32_t>{llvh::None}
+      : OptValue<uint32_t>{endLine};
+
+  for (auto &runtimeModule : runtime_.getRuntimeModules()) {
+    const auto *debugInfo = runtimeModule.getBytecode()->getDebugInfo();
+    if (!debugInfo) {
+      continue;
+    }
+
+    for (const auto &file : debugInfo->viewFiles()) {
+      if (resolveScriptId(&runtimeModule, file.filenameId) != scriptId) {
+        continue;
+      }
+
+      std::vector<hbc::DebugSearchResult> searchResults =
+          debugInfo->getAllLocationsForRange(
+              file.filenameId, startLine, startColumn, endLineOpt, endColumn);
+      std::string fileName = debugInfo->getUTF8FilenameByID(file.filenameId);
+
+      // Reduce the per-instruction locations to roughly one per source
+      // statement, plus every call/return/debugger location. This matches the
+      // granularity of V8's getPossibleBreakpoints and of Hermes' own stepper,
+      // which stops at the first instruction of each distinct statement (see
+      // sameStatementDifferentInstruction and the statement == 0 checks in the
+      // step loop). Without this, the debug info's one-entry-per-instruction
+      // granularity surfaces a breakpoint at nearly every token.
+      // seenStatements tracks the (functionIndex, statement) pairs whose lead
+      // location has been emitted; seenIndex then de-duplicates by source
+      // position, keeping the most specific type.
+      llvh::DenseSet<uint64_t> seenStatements;
+      llvh::DenseMap<uint64_t, size_t> seenIndex;
+      for (const auto &searchResult : searchResults) {
+        fhd::BreakLocationType type = fhd::BreakLocationType::None;
+        CodeBlock *codeBlock =
+            runtimeModule.getCodeBlockMayAllocate(searchResult.functionIndex);
+        if (codeBlock != nullptr &&
+            searchResult.bytecodeOffset < codeBlock->getOpcodeArray().size()) {
+          // Use getRealOpCode so an installed breakpoint doesn't masquerade as
+          // a debugger statement.
+          OpCode opCode = getRealOpCode(codeBlock, searchResult.bytecodeOffset);
+          if (opCode == OpCode::Debugger) {
+            type = fhd::BreakLocationType::DebuggerStatement;
+          } else if (isCallType(opCode)) {
+            type = fhd::BreakLocationType::Call;
+          } else if (opCode == OpCode::Ret) {
+            type = fhd::BreakLocationType::Return;
+          }
+        }
+
+        // Keep the first location of each statement (the statement boundary)
+        // and any call/return/debugger location; skip other intra-statement
+        // instructions.
+        uint64_t statementKey =
+            (static_cast<uint64_t>(searchResult.functionIndex) << 32) |
+            searchResult.statement;
+        bool isStatementLead = searchResult.statement != 0 &&
+            seenStatements.insert(statementKey).second;
+
+        uint64_t key = (static_cast<uint64_t>(searchResult.line) << 32) |
+            searchResult.column;
+        auto existing = seenIndex.find(key);
+        bool seenPos = existing != seenIndex.end();
+
+        // Drop the compiler's implicit epilogue return: a Return that does not
+        // begin a statement (it reuses the last statement's index) and lands on
+        // a brand-new source position (the function's end). Explicit returns
+        // are statement leads, and an explicit return's terminator shares its
+        // statement's position, so neither is affected.
+        if (type == fhd::BreakLocationType::Return && !isStatementLead &&
+            !seenPos) {
+          continue;
+        }
+
+        if (!isStatementLead && type == fhd::BreakLocationType::None) {
+          continue;
+        }
+
+        if (seenPos) {
+          BreakLocation &prev = result[existing->second];
+          if (prev.type == fhd::BreakLocationType::None) {
+            prev.type = type;
+          }
+          continue;
+        }
+
+        SourceLocation loc;
+        loc.line = searchResult.line;
+        loc.column = searchResult.column;
+        loc.fileId = scriptId;
+        loc.fileName = fileName;
+
+        seenIndex[key] = result.size();
+        result.push_back(BreakLocation{std::move(loc), type});
+      }
+
+      return result;
+    }
+  }
+
+  return result;
 }
 
 auto Debugger::resolveScriptId(

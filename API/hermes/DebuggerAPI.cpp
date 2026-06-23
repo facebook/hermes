@@ -152,6 +152,16 @@ std::vector<BreakpointID> Debugger::getBreakpoints() {
   return impl_->getBreakpoints();
 }
 
+std::vector<BreakLocation> Debugger::getPossibleBreakpoints(
+    ScriptID scriptId,
+    uint32_t startLine,
+    uint32_t startColumn,
+    uint32_t endLine,
+    uint32_t endColumn) {
+  return impl_->getPossibleBreakpoints(
+      scriptId, startLine, startColumn, endLine, endColumn);
+}
+
 void Debugger::setShouldPauseOnScriptLoad(bool flag) {
   return impl_->setShouldPauseOnScriptLoad(flag);
 }

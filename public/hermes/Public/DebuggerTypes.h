@@ -56,6 +56,29 @@ struct SourceLocation {
   String fileName;
 };
 
+/// The kind of program point at a possible breakpoint location. Mirrors the
+/// `type` field of CDP's Debugger.BreakLocation.
+enum class BreakLocationType {
+  /// No notable type.
+  None,
+  /// A `debugger;` statement.
+  DebuggerStatement,
+  /// A function call.
+  Call,
+  /// A return from a function.
+  Return,
+};
+
+/// A possible breakpoint location within a source range, as returned by
+/// Debugger::getPossibleBreakpoints.
+struct BreakLocation {
+  /// The resolved source location of the possible breakpoint.
+  SourceLocation location;
+
+  /// The kind of program point at this location, if notable.
+  BreakLocationType type = BreakLocationType::None;
+};
+
 /// CallFrameInfo is a value type representing an entry in a call stack.
 struct CallFrameInfo {
   /// Name of the function executing in this frame.
