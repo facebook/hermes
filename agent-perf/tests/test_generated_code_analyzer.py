@@ -250,6 +250,21 @@ static SHLegacyValue _1_func2(SHRuntime *shr, SHLegacyValue *frame) {
         self.assertEqual(result["functions"][1]["name"], "_1_func2")
         self.assertEqual(result["summary"]["total_runtime_calls"], 2)
 
+    def test_single_line_functions_are_closed_immediately(self):
+        source = """
+static SHLegacyValue _0_func1(SHRuntime *shr, SHLegacyValue *frame) { return _sh_ljs_add(shr, 1, 2); }
+static SHLegacyValue _1_func2(SHRuntime *shr, SHLegacyValue *frame) { return _sh_ljs_mul(shr, 3, 4); }
+"""
+        result = parse_generated_c(source)
+
+        self.assertEqual(len(result["functions"]), 2)
+        self.assertEqual(result["functions"][0]["name"], "_0_func1")
+        self.assertEqual(result["functions"][0]["line_count"], 1)
+        self.assertEqual(result["functions"][0]["total_runtime_calls"], 1)
+        self.assertEqual(result["functions"][1]["name"], "_1_func2")
+        self.assertEqual(result["functions"][1]["line_count"], 1)
+        self.assertEqual(result["functions"][1]["total_runtime_calls"], 1)
+
 
 class TestDetectPatterns(unittest.TestCase):
     """Test anti-pattern detection."""

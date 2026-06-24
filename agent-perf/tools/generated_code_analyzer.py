@@ -149,6 +149,39 @@ def parse_generated_c(source: str) -> Dict[str, Any]:
     current_func_lines: int = 0
     brace_depth: int = 0
 
+    def flush_current_function(end_line: int) -> None:
+        nonlocal current_func, current_func_calls, current_func_gc_scopes
+        nonlocal current_func_lines
+        if current_func is None:
+            return
+
+        total_calls = sum(current_func_calls.values())
+        func_categories: Counter = Counter()
+        for name, count in current_func_calls.items():
+            func_categories[categorize_call(name)] += count
+
+        functions.append(
+            {
+                "name": current_func,
+                "start_line": current_func_start + 1,
+                "end_line": end_line,
+                "line_count": current_func_lines,
+                "total_runtime_calls": total_calls,
+                "gc_scopes": current_func_gc_scopes,
+                "calls_per_line": (
+                    round(total_calls / current_func_lines, 3)
+                    if current_func_lines > 0
+                    else 0
+                ),
+                "call_breakdown": dict(func_categories),
+                "top_calls": current_func_calls.most_common(10),
+            }
+        )
+        current_func = None
+        current_func_calls = Counter()
+        current_func_gc_scopes = 0
+        current_func_lines = 0
+
     for i, line in enumerate(lines):
         # Track brace depth for function boundary detection.
         if current_func is not None:
@@ -168,32 +201,7 @@ def parse_generated_c(source: str) -> Dict[str, Any]:
 
             # End of function.
             if brace_depth <= 0:
-                total_calls = sum(current_func_calls.values())
-                func_categories: Counter = Counter()
-                for name, count in current_func_calls.items():
-                    func_categories[categorize_call(name)] += count
-
-                functions.append(
-                    {
-                        "name": current_func,
-                        "start_line": current_func_start + 1,
-                        "end_line": i + 1,
-                        "line_count": current_func_lines,
-                        "total_runtime_calls": total_calls,
-                        "gc_scopes": current_func_gc_scopes,
-                        "calls_per_line": (
-                            round(total_calls / current_func_lines, 3)
-                            if current_func_lines > 0
-                            else 0
-                        ),
-                        "call_breakdown": dict(func_categories),
-                        "top_calls": current_func_calls.most_common(10),
-                    }
-                )
-                current_func = None
-                current_func_calls = Counter()
-                current_func_gc_scopes = 0
-                current_func_lines = 0
+                flush_current_function(i + 1)
                 continue
 
         # Look for function start.
@@ -213,6 +221,9 @@ def parse_generated_c(source: str) -> Dict[str, Any]:
 
             if "_sh_push_locals" in line or "_sh_new_gcscope" in line:
                 current_func_gc_scopes += 1
+
+            if brace_depth <= 0:
+                flush_current_function(i + 1)
 
     # --- Detect patterns / anti-patterns ---
     patterns = _detect_patterns(source, lines, functions)
