@@ -141,6 +141,11 @@ class TestClassifySymbol(unittest.TestCase):
         self.assertEqual(classify_symbol("_sh_ljs_add_rjs"), "arithmetic")
         self.assertEqual(classify_symbol("_sh_ljs_sub_rjs"), "arithmetic")
         self.assertEqual(classify_symbol("_sh_ljs_mul_rjs"), "arithmetic")
+        self.assertEqual(classify_symbol("_sh_ljs_div_rjs"), "arithmetic")
+        self.assertEqual(classify_symbol("_sh_ljs_mod_rjs"), "arithmetic")
+        self.assertEqual(classify_symbol("_sh_ljs_inc_rjs"), "arithmetic")
+        self.assertEqual(classify_symbol("_sh_ljs_dec_rjs"), "arithmetic")
+        self.assertEqual(classify_symbol("_sh_ljs_negate_rjs"), "arithmetic")
 
     def test_generated_js(self):
         self.assertEqual(classify_symbol("_0_global"), "generated_js")

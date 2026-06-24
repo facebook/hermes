@@ -121,7 +121,7 @@ def classify_symbol(name):
         return "property_put"
     if "_sh_ljs_call" in name or "_sh_ljs_construct" in name:
         return "calls"
-    if "_sh_ljs_add" in name or "_sh_ljs_sub" in name or "_sh_ljs_mul" in name:
+    if re.search(r"_sh_ljs_(add|sub|mul|div|mod|inc|dec|negate)", name):
         return "arithmetic"
     if "_0_global" in name or re.match(r"_\d+_", name):
         return "generated_js"
