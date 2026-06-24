@@ -122,6 +122,22 @@ class TestAntipatternScan(unittest.TestCase):
         finally:
             os.unlink(filepath)
 
+    def test_block_comment_content_not_detected(self):
+        """Test that anti-patterns inside block comments are skipped."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".cpp", delete=False) as f:
+            f.write("/* virtual void foo();\n")
+            f.write("   int x = map[key] + map[key];\n")
+            f.write('   for (;;) { str += "x"; }\n')
+            f.write("*/\n")
+            f.flush()
+            filepath = f.name
+
+        try:
+            findings = scan_file(filepath)
+            self.assertEqual(findings, [])
+        finally:
+            os.unlink(filepath)
+
     def test_unnecessary_copy_detected(self):
         """Test that unnecessary auto copies are detected."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".cpp", delete=False) as f:

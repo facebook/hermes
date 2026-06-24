@@ -78,10 +78,23 @@ def scan_file(filepath: str) -> List[Dict]:
     in_loop = False
     loop_depth = 0
     brace_depth_at_loop = 0  # noqa: F841
+    in_comment_block = False
 
     for i, line in enumerate(lines):
         stripped = line.strip()
         lineno = i + 1
+
+        # Skip whole-line comments before running pattern heuristics.
+        if in_comment_block:
+            if "*/" in stripped:
+                in_comment_block = False
+            continue
+        if stripped.startswith("/*"):
+            if "*/" not in stripped:
+                in_comment_block = True
+            continue
+        if stripped.startswith("//"):
+            continue
 
         # Track loop context.
         if re.match(r"\b(for|while|do)\b", stripped):
@@ -157,7 +170,7 @@ def scan_file(filepath: str) -> List[Dict]:
                 )
 
         # 4. Virtual dispatch detection (calls through virtual methods).
-        if re.search(r"\bvirtual\b", stripped) and not stripped.startswith("//"):
+        if re.search(r"\bvirtual\b", stripped):
             findings.append(
                 {
                     "file": filepath,
