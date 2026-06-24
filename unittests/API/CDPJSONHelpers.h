@@ -216,6 +216,11 @@ m::debugger::BreakpointId ensureSetBreakpointByUrlResponse(
     int id,
     std::vector<BreakpointLocation> locations);
 
+/// Ensure that \p message is a Debugger.getPossibleBreakpoints response with
+/// the given \p id, and return the parsed response.
+m::debugger::GetPossibleBreakpointsResponse
+ensureGetPossibleBreakpointsResponse(const std::string &message, int id);
+
 m::runtime::GetPropertiesResponse ensureProps(
     const std::string &message,
     const std::unordered_map<std::string, PropInfo> &infos,

@@ -2374,6 +2374,172 @@ TEST_F(CDPAgentTest, DebuggerSetBreakpointById) {
   ensureNotification(waitForMessage(), "Debugger.resumed");
 }
 
+TEST_F(CDPAgentTest, DebuggerGetPossibleBreakpoints) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    debugger;      // line 1 (CDP): pause + debuggerStatement
+    var a = 1;     // line 2 (CDP)
+    Math.random(); // line 3 (CDP): call
+  )");
+
+  auto note = expectNotification("Debugger.scriptParsed");
+  auto scriptID = jsonScope_.getString(note, {"params", "scriptId"});
+
+  // Execution pauses on the debugger statement; query while paused.
+  ensurePaused(waitForMessage(), "other", {{"global", 1, 1}});
+
+  // Request all breakpoint locations from the start of the script onward.
+  sendRequest(
+      "Debugger.getPossibleBreakpoints",
+      msgId,
+      [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("start");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 0);
+        json.emitKeyValue("columnNumber", 0);
+        json.closeDict();
+      });
+
+  auto resp = ensureGetPossibleBreakpointsResponse(waitForMessage(), msgId++);
+  EXPECT_FALSE(resp.locations.empty());
+
+  bool foundDebuggerStatement = false;
+  bool foundCall = false;
+  for (const m::debugger::BreakLocation &location : resp.locations) {
+    // Every location belongs to the queried script and carries a column.
+    EXPECT_EQ(location.scriptId, scriptID);
+    EXPECT_TRUE(location.columnNumber.has_value());
+    if (location.type.has_value()) {
+      if (location.type.value() == "debuggerStatement") {
+        foundDebuggerStatement = true;
+        // The debugger statement is on the first line (0-based).
+        EXPECT_EQ(location.lineNumber, 1);
+      } else if (location.type.value() == "call") {
+        foundCall = true;
+      }
+    }
+  }
+  EXPECT_TRUE(foundDebuggerStatement);
+  EXPECT_TRUE(foundCall);
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+}
+
+TEST_F(CDPAgentTest, DebuggerGetPossibleBreakpointsUnknownScript) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  // Query a script ID that was never loaded.
+  sendRequest(
+      "Debugger.getPossibleBreakpoints",
+      msgId,
+      [](::hermes::JSONEmitter &json) {
+        json.emitKey("start");
+        json.openDict();
+        json.emitKeyValue("scriptId", "12345");
+        json.emitKeyValue("lineNumber", 0);
+        json.emitKeyValue("columnNumber", 0);
+        json.closeDict();
+      });
+  expectErrorMessageContaining("No script with id", msgId++);
+}
+
+TEST_F(CDPAgentTest, DebuggerGetPossibleBreakpointsEmptyRange) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    debugger;
+    var a = 1;
+  )");
+
+  auto note = expectNotification("Debugger.scriptParsed");
+  auto scriptID = jsonScope_.getString(note, {"params", "scriptId"});
+
+  ensurePaused(waitForMessage(), "other", {{"global", 1, 1}});
+
+  // An empty range (start == end) yields no locations, but is not an error.
+  sendRequest(
+      "Debugger.getPossibleBreakpoints",
+      msgId,
+      [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("start");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 1);
+        json.emitKeyValue("columnNumber", 0);
+        json.closeDict();
+        json.emitKey("end");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 1);
+        json.emitKeyValue("columnNumber", 0);
+        json.closeDict();
+      });
+  auto resp = ensureGetPossibleBreakpointsResponse(waitForMessage(), msgId++);
+  EXPECT_TRUE(resp.locations.empty());
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+}
+
+TEST_F(CDPAgentTest, DebuggerGetPossibleBreakpointsStatementGranularity) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  // `var z = a + b + c;` is a single statement that compiles to several
+  // sub-expression instructions (loads and adds). Reading variables (rather
+  // than literals) prevents constant folding so those instructions survive.
+  // We expect one break location for the statement, not one per operand.
+  scheduleScript(R"(
+    var a = 1; var b = 2; var c = 3; // line 1 (CDP): three statements
+    debugger;                        // line 2 (CDP): pause
+    var z = a + b + c;               // line 3 (CDP): one statement
+  )");
+
+  auto note = expectNotification("Debugger.scriptParsed");
+  auto scriptID = jsonScope_.getString(note, {"params", "scriptId"});
+
+  ensurePaused(waitForMessage(), "other", {{"global", 2, 1}});
+
+  sendRequest(
+      "Debugger.getPossibleBreakpoints",
+      msgId,
+      [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("start");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 0);
+        json.emitKeyValue("columnNumber", 0);
+        json.closeDict();
+      });
+
+  auto resp = ensureGetPossibleBreakpointsResponse(waitForMessage(), msgId++);
+
+  // The single-statement line collapses to exactly one statement-boundary
+  // (typeless) location, rather than one per sub-expression instruction.
+  // (Other typed locations, such as the function's implicit return, may also
+  // land on this line; those are not statement boundaries.)
+  int statementBoundariesOnVarZLine = 0;
+  for (const m::debugger::BreakLocation &location : resp.locations) {
+    if (location.lineNumber == 3 && !location.type.has_value()) {
+      statementBoundariesOnVarZLine++;
+    }
+  }
+  EXPECT_EQ(statementBoundariesOnVarZLine, 1);
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+}
+
 TEST_F(CDPAgentTest, DebuggerSetBreakpointByUrl) {
   int msgId = 1;
 

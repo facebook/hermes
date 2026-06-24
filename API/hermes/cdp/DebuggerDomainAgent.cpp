@@ -497,6 +497,117 @@ void DebuggerDomainAgent::setBreakpointByUrl(
   sendResponseToClient(resp);
 }
 
+void DebuggerDomainAgent::getPossibleBreakpoints(
+    const m::debugger::GetPossibleBreakpointsRequest &req) {
+  if (!checkDebuggerEnabled(req)) {
+    return;
+  }
+
+  // The start and end locations must refer to the same script.
+  if (req.end.has_value() && req.end->scriptId != req.start.scriptId) {
+    sendResponseToClient(
+        m::makeErrorResponse(
+            req.id, m::ErrorCode::ServerError, "Invalid range"));
+    return;
+  }
+
+  // The start must not be positioned after the end.
+  if (req.end.has_value()) {
+    long long startColumn = req.start.columnNumber.value_or(0);
+    long long endColumn = req.end->columnNumber.value_or(0);
+    if (req.start.lineNumber > req.end->lineNumber ||
+        (req.start.lineNumber == req.end->lineNumber &&
+         startColumn > endColumn)) {
+      sendResponseToClient(
+          m::makeErrorResponse(
+              req.id, m::ErrorCode::ServerError, "Invalid range"));
+      return;
+    }
+  }
+
+  // Parse and validate the script ID. Reject anything that isn't a plain
+  // number to avoid throwing in std::stoull (the digit-count guard keeps the
+  // value within uint64_t range).
+  const std::string &scriptIdStr = req.start.scriptId;
+  if (scriptIdStr.empty() || scriptIdStr.size() > 19 ||
+      scriptIdStr.find_first_not_of("0123456789") != std::string::npos) {
+    sendResponseToClient(
+        m::makeErrorResponse(
+            req.id, m::ErrorCode::ServerError, "No script with id"));
+    return;
+  }
+  auto scriptID = static_cast<debugger::ScriptID>(std::stoull(scriptIdStr));
+
+  bool scriptFound = false;
+  for (const auto &srcLoc : runtime_.getDebugger().getLoadedScripts()) {
+    if (srcLoc.fileId == scriptID) {
+      scriptFound = true;
+      break;
+    }
+  }
+  if (!scriptFound) {
+    sendResponseToClient(
+        m::makeErrorResponse(
+            req.id, m::ErrorCode::ServerError, "No script with id"));
+    return;
+  }
+
+  // Convert the CDP 0-based range to Hermes' 1-based, half-open range.
+  uint32_t startLine = static_cast<uint32_t>(req.start.lineNumber) + 1;
+  uint32_t startColumn = req.start.columnNumber.has_value()
+      ? static_cast<uint32_t>(req.start.columnNumber.value()) + 1
+      : 1;
+  uint32_t endLine = debugger::kInvalidLocation;
+  uint32_t endColumn = debugger::kInvalidLocation;
+  if (req.end.has_value()) {
+    endLine = static_cast<uint32_t>(req.end->lineNumber) + 1;
+    // endColumn is an exclusive bound; an omitted column means the whole end
+    // line, not column 1.
+    endColumn = req.end->columnNumber.has_value()
+        ? static_cast<uint32_t>(req.end->columnNumber.value()) + 1
+        : debugger::kInvalidLocation;
+  }
+
+  std::vector<debugger::BreakLocation> breakLocations =
+      runtime_.getDebugger().getPossibleBreakpoints(
+          scriptID, startLine, startColumn, endLine, endColumn);
+
+  // Match V8's cap on the number of returned locations to bound the response
+  // size (see kMaxNumBreakpoints in V8's v8-debugger-agent-impl.cc). With
+  // statement-level granularity this is rarely hit.
+  constexpr size_t kMaxNumBreakLocations = 1000;
+  size_t count = breakLocations.size();
+  if (count > kMaxNumBreakLocations) {
+    count = kMaxNumBreakLocations;
+  }
+
+  m::debugger::GetPossibleBreakpointsResponse resp;
+  resp.id = req.id;
+  resp.locations.reserve(count);
+  for (size_t i = 0; i < count; ++i) {
+    const debugger::BreakLocation &breakLocation = breakLocations[i];
+    m::debugger::BreakLocation cdpLocation;
+    cdpLocation.scriptId = std::to_string(breakLocation.location.fileId);
+    m::setChromeLocation(cdpLocation, breakLocation.location);
+    switch (breakLocation.type) {
+      case debugger::BreakLocationType::DebuggerStatement:
+        cdpLocation.type = "debuggerStatement";
+        break;
+      case debugger::BreakLocationType::Call:
+        cdpLocation.type = "call";
+        break;
+      case debugger::BreakLocationType::Return:
+        cdpLocation.type = "return";
+        break;
+      case debugger::BreakLocationType::None:
+        break;
+    }
+    resp.locations.push_back(std::move(cdpLocation));
+  }
+
+  sendResponseToClient(resp);
+}
+
 void DebuggerDomainAgent::removeBreakpoint(
     const m::debugger::RemoveBreakpointRequest &req) {
   if (!checkDebuggerEnabled(req)) {
