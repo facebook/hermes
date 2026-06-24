@@ -288,6 +288,20 @@ class TestJsAntipatternScan(unittest.TestCase):
         finally:
             os.unlink(filepath)
 
+    def test_single_line_block_comment_not_scanned(self):
+        """Test that single-line block comments are skipped."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".js", delete=False) as f:
+            f.write("/* eval('test') */\n")
+            f.flush()
+            filepath = f.name
+
+        try:
+            findings = scan_js_file(filepath)
+            eval_findings = [f for f in findings if f["pattern"] == "eval_usage"]
+            self.assertEqual(len(eval_findings), 0)
+        finally:
+            os.unlink(filepath)
+
     def test_format_human_empty(self):
         """Test format_human with no findings."""
         result = format_human([])

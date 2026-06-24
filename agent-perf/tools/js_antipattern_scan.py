@@ -63,6 +63,8 @@ def scan_js_file(filepath: str) -> List[Dict]:
         lineno = i + 1
 
         # Skip block comments.
+        if "/*" in stripped and "*/" in stripped:
+            continue
         if "/*" in stripped and "*/" not in stripped:
             in_comment_block = True
             continue
