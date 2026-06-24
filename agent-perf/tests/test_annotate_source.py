@@ -90,6 +90,19 @@ class TestParsePerfAnnotate(unittest.TestCase):
         results = parse_perf_annotate(lines, function_filter="Function")
         self.assertEqual(len(results), 2)
 
+    def test_function_filter_matches_indented_headers(self):
+        """Test function filters against indented perf annotate headers."""
+        lines = [
+            "  someFunction():",
+            "  0.50 :    1: code1",
+            "  anotherFunction():",
+            "  1.00 :    1: code2",
+        ]
+
+        results = parse_perf_annotate(lines, function_filter="another")
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["source"], " code2")
+
     def test_file_marker_detection(self):
         """Test that file markers are detected and set."""
         lines = [

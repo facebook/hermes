@@ -46,7 +46,7 @@ def parse_perf_annotate(
     in_target = function_filter is None  # If no filter, include everything.
 
     # Matches the function header produced by perf annotate.
-    func_header = re.compile(r"^(\S.*):$")
+    func_header = re.compile(r"^\s*(\S.*):\s*$")
     # Matches annotated source lines.  The percentage may be absent (cold line).
     # Format: "  percentage : source" or "         : source"
     annotated_line = re.compile(r"^\s*(\d+\.\d+)?\s*:\s*(\d+)?\s*:(.*)$")
@@ -62,7 +62,7 @@ def parse_perf_annotate(
 
         # Detect function headers.
         m_func = func_header.match(raw)
-        if m_func and not raw.startswith(" "):
+        if m_func and not m_func.group(1).startswith(":"):
             current_function = m_func.group(1).strip()
             if function_filter:
                 in_target = function_filter.lower() in current_function.lower()
