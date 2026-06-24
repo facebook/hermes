@@ -78,6 +78,26 @@ class TestGeneratedCodeAntipatterns(unittest.TestCase):
         finally:
             os.unlink(filepath)
 
+    def test_excessive_function_calls_detected_at_function_end(self):
+        """Test detection when a consecutive call block reaches function end."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".c", delete=False) as f:
+            f.write("static SHLegacyValue _1_foo(SHRuntime* shr) {\n")
+            for i in range(10):
+                f.write(f"  _sh_ljs_call_{i}();\n")
+            f.write("}\n")
+            f.flush()
+            filepath = f.name
+
+        try:
+            findings = scan_generated_c(filepath)
+            excessive = [
+                f for f in findings if f["pattern"] == "excessive_function_calls"
+            ]
+            self.assertEqual(len(excessive), 1)
+            self.assertIn("consecutive", excessive[0]["detail"])
+        finally:
+            os.unlink(filepath)
+
     def test_unnecessary_gc_root_detected(self):
         """Test detection of unnecessary GC root push/pop."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".c", delete=False) as f:

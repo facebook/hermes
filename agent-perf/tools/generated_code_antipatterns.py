@@ -82,6 +82,25 @@ def scan_generated_c(filepath: str) -> List[Dict]:
     consecutive_calls = 0
     call_block_start = 0
 
+    def flush_call_block(last_call_line: int) -> None:
+        nonlocal consecutive_calls
+        if consecutive_calls > 8:
+            findings.append(
+                {
+                    "file": filepath,
+                    "line": call_block_start,
+                    "pattern": "excessive_function_calls",
+                    "detail": (
+                        f"{consecutive_calls} consecutive runtime calls "
+                        f"(lines {call_block_start}-{last_call_line}) "
+                        f"may prevent register allocation optimization"
+                    ),
+                    "severity": "high",
+                    "function": current_func or "<global>",
+                }
+            )
+        consecutive_calls = 0
+
     for i, raw_line in enumerate(lines):
         line = raw_line.rstrip("\n")
         stripped = line.strip()
@@ -98,6 +117,7 @@ def scan_generated_c(filepath: str) -> List[Dict]:
                 func_local_count += 1
 
             if brace_depth <= 0:
+                flush_call_block(lineno - 1)
                 # End of function: check for large stack frame.
                 if func_local_count > 50:
                     findings.append(
@@ -189,22 +209,7 @@ def scan_generated_c(filepath: str) -> List[Dict]:
                 call_block_start = lineno
             consecutive_calls += 1
         else:
-            if consecutive_calls > 8:
-                findings.append(
-                    {
-                        "file": filepath,
-                        "line": call_block_start,
-                        "pattern": "excessive_function_calls",
-                        "detail": (
-                            f"{consecutive_calls} consecutive runtime calls "
-                            f"(lines {call_block_start}-{lineno - 1}) "
-                            f"may prevent register allocation optimization"
-                        ),
-                        "severity": "high",
-                        "function": func_name,
-                    }
-                )
-            consecutive_calls = 0
+            flush_call_block(lineno - 1)
 
         # --- 4. Unnecessary GC root management ---
         if "_sh_push_locals" in stripped or "_sh_new_gcscope" in stripped:
