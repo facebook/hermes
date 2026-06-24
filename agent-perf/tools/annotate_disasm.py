@@ -56,7 +56,7 @@ def parse_disasm_annotations(
     # Format: "  pct  :  addr: instruction" or "       :  addr: instruction"
     asm_line = re.compile(
         r"^\s*(\d+\.\d+)?\s*:\s*"  # optional percentage
-        r"([0-9a-fA-F]+):\s+"  # hex address
+        r"(?:0x)?([0-9a-fA-F]+):\s+"  # hex address
         r"(.+?)\s*$"  # instruction text
     )
 

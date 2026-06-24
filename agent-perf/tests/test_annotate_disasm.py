@@ -229,6 +229,18 @@ class TestParseDisasmAnnotations(unittest.TestCase):
         self.assertEqual(results[0]["address"], "0x4005a3")
         self.assertEqual(results[1]["address"], "0xabc123")
 
+    def test_parse_address_with_existing_0x_prefix(self):
+        """Test parsing assembly lines whose address already has 0x."""
+        lines = [
+            "  func():",
+            "  1.00  :  0x4005a3: nop",
+        ]
+        results = parse_disasm_annotations(lines)
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["address"], "0x4005a3")
+        self.assertEqual(results[0]["instruction"], "nop")
+
     def test_unknown_function_when_no_header(self):
         """Test that function is <unknown> when no header seen."""
         lines = [
