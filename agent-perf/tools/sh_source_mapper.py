@@ -82,7 +82,7 @@ def parse_line_directives(source: str) -> List[Dict]:
                         "c_source": stripped,
                     }
                 )
-                current_js_line += 1
+            current_js_line += 1
 
     return mappings
 

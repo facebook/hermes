@@ -77,6 +77,8 @@ var y = 43;
         self.assertEqual(len(mappings), 2)
         self.assertEqual(mappings[0]["c_line"], 3)
         self.assertEqual(mappings[1]["c_line"], 5)
+        self.assertEqual(mappings[0]["js_line"], 10)
+        self.assertEqual(mappings[1]["js_line"], 12)
 
     def test_skips_bare_braces(self):
         source = """
@@ -89,6 +91,23 @@ var x = 42;
         # Bare { and } should not create mappings
         self.assertEqual(len(mappings), 1)
         self.assertEqual(mappings[0]["c_source"], "var x = 42;")
+        self.assertEqual(mappings[0]["js_line"], 11)
+
+    def test_skipped_braces_advance_subsequent_js_lines(self):
+        source = """
+#line 10 "input.js"
+{
+var x = 42;
+}
+var y = 43;
+"""
+        mappings = parse_line_directives(source)
+
+        self.assertEqual(len(mappings), 2)
+        self.assertEqual(mappings[0]["c_source"], "var x = 42;")
+        self.assertEqual(mappings[0]["js_line"], 11)
+        self.assertEqual(mappings[1]["c_source"], "var y = 43;")
+        self.assertEqual(mappings[1]["js_line"], 13)
 
     def test_multiple_files_in_same_c_output(self):
         source = """
