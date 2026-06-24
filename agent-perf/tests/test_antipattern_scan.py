@@ -185,6 +185,17 @@ class TestAntipatternScan(unittest.TestCase):
         finally:
             os.unlink(filepath)
 
+    def test_collect_files_rejects_non_cpp_file(self):
+        """Test collect_files rejects a single non-C++ file."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+            filepath = f.name
+
+        try:
+            files = collect_files(filepath)
+            self.assertEqual(files, [])
+        finally:
+            os.unlink(filepath)
+
     def test_collect_files_directory(self):
         """Test collect_files with a directory."""
         with tempfile.TemporaryDirectory() as tmpdir:

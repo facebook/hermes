@@ -217,7 +217,8 @@ def collect_files(path: str) -> List[str]:
     """Collect C++ source files from a path (file or directory)."""
     cpp_extensions = {".cpp", ".cc", ".cxx", ".h", ".hpp", ".hxx"}
     if os.path.isfile(path):
-        return [path]
+        _, ext = os.path.splitext(path)
+        return [path] if ext in cpp_extensions else []
     files = []
     # Non-recursive: only scan the immediate directory.
     # For recursive scanning, the user should specify individual files or use
