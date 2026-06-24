@@ -61,6 +61,7 @@ def scan_js_file(filepath: str) -> List[Dict]:
     for i, line in enumerate(lines):
         stripped = line.strip()
         lineno = i + 1
+        single_line_loop = False
 
         # Skip block comments.
         if "/*" in stripped and "*/" not in stripped:
@@ -78,6 +79,7 @@ def scan_js_file(filepath: str) -> List[Dict]:
         if re.search(r"\b(for|while|do)\s*[\(\{]", stripped):
             in_loop = True
             loop_brace_depth = 0
+            single_line_loop = "{" not in stripped and ";" in stripped
         if in_loop:
             loop_brace_depth += line.count("{") - line.count("}")
             if loop_brace_depth < 0:
@@ -272,6 +274,10 @@ def scan_js_file(filepath: str) -> List[Dict]:
                             ),
                         }
                     )
+
+        if single_line_loop:
+            in_loop = False
+            loop_brace_depth = 0
 
     return findings
 

@@ -132,6 +132,24 @@ class TestJsAntipatternScan(unittest.TestCase):
         finally:
             os.unlink(filepath)
 
+    def test_single_line_loop_does_not_leak_scope(self):
+        """Test that single-line loops do not mark following lines as loop body."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".js", delete=False) as f:
+            f.write("for (let i = 0; i < 10; i++) console.log(obj[key]);\n")
+            f.write("console.log(obj[key]);\n")
+            f.flush()
+            filepath = f.name
+
+        try:
+            findings = scan_js_file(filepath)
+            mega_findings = [
+                f for f in findings if f["pattern"] == "megamorphic_access"
+            ]
+            self.assertEqual(len(mega_findings), 1)
+            self.assertEqual(mega_findings[0]["line"], 1)
+        finally:
+            os.unlink(filepath)
+
     def test_dynamic_property_name_detected(self):
         """Test detection of computed property names."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".js", delete=False) as f:
