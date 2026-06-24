@@ -37,6 +37,8 @@ import sys
 from collections import Counter, defaultdict
 from typing import Dict, List, Optional
 
+from perf_report_parser import parse_perf_report_line
+
 
 # Category classification for _sh_* functions (same categories as
 # generated_code_analyzer.py for consistency).
@@ -121,55 +123,16 @@ def parse_perf_report_sh(lines: List[str]) -> List[Dict]:
     """
     results = []
 
-    # Matches perf report lines with sample counts.
-    pattern_with_samples = re.compile(
-        r"^\s*(\d+\.\d+)%\s+"
-        r"(\d+)\s+"
-        r"(\S+)\s+"
-        r"(\S+)\s+"
-        r"\[.\]\s+"
-        r"(.+?)\s*$"
-    )
-    # Matches perf report lines without sample counts.
-    pattern_no_samples = re.compile(
-        r"^\s*(\d+\.\d+)%\s+"
-        r"(\S+)\s+"
-        r"(\S+)\s+"
-        r"\[.\]\s+"
-        r"(.+?)\s*$"
-    )
-
     for line in lines:
-        line = line.rstrip("\n")
-        if not line or line.startswith("#"):
-            continue
-
-        func_name = None
-        module = None
-        samples = 0
-        pct = 0.0
-
-        m = pattern_with_samples.match(line)
-        if m:
-            pct = float(m.group(1))
-            samples = int(m.group(2))
-            module = m.group(4)
-            func_name = m.group(5)
-        else:
-            m = pattern_no_samples.match(line)
-            if m:
-                pct = float(m.group(1))
-                module = m.group(3)
-                func_name = m.group(4)
-
-        if func_name and func_name.startswith("_sh_"):
+        entry = parse_perf_report_line(line)
+        if entry and entry["function"].startswith("_sh_"):
             results.append(
                 {
-                    "function": func_name,
-                    "module": module or "<unknown>",
-                    "samples": samples,
-                    "percentage": pct,
-                    "category": categorize(func_name),
+                    "function": entry["function"],
+                    "module": entry["module"],
+                    "samples": entry["samples"],
+                    "percentage": entry["percentage"],
+                    "category": categorize(entry["function"]),
                 }
             )
 

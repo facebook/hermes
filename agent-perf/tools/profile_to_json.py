@@ -21,9 +21,10 @@ Examples:
 
 import argparse
 import json
-import re
 import sys
 from typing import Dict, List, Optional
+
+from perf_report_parser import parse_perf_report_line
 
 
 def parse_perf_report(lines: List[str]) -> List[Dict]:
@@ -37,54 +38,10 @@ def parse_perf_report(lines: List[str]) -> List[Dict]:
     Returns a list of dicts with keys: function, module, samples, percentage.
     """
     results = []
-    # Pattern matches lines like:
-    #   12.34%  1234  command  module  [.] function
-    # The percentage may or may not have leading spaces.
-    # Some versions omit sample counts; we handle both.
-    pattern_with_samples = re.compile(
-        r"^\s*(\d+\.\d+)%\s+"  # percentage
-        r"(\d+)\s+"  # sample count
-        r"(\S+)\s+"  # command
-        r"(\S+)\s+"  # shared object / module
-        r"\[.\]\s+"  # symbol type indicator [.] or [k] etc.
-        r"(.+?)\s*$"  # function name
-    )
-    pattern_no_samples = re.compile(
-        r"^\s*(\d+\.\d+)%\s+"  # percentage
-        r"(\S+)\s+"  # command
-        r"(\S+)\s+"  # shared object / module
-        r"\[.\]\s+"  # symbol type indicator
-        r"(.+?)\s*$"  # function name
-    )
-
     for line in lines:
-        line = line.rstrip("\n")
-        # Skip comment and empty lines.
-        if not line or line.startswith("#"):
-            continue
-
-        m = pattern_with_samples.match(line)
-        if m:
-            results.append(
-                {
-                    "function": m.group(5),
-                    "module": m.group(4),
-                    "samples": int(m.group(2)),
-                    "percentage": float(m.group(1)),
-                }
-            )
-            continue
-
-        m = pattern_no_samples.match(line)
-        if m:
-            results.append(
-                {
-                    "function": m.group(4),
-                    "module": m.group(3),
-                    "samples": 0,
-                    "percentage": float(m.group(1)),
-                }
-            )
+        entry = parse_perf_report_line(line)
+        if entry:
+            results.append(entry)
 
     return results
 

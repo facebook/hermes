@@ -235,6 +235,37 @@ class TestParsePerfReportSh(unittest.TestCase):
         self.assertEqual(result[0]["samples"], 0)  # Default when not present
         self.assertEqual(result[0]["module"], "libhermes.so")
 
+    def test_handles_default_children_self_format(self):
+        """Test parsing perf's default Children/Self percentage columns."""
+        lines = [
+            "# Children      Self  Command  Shared Object       Symbol",
+            "    20.00%    10.50%  app      libhermes.so        [.] _sh_ljs_add_rjs",
+            "     7.00%     3.25%  app      libhermes.so        [.] _sh_push_locals",
+            "     2.00%     0.50%  app      libhermes.so        [.] helper_func",
+        ]
+
+        result = parse_perf_report_sh(lines)
+
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["function"], "_sh_ljs_add_rjs")
+        self.assertEqual(result[0]["percentage"], 10.50)
+        self.assertEqual(result[0]["samples"], 0)
+        self.assertEqual(result[1]["function"], "_sh_push_locals")
+        self.assertEqual(result[1]["percentage"], 3.25)
+
+    def test_handles_modules_with_spaces(self):
+        """Test parsing _sh_* entries from modules whose names contain spaces."""
+        lines = [
+            "     4.00%     2.00%  app      JIT code            [.] _sh_ljs_call_rjs",
+        ]
+
+        result = parse_perf_report_sh(lines)
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["module"], "JIT code")
+        self.assertEqual(result[0]["function"], "_sh_ljs_call_rjs")
+        self.assertEqual(result[0]["percentage"], 2.00)
+
     def test_skips_comments_and_empty_lines(self):
         """Test that comments and empty lines are skipped."""
         lines = [

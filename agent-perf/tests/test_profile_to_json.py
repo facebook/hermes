@@ -58,6 +58,48 @@ class TestParsePerfReport(unittest.TestCase):
         self.assertEqual(results[1]["samples"], 0)
         self.assertEqual(results[1]["percentage"], 5.67)
 
+    def test_parse_default_children_self_format(self):
+        """Test parsing perf's default Children/Self percentage columns."""
+        lines = [
+            "# Children      Self  Command  Shared Object       Symbol",
+            "    25.00%    12.50%  hermes   libhermes.so        [.] hotFunction",
+            "     8.00%     1.25%  hermes   [kernel.kallsyms]   [k] page_fault",
+        ]
+        results = parse_perf_report(lines)
+
+        self.assertEqual(len(results), 2)
+        self.assertEqual(results[0]["function"], "hotFunction")
+        self.assertEqual(results[0]["module"], "libhermes.so")
+        self.assertEqual(results[0]["samples"], 0)
+        self.assertEqual(results[0]["percentage"], 12.50)
+
+        self.assertEqual(results[1]["function"], "page_fault")
+        self.assertEqual(results[1]["module"], "[kernel.kallsyms]")
+        self.assertEqual(results[1]["percentage"], 1.25)
+
+    def test_parse_module_names_with_spaces(self):
+        """Test parsing module names that contain spaces."""
+        lines = [
+            "     4.00%     2.00%  hermes   JIT code            [.] jittedFunction",
+        ]
+        results = parse_perf_report(lines)
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["module"], "JIT code")
+        self.assertEqual(results[0]["function"], "jittedFunction")
+        self.assertEqual(results[0]["percentage"], 2.00)
+
+    def test_parse_function_names_with_bracket_suffixes(self):
+        """Test parsing function names that contain bracketed suffixes."""
+        lines = [
+            "     4.00%     2.00%  hermes   libhermes.so        [.] foo[abi:cxx11]",
+        ]
+        results = parse_perf_report(lines)
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["module"], "libhermes.so")
+        self.assertEqual(results[0]["function"], "foo[abi:cxx11]")
+
     def test_skip_comment_and_empty_lines(self):
         """Test that comment and empty lines are skipped."""
         lines = [
