@@ -94,6 +94,22 @@ class TestAntipatternScan(unittest.TestCase):
         finally:
             os.unlink(filepath)
 
+    def test_single_line_loop_does_not_leak_scope(self):
+        """Test that single-line loops do not mark following lines as loop body."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".cpp", delete=False) as f:
+            f.write('for (int i = 0; i < 10; i++) str += "x";\n')
+            f.write('str += "outside";\n')
+            f.flush()
+            filepath = f.name
+
+        try:
+            findings = scan_file(filepath)
+            concat = [f for f in findings if f["pattern"] == "string_concat_loop"]
+            self.assertEqual(len(concat), 1)
+            self.assertEqual(concat[0]["line"], 1)
+        finally:
+            os.unlink(filepath)
+
     def test_virtual_dispatch_detected(self):
         """Test that virtual function declarations are detected."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".cpp", delete=False) as f:

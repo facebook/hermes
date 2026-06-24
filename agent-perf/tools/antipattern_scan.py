@@ -82,6 +82,7 @@ def scan_file(filepath: str) -> List[Dict]:
     for i, line in enumerate(lines):
         stripped = line.strip()
         lineno = i + 1
+        single_line_loop = False
 
         # Track loop context.
         if re.match(r"\b(for|while|do)\b", stripped):
@@ -89,6 +90,7 @@ def scan_file(filepath: str) -> List[Dict]:
                 in_loop = True
                 loop_depth = 0
                 _ = 0  # brace_depth_at_loop placeholder
+                single_line_loop = "{" not in stripped and ";" in stripped
         if in_loop:
             loop_depth += line.count("{") - line.count("}")
             if loop_depth < 0:
@@ -209,6 +211,10 @@ def scan_file(filepath: str) -> List[Dict]:
                         "estimated_impact": "medium",
                     }
                 )
+
+        if single_line_loop:
+            in_loop = False
+            loop_depth = 0
 
     return findings
 
