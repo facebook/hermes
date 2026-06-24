@@ -105,6 +105,21 @@ class TestParsePerfAnnotate(unittest.TestCase):
         self.assertEqual(results[0]["file"], "/path/to/file.cpp")
         self.assertEqual(results[1]["file"], "/another/file.cpp")
 
+    def test_file_marker_detection_with_relative_windows_and_spaces(self):
+        """Test file markers that are not absolute Unix paths."""
+        lines = [
+            "myFunc():",
+            "       : relative/path/file.cpp:",
+            "  0.50 :    1: code",
+            "       : C:\\\\src\\\\dir with spaces\\\\file.cpp:",
+            "  1.00 :    2: more code",
+        ]
+        results = parse_perf_annotate(lines)
+
+        self.assertEqual(len(results), 2)
+        self.assertEqual(results[0]["file"], "relative/path/file.cpp")
+        self.assertEqual(results[1]["file"], "C:\\\\src\\\\dir with spaces\\\\file.cpp")
+
     def test_hot_detection(self):
         """Test that hot threshold (>= 1.0%) is correctly applied."""
         lines = [

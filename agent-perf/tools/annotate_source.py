@@ -52,8 +52,8 @@ def parse_perf_annotate(
     annotated_line = re.compile(r"^\s*(\d+\.\d+)?\s*:\s*(\d+)?\s*:(.*)$")
     # Alternate simpler format: "  pct : source" without explicit line numbers.
     simple_annotated = re.compile(r"^\s*(\d+\.\d+)?\s*:\s(.*)$")
-    # File path line (appears as comment like "// file.cpp").
-    file_marker = re.compile(r"^\s*:\s*(/\S+\.\w+):$")
+    # File path line emitted before source lines.
+    file_marker = re.compile(r"^\s*:\s*(\S.*\S):$")
 
     line_counter = 0
 
