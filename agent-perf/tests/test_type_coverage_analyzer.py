@@ -88,6 +88,19 @@ static SHLegacyValue _0_func(SHRuntime *shr, SHLegacyValue *frame) {
         # Should count all three calls
         self.assertEqual(sum(result["global_calls"].values()), 3)
 
+    def test_single_line_functions_are_counted_separately(self):
+        source = """
+static SHLegacyValue _0_func1(SHRuntime *shr, SHLegacyValue *frame) { return _sh_ljs_add(shr, 1, 2); }
+static SHLegacyValue _1_func2(SHRuntime *shr, SHLegacyValue *frame) { return _sh_ljs_mul(shr, 3, 4); }
+"""
+        result = extract_runtime_calls(source)
+
+        self.assertEqual(len(result["functions"]), 2)
+        self.assertEqual(result["functions"]["_0_func1"]["_sh_ljs_add"], 1)
+        self.assertEqual(result["functions"]["_1_func2"]["_sh_ljs_mul"], 1)
+        self.assertEqual(result["function_lines"]["_0_func1"], 1)
+        self.assertEqual(result["function_lines"]["_1_func2"], 1)
+
 
 class TestCompare(unittest.TestCase):
     """Test comparison of typed vs untyped generated code."""

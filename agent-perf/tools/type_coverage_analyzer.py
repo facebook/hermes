@@ -58,6 +58,16 @@ def extract_runtime_calls(source: str) -> Dict[str, Any]:
     brace_depth = 0
     func_line_count = 0
 
+    def flush_current_function() -> None:
+        nonlocal current_func, current_calls, func_line_count
+        if current_func is None:
+            return
+        functions[current_func] = current_calls
+        function_lines[current_func] = func_line_count
+        current_func = None
+        current_calls = Counter()
+        func_line_count = 0
+
     for line in lines:
         if current_func is not None:
             brace_depth += line.count("{") - line.count("}")
@@ -69,11 +79,7 @@ def extract_runtime_calls(source: str) -> Dict[str, Any]:
                 global_calls[call] += 1
 
             if brace_depth <= 0:
-                functions[current_func] = current_calls
-                function_lines[current_func] = func_line_count
-                current_func = None
-                current_calls = Counter()
-                func_line_count = 0
+                flush_current_function()
                 continue
         else:
             m_func = FUNC_DEF_RE.match(line)
@@ -87,6 +93,9 @@ def extract_runtime_calls(source: str) -> Dict[str, Any]:
                     call = m.group(1)
                     current_calls[call] += 1
                     global_calls[call] += 1
+
+                if brace_depth <= 0:
+                    flush_current_function()
 
     return {
         "global_calls": global_calls,
