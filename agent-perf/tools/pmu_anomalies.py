@@ -112,25 +112,41 @@ def safe_div(a: float, b: float) -> Optional[float]:
     return a / b
 
 
+def get_float(data: Dict[str, Any], key: str) -> Optional[float]:
+    """Return a counter as float, or None if the counter is absent."""
+    if key not in data:
+        return None
+    return float(data[key])
+
+
+def safe_rate(
+    data: Dict[str, Any],
+    numerator_key: str,
+    denominator_key: str,
+    scale: float = 1.0,
+) -> Optional[float]:
+    """Return a scaled rate, or None if either counter is absent."""
+    numerator = get_float(data, numerator_key)
+    denominator = get_float(data, denominator_key)
+    if numerator is None or denominator is None:
+        return None
+    return safe_div(numerator * scale, denominator)
+
+
 def compute_metrics(data: Dict[str, Any]) -> Dict[str, Optional[float]]:
     """Derive rate metrics from raw PMU counters."""
-    instructions = float(data.get("instructions", 0))
-    cycles = float(data.get("cycles", 0))
-    branch_instr = float(data.get("branch_instructions", 0))
-    branch_misses = float(data.get("branch_misses", 0))
-    l1i_loads = float(data.get("L1_icache_loads", 0))
-    l1i_misses = float(data.get("L1_icache_misses", 0))
-    l1d_loads = float(data.get("L1_dcache_loads", 0))
-    l1d_misses = float(data.get("L1_dcache_misses", 0))
-    dtlb_loads = float(data.get("dTLB_loads", 0))
-    dtlb_misses = float(data.get("dTLB_misses", 0))
-
     return {
-        "ipc": safe_div(instructions, cycles),
-        "branch_miss_rate": safe_div(branch_misses * 100, branch_instr),
-        "l1_icache_miss_rate": safe_div(l1i_misses * 100, l1i_loads),
-        "l1_dcache_miss_rate": safe_div(l1d_misses * 100, l1d_loads),
-        "dtlb_miss_rate": safe_div(dtlb_misses * 100, dtlb_loads),
+        "ipc": safe_rate(data, "instructions", "cycles"),
+        "branch_miss_rate": safe_rate(
+            data, "branch_misses", "branch_instructions", scale=100
+        ),
+        "l1_icache_miss_rate": safe_rate(
+            data, "L1_icache_misses", "L1_icache_loads", scale=100
+        ),
+        "l1_dcache_miss_rate": safe_rate(
+            data, "L1_dcache_misses", "L1_dcache_loads", scale=100
+        ),
+        "dtlb_miss_rate": safe_rate(data, "dTLB_misses", "dTLB_loads", scale=100),
     }
 
 

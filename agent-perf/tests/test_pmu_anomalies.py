@@ -86,6 +86,25 @@ class TestComputeMetrics(unittest.TestCase):
         self.assertIsNone(metrics["l1_dcache_miss_rate"])
         self.assertIsNone(metrics["dtlb_miss_rate"])
 
+    def test_missing_numerator_does_not_imply_zero_rate(self):
+        """Test missing numerator counters return None instead of 0.0."""
+        data = {
+            "instructions": 1000000,
+            "cycles": 500000,
+            "branch_instructions": 200000,
+            "L1_icache_loads": 500000,
+            "L1_dcache_loads": 800000,
+            "dTLB_loads": 800000,
+        }
+
+        metrics = compute_metrics(data)
+
+        self.assertAlmostEqual(metrics["ipc"], 2.0, places=4)
+        self.assertIsNone(metrics["branch_miss_rate"])
+        self.assertIsNone(metrics["l1_icache_miss_rate"])
+        self.assertIsNone(metrics["l1_dcache_miss_rate"])
+        self.assertIsNone(metrics["dtlb_miss_rate"])
+
     def test_zero_denominators(self):
         """Test metrics computation with zero denominators returns None."""
         data = {
