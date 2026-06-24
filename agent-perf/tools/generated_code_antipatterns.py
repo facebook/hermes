@@ -42,7 +42,7 @@ from typing import Dict, List, Optional
 
 
 # Pattern to match function definitions in generated C.
-FUNC_DEF_RE = re.compile(r"^(?:static\s+)?\w[\w\s*]*\s+(_\d+_\w+)\s*\(")
+FUNC_DEF_RE = re.compile(r"^(?:static\s+)?\w[\w\s*]*\s+(_\d+_\w+)(?:#\d+)?\s*\(")
 FUNC_END_RE = re.compile(r"^}")
 
 

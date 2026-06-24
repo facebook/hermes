@@ -187,6 +187,26 @@ class TestGeneratedCodeAntipatterns(unittest.TestCase):
         finally:
             os.unlink(filepath)
 
+    def test_function_with_id_reports_function_name(self):
+        """Test that function#id definitions are attributed to the base name."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".c", delete=False) as f:
+            f.write("static SHLegacyValue _2_bar#123(SHRuntime* shr) {\n")
+            f.write("  _sh_throw();\n")
+            f.write("  int x = 5;\n")
+            f.write("}\n")
+            f.flush()
+            filepath = f.name
+
+        try:
+            findings = scan_generated_c(filepath)
+            unreachable = [
+                f for f in findings if f["pattern"] == "unreachable_after_throw"
+            ]
+            self.assertEqual(len(unreachable), 1)
+            self.assertEqual(unreachable[0]["function"], "_2_bar")
+        finally:
+            os.unlink(filepath)
+
     def test_format_human_empty(self):
         """Test format_human with no findings."""
         result = format_human([])
