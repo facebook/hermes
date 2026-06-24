@@ -280,7 +280,8 @@ def collect_js_files(path: str) -> List[str]:
     """Collect JavaScript files from a path (file or directory)."""
     js_extensions = {".js", ".mjs", ".cjs", ".jsx"}
     if os.path.isfile(path):
-        return [path]
+        _, ext = os.path.splitext(path)
+        return [path] if ext in js_extensions else []
     files = []
     try:
         for entry in os.listdir(path):
