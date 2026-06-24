@@ -115,6 +115,18 @@ class TestRegAllocReport(unittest.TestCase):
         self.assertEqual(len(functions), 1)
         self.assertEqual(functions[0]["name"], "bar")
 
+    def test_parse_dump_ra_quoted_function_name(self):
+        """Test parsing quoted function names with spaces."""
+        lines = [
+            'function "foo bar"(x) {\n',
+            "  %r0 = LoadParamInst x\n",
+            "  ReturnInst %r0\n",
+            "}\n",
+        ]
+        functions = parse_dump_ra(lines)
+        self.assertEqual(len(functions), 1)
+        self.assertEqual(functions[0]["name"], "foo bar")
+
     def test_parse_dump_ra_multiple_functions(self):
         """Test parsing multiple functions."""
         lines = [

@@ -48,9 +48,11 @@ def parse_dump_ra(lines: List[str]) -> List[Dict[str, Any]]:
     """
     functions: List[Dict[str, Any]] = []
 
-    # Function header pattern: "function <name>(<params>)"
-    # or "function <name>#<id>(<params>)"
-    func_header = re.compile(r"^(?:scope\s+)?function\s+(\S+?)(?:#\d+)?\s*\(")
+    # Function header pattern: "function <name>(<params>)",
+    # "function <name>#<id>(<params>)", or quoted display names.
+    func_header = re.compile(
+        r'^(?:scope\s+)?function\s+(?:"([^"]+)"|(\S+?)(?:#\d+)?)\s*\('
+    )
 
     # Register usage pattern: %rN where N is the register number.
     reg_pattern = re.compile(r"%r(\d+)")
@@ -103,7 +105,7 @@ def parse_dump_ra(lines: List[str]) -> List[Dict[str, Any]]:
         if m_func:
             # Flush previous function.
             flush_function(lineno - 1)
-            current_func = m_func.group(1)
+            current_func = m_func.group(1) or m_func.group(2)
             current_start = lineno
             continue
 
