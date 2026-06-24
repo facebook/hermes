@@ -36,7 +36,7 @@ def parse_nm_output(text):
     """
     symbols = {}
     for line in text.strip().splitlines():
-        parts = line.split()
+        parts = line.split(maxsplit=3)
         if len(parts) < 4:
             continue
         size_str, sym_type, name = parts[1], parts[2], parts[3]

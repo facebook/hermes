@@ -68,6 +68,11 @@ class TestParseNmOutput(unittest.TestCase):
         syms = parse_nm_output(nm_output)
         self.assertEqual(syms, {})
 
+    def test_symbol_names_with_spaces_are_preserved(self):
+        nm_output = "0000000000401000 00000100 T _foo symbol clone\n"
+        syms = parse_nm_output(nm_output)
+        self.assertEqual(syms["_foo symbol clone"], 100)
+
 
 class TestCompareSymbols(unittest.TestCase):
     def test_size_increase(self):
