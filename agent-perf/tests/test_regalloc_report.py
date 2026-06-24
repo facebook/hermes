@@ -103,6 +103,18 @@ class TestRegAllocReport(unittest.TestCase):
         self.assertIn(5, functions[0]["spill_slots"])
         self.assertIn(10, functions[0]["spill_slots"])
 
+    def test_parse_dump_ra_extract_alternate_spill_slot_forms(self):
+        """Test extraction of dotted and bracketed spill slot forms."""
+        lines = [
+            "function foo(a) {\n",
+            "  StoreStackInst %r0, %stack.5\n",
+            "  LoadStackInst %stack[6]\n",
+            "}\n",
+        ]
+        functions = parse_dump_ra(lines)
+        self.assertIn(5, functions[0]["spill_slots"])
+        self.assertIn(6, functions[0]["spill_slots"])
+
     def test_parse_dump_ra_function_with_id(self):
         """Test parsing function#id format."""
         lines = [

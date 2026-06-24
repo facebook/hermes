@@ -62,6 +62,7 @@ def parse_dump_ra(lines: List[str]) -> List[Dict[str, Any]]:
     spill_marker = re.compile(r"\b(Spill|Reload|SpillInst|ReloadInst)\b", re.IGNORECASE)
     # Mov to stack for spill.
     mov_spill = re.compile(r"\bMov(?:Inst)?\b.*%stack")
+    spill_slot_pattern = re.compile(r"%stack(?:\.|\[)?(\d+)\]?")
 
     current_func: Optional[str] = None
     current_start: int = 0
@@ -94,6 +95,10 @@ def parse_dump_ra(lines: List[str]) -> List[Dict[str, Any]]:
         instr_count = 0
         spill_slots = set()
 
+    def collect_spill_slots(line: str) -> None:
+        for slot_match in spill_slot_pattern.finditer(line):
+            spill_slots.add(int(slot_match.group(1)))
+
     for i, raw_line in enumerate(lines):
         line = raw_line.rstrip("\n")
         lineno = i + 1
@@ -121,19 +126,14 @@ def parse_dump_ra(lines: List[str]) -> List[Dict[str, Any]]:
         # Detect spills.
         if spill_store.search(line) or spill_load.search(line):
             spills += 1
-            # Try to extract spill slot identifier.
-            slot_match = re.search(r"%stack(\d+)", line)
-            if slot_match:
-                spill_slots.add(int(slot_match.group(1)))
+            collect_spill_slots(line)
 
         if spill_marker.search(line):
             spills += 1
 
         if mov_spill.search(line):
             spills += 1
-            slot_match = re.search(r"%stack(\d+)", line)
-            if slot_match:
-                spill_slots.add(int(slot_match.group(1)))
+            collect_spill_slots(line)
 
     # Flush last function.
     flush_function(len(lines))
