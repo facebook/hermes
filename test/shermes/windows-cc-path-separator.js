@@ -6,12 +6,12 @@
  */
 
 // REQUIRES: windows
-// RUN: (CC=cmd %shermes -v -o %t.exe %s || true) 2>&1 | %FileCheck %s
+// RUN: (%shermes -v -Wc,--shermes-invalid-cc-option -o %t.exe %s || true) 2>&1 | %FileCheck %s
 
-// CHECK: cmd.exe
-// CHECK-NOT: {{(^| )-IC( |$)}}
-// CHECK-NOT: {{(^| )-LC( |$)}}
-// CHECK-NOT: {{(^| )-Wl,-rpath C( |$)}}
+// CHECK: --shermes-invalid-cc-option
+// CHECK-NOT: {{(^| )-I[A-Za-z]( |$)}}
+// CHECK-NOT: {{(^| )-L[A-Za-z]( |$)}}
+// CHECK-NOT: {{(^| )-Wl,-rpath [A-Za-z]( |$)}}
 // CHECK-NOT: {{[A-Za-z]:[^ ]*:[A-Za-z]:}}
 // CHECK: {{(^| )-o }}
 
