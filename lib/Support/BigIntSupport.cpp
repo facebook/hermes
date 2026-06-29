@@ -407,7 +407,7 @@ OperationStatus toDouble(double &dst, ImmutableBigIntRef src) {
   // And now shift the mantissa right to make space for the sign and the
   // exponent in the final result.
   mantissa >>= numBitsSignExp;
-  // Number of bits in the mantissa that need to be filled with with the most
+  // Number of bits in the mantissa that need to be filled with the most
   // significant bits of src's previous digit.
   uint32_t bottomUnsetMantissaBits =
       msdShift < numBitsSignExp ? 0 : msdShift - numBitsSignExp;
@@ -1304,7 +1304,7 @@ static OperationStatus bigintAsImpl(
       // compute a mask for sign-extension -- i.e., a mask that, when or'd with
       // the digit where n lives results in that digit being sign extended. if
       // the result needs to be zero-extended, then use the complement mask to
-      // clear the upper bits. Note how this creates a mask with with upper
+      // clear the upper bits. Note how this creates a mask with upper
       // (i.e., Trailing) bits -- that's because dst is correct up-to, and
       // including, bit n-1.
       const BigIntDigitType signExtMask =

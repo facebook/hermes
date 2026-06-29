@@ -23,7 +23,7 @@ namespace hermes::vm {
 namespace module_export_cache {
 
 /// Attempts to set the module export for module \p modIndex to \p modExport.
-/// If if \p modIndex is outside current capacity of \p exports,
+/// If \p modIndex is outside current capacity of \p exports,
 /// attempts to reallocate \p exports to hold \p modIndex.  If that
 /// succeeds, \p exports is updated to point to the new ArrayStorage.
 /// If the reallocation fails, the array size will remain unchanged.

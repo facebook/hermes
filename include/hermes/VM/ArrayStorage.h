@@ -51,7 +51,7 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
     return ArrayStorageBase::template totalSizeToAlloc<GCHVType>(capacity);
   }
 
-  /// \return The the maximum number of elements that will fit in an
+  /// \return The maximum number of elements that will fit in an
   /// ArrayStorage with allocated size \p allocSize.
   static constexpr size_type capacityForAllocationSize(uint32_t allocSize) {
     assert(

@@ -1399,7 +1399,7 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
   EXPECT_EQ(hoObjID, rec7AsGPN.hostObjectID_);
   uint32_t observedXPropNameUID = rec7AsGPN.propNameID_;
   EXPECT_EQ(x, rec7AsGPN.propName_);
-  // Now we're in in the body of the HostObject getter.
+  // Now we're in the body of the HostObject getter.
   auto gprExpect0 = SynthTrace::GetPropertyRecord(
       records[recordIndex]->time_,
       globID,

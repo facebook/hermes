@@ -1168,7 +1168,7 @@ CallResult<PseudoHandle<>> JSObject::getNamedWithReceiver_RJS(
         // a dictionary HC, as long as it hasn't had any properties deleted (or
         // property flags changed) -- hence the isDictionaryNoCache test above.
         // But for the negative caching we do here, we have to exempt all
-        // dictionaries, since adding a property could mean that that a
+        // dictionaries, since adding a property could mean that a
         // subsequent execution should get the value from the object rather than
         // the prototype.
         cacheEntry->negMatchClazz = selfHandle->getClassGCPtr();

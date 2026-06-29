@@ -168,7 +168,7 @@ class SourceErrorManager {
 
   unsigned messageCount_[kMessageCountSize]{0, 0, 0, 0};
 
-  /// Supress errors after this has been reached
+  /// Suppress errors after this has been reached
   unsigned errorLimit_ = UINT_MAX;
 
   /// Set to true once the error limit has been reached.
@@ -473,7 +473,7 @@ class SourceErrorManager {
   /// Print the passed source coordinates in human readable form for debugging.
   void dumpCoords(llvh::raw_ostream &OS, const SourceCoords &coords);
 
-  /// If sucessfully decoded, print the passed source location in human readable
+  /// If successfully decoded, print the passed source location in human readable
   /// form.
   void dumpCoords(llvh::raw_ostream &OS, SMLoc loc);
 

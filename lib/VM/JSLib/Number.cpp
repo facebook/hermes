@@ -478,7 +478,7 @@ CallResult<HermesValue> numberPrototypeToFixed(void *, Runtime &runtime) {
   // Minimum number of digits required by the specified fixed-point length.
   size_t minNLen = decPt + f;
 
-  // Pad n to account for for the specified fixed-point length.
+  // Pad n to account for the specified fixed-point length.
   while (n.size() < minNLen) {
     n.push_back('0');
   }

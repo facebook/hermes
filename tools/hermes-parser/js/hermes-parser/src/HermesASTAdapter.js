@@ -73,7 +73,7 @@ export default class HermesASTAdapter {
    * Transform a Hermes AST node to the output AST format.
    *
    * This may modify the input node in-place and return that same node, or a completely
-   * new node may be constructed and returned. Overriden in child classes.
+   * new node may be constructed and returned. Overridden in child classes.
    */
   mapNode(_node: HermesNode): HermesNode {
     throw new Error('Implemented in subclasses');
@@ -104,7 +104,7 @@ export default class HermesASTAdapter {
 
   /**
    * Update the source location for this node depending on the output AST format.
-   * This can modify the input node in-place. Overriden in child classes.
+   * This can modify the input node in-place. Overridden in child classes.
    */
   fixSourceLocation(_node: HermesNode): void {
     throw new Error('Implemented in subclasses');

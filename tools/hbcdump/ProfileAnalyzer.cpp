@@ -595,7 +595,7 @@ void ProfileAnalyzer::dumpBasicBlockStats() {
     uint64_t hitCount{0};
     // Total number of executed instructions at runtime.
     uint64_t runtimeInstCount{0};
-    // Block's average loop count per funciton entry.
+    // Block's average loop count per function entry.
     double avgLoopCount{0.0};
   };
   std::vector<BasicBlockRuntimeStatistics> blockRuntimeStats;

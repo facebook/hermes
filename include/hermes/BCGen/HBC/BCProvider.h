@@ -275,7 +275,7 @@ class BCProviderBase {
   virtual const hbc::DebugOffsets *getDebugOffsets(
       uint32_t functionID) const = 0;
 
-  /// Get the source text location of address \p offsetInFunction in funciton
+  /// Get the source text location of address \p offsetInFunction in function
   /// \p funcId.
   llvh::Optional<SourceTextLocation> getSourceTextLocation(
       uint32_t funcId,

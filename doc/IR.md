@@ -214,7 +214,7 @@ LoadFrameInst | _
 Description | Loads a value from a variable.
 Example |  %1 = LoadFrameInst %scope, %variable
 Arguments | %variable is a location in %scope to load from.
-Semantics | The the instruction reads from a variable. The variable must be valid and found in the given scope.
+Semantics | The instruction reads from a variable. The variable must be valid and found in the given scope.
 Effects | Reads from memory.
 
 
@@ -225,7 +225,7 @@ LoadStackInst | _
 Description | Loads a value from a stack allocated memory pointed by a reference.
 Example |  %1 = LoadInst %0
 Arguments | The address from which the instruction loads.
-Semantics | The the instruction reads from memory. The address must be a valid stack address.
+Semantics | The instruction reads from memory. The address must be a valid stack address.
 Effects | Reads from memory.
 
 ### StoreFrameInst
@@ -235,7 +235,7 @@ StoreFrameInst | _
 Description | Stores a value to a frame variable.
 Example |  %1 = StoreFrameInst %scope, %value, %variable
 Arguments | %value is the value to be stored. %variable is a variable in %scope where where the value will be stored.
-Semantics | The the instruction saves a value to memory. The variable must be a real variable found in the scope.
+Semantics | The instruction saves a value to memory. The variable must be a real variable found in the scope.
 Effects | Writes to memory.
 
 ### StoreStackInst
@@ -245,7 +245,7 @@ StoreStackInst | _
 Description | Stores a value to a stack allocated memory.
 Example |  %1 = StoreStackInst %value, %stack_allocated
 Arguments | %value is the value to be stored. %address is the reference to stack allocation.
-Semantics | The the instruction saves a value to memory. The address must be a valid stack allocation.
+Semantics | The instruction saves a value to memory. The address must be a valid stack allocation.
 Effects | Writes to memory.
 
 ### ToPropertyKeyInst

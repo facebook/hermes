@@ -499,7 +499,7 @@ uint64_t current_rss() {
     return 0;
   }
   fclose(fp);
-  // The RSS number from from statm is in number of pages. Multiply by the real
+  // The RSS number from statm is in number of pages. Multiply by the real
   // page size to get the number in bytes.
   return rss * page_size_real();
 #endif

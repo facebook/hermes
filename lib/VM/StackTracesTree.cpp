@@ -191,7 +191,7 @@ void StackTracesTree::pushCallStack(
   assert(codeBlock && ip && "Code block and IP must be known");
 
   /// This collapses together multiple calls apparently from the same codeBlock
-  /// + IP into one node. This can happen with with bound functions, or anything
+  /// + IP into one node. This can happen with bound functions, or anything
   /// else where C++ code makes calls into the interpreter without executing
   /// further bytecode. This depth will then be depleted in calls to
   /// \c popCallStack() .

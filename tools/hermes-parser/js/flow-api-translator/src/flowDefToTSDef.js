@@ -4090,7 +4090,7 @@ const getTransforms = (
     },
     TypeParameter(node: FlowESTree.TypeParameter): TSESTree.TSTypeParameter {
       /*
-      TODO - flow models variance as explicit syntax, but but TS resolves it automatically
+      TODO - flow models variance as explicit syntax, but TS resolves it automatically
       TS does have syntax for explicit variance, but you can introduce a TS error if the
       marked parameter isn't used in the location that TS expects them to be in.
 

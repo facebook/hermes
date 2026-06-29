@@ -85,7 +85,7 @@ class Regex {
   // Named backrefs that might be invalid.
   std::vector<std::pair<GroupName, BackRefNode *>> unresolvedNamedBackRefs_;
 
-  /// Construct and and append a node of type NodeType at the end of the nodes_
+  /// Construct and append a node of type NodeType at the end of the nodes_
   /// list. The node should be constructible from \p args.
   /// \return an observer pointer to the new node.
   template <typename NodeType, typename... Args>

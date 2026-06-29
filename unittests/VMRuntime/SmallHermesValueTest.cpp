@@ -141,7 +141,7 @@ TEST_F(SmallHermesValueRuntimeTest, SmiTest) {
   // We can do min int values for large bit widths, but only because they're
   // powers of 2 -- their mantissa has trailing zeros.
   verifySmi(llvh::minIntN(40));
-  // For positive max values, which are all ones, the max we we can do is 19:
+  // For positive max values, which are all ones, the max we can do is 19:
   // The max N-bit integer has N-1 ones.  So that's 18 ones.
   // One of these is an implicit leading 1 in floating point.  So 17 ones.
   // 32 - (3 tag bits) - (1 sign bit) - (11 exponent bits) = 17;
@@ -169,7 +169,7 @@ TEST_F(SmallHermesValueRuntimeTest, EncodeNumberTest) {
   // We can do min int values for large bit widths, but only because they're
   // powers of 2 -- their mantissa has trailing zeros.
   verifySmi(llvh::minIntN(40));
-  // For positive max values, which are all ones, the max we we can do is 19:
+  // For positive max values, which are all ones, the max we can do is 19:
   // The max N-bit integer has N-1 ones.  So that's 18 ones.
   // One of these is an implicit leading 1 in floating point.  So 17 ones.
   // 32 - (3 tag bits) - (1 sign bit) - (11 exponent bits) = 17;
