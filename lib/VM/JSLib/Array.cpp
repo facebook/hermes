@@ -2012,14 +2012,66 @@ CallResult<HermesValue> arrayPrototypeSort(void *, Runtime &runtime) {
   return lv.O.getHermesValue();
 }
 
+/// Read the element at index \p k of \p O inside an iteration loop that
+/// runs user callbacks (forEach/map/filter), storing it in \p kValue.
+/// If \p fastPath is true, first try reading the element directly out of
+/// the indexed storage. Correctness does not depend on the fast path check
+/// remaining true after a callback runs: a non-empty value in the indexed
+/// storage is always a plain own data property (converting an indexed
+/// property to an accessor deletes the indexed slot first), and at()
+/// re-checks the bounds against the current storage on every iteration.
+/// Everything else falls back to the generic per-index path.
+/// \param O the object being iterated. Must be a JSArray if \p fastPath is
+///   true.
+/// \param fastPath the result of arrayFastPathCheck on \p O, hoisted out of
+///   the loop.
+/// \param k the current index.
+/// \param kHandle a Handle containing \p k encoded as a number.
+/// \param[out] kValue set to the value of the element if it is present.
+/// \return true if the element is present, false if it is a hole.
+static CallResult<bool> readElementForCallback(
+    Runtime &runtime,
+    Handle<JSObject> O,
+    bool fastPath,
+    uint32_t k,
+    Handle<> kHandle,
+    PinnedValue<> &kValue) {
+  if (fastPath) {
+    SmallHermesValue elem = vmcast<JSArray>(O.get())->at(runtime, k);
+    if (LLVM_LIKELY(!elem.isEmpty())) {
+      // Fast path: the element is a plain own data property in the indexed
+      // storage, so no property lookup is needed.
+      kValue = elem.unboxToHV(runtime);
+      return true;
+    }
+  }
+  struct : Locals {
+    PinnedValue<JSObject> descObj;
+    PinnedValue<SymbolID> tmpPropNameStorage;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+  ComputedPropertyDescWithSymStorage desc{lv.tmpPropNameStorage};
+  JSObject::getComputedPrimitiveDescriptor(
+      O, runtime, kHandle, lv.descObj, desc);
+  CallResult<PseudoHandle<>> propRes = JSObject::getComputedPropertyValue_RJS(
+      O, runtime, lv.descObj, desc.get(), kHandle);
+  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (LLVM_LIKELY(!(*propRes)->isEmpty())) {
+    kValue = std::move(*propRes);
+    return true;
+  }
+  return false;
+}
+
 inline CallResult<HermesValue> arrayPrototypeForEach(void *, Runtime &runtime) {
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   struct : Locals {
     PinnedValue<JSObject> O;
     PinnedValue<> lenProp;
     PinnedValue<> k;
-    PinnedValue<JSObject> descObj;
-    PinnedValue<SymbolID> tmpPropNameStorage;
+    PinnedValue<> kValue;
   } lv;
   LocalsRAII lraii{runtime, &lv};
 
@@ -2051,28 +2103,29 @@ inline CallResult<HermesValue> arrayPrototypeForEach(void *, Runtime &runtime) {
   // Index to execute the callback on.
   lv.k = HermesValue::encodeTrustedNumberValue(0);
 
+  // Whether elements can be read directly out of the indexed storage; see
+  // readElementForCallback() for why this can be hoisted out of the loop.
+  bool fastPath = false;
+  if (JSArray *arr = dyn_vmcast<JSArray>(lv.O.get()))
+    fastPath = arrayFastPathCheck(runtime, arr, nullptr, (uint32_t)len);
+
   // Loop through and execute the callback on all existing values.
-  // TODO: Implement a fast path for actual arrays.
   auto marker = gcScope.createMarker();
   while (lv.k->getDouble() < len) {
     gcScope.flushToMarker(marker);
 
-    ComputedPropertyDescWithSymStorage desc{lv.tmpPropNameStorage};
-    JSObject::getComputedPrimitiveDescriptor(
-        lv.O, runtime, lv.k, lv.descObj, desc);
-    CallResult<PseudoHandle<>> propRes = JSObject::getComputedPropertyValue_RJS(
-        lv.O, runtime, lv.descObj, desc.get(), lv.k);
-    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+    CallResult<bool> kPresent = readElementForCallback(
+        runtime, lv.O, fastPath, (uint32_t)lv.k->getDouble(), lv.k, lv.kValue);
+    if (LLVM_UNLIKELY(kPresent == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    if (LLVM_LIKELY(!(*propRes)->isEmpty())) {
-      auto kValue = std::move(*propRes);
+    if (*kPresent) {
       if (LLVM_UNLIKELY(
               Callable::executeCall3(
                   callbackFn,
                   runtime,
                   args.getArgHandle(1),
-                  kValue.get(),
+                  lv.kValue.get(),
                   lv.k.get(),
                   lv.O.getHermesValue()) == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
@@ -2457,13 +2510,33 @@ CallResult<HermesValue> arrayPrototypeSlice(void *, Runtime &runtime) {
   }
   lv.A = std::move(*arrRes);
 
+  // Fast path: copy the elements directly out of the array's storage. The
+  // fast path check fails if the argument coercions above mutated the array,
+  // because the element count would no longer match \c len.
+  // Note that JSArray::create has already set the length of \c A, and holes
+  // (empty values) are copied like ordinary values, which is unobservable
+  // because the fast path check has ensured there are no index-like
+  // properties in the prototype chain.
+  if (JSArray *arr = dyn_vmcast<JSArray>(lv.O.get());
+      arr && arrayFastPathCheck(runtime, arr, nullptr, (uint32_t)len)) {
+    if (count32 > 0) {
+      NoAllocScope noAlloc{runtime};
+      uint32_t start = (uint32_t)k;
+      auto *aStorage = lv.A->getIndexedStorageUnsafe(runtime);
+      auto *oStorage = arr->getIndexedStorageUnsafe(runtime);
+      for (uint32_t j = 0; j < count32; ++j) {
+        aStorage->set(j, oStorage->at(start + j), runtime.getHeap());
+      }
+    }
+    return lv.A.getHermesValue();
+  }
+
   // Next index in A to write to.
   uint32_t n = 0;
 
   auto marker = gcScope.createMarker();
 
   // Copy the elements between the actual start and end indices into A.
-  // TODO: Implement a fast path for actual arrays.
   while (k < fin) {
     lv.k = HermesValue::encodeTrustedNumberValue(k);
     ComputedPropertyDescWithSymStorage desc{lv.tmpPropNameStorage};
@@ -3207,6 +3280,50 @@ CallResult<HermesValue> arrayPrototypePop(void *, Runtime &runtime) {
   return lv.element.get();
 }
 
+/// Fast path for Array.prototype.shift() when the array is a normal array.
+/// \pre \p arr is an array with fast index properties and there are no
+///   index-like properties in any parents.
+/// \pre The storage for \p arr starts at 0 and ends at its length.
+/// \param arr the array to shift the first element from.
+/// \param len the length of \p arr (before shifting).
+static CallResult<HermesValue> arrayPrototypeShiftFastPath(
+    Runtime &runtime,
+    Handle<JSArray> arr,
+    uint32_t len) {
+  if (LLVM_UNLIKELY(len == 0)) {
+    return HermesValue::encodeUndefinedValue();
+  }
+
+  // May allocate, do the encoding outside NoAllocScope.
+  auto newLen = SmallHermesValue::encodeNumberValue(len - 1, runtime);
+
+  // Perform the actual shift.
+  NoAllocScope noAlloc{runtime};
+  auto *storage = arr->getIndexedStorageUnsafe(runtime);
+  SmallHermesValue first = storage->at(0);
+  // Move every element to the left one slot. Holes (empty values) are moved
+  // like ordinary values, which is unobservable because the fast path check
+  // has ensured there are no index-like properties in the prototype chain.
+  for (uint32_t from = 1; from < len; ++from) {
+    SmallHermesValue elem = storage->at(from);
+    storage->set(from - 1, elem, runtime.getHeap());
+  }
+  JSArray::StorageType::resizeWithinCapacity(storage, runtime, len - 1);
+  // Set the elemCount to the end of the storage, which we know is correct
+  // because we just shrank the storage to len-1 elements and we've already
+  // checked the bounds of the storage in the fast path check.
+  assert(storage->size() == len - 1 && arr->getBeginIndex() == 0);
+  arr->setElemCountUnsafe(len - 1);
+  // We've already checked that the length is not readonly.
+  JSArray::putLengthUnsafe(*arr, runtime, newLen);
+
+  // Fast path check has ensured there's no other elements up the prototype
+  // chain that can have values at index-like property names, so if we see
+  // 'empty' in the storage we need to return 'undefined'.
+  return first.isEmpty() ? HermesValue::encodeUndefinedValue()
+                         : first.unboxToHV(runtime);
+}
+
 CallResult<HermesValue> arrayPrototypeShift(void *, Runtime &runtime) {
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   struct : Locals {
@@ -3221,6 +3338,22 @@ CallResult<HermesValue> arrayPrototypeShift(void *, Runtime &runtime) {
   } lv;
   LocalsRAII lraii{runtime, &lv};
 
+  // Ensure the fast path does not leak any handles.
+  NoLeakHandleScope noLeaks{runtime};
+
+  if (LLVM_LIKELY(vmisa<JSArray>(args.getThisArg()))) {
+    // Fast path for getting the length.
+    JSArray *arr = vmcast<JSArray>(args.getThisArg());
+    uint32_t len = JSArray::getLength(arr, runtime);
+
+    if (arrayFastPathCheck(runtime, arr, *runtime.arrayClass, len)) {
+      return arrayPrototypeShiftFastPath(
+          runtime, args.vmcastThis<JSArray>(), len);
+    }
+  }
+
+  // The slow path may create additional handles, so create a GCScope to avoid
+  // leaking them.
   GCScope gcScope(runtime);
   auto objRes = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
@@ -3590,6 +3723,66 @@ indexOfHelper(Runtime &runtime, NativeArgs args, const bool reverse) {
   return HermesValue::encodeTrustedNumberValue(-1);
 }
 
+/// Fast path for Array.prototype.unshift() when the array is a normal array.
+/// \pre \p arr is an array with fast index properties and there are no
+///   index-like properties in any parents.
+/// \pre The storage for \p arr starts at 0 and ends at its length.
+/// \pre There is at least one argument, and the resulting length fits in
+///   uint32.
+/// \param arr the array to prepend the arguments to.
+/// \param len the length of \p arr (before prepending).
+/// \param args the original NativeArgs to unshift().
+static CallResult<HermesValue> arrayPrototypeUnshiftFastPath(
+    Runtime &runtime,
+    Handle<JSArray> arr,
+    uint32_t len,
+    const NativeArgs &args) {
+  uint32_t argCount = args.getArgCount();
+  assert(argCount > 0 && "fast path requires at least one argument");
+  assert(
+      UINT32_MAX - len >= argCount &&
+      "integer overflow checked before calling fast path");
+  uint32_t finalLen = len + argCount;
+
+  // Expand the array to make room for the new items.
+  // Length property will be set at the end.
+  if (LLVM_UNLIKELY(
+          JSArray::setStorageEndIndex(arr, runtime, finalLen) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  {
+    // Move every element to the right by argCount, starting from the right,
+    // to avoid overwriting elements that have not been moved yet. Holes
+    // (empty values) are moved like ordinary values, which is unobservable
+    // because the fast path check has ensured there are no index-like
+    // properties in the prototype chain.
+    NoAllocScope noAlloc{runtime};
+    auto *storage = arr->getIndexedStorageUnsafe(runtime);
+    for (uint32_t from = len; from > 0; --from) {
+      SmallHermesValue elem = storage->at(from - 1);
+      storage->set(from - 1 + argCount, elem, runtime.getHeap());
+    }
+  }
+
+  // Copy the arguments into the beginning of the array.
+  for (uint32_t i = 0; i < argCount; ++i) {
+    // Perform potential allocation before dereferencing arr.
+    SmallHermesValue shv =
+        SmallHermesValue::encodeHermesValue(args.getArg(i), runtime);
+    JSArray::unsafeSetExistingElementAt(*arr, runtime, i, shv);
+  }
+
+  auto shv = SmallHermesValue::encodeNumberValue(finalLen, runtime);
+  // Since we have already checked that the hidden class is unchanged, and
+  // updated the storage end index, we can just directly store the new length
+  // to the corresponding slot in the JSArray.
+  JSArray::putLengthUnsafe(*arr, runtime, shv);
+
+  return HermesValue::encodeTrustedNumberValue(finalLen);
+}
+
 CallResult<HermesValue> arrayPrototypeUnshift(void *, Runtime &runtime) {
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   struct : Locals {
@@ -3603,6 +3796,25 @@ CallResult<HermesValue> arrayPrototypeUnshift(void *, Runtime &runtime) {
     PinnedValue<SymbolID> fromNameTmpStorage;
   } lv;
   LocalsRAII lraii{runtime, &lv};
+
+  // Ensure the fast path does not leak any handles.
+  NoLeakHandleScope noLeaks{runtime};
+
+  uint32_t argCount32 = args.getArgCount();
+  if (LLVM_LIKELY(vmisa<JSArray>(args.getThisArg())) && argCount32 > 0) {
+    // Fast path for getting the length.
+    JSArray *arr = vmcast<JSArray>(args.getThisArg());
+    uint32_t len = JSArray::getLength(arr, runtime);
+
+    if (LLVM_LIKELY(len < UINT32_MAX - argCount32) &&
+        arrayFastPathCheck(runtime, arr, *runtime.arrayClass, len)) {
+      return arrayPrototypeUnshiftFastPath(
+          runtime, args.vmcastThis<JSArray>(), len, args);
+    }
+  }
+
+  // The slow path may create additional handles, so create a GCScope to avoid
+  // leaking them.
   GCScope gcScope(runtime);
 
   auto objRes = toObject(runtime, args.getThisHandle());
@@ -3823,8 +4035,7 @@ CallResult<HermesValue> arrayPrototypeMap(void *, Runtime &runtime) {
     PinnedValue<> lenProp;
     PinnedValue<JSArray> A;
     PinnedValue<> k;
-    PinnedValue<JSObject> descObj;
-    PinnedValue<SymbolID> tmpPropNameStorage;
+    PinnedValue<> kValue;
     PinnedValue<> value;
   } lv;
   LocalsRAII lraii{runtime, &lv};
@@ -3867,28 +4078,29 @@ CallResult<HermesValue> arrayPrototypeMap(void *, Runtime &runtime) {
   // Current index to execute callback on.
   lv.k = HermesValue::encodeTrustedNumberValue(0);
 
+  // Whether elements can be read directly out of the indexed storage; see
+  // readElementForCallback() for why this can be hoisted out of the loop.
+  bool fastPath = false;
+  if (JSArray *arr = dyn_vmcast<JSArray>(lv.O.get()))
+    fastPath = arrayFastPathCheck(runtime, arr, nullptr, (uint32_t)len);
+
   // Main loop to execute callback and store the results in A.
-  // TODO: Implement a fast path for actual arrays.
   auto marker = gcScope.createMarker();
   while (lv.k->getDouble() < len) {
     gcScope.flushToMarker(marker);
 
-    ComputedPropertyDescWithSymStorage desc{lv.tmpPropNameStorage};
-    JSObject::getComputedPrimitiveDescriptor(
-        lv.O, runtime, lv.k, lv.descObj, desc);
-    CallResult<PseudoHandle<>> propRes = JSObject::getComputedPropertyValue_RJS(
-        lv.O, runtime, lv.descObj, desc.get(), lv.k);
-    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+    CallResult<bool> kPresent = readElementForCallback(
+        runtime, lv.O, fastPath, (uint32_t)lv.k->getDouble(), lv.k, lv.kValue);
+    if (LLVM_UNLIKELY(kPresent == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    if (LLVM_LIKELY(!(*propRes)->isEmpty())) {
+    if (*kPresent) {
       // kPresent is true, execute callback and store result in A[k].
-      auto kValue = std::move(*propRes);
       auto callRes = Callable::executeCall3(
           callbackFn,
           runtime,
           args.getArgHandle(1),
-          kValue.get(),
+          lv.kValue.get(),
           lv.k.get(),
           lv.O.getHermesValue());
       if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
@@ -3916,8 +4128,6 @@ CallResult<HermesValue> arrayPrototypeFilter(void *, Runtime &runtime) {
     PinnedValue<JSArray> A;
     PinnedValue<> k;
     PinnedValue<> kValue;
-    PinnedValue<JSObject> descObj;
-    PinnedValue<SymbolID> tmpPropNameStorage;
   } lv;
   LocalsRAII lraii{runtime, &lv};
 
@@ -3960,21 +4170,23 @@ CallResult<HermesValue> arrayPrototypeFilter(void *, Runtime &runtime) {
   // Index to copy to in the new array.
   uint32_t to = 0;
 
+  // Whether elements can be read directly out of the indexed storage; see
+  // readElementForCallback() for why this can be hoisted out of the loop.
+  bool fastPath = false;
+  if (JSArray *arr = dyn_vmcast<JSArray>(lv.O.get()))
+    fastPath = arrayFastPathCheck(runtime, arr, nullptr, (uint32_t)len);
+
   auto marker = gcScope.createMarker();
   while (k < len) {
     gcScope.flushToMarker(marker);
 
-    ComputedPropertyDescWithSymStorage desc{lv.tmpPropNameStorage};
     lv.k = HermesValue::encodeTrustedNumberValue(k);
-    JSObject::getComputedPrimitiveDescriptor(
-        lv.O, runtime, lv.k, lv.descObj, desc);
-    CallResult<PseudoHandle<>> propRes = JSObject::getComputedPropertyValue_RJS(
-        lv.O, runtime, lv.descObj, desc.get(), lv.k);
-    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+    CallResult<bool> kPresent = readElementForCallback(
+        runtime, lv.O, fastPath, (uint32_t)k, lv.k, lv.kValue);
+    if (LLVM_UNLIKELY(kPresent == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    if (LLVM_LIKELY(!(*propRes)->isEmpty())) {
-      lv.kValue = std::move(*propRes);
+    if (*kPresent) {
       // Call the callback.
       auto callRes = Callable::executeCall3(
           callbackFn,
