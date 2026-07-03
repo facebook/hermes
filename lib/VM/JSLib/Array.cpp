@@ -3341,37 +3341,46 @@ CallResult<HermesValue> arrayPrototypeShift(void *, Runtime &runtime) {
   // Ensure the fast path does not leak any handles.
   NoLeakHandleScope noLeaks{runtime};
 
+  uint64_t len;
   if (LLVM_LIKELY(vmisa<JSArray>(args.getThisArg()))) {
     // Fast path for getting the length.
     JSArray *arr = vmcast<JSArray>(args.getThisArg());
-    uint32_t len = JSArray::getLength(arr, runtime);
+    len = JSArray::getLength(arr, runtime);
 
     if (arrayFastPathCheck(runtime, arr, *runtime.arrayClass, len)) {
       return arrayPrototypeShiftFastPath(
           runtime, args.vmcastThis<JSArray>(), len);
     }
+
+    // Fast path check failed, populate the O Local so it can be used in the
+    // slow path.
+    lv.O = args.vmcastThis<JSObject>();
   }
 
   // The slow path may create additional handles, so create a GCScope to avoid
   // leaking them.
   GCScope gcScope(runtime);
-  auto objRes = toObject(runtime, args.getThisHandle());
-  if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  lv.O.castAndSetHermesValue<JSObject>(*objRes);
 
-  auto propRes = JSObject::getNamed_RJS(
-      lv.O, runtime, Predefined::getSymbolID(Predefined::length));
-  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
+  // If the fast path has not populated the object, do that now.
+  if (!*lv.O) {
+    auto objRes = toObject(runtime, args.getThisHandle());
+    if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    lv.O.castAndSetHermesValue<JSObject>(*objRes);
+
+    auto propRes = JSObject::getNamed_RJS(
+        lv.O, runtime, Predefined::getSymbolID(Predefined::length));
+    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    lv.lenProp = std::move(*propRes);
+    auto intRes = toLengthU64(runtime, lv.lenProp);
+    if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    len = *intRes;
   }
-  lv.lenProp = std::move(*propRes);
-  auto intRes = toLengthU64(runtime, lv.lenProp);
-  if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  uint64_t len = *intRes;
 
   if (len == 0) {
     // Need to set length to 0 per spec.
@@ -3386,9 +3395,8 @@ CallResult<HermesValue> arrayPrototypeShift(void *, Runtime &runtime) {
     return HermesValue::encodeUndefinedValue();
   }
 
-  if (LLVM_UNLIKELY(
-          (propRes = getIndexed_RJS(runtime, lv.O, 0)) ==
-          ExecutionStatus::EXCEPTION)) {
+  CallResult<PseudoHandle<>> propRes = getIndexed_RJS(runtime, lv.O, 0);
+  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   lv.first = std::move(*propRes);
@@ -3396,7 +3404,6 @@ CallResult<HermesValue> arrayPrototypeShift(void *, Runtime &runtime) {
   lv.from = HermesValue::encodeTrustedNumberValue(1);
 
   // Move every element to the left one slot.
-  // TODO: Add a fast path for actual arrays.
   while (lv.from->getDouble() < len) {
     GCScopeMarkerRAII marker{gcScope};
 
@@ -3801,40 +3808,48 @@ CallResult<HermesValue> arrayPrototypeUnshift(void *, Runtime &runtime) {
   NoLeakHandleScope noLeaks{runtime};
 
   uint32_t argCount32 = args.getArgCount();
-  if (LLVM_LIKELY(vmisa<JSArray>(args.getThisArg())) && argCount32 > 0) {
+  uint64_t len;
+  if (LLVM_LIKELY(vmisa<JSArray>(args.getThisArg()))) {
     // Fast path for getting the length.
     JSArray *arr = vmcast<JSArray>(args.getThisArg());
-    uint32_t len = JSArray::getLength(arr, runtime);
+    len = JSArray::getLength(arr, runtime);
 
-    if (LLVM_LIKELY(len < UINT32_MAX - argCount32) &&
+    if (argCount32 > 0 && LLVM_LIKELY(len < UINT32_MAX - argCount32) &&
         arrayFastPathCheck(runtime, arr, *runtime.arrayClass, len)) {
       return arrayPrototypeUnshiftFastPath(
           runtime, args.vmcastThis<JSArray>(), len, args);
     }
+
+    // Fast path check failed, populate the O Local so it can be used in the
+    // slow path.
+    lv.O = args.vmcastThis<JSObject>();
   }
 
   // The slow path may create additional handles, so create a GCScope to avoid
   // leaking them.
   GCScope gcScope(runtime);
 
-  auto objRes = toObject(runtime, args.getThisHandle());
-  if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  lv.O.castAndSetHermesValue<JSObject>(*objRes);
+  // If the fast path has not populated the object, do that now.
+  if (!*lv.O) {
+    auto objRes = toObject(runtime, args.getThisHandle());
+    if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    lv.O.castAndSetHermesValue<JSObject>(*objRes);
 
-  auto propRes = JSObject::getNamed_RJS(
-      lv.O, runtime, Predefined::getSymbolID(Predefined::length));
-  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
+    auto propRes = JSObject::getNamed_RJS(
+        lv.O, runtime, Predefined::getSymbolID(Predefined::length));
+    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    lv.lenProp = std::move(*propRes);
+    auto intRes = toLengthU64(runtime, lv.lenProp);
+    if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    len = *intRes;
   }
-  lv.lenProp = std::move(*propRes);
-  auto intRes = toLengthU64(runtime, lv.lenProp);
-  if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  uint64_t len = *intRes;
-  size_t argCount = args.getArgCount();
+  size_t argCount = argCount32;
 
   // 4. If argCount > 0, then
   if (argCount > 0) {
@@ -3849,7 +3864,6 @@ CallResult<HermesValue> arrayPrototypeUnshift(void *, Runtime &runtime) {
     uint64_t j = 0;
 
     // Move elements to the right by argCount to account for the new elements.
-    // TODO: Add a fast path for actual arrays.
     auto marker = gcScope.createMarker();
     while (k > 0) {
       gcScope.flushToMarker(marker);
