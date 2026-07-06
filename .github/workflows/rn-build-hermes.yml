@@ -16,7 +16,7 @@ on:
       - static_h
   push:
     branches:
-      - 250829098.0.0-stable
+      - 260318099.0.0-stable
       - static_h
 
 jobs:
