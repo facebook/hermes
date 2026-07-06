@@ -137,6 +137,7 @@ static int executeHBCBytecodeFromCL(
           .withEnableHermesInternalTestMethods(
               flags.EnableHermesInternalTestMethods)
           .withTest262(cl::compilerRuntimeFlags.Test262)
+          .withES6BlockScoping(cl::compilerRuntimeFlags.ES6BlockScoping)
           .build();
 
   options.basicBlockProfiling = cl::BasicBlockProfiling;
@@ -230,6 +231,7 @@ static vm::RuntimeConfig getReplRuntimeConfig() {
       .withEnableHermesInternal(flags.EnableHermesInternal)
       .withEnableHermesInternalTestMethods(
           flags.EnableHermesInternalTestMethods)
+      .withES6BlockScoping(cl::compilerRuntimeFlags.ES6BlockScoping)
       .build();
 }
 
