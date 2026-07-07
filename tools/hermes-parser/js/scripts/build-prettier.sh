@@ -18,6 +18,8 @@ HERMES_PARSER_JS="$XPLAT/static_h/tools/hermes-parser/js"
 HERMES_PARSER_DIST="$HERMES_PARSER_JS/hermes-parser/dist"
 PRETTIER_DIR="$HERMES_PARSER_JS/prettier-hermes-flow-fork"
 PLUGIN_DIR="$HERMES_PARSER_JS/prettier-plugin-hermes-parser"
+GENERATED_PLUGIN="$PLUGIN_DIR/index.generated.mjs"
+WRAPPER_TEMPLATE="$HERMES_PARSER_JS/scripts/templates/prettier-plugin-index.mjs"
 PRETTIER_YARN="$PRETTIER_DIR/.yarn/releases/yarn-4.9.2.cjs"
 GENERATED="generated"
 
@@ -69,8 +71,9 @@ $NODE $PRETTIER_YARN build --package=@prettier/plugin-hermes
 
 # Copy assets to prettier plugin dir
 echo "Copy assets"
-echo "// @$GENERATED" > "$PLUGIN_DIR/index.mjs"
-cat "./dist/plugin-hermes/index.mjs" >> "$PLUGIN_DIR/index.mjs"
+echo "// @$GENERATED" > "$GENERATED_PLUGIN"
+cat "./dist/plugin-hermes/index.mjs" >> "$GENERATED_PLUGIN"
+cp "$WRAPPER_TEMPLATE" "$PLUGIN_DIR/index.mjs"
 
 echo "Success!"
 echo "Be sure to commit your changes and create a PR to the upstream repo after committing"

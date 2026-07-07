@@ -1,3 +1,6 @@
+## 0.37.0
+- Fix compatibility with Prettier 3.7+.
+
 ## 0.36.1
 - Updated hermes-parser to 0.36.1.
 - Support `async component` and `async hook` declaration formatting. See [PR #19053 in prettier](https://github.com/prettier/prettier/pull/19053).

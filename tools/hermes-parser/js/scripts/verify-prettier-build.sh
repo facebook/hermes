@@ -10,7 +10,8 @@
 set -xe -o pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MINIFIED_PRETTIER_PLUGIN="$SCRIPT_DIR/../prettier-plugin-hermes-parser/index.mjs"
+PRETTIER_PLUGIN_WRAPPER="$SCRIPT_DIR/../prettier-plugin-hermes-parser/index.mjs"
+MINIFIED_PRETTIER_PLUGIN="$SCRIPT_DIR/../prettier-plugin-hermes-parser/index.generated.mjs"
 XPLAT="$(cd "$SCRIPT_DIR/../../../../.." && pwd)"
 NODE="$XPLAT/third-party/node/v24.17.0/node"
 
@@ -24,15 +25,17 @@ trap 'rm -f "$ORIGINAL_COPY"' EXIT
 # Run the build script
 "$SCRIPT_DIR/build-prettier.sh"
 
-# Check if index.mjs changed
-if sl status "$MINIFIED_PRETTIER_PLUGIN" | grep -q .; then
+# Check if the generated bundle or its compatibility wrapper changed
+if sl status "$PRETTIER_PLUGIN_WRAPPER" "$MINIFIED_PRETTIER_PLUGIN" | grep -q .; then
     NEW_SIZE=$(wc -c < "$MINIFIED_PRETTIER_PLUGIN")
     NEW_HASH=$(sha256sum "$MINIFIED_PRETTIER_PLUGIN" | awk '{print $1}')
 
-    echo "✗ index.mjs is out of sync with the prettier fork!"
+    echo "✗ prettier plugin files are out of sync with the prettier fork!"
     echo ""
-    echo "The committed index.mjs does not match the build output."
-    echo "Please run ./scripts/build-prettier.sh and commit the updated file."
+    echo "The committed plugin files do not match the build output."
+    echo "Please run ./scripts/build-prettier.sh and commit the updated files."
+    echo ""
+    sl status "$PRETTIER_PLUGIN_WRAPPER" "$MINIFIED_PRETTIER_PLUGIN"
     echo ""
     echo "File comparison:"
     echo "  Committed: $ORIGINAL_SIZE bytes (sha256: ${ORIGINAL_HASH:0:16}...)"

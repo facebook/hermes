@@ -27,7 +27,7 @@ module.exports = defineConfig([
     '**/fixtures/**',
     'internal-prettier-v3/',
     'jest.config.js',
-    'prettier-plugin-hermes-parser/index.mjs',
+    'prettier-plugin-hermes-parser/index.generated.mjs',
     'prettier-hermes-flow-fork/',
   ]),
   js.configs.recommended,
