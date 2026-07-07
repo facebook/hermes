@@ -73,8 +73,26 @@ async function updateGradlePropertiesFile(
   );
 }
 
+async function updatePackageJsonVersion(
+  version /*: string */,
+) /*: Promise<void> */ {
+  const hermesCompilerPackageJsonPath = path.join(
+    REPO_ROOT,
+    'npm',
+    'hermes-compiler',
+    'package.json',
+  );
+  const contents = await fs.readFile(hermesCompilerPackageJsonPath, 'utf-8');
+
+  return fs.writeFile(
+    hermesCompilerPackageJsonPath,
+    contents.replace(/"version": ".*"/, `"version": "${version}"`),
+  );
+}
+
 module.exports = {
   validateBuildType,
   getVersion,
   updateGradlePropertiesFile,
+  updatePackageJsonVersion,
 };
