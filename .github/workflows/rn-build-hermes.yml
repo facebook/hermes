@@ -40,9 +40,10 @@ jobs:
         uses: ./.github/actions/yarn-install
       - id: set_release_type
         run: |
-          # Guard: never allow release mode on non-releasing branches
-          # (static_h and the staging branch), even via workflow_dispatch.
-          if [[ $REF == "refs/heads/static_h" || $REF == "refs/heads/260318099.0.0-staging" ]]; then
+          # Guard: never allow release mode on non-releasing branches:
+          # static_h and any branch whose name ends in `-staging`, even via
+          # workflow_dispatch.
+          if [[ $REF == "refs/heads/static_h" || $REF == refs/heads/*-staging ]]; then
             echo "Branch is a non-releasing branch, forcing dry-run mode"
             echo "RELEASE_TYPE=dry-run" >> $GITHUB_OUTPUT
           elif [[ $EVENT_NAME == "workflow_dispatch" ]]; then
