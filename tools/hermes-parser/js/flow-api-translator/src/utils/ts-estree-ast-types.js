@@ -141,9 +141,7 @@ export interface CatchClause extends BaseNode {
   +body: BlockStatement;
 }
 export type ChainElement =
-  | CallExpression
-  | MemberExpression
-  | TSNonNullExpression;
+  CallExpression | MemberExpression | TSNonNullExpression;
 export interface ChainExpression extends BaseNode {
   +type: 'ChainExpression';
   +expression: ChainElement;
@@ -211,8 +209,7 @@ export interface ClassBody extends BaseNode {
   +body: ReadonlyArray<ClassElement>;
 }
 export type ClassDeclaration =
-  | ClassDeclarationWithName
-  | ClassDeclarationWithOptionalName;
+  ClassDeclarationWithName | ClassDeclarationWithOptionalName;
 interface ClassDeclarationBase extends ClassBase {
   +type: 'ClassDeclaration';
 }
@@ -239,21 +236,18 @@ export interface ClassExpression extends ClassBase {
   +declare?: void;
   +decorators?: void;
 }
-interface ClassMethodDefinitionNonComputedNameBase
-  extends MethodDefinitionBase {
+interface ClassMethodDefinitionNonComputedNameBase extends MethodDefinitionBase {
   +type: 'MethodDefinition';
   +key: ClassPropertyNameNonComputed;
   +computed: false;
 }
-interface ClassPropertyDefinitionNonComputedNameBase
-  extends PropertyDefinitionBase {
+interface ClassPropertyDefinitionNonComputedNameBase extends PropertyDefinitionBase {
   +type: 'PropertyDefinition';
   +key: ClassPropertyNameNonComputed;
   +computed: false;
 }
 export type ClassPropertyNameNonComputed =
-  | PrivateIdentifier
-  | PropertyNameNonComputed;
+  PrivateIdentifier | PropertyNameNonComputed;
 export type Comment = BlockComment | LineComment;
 export interface ConditionalExpression extends BaseNode {
   +type: 'ConditionalExpression';
@@ -337,8 +331,7 @@ export interface ExportAllDeclaration extends BaseNode {
 }
 type ExportAndImportKind = 'type' | 'value';
 export type ExportDeclaration =
-  | DefaultExportDeclarations
-  | NamedExportDeclarations;
+  DefaultExportDeclarations | NamedExportDeclarations;
 export interface ExportDefaultDeclaration extends BaseNode {
   +type: 'ExportDefaultDeclaration';
   /**
@@ -390,28 +383,24 @@ interface ExportNamedDeclarationBase extends BaseNode {
    */
   +specifiers: ReadonlyArray<ExportSpecifier>;
 }
-export interface ExportNamedDeclarationAmbiguous
-  extends ExportNamedDeclarationBase {
+export interface ExportNamedDeclarationAmbiguous extends ExportNamedDeclarationBase {
   +type: 'ExportNamedDeclaration';
 }
-export interface ExportNamedDeclarationWithoutSourceWithSingle
-  extends ExportNamedDeclarationBase {
+export interface ExportNamedDeclarationWithoutSourceWithSingle extends ExportNamedDeclarationBase {
   +type: 'ExportNamedDeclaration';
   +assertions: ReadonlyArray<ImportAttribute>;
   +declaration: NamedExportDeclarations;
   +source: null;
   +specifiers: [];
 }
-export interface ExportNamedDeclarationWithoutSourceWithMultiple
-  extends ExportNamedDeclarationBase {
+export interface ExportNamedDeclarationWithoutSourceWithMultiple extends ExportNamedDeclarationBase {
   +type: 'ExportNamedDeclaration';
   +assertions: ReadonlyArray<ImportAttribute>;
   +declaration: null;
   +source: null;
   +specifiers: ReadonlyArray<ExportSpecifier>;
 }
-export interface ExportNamedDeclarationWithSource
-  extends ExportNamedDeclarationBase {
+export interface ExportNamedDeclarationWithSource extends ExportNamedDeclarationBase {
   +type: 'ExportNamedDeclaration';
   +assertions: ReadonlyArray<ImportAttribute>;
   +declaration: null;
@@ -552,8 +541,7 @@ interface FunctionBase extends BaseNode {
   +typeParameters?: TSTypeParameterDeclaration;
 }
 export type FunctionDeclaration =
-  | FunctionDeclarationWithName
-  | FunctionDeclarationWithOptionalName;
+  FunctionDeclarationWithName | FunctionDeclarationWithOptionalName;
 interface FunctionDeclarationBase extends FunctionBase {
   +type: 'FunctionDeclaration';
   +body: BlockStatement;
@@ -564,8 +552,7 @@ export interface FunctionDeclarationWithName extends FunctionDeclarationBase {
   +type: 'FunctionDeclaration';
   +id: Identifier;
 }
-export interface FunctionDeclarationWithOptionalName
-  extends FunctionDeclarationBase {
+export interface FunctionDeclarationWithOptionalName extends FunctionDeclarationBase {
   +type: 'FunctionDeclaration';
   +id: Identifier | null;
 }
@@ -602,9 +589,7 @@ export interface ImportAttribute extends BaseNode {
   +value: Literal;
 }
 export type ImportClause =
-  | ImportDefaultSpecifier
-  | ImportNamespaceSpecifier
-  | ImportSpecifier;
+  ImportDefaultSpecifier | ImportNamespaceSpecifier | ImportSpecifier;
 export interface ImportDeclaration extends BaseNode {
   +type: 'ImportDeclaration';
   /**
@@ -684,9 +669,7 @@ export interface JSXEmptyExpression extends BaseNode {
   +type: 'JSXEmptyExpression';
 }
 export type JSXExpression =
-  | JSXEmptyExpression
-  | JSXExpressionContainer
-  | JSXSpreadChild;
+  JSXEmptyExpression | JSXExpressionContainer | JSXSpreadChild;
 export interface JSXExpressionContainer extends BaseNode {
   +type: 'JSXExpressionContainer';
   +expression: Expression | JSXEmptyExpression;
@@ -733,9 +716,7 @@ export interface JSXSpreadChild extends BaseNode {
   +expression: Expression | JSXEmptyExpression;
 }
 export type JSXTagNameExpression =
-  | JSXIdentifier
-  | JSXMemberExpression
-  | JSXNamespacedName;
+  JSXIdentifier | JSXMemberExpression | JSXNamespacedName;
 export interface JSXText extends BaseNode {
   +type: 'JSXText';
   +value: string;
@@ -798,8 +779,7 @@ export interface LogicalExpression extends BaseNode {
   +right: Expression;
 }
 export type MemberExpression =
-  | MemberExpressionComputedName
-  | MemberExpressionNonComputedName;
+  MemberExpressionComputedName | MemberExpressionNonComputedName;
 interface MemberExpressionBase extends BaseNode {
   +object: LeftHandSideExpression;
   +property: Expression | Identifier | PrivateIdentifier;
@@ -822,8 +802,7 @@ export interface MetaProperty extends BaseNode {
   +property: Identifier;
 }
 export type MethodDefinition =
-  | MethodDefinitionComputedName
-  | MethodDefinitionNonComputedName;
+  MethodDefinitionComputedName | MethodDefinitionNonComputedName;
 /** this should not be directly used - instead use MethodDefinitionComputedNameBase or MethodDefinitionNonComputedNameBase */
 interface MethodDefinitionBase extends BaseNode {
   +accessibility?: Accessibility;
@@ -840,8 +819,7 @@ interface MethodDefinitionBase extends BaseNode {
 export interface MethodDefinitionAmbiguous extends MethodDefinitionBase {
   type: 'MethodDefinition';
 }
-export interface MethodDefinitionComputedName
-  extends MethodDefinitionComputedNameBase {
+export interface MethodDefinitionComputedName extends MethodDefinitionComputedNameBase {
   +type: 'MethodDefinition';
   +computed: true;
 }
@@ -849,8 +827,7 @@ interface MethodDefinitionComputedNameBase extends MethodDefinitionBase {
   +key: PropertyNameComputed;
   +computed: true;
 }
-export interface MethodDefinitionNonComputedName
-  extends ClassMethodDefinitionNonComputedNameBase {
+export interface MethodDefinitionNonComputedName extends ClassMethodDefinitionNonComputedNameBase {
   +type: 'MethodDefinition';
   +computed: false;
 }
@@ -1152,8 +1129,7 @@ export interface PropertyComputedName extends PropertyBase {
   +computed: true;
 }
 export type PropertyDefinition =
-  | PropertyDefinitionComputedName
-  | PropertyDefinitionNonComputedName;
+  PropertyDefinitionComputedName | PropertyDefinitionNonComputedName;
 interface PropertyDefinitionBase extends BaseNode {
   +accessibility?: Accessibility;
   +computed: boolean;
@@ -1171,8 +1147,7 @@ interface PropertyDefinitionBase extends BaseNode {
 export interface PropertyDefinitionAmbiguous extends PropertyDefinitionBase {
   type: 'PropertyDefinition';
 }
-export interface PropertyDefinitionComputedName
-  extends PropertyDefinitionComputedNameBase {
+export interface PropertyDefinitionComputedName extends PropertyDefinitionComputedNameBase {
   +type: 'PropertyDefinition';
   +computed: true;
 }
@@ -1180,8 +1155,7 @@ interface PropertyDefinitionComputedNameBase extends PropertyDefinitionBase {
   +key: PropertyNameComputed;
   +computed: true;
 }
-export interface PropertyDefinitionNonComputedName
-  extends ClassPropertyDefinitionNonComputedNameBase {
+export interface PropertyDefinitionNonComputedName extends ClassPropertyDefinitionNonComputedNameBase {
   +type: 'PropertyDefinition';
   +computed: false;
 }
@@ -1190,14 +1164,10 @@ interface PropertyDefinitionNonComputedNameBase extends PropertyDefinitionBase {
   +computed: false;
 }
 export type PropertyName =
-  | ClassPropertyNameNonComputed
-  | PropertyNameComputed
-  | PropertyNameNonComputed;
+  ClassPropertyNameNonComputed | PropertyNameComputed | PropertyNameNonComputed;
 export type PropertyNameComputed = Expression;
 export type PropertyNameNonComputed =
-  | Identifier
-  | NumberLiteral
-  | StringLiteral;
+  Identifier | NumberLiteral | StringLiteral;
 export interface PropertyNonComputedName extends PropertyBase {
   +type: 'Property';
   +key: PropertyNameNonComputed;
@@ -1414,27 +1384,23 @@ export interface TSAbstractKeyword extends BaseNode {
 export type TSAbstractMethodDefinition =
   | TSAbstractMethodDefinitionComputedName
   | TSAbstractMethodDefinitionNonComputedName;
-export interface TSAbstractMethodDefinitionComputedName
-  extends MethodDefinitionComputedNameBase {
+export interface TSAbstractMethodDefinitionComputedName extends MethodDefinitionComputedNameBase {
   +type: 'TSAbstractMethodDefinition';
   +computed: true;
 }
-export interface TSAbstractMethodDefinitionNonComputedName
-  extends MethodDefinitionNonComputedNameBase {
+export interface TSAbstractMethodDefinitionNonComputedName extends MethodDefinitionNonComputedNameBase {
   +type: 'TSAbstractMethodDefinition';
   +computed: false;
 }
 export type TSAbstractPropertyDefinition =
   | TSAbstractPropertyDefinitionComputedName
   | TSAbstractPropertyDefinitionNonComputedName;
-export interface TSAbstractPropertyDefinitionComputedName
-  extends PropertyDefinitionComputedNameBase {
+export interface TSAbstractPropertyDefinitionComputedName extends PropertyDefinitionComputedNameBase {
   +computed: true;
   +type: 'TSAbstractPropertyDefinition';
   +value: null;
 }
-export interface TSAbstractPropertyDefinitionNonComputedName
-  extends PropertyDefinitionNonComputedNameBase {
+export interface TSAbstractPropertyDefinitionNonComputedName extends PropertyDefinitionNonComputedNameBase {
   +type: 'TSAbstractPropertyDefinition';
   +computed: false;
   +value: null;
@@ -1477,8 +1443,7 @@ export interface TSConstructorType extends TSFunctionSignatureBase {
   +type: 'TSConstructorType';
   +abstract: boolean;
 }
-export interface TSConstructSignatureDeclaration
-  extends TSFunctionSignatureBase {
+export interface TSConstructSignatureDeclaration extends TSFunctionSignatureBase {
   +type: 'TSConstructSignatureDeclaration';
 }
 export interface TSDeclareFunction extends FunctionBase {
@@ -1522,8 +1487,7 @@ export interface TSEnumDeclaration extends BaseNode {
   +modifiers?: ReadonlyArray<Modifier>;
 }
 export type TSEnumMember =
-  | TSEnumMemberComputedName
-  | TSEnumMemberNonComputedName;
+  TSEnumMemberComputedName | TSEnumMemberNonComputedName;
 interface TSEnumMemberBase extends BaseNode {
   +type: 'TSEnumMember';
   +id: PropertyNameComputed | PropertyNameNonComputed;
@@ -1681,8 +1645,7 @@ export interface TSMappedType extends BaseNode {
   +nameType: TypeNode | null;
 }
 export type TSMethodSignature =
-  | TSMethodSignatureComputedName
-  | TSMethodSignatureNonComputedName;
+  TSMethodSignatureComputedName | TSMethodSignatureNonComputedName;
 interface TSMethodSignatureBase extends BaseNode {
   +type: 'TSMethodSignature';
   +accessibility?: Accessibility;
@@ -1702,8 +1665,7 @@ export interface TSMethodSignatureComputedName extends TSMethodSignatureBase {
   +key: PropertyNameComputed;
   +computed: true;
 }
-export interface TSMethodSignatureNonComputedName
-  extends TSMethodSignatureBase {
+export interface TSMethodSignatureNonComputedName extends TSMethodSignatureBase {
   +type: 'TSMethodSignature';
   +key: PropertyNameNonComputed;
   +computed: false;
@@ -1792,8 +1754,7 @@ export interface TSPrivateKeyword extends BaseNode {
   +type: 'TSPrivateKeyword';
 }
 export type TSPropertySignature =
-  | TSPropertySignatureComputedName
-  | TSPropertySignatureNonComputedName;
+  TSPropertySignatureComputedName | TSPropertySignatureNonComputedName;
 interface TSPropertySignatureBase extends BaseNode {
   +type: 'TSPropertySignature';
   +accessibility?: Accessibility;
@@ -1806,14 +1767,12 @@ interface TSPropertySignatureBase extends BaseNode {
   +static?: boolean;
   +typeAnnotation?: TSTypeAnnotation;
 }
-export interface TSPropertySignatureComputedName
-  extends TSPropertySignatureBase {
+export interface TSPropertySignatureComputedName extends TSPropertySignatureBase {
   +type: 'TSPropertySignature';
   +key: PropertyNameComputed;
   +computed: true;
 }
-export interface TSPropertySignatureNonComputedName
-  extends TSPropertySignatureBase {
+export interface TSPropertySignatureNonComputedName extends TSPropertySignatureBase {
   +type: 'TSPropertySignature';
   +key: PropertyNameNonComputed;
   +computed: false;
@@ -1931,10 +1890,7 @@ export interface TSTypeReference extends BaseNode {
   +typeArguments?: TSTypeParameterInstantiation;
 }
 export type TSUnaryExpression =
-  | AwaitExpression
-  | LeftHandSideExpression
-  | UnaryExpression
-  | UpdateExpression;
+  AwaitExpression | LeftHandSideExpression | UnaryExpression | UpdateExpression;
 export interface TSUndefinedKeyword extends BaseNode {
   +type: 'TSUndefinedKeyword';
 }

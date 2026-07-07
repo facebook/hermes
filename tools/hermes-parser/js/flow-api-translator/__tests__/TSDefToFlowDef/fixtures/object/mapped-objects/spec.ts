@@ -10,8 +10,7 @@
 export type FlattenTokens<
   T extends {
     [k: string]:
-      | string
-      | {readonly default: string; readonly [k: string]: string};
+      string | {readonly default: string; readonly [k: string]: string};
   },
 > = {
   readonly [Key in keyof T]: T[Key] extends {
