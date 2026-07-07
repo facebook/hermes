@@ -70,16 +70,16 @@ async function publishNpm(
 
   if (buildType === 'dry-run') {
     tagFlag = ` --dry-run`;
+    // For a dry run, publish a unique per-commit version
+    // (`${mainVersion}-${shortCommit}`) so the `npm publish --dry-run`
+    // validation does not collide with an already-published version (npm
+    // performs this check even with `--dry-run`). For a real release we keep
+    // the version declared in package.json untouched.
+    const version = await getVersion(buildType);
+    await updatePackageJsonVersion(version);
   } else if (buildType === 'release') {
     tagFlag = ` --tag latest-v1`;
   }
-
-  // Set the version we are about to publish. For a dry-run this is
-  // `${mainVersion}-${shortCommit}`, which is unique per commit and therefore
-  // does not collide with an already-published version (npm validates this
-  // even with `--dry-run`). For a release it is the plain main version.
-  const version = await getVersion(buildType);
-  await updatePackageJsonVersion(version);
 
   const packagePath = path.join(REPO_ROOT, 'npm', 'hermes-compiler');
   const options /*: ExecOptsSync */ = {cwd: packagePath};
