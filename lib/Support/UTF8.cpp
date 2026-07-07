@@ -187,7 +187,7 @@ void convertUTF16ToUTF8WithSingleSurrogates(
       dest.push_back(static_cast<char>(c));
       continue;
     }
-    char32_t c32 = c;
+    char32_t c32 = static_cast<char32_t>(c);
     char buff[UTF8CodepointMaxBytes];
     char *ptr = buff;
     encodeUTF8(ptr, c32);
