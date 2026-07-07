@@ -14,10 +14,12 @@ on:
   pull_request:
     branches:
       - static_h
+      - 260318099.0.0-staging
   push:
     branches:
       - 250829098.0.0-stable
       - static_h
+      - 260318099.0.0-staging
 
 jobs:
   set_release_type:
@@ -38,9 +40,10 @@ jobs:
         uses: ./.github/actions/yarn-install
       - id: set_release_type
         run: |
-          # Guard: never allow release mode on static_h branch
-          if [[ $REF == "refs/heads/static_h" ]]; then
-            echo "Branch is static_h, forcing dry-run mode"
+          # Guard: never allow release mode on non-releasing branches
+          # (static_h and the staging branch), even via workflow_dispatch.
+          if [[ $REF == "refs/heads/static_h" || $REF == "refs/heads/260318099.0.0-staging" ]]; then
+            echo "Branch is a non-releasing branch, forcing dry-run mode"
             echo "RELEASE_TYPE=dry-run" >> $GITHUB_OUTPUT
           elif [[ $EVENT_NAME == "workflow_dispatch" ]]; then
             echo "Setting release type to ${{ github.event.inputs.release-type }}"
