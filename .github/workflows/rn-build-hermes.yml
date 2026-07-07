@@ -14,6 +14,7 @@ on:
   pull_request:
     branches:
       - static_h
+      - 260318099.0.0-stable
   push:
     branches:
       - 250829098.0.0-stable
