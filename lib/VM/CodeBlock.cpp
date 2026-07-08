@@ -302,24 +302,16 @@ void CodeBlock::markWeakElementsInCaches(
     WeakRootAcceptor &acceptor) {
   for (auto &prop :
        llvh::makeMutableArrayRef(readPropertyCache(), readPropertyCacheSize_)) {
-    if (prop.clazz) {
-      acceptor.acceptWeak(prop.clazz);
-    }
-    if (prop.negMatchClazz) {
-      acceptor.acceptWeak(prop.negMatchClazz);
-    }
+    acceptor.acceptWeak(prop.clazz);
+    acceptor.acceptWeak(prop.negMatchClazz);
   }
   for (auto &prop : llvh::makeMutableArrayRef(
            writePropertyCache(), writePropertyCacheSize_)) {
-    if (prop.clazz) {
-      acceptor.acceptWeak(prop.clazz);
-    }
+    acceptor.acceptWeak(prop.clazz);
   }
   for (auto &prop :
        llvh::makeMutableArrayRef(privateNameCache(), privateNameCacheSize_)) {
-    if (prop.clazz) {
-      acceptor.acceptWeak(prop.clazz);
-    }
+    acceptor.acceptWeak(prop.clazz);
     acceptor.acceptWeakSym(prop.nameVal);
   }
 }

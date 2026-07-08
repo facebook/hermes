@@ -792,6 +792,9 @@ void Runtime::markWeakRoots(WeakRootAcceptor &acceptor, bool markLongLived) {
       acceptor.acceptWeak(entry.clazz);
     }
     for (auto &entry : fixedReadPropCache_) {
+      assert(
+          !entry.negMatchClazz &&
+          "negMatchClazz is always zero for non-JS code property cache");
       acceptor.acceptWeak(entry.clazz);
     }
   }
