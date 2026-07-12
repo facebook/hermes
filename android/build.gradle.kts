@@ -109,19 +109,18 @@ val configureBuildForHermes by
       workingDir(hermesDir)
       inputs.dir(hermesDir)
       outputs.files(hermesBuildOutputFileTree)
-      var cmakeCommandLine =
-          windowsAwareCommandLine(
-              cmakeBinaryPath,
-              // Suppress all warnings as this is the Hermes build and we can't fix them.
-              "--log-level=ERROR",
-              "-Wno-dev",
-              "-S",
-              ".",
-              "-B",
-              hermesBuildDir.toString(),
-              "-DJSI_DIR=" + jsiDir.absolutePath,
-              "-DCMAKE_BUILD_TYPE=Debug",
-          )
+      var cmakeCommandLine = windowsAwareCommandLine(
+          cmakeBinaryPath,
+          // Suppress all warnings as this is the Hermes build and we can't fix them.
+          "--log-level=ERROR",
+          "-Wno-dev",
+          "-S",
+          ".",
+          "-B",
+          hermesBuildDir.toString(),
+          "-DJSI_DIR=" + jsiDir.absolutePath,
+          "-DCMAKE_BUILD_TYPE=Debug",
+      )
       if (Os.isFamily(Os.FAMILY_WINDOWS)) {
         cmakeCommandLine = cmakeCommandLine + "-GNMake Makefiles"
       }
