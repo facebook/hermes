@@ -37,11 +37,10 @@ class HermesUtils(private val project: Project) {
 
   val hermesC: String
     get() {
-      val candidateHermesCPaths =
-          listOf(
-              "$hermesWs/build/ImportHostCompilers.cmake",
-              "$hermesWs/build_release/ImportHostCompilers.cmake",
-          )
+      val candidateHermesCPaths = listOf(
+          "$hermesWs/build/ImportHostCompilers.cmake",
+          "$hermesWs/build_release/ImportHostCompilers.cmake",
+      )
 
       val hermesCPath = candidateHermesCPaths.lastOrNull { File(it).exists() }
       if (hermesCPath == null) {
