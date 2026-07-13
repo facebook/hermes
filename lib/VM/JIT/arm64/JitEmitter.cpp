@@ -5741,7 +5741,8 @@ void Emitter::uintSwitchImm(
 
 void Emitter::stringSwitchImm(
     FR frInput,
-    const StringSwitchDenseMap &table,
+    RuntimeModule *runtimeModule,
+    uint32_t tableIndex,
     const asmjit::Label &defaultLabel,
     llvh::ArrayRef<StringSwitchCase> cases) {
   comment("// stringSwitchImm r%u, size %zu", frInput.index(), cases.size());
@@ -5749,12 +5750,13 @@ void Emitter::stringSwitchImm(
   // End of the basic block.
   syncAllFRTempExcept({});
 
-  a.mov(a64::x0, &table);
-  loadFrameAddr(a64::x1, frInput);
+  a.mov(a64::x0, (uint64_t)runtimeModule);
+  a.mov(a64::w1, tableIndex);
+  loadFrameAddr(a64::x2, frInput);
 
   EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(
       *this,
-      void *(*)(StringSwitchDenseMap *, SHLegacyValue *),
+      void *(*)(RuntimeModule *, uint32_t, SHLegacyValue *),
       _jit_string_switch_imm_table_lookup);
 
   a.cbz(a64::x0, defaultLabel);

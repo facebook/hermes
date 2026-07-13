@@ -690,7 +690,8 @@ inline void JITContext::Compiler::emitStringSwitchImm(
 
   em_.stringSwitchImm(
       FR(inst->op1),
-      table,
+      codeBlock_->getRuntimeModule(),
+      inst->op2,
       bbLabelFromInst(inst, inst->op4),
       switchTableLabels);
 

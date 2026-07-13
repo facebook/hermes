@@ -715,9 +715,14 @@ class Emitter {
         : caseLabelStringId(caseLabelStringId), target(target) {}
   };
 
+  /// Emit a string switch. The lookup table is identified at runtime by
+  /// (\p runtimeModule, \p tableIndex) rather than by baking its address into
+  /// the code, since the module's table vector may be reallocated after this
+  /// code is compiled (e.g. by lazy compilation).
   void stringSwitchImm(
       FR frInput,
-      const StringSwitchDenseMap &table,
+      RuntimeModule *runtimeModule,
+      uint32_t tableIndex,
       const asmjit::Label &defaultLabel,
       llvh::ArrayRef<StringSwitchCase> cases);
 

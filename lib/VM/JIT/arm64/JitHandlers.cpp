@@ -505,13 +505,21 @@ SHLegacyValue _jit_call_builtin(
 }
 
 void *_jit_string_switch_imm_table_lookup(
-    StringSwitchDenseMap *table,
+    RuntimeModule *runtimeModule,
+    uint32_t tableIndex,
     SHLegacyValue *switchValueLegacy) {
   PinnedHermesValue *switchValue = toPHV(switchValueLegacy);
   if (!switchValue->isString()) {
     // Not a string; should branch to the default case.
     return nullptr;
   }
+
+  assert(
+      tableIndex < runtimeModule->numStringSwitchImmTables() &&
+      "String Switch index out of range.");
+  StringSwitchDenseMap *table =
+      &runtimeModule->getStringSwitchImmTables()[tableIndex];
+
   auto iter = table->find(switchValue->getString());
   if (iter == table->end()) {
     // Not found; branch to the default case.
