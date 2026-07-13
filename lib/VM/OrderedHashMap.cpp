@@ -531,7 +531,7 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::doInsert(
   // Run rehash if necessary before inserting.
   if (shouldRehash(self->capacity_, self->size_, self->deletedCount_)) {
     if (LLVM_UNLIKELY(
-            self->rehash(self, runtime, true) == ExecutionStatus::EXCEPTION)) {
+            rehash(self, runtime, true) == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
 
@@ -587,7 +587,7 @@ bool OrderedHashMapBase<BucketType, Derived>::erase(
   self->size_--;
 
   if (shouldShrink(self->capacity_, self->size_))
-    self->rehash(self, runtime);
+    rehash(self, runtime);
 
   return true;
 }

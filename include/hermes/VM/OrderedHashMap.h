@@ -315,6 +315,9 @@ class OrderedHashMapBase {
   static constexpr uint32_t kHashTableElementUnused = kMaxCapacity + 1;
   /// For epresenting when the hash table element is deleted.
   static constexpr uint32_t kHashTableElementDeleted = kMaxCapacity + 2;
+  static_assert(
+      kHashTableElementDeleted > kMaxCapacity,
+      "kHashTableElementDeleted overflows.");
 
   /// Capacity of the hash table.
   uint32_t capacity_{kInitialCapacity};
@@ -402,11 +405,6 @@ class OrderedHashMapBase {
       }
     }
     return capacity * kGrowOrShrinkFactor;
-  }
-
-  /// Check if the bucket is deleted or not.
-  static bool isDeleted(SmallHermesValue bucket) {
-    return bucket.isNull();
   }
 
   /// Mark the bucket as deleted.
