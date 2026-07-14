@@ -82,7 +82,7 @@ class JSTypedArrayBase : public JSObject {
   /// storage, or null if this TypedArray doesn't have a corresponding
   /// ArrayBuffer. May be called even if the underlying buffer is detached.
   JSArrayBuffer *getBuffer(Runtime &runtime) const {
-    return buffer_.get(runtime);
+    return buffer_.getNonNull(runtime);
   }
 
   uint8_t *data(PointerBase &base) {
@@ -115,7 +115,9 @@ class JSTypedArrayBase : public JSObject {
 
   /// \return Whether this JSTypedArrayBase is attached to some buffer.
   bool attached(PointerBase &base) const {
-    return buffer_ && buffer_.getNonNull(base)->attached();
+    assert(
+        buffer_ && "buffer_ can only be null in partial initialization status");
+    return buffer_.getNonNull(base)->attached();
   }
 
   /// \return The offset from the beginning of the buffer this typed array
