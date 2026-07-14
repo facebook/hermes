@@ -23,7 +23,6 @@ type Foo2 = {
 
     ...$$rest$$: string[]
   ): string,
-
   ...
 };
 "

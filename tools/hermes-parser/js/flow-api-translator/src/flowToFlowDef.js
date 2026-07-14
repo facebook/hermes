@@ -92,7 +92,7 @@ import {
 const EMPTY_TRANSLATION_RESULT: TranslatedResultOrNull<empty> = [null, []];
 
 type TranslatedDeps = ReadonlyArray<Dep>;
-type TranslatedResultOrNull<+T> = Readonly<
+type TranslatedResultOrNull<out T> = Readonly<
   [DetachedNode<T> | null, TranslatedDeps],
 >;
 type TranslatedResultArray<T> = [

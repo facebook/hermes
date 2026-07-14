@@ -1,6 +1,6 @@
 {
   "name": "hermes-parser",
-  "version": "0.36.1",
+  "version": "0.37.0",
   "description": "A JavaScript parser built from the Hermes engine",
   "main": "dist/index.js",
   "license": "MIT",
@@ -10,7 +10,7 @@
     "directory": "tools/hermes-parser/js/hermes-parser"
   },
   "dependencies": {
-    "hermes-estree": "0.36.1"
+    "hermes-estree": "0.37.0"
   },
   "devDependencies": {
     "@babel/parser": "7.7.4",

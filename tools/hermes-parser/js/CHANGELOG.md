@@ -1,3 +1,13 @@
+## 0.37.0
+
+### `hermes-transform`
+- Print with Prettier's built-in Flow and TypeScript plugins instead of conditionally loading `prettier-plugin-hermes-parser`
+
+### `flow-api-translator`
+- Emit TypeScript ESTree generic instantiation fields expected by current `@typescript-eslint` and Prettier
+- Emit `TSImportType.source` for `$Exports` so Prettier's TypeScript printer can format it
+- Require Prettier v3, matching `hermes-transform`
+
 ## 0.36.1
 
 ### `hermes-parser`

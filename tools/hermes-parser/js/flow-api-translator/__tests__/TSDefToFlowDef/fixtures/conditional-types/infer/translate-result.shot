@@ -8,14 +8,12 @@ exports[`TSDefToFlowDef conditional-types/infer 1`] = `
         +default: string,
 
         +[string]: string,
-
         ...
       },
 > = T extends {
   +default: infer X,
 
   +[string]: infer Y,
-
   ...
 }
   ? X | Y

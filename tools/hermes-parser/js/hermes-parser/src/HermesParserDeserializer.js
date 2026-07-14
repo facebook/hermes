@@ -25,22 +25,22 @@ import NODE_DESERIALIZERS from './HermesParserNodeDeserializers';
 export default class HermesParserDeserializer {
   programBufferIdx: number;
   positionBufferIdx: number;
-  +positionBufferSize: number;
-  +locMap: {[number]: HermesSourceLocation};
-  +HEAPU8: HermesParserWASM['HEAPU8'];
-  +HEAPU32: HermesParserWASM['HEAPU32'];
-  +HEAPF64: HermesParserWASM['HEAPF64'];
-  +options: ParserOptions;
+  readonly positionBufferSize: number;
+  readonly locMap: {[number]: HermesSourceLocation};
+  readonly HEAPU8: HermesParserWASM['HEAPU8'];
+  readonly HEAPU32: HermesParserWASM['HEAPU32'];
+  readonly HEAPF64: HermesParserWASM['HEAPF64'];
+  readonly options: ParserOptions;
 
   // Matches StoredComment::Kind enum in JSLexer.h
-  +commentTypes: ReadonlyArray<HermesComment['type']> = [
+  readonly commentTypes: ReadonlyArray<HermesComment['type']> = [
     'CommentLine',
     'CommentBlock',
     'InterpreterDirective',
   ];
 
   // Matches TokenType enum in HermesParserJSSerializer.h
-  +tokenTypes: ReadonlyArray<HermesToken['type']> = [
+  readonly tokenTypes: ReadonlyArray<HermesToken['type']> = [
     'Boolean',
     'Identifier',
     'Keyword',

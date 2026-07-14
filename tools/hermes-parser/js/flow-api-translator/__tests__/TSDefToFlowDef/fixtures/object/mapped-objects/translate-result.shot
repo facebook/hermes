@@ -9,10 +9,8 @@ exports[`TSDefToFlowDef object/mapped-objects 1`] = `
           +default: string,
 
           +[string]: string,
-
           ...
         },
-
     ...
   },
 > = {
@@ -20,19 +18,14 @@ exports[`TSDefToFlowDef object/mapped-objects 1`] = `
     +default: infer X,
 
     +[string]: infer Y,
-
     ...
   }
     ? X | Y
     : T[Key],
 };
 
-type ObjectEntries<
-  Obj: {
-    +[string]: mixed,
-
-    ...
-  },
-> = {[Key in keyof Obj]?: [Key, Obj[Key]]};
+type ObjectEntries<Obj: {+[string]: mixed, ...}> = {
+  [Key in keyof Obj]?: [Key, Obj[Key]],
+};
 "
 `;

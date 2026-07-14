@@ -17,11 +17,11 @@ PACKAGES=(
   babel-plugin-syntax-hermes-parser
 )
 
-# Subset of PACKAGES whose dist/ must exist (Flow-stripped) before
-# babel.config.js can enable the `babel-plugin-syntax-hermes-parser` parser
-# override. Their src/ uses no Flow `as` casts, so stock @babel/parser handles
-# them on its own — the override is intentionally skipped here to break the
-# bootstrap chicken-and-egg.
+# Subset of PACKAGES whose dist/ must exist before babel.config.js can enable
+# the `babel-plugin-syntax-hermes-parser` parser override. We strip Flow from
+# their copied dist files before Babel runs, which breaks the parser bootstrap
+# dependency cycle without requiring stock @babel/parser to understand every
+# current Flow syntax form.
 BOOTSTRAP_PACKAGES=(
   hermes-estree
   hermes-parser
@@ -110,6 +110,12 @@ yarn babel-node "$THIS_DIR/genTransformReplaceNodeTypes.js"
 # override can be re-enabled for the remaining packages.
 for package in "${BOOTSTRAP_PACKAGES[@]}"; do
   PACKAGE_DIST_DIR="$THIS_DIR/../$package/dist"
+  find "$PACKAGE_DIST_DIR" -type f -name "*.js" | while read -r file; do
+    yarn flow-remove-types --quiet --pretty --remove-empty-imports \
+      --out-file "$file.stripped" \
+      "$file"
+    mv "$file.stripped" "$file"
+  done
   yarn babel --config-file="$THIS_DIR/../babel.config.js" "$PACKAGE_DIST_DIR" --out-dir="$PACKAGE_DIST_DIR"
 done
 

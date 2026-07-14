@@ -18,7 +18,7 @@ import {getModuleDocblock} from './getModuleDocblock';
 declare var BigInt: ?(value: $FlowFixMe) => unknown;
 
 export default class HermesToESTreeAdapter extends HermesASTAdapter {
-  +code: string;
+  readonly code: string;
 
   constructor(options: ParserOptions, code: string) {
     super(options);

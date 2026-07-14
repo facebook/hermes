@@ -1027,6 +1027,19 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
     static TSImportType(
       node: TSESTree.TSImportType,
     ): FlowESTree.TypeAnnotationType {
+      const source =
+        node.argument ??
+        (node.source == null
+          ? null
+          : ({
+              type: 'TSLiteralType',
+              loc: node.source.loc,
+              literal: node.source,
+            } as TSESTree.TSLiteralType));
+      if (source == null) {
+        return unsupportedAnnotation(node, 'import types without a source');
+      }
+
       let base: FlowESTree.TypeAnnotationType =
         constructFlowNode<FlowESTree.GenericTypeAnnotation>({
           type: 'GenericTypeAnnotation',
@@ -1039,14 +1052,14 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
           typeParameters:
             constructFlowNode<FlowESTree.TypeParameterInstantiation>({
               type: 'TypeParameterInstantiation',
-              params: [Transform.TSTypeAnnotation(node.argument)],
+              params: [Transform.TSTypeAnnotation(source)],
             }),
         });
+      if (node.typeArguments != null) {
+        return unsupportedAnnotation(node, 'import types with type arguments');
+      }
       if (node.qualifier == null) {
         return base;
-      }
-      if (node.typeParameters != null) {
-        return unsupportedAnnotation(node, 'import types with type parameters');
       }
       let qualifier = Transform.EntityNameToTypeIdentifier(node.qualifier);
       const namesRev: Array<string> = [];
@@ -1960,12 +1973,22 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
 
     static TSTypeQuery(
       node: TSESTree.TSTypeQuery,
-    ): FlowESTree.TypeofTypeAnnotation {
+    ): FlowESTree.TypeAnnotationType {
+      if (node.exprName.type === 'TSImportType') {
+        if (node.typeArguments != null) {
+          return unsupportedAnnotation(
+            node,
+            'type query imports with type arguments',
+          );
+        }
+        return Transform.TSImportType(node.exprName);
+      }
+
       return constructFlowNode<FlowESTree.TypeofTypeAnnotation>({
         type: 'TypeofTypeAnnotation',
         argument: Transform.EntityNameToTypeofIdentifier(node.exprName),
         typeArguments:
-          Transform.TSTypeParameterInstantiationOpt(node.typeParameters) ??
+          Transform.TSTypeParameterInstantiationOpt(node.typeArguments) ??
           undefined,
       });
     }

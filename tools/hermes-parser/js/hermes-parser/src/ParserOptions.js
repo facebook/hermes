@@ -22,9 +22,9 @@ export type ParserOptions = {
   sourceType?: 'module' | 'script' | 'unambiguous',
   tokens?: boolean,
   transformOptions?: {
-    +TransformEnumSyntax?: {
-      +enable: boolean,
-      +getRuntime?: () => Expression,
+    readonly TransformEnumSyntax?: {
+      readonly enable: boolean,
+      readonly getRuntime?: () => Expression,
     },
   },
 };

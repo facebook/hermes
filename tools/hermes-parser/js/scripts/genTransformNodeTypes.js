@@ -57,7 +57,7 @@ export type ${node.name}Props = {};
     nodeTypeFunctions.push(
       `\
 export function ${node.name}(props: {
-  +parent?: ESNode,
+  readonly parent?: ESNode,
 } = {...null}): DetachedNode<${node.name}Type> {
   return detachedProps<${node.name}Type>(props.parent as $FlowFixMe, {
     type: '${type}',
@@ -83,9 +83,9 @@ export type ${node.name}Props = {
       }
 
       if (arg.optional) {
-        return `+${arg.name}?: ?${type}`;
+        return `readonly ${arg.name}?: ?${type}`;
       }
-      return `+${arg.name}: ${type}`;
+      return `readonly ${arg.name}: ${type}`;
     })
     .filter(Boolean)
     .join(',\n')},
@@ -96,7 +96,7 @@ export type ${node.name}Props = {
       `\
 export function ${node.name}(props: {
   ...${node.name}Props,
-  +parent?: ESNode,
+  readonly parent?: ESNode,
 }): DetachedNode<${node.name}Type> {
   const node = detachedProps<${node.name}Type>(props.parent as $FlowFixMe, {
     type: '${type}',

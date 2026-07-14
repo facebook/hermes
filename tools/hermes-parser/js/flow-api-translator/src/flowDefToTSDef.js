@@ -608,7 +608,7 @@ const getTransforms = (
                       loc: DUMMY_LOC,
                       name: 'IterableIterator',
                     },
-                    typeParameters: {
+                    typeArguments: {
                       type: 'TSTypeParameterInstantiation',
                       loc: DUMMY_LOC,
                       params: [
@@ -873,7 +873,7 @@ const getTransforms = (
         type: 'TSClassImplements',
         loc: DUMMY_LOC,
         expression: transform.Identifier(node.id, false),
-        typeParameters: transform.TypeParameterInstantiation(
+        typeArguments: transform.TypeParameterInstantiation(
           node.typeParameters,
         ),
       };
@@ -1086,7 +1086,7 @@ const getTransforms = (
             : superClass.id.type === 'QualifiedTypeIdentifier'
               ? transform.QualifiedTypeIdentifier(superClass.id)
               : transform.Identifier(superClass.id as $FlowFixMe, false),
-        superTypeParameters: transform.TypeParameterInstantiation(
+        superTypeArguments: transform.TypeParameterInstantiation(
           superClass?.typeParameters,
         ),
         typeParameters:
@@ -1583,7 +1583,7 @@ const getTransforms = (
               name: `ReactNode`,
             },
           },
-          typeParameters: undefined,
+          typeArguments: undefined,
         },
       };
 
@@ -2220,7 +2220,7 @@ const getTransforms = (
               loc: DUMMY_LOC,
               name: 'ArrayLike',
             },
-            typeParameters: {
+            typeArguments: {
               type: 'TSTypeParameterInstantiation',
               loc: DUMMY_LOC,
               params: assertHasExactlyNTypeParameters(1),
@@ -2240,7 +2240,7 @@ const getTransforms = (
               loc: DUMMY_LOC,
               name: 'Pick',
             },
-            typeParameters: {
+            typeArguments: {
               type: 'TSTypeParameterInstantiation',
               loc: DUMMY_LOC,
               params: [
@@ -2253,7 +2253,7 @@ const getTransforms = (
                     loc: DUMMY_LOC,
                     name: 'Exclude',
                   },
-                  typeParameters: {
+                  typeArguments: {
                     type: 'TSTypeParameterInstantiation',
                     loc: DUMMY_LOC,
                     params: [
@@ -2318,7 +2318,9 @@ const getTransforms = (
               loc: DUMMY_LOC,
               argument: moduleName,
               qualifier: null,
-              typeParameters: null,
+              options: null,
+              source: moduleName.literal,
+              typeArguments: null,
             },
           } as $FlowFixMe;
         }
@@ -2398,7 +2400,7 @@ const getTransforms = (
               loc: DUMMY_LOC,
               name: 'NonNullable',
             },
-            typeParameters: {
+            typeArguments: {
               type: 'TSTypeParameterInstantiation',
               loc: DUMMY_LOC,
               params: assertHasExactlyNTypeParameters(1),
@@ -2416,7 +2418,7 @@ const getTransforms = (
               loc: DUMMY_LOC,
               name: 'Readonly',
             },
-            typeParameters: {
+            typeArguments: {
               type: 'TSTypeParameterInstantiation',
               loc: DUMMY_LOC,
               params: assertHasExactlyNTypeParameters(1),
@@ -2437,7 +2439,7 @@ const getTransforms = (
               loc: DUMMY_LOC,
               name: 'ReadonlyArray',
             },
-            typeParameters: {
+            typeArguments: {
               type: 'TSTypeParameterInstantiation',
               loc: DUMMY_LOC,
               params: assertHasExactlyNTypeParameters(1),
@@ -2454,7 +2456,7 @@ const getTransforms = (
               loc: DUMMY_LOC,
               name: 'ReadonlyMap',
             },
-            typeParameters: {
+            typeArguments: {
               type: 'TSTypeParameterInstantiation',
               loc: DUMMY_LOC,
               params: assertHasExactlyNTypeParameters(2),
@@ -2471,7 +2473,7 @@ const getTransforms = (
               loc: DUMMY_LOC,
               name: 'ReadonlySet',
             },
-            typeParameters: {
+            typeArguments: {
               type: 'TSTypeParameterInstantiation',
               loc: DUMMY_LOC,
               params: assertHasExactlyNTypeParameters(1),
@@ -2663,7 +2665,7 @@ const getTransforms = (
                     loc: DUMMY_LOC,
                     name: 'ReadonlyArray',
                   },
-                  typeParameters: {
+                  typeArguments: {
                     type: 'TSTypeParameterInstantiation',
                     loc: DUMMY_LOC,
                     params: [param],
@@ -2704,7 +2706,7 @@ const getTransforms = (
                   name: 'Component',
                 },
               },
-              typeParameters: {
+              typeArguments: {
                 type: 'TSTypeParameterInstantiation',
                 loc: DUMMY_LOC,
                 params: params.map(param => transformTypeAnnotationType(param)),
@@ -2729,7 +2731,7 @@ const getTransforms = (
                   name: `Context`,
                 },
               },
-              typeParameters: {
+              typeArguments: {
                 type: 'TSTypeParameterInstantiation',
                 loc: DUMMY_LOC,
                 params: assertHasExactlyNTypeParameters(1),
@@ -2772,7 +2774,7 @@ const getTransforms = (
                   name: `ElementType`,
                 },
               },
-              typeParameters: undefined,
+              typeArguments: undefined,
             };
           }
           // React.Node -> React.ReactNode
@@ -2792,7 +2794,7 @@ const getTransforms = (
                   name: `ReactNode`,
                 },
               },
-              typeParameters: undefined,
+              typeArguments: undefined,
             };
           }
           // React.Element<typeof Component> -> React.ReactElement<typeof Component>
@@ -2811,7 +2813,7 @@ const getTransforms = (
                   name: `ReactElement`,
                 },
               },
-              typeParameters: {
+              typeArguments: {
                 type: 'TSTypeParameterInstantiation',
                 loc: DUMMY_LOC,
                 params: assertHasExactlyNTypeParameters(1),
@@ -2835,7 +2837,7 @@ const getTransforms = (
                   name: `ComponentRef`,
                 },
               },
-              typeParameters: {
+              typeArguments: {
                 type: 'TSTypeParameterInstantiation',
                 loc: DUMMY_LOC,
                 params: assertHasExactlyNTypeParameters(1),
@@ -2890,7 +2892,7 @@ const getTransforms = (
                   name: 'Element',
                 },
               },
-              typeParameters: undefined,
+              typeArguments: undefined,
             };
           }
           // React.ComponentType<Config> -> React.ComponentType<Config>
@@ -2910,7 +2912,7 @@ const getTransforms = (
                   name: 'ComponentType',
                 },
               },
-              typeParameters: {
+              typeArguments: {
                 type: 'TSTypeParameterInstantiation',
                 loc: DUMMY_LOC,
                 params: assertHasExactlyNTypeParameters(1),
@@ -2969,7 +2971,7 @@ const getTransforms = (
                           name: 'RefAttributes',
                         },
                       },
-                      typeParameters: {
+                      typeArguments: {
                         type: 'TSTypeParameterInstantiation',
                         loc: DUMMY_LOC,
                         params: [ref],
@@ -2993,7 +2995,7 @@ const getTransforms = (
                   name: 'ComponentType',
                 },
               },
-              typeParameters: {
+              typeArguments: {
                 type: 'TSTypeParameterInstantiation',
                 loc: DUMMY_LOC,
                 params: newParams,
@@ -3017,7 +3019,7 @@ const getTransforms = (
                   name: 'ComponentProps',
                 },
               },
-              typeParameters: {
+              typeArguments: {
                 type: 'TSTypeParameterInstantiation',
                 loc: DUMMY_LOC,
                 params: assertHasExactlyNTypeParameters(1),
@@ -3055,7 +3057,7 @@ const getTransforms = (
                   name: 'LibraryManagedAttributes',
                 },
               },
-              typeParameters: {
+              typeArguments: {
                 type: 'TSTypeParameterInstantiation',
                 loc: DUMMY_LOC,
                 params: [
@@ -3073,7 +3075,7 @@ const getTransforms = (
                         name: `ComponentProps`,
                       },
                     },
-                    typeParameters: {
+                    typeArguments: {
                       type: 'TSTypeParameterInstantiation',
                       loc: DUMMY_LOC,
                       params: [param],
@@ -3100,7 +3102,7 @@ const getTransforms = (
                   name: 'Ref',
                 },
               },
-              typeParameters: {
+              typeArguments: {
                 type: 'TSTypeParameterInstantiation',
                 loc: DUMMY_LOC,
                 params: assertHasExactlyNTypeParameters(1),
@@ -3118,7 +3120,7 @@ const getTransforms = (
           node.id.type === 'Identifier'
             ? transform.Identifier(node.id, false)
             : transform.QualifiedTypeIdentifier(node.id),
-        typeParameters: transform.TypeParameterInstantiation(
+        typeArguments: transform.TypeParameterInstantiation(
           node.typeParameters,
         ),
       };
@@ -3257,7 +3259,7 @@ const getTransforms = (
           node.id.type === 'QualifiedTypeIdentifier'
             ? transform.QualifiedTypeIdentifier(node.id)
             : transform.Identifier(node.id, false),
-        typeParameters: transform.TypeParameterInstantiation(
+        typeArguments: transform.TypeParameterInstantiation(
           node.typeParameters,
         ),
       };
@@ -3278,7 +3280,7 @@ const getTransforms = (
               loc: DUMMY_LOC,
               // Bug: ex.id can be qualified
               typeName: transform.Identifier(ex.id as $FlowFixMe, false),
-              typeParameters: transform.TypeParameterInstantiation(
+              typeArguments: transform.TypeParameterInstantiation(
                 ex.typeParameters,
               ),
             })),
@@ -3652,7 +3654,7 @@ const getTransforms = (
               loc: DUMMY_LOC,
               name: 'Omit',
             },
-            typeParameters: {
+            typeArguments: {
               type: 'TSTypeParameterInstantiation',
               loc: DUMMY_LOC,
               params: [
@@ -3879,7 +3881,7 @@ const getTransforms = (
             loc: DUMMY_LOC,
             name: 'NonNullable',
           },
-          typeParameters: {
+          typeArguments: {
             type: 'TSTypeParameterInstantiation',
             loc: DUMMY_LOC,
             params: [transformTypeAnnotationType(node.objectType)],
@@ -4077,14 +4079,14 @@ const getTransforms = (
             type: 'TSTypeQuery',
             loc: DUMMY_LOC,
             exprName: transform.Identifier(node.argument),
-            typeParameters: undefined,
+            typeArguments: undefined,
           };
         case 'QualifiedTypeofIdentifier':
           return {
             type: 'TSTypeQuery',
             loc: DUMMY_LOC,
             exprName: transform.QualifiedTypeofIdentifier(node.argument),
-            typeParameters: undefined,
+            typeArguments: undefined,
           };
       }
     },
@@ -4262,7 +4264,7 @@ const getTransforms = (
                 name: `ReactNode`,
               },
             },
-            typeParameters: undefined,
+            typeArguments: undefined,
           };
         }
       }
@@ -4296,7 +4298,7 @@ const getTransforms = (
               name: `ReactNode`,
             },
           },
-          typeParameters: undefined,
+          typeArguments: undefined,
         },
       };
 

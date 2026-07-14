@@ -24,8 +24,8 @@ const typeAliases = new Map<string, string>();
 const HermesESTreeJSON = GetHermesESTreeJSON();
 
 function pushSelector(selector: string, type: string): void {
-  enterSelectors.push(`+'${selector}'?: (node: ${type}) => void`);
-  exitSelectors.push(`+'${selector}:exit'?: (node: ${type}) => void`);
+  enterSelectors.push(`readonly '${selector}'?: (node: ${type}) => void`);
+  exitSelectors.push(`readonly '${selector}:exit'?: (node: ${type}) => void`);
 }
 
 for (const node of HermesESTreeJSON.concat({name: 'Literal', arguments: []})) {
@@ -44,8 +44,8 @@ for (const node of HermesESTreeJSON.concat({name: 'Literal', arguments: []})) {
     typeAliases.set(
       typeAliasName,
       // This creates an "override" type that enforces that the property exists and is not nullish
-      // interface VariableDeclarator_With_Init VariableDeclarator { +init: NonNullable<VariableDeclarator['init']> }
-      `interface ${typeAliasName} extends ${node.name} { +${arg.name}: NonNullable<${node.name}['${arg.name}']> }`,
+      // interface VariableDeclarator_With_Init VariableDeclarator { readonly init: NonNullable<VariableDeclarator['init']> }
+      `interface ${typeAliasName} extends ${node.name} { readonly ${arg.name}: NonNullable<${node.name}['${arg.name}']> }`,
     );
     pushSelector(`${node.name}[${arg.name}]`, typeAliasName);
   }

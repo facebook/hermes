@@ -132,11 +132,11 @@ describe('flowToFlowDef', () => {
         type Outer6 = number;
 
         declare export class Foo<
-            // shouldn't create a reference on the outer T
-            T: Outer1 = Outer2,
-            // shouldn't create a reference on the outer T
-            T2: T = T,
-          >
+          // shouldn't create a reference on the outer T
+          T: Outer1 = Outer2,
+          // shouldn't create a reference on the outer T
+          T2: T = T,
+        >
           // shouldn't create a reference on the outer T
           extends OuterClass<T>
           // shouldn't create a reference on the outer T
