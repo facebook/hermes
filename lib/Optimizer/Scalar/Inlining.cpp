@@ -447,21 +447,24 @@ static Value *inlineFunction(
 
 /// Heuristics to determine whether to inline \p FC.
 /// \param callsites the list of known call sites of the function.
-/// \return true if we should try to inline the function. This doesn't mean that
-///   it will be able to be inlined at every callsite, but it means that it's
-///   desirable to try.
-static bool shouldTryToInline(
+/// \return a pair of (shouldInline, numSignificantInstructions).
+///   \c shouldInline is true if we should try to inline the function. This
+///   doesn't mean that it will be able to be inlined at every callsite, but it
+///   means that it's desirable to try. \c numSignificantInstructions is the
+///   number of significant instructions in \p FC, as computed by
+///   canBeInlined().
+static std::pair<bool, size_t> shouldTryToInline(
     Function *FC,
     llvh::ArrayRef<BaseCallInst *> callsites) {
   auto [canInline, numSignificantInstructions] = canBeInlined(FC);
 
   // If the function can't be inlined then bail early.
   if (!canInline) {
-    return false;
+    return {false, numSignificantInstructions};
   }
 
   if (FC->getAlwaysInline()) {
-    return true;
+    return {true, numSignificantInstructions};
   }
 
   // Account for parameter setup in the caller, and add 1 extra for moving
@@ -480,7 +483,7 @@ static bool shouldTryToInline(
                             "': has %u instructions (requires <= %u)\n",
                             numSignificantInstructions,
                             maxInlineSize));
-    return true;
+    return {true, numSignificantInstructions};
   }
 
   // Check for allCallsitesKnownExceptErrorStructuredStackTrace here because
@@ -493,7 +496,7 @@ static bool shouldTryToInline(
         llvh::dbgs() << "Heuristic: not inlining function '"
                      << FC->getInternalNameStr()
                      << "': has unknown callsites\n");
-    return false;
+    return {false, numSignificantInstructions};
   }
 
   if (callsites.size() != 1) {
@@ -503,10 +506,10 @@ static bool shouldTryToInline(
                      << llvh::format(
                             "': has %u callsites (requires 1)\n",
                             callsites.size()));
-    return false;
+    return {false, numSignificantInstructions};
   }
 
-  return true;
+  return {true, numSignificantInstructions};
 }
 
 bool Inlining::runOnModule(Module *M) {
@@ -553,7 +556,9 @@ bool Inlining::runOnModule(Module *M) {
     }
 
     // Check the heuristic before doing any work.
-    if (!shouldTryToInline(FC, callsites)) {
+    auto [shouldInline, numSignificantInstructions] =
+        shouldTryToInline(FC, callsites);
+    if (!shouldInline) {
       if (FC->getAlwaysInline()) {
         FC->getParent()->getContext().getSourceErrorManager().warning(
             FC->getSourceRange().Start,
@@ -588,9 +593,14 @@ bool Inlining::runOnModule(Module *M) {
         continue;
       }
 
-      // Don't inline into a function that has try/catch.
-      // Avoids JIT/native backend deopt.
-      if (functionsWithTryCatch.count(intoFunction)) {
+      // Don't inline larger functions into a function that has try/catch.
+      // Avoids JIT/native backend deopt (all registers in intoFunction are
+      // spilled to the stack if a function contains try/catch).
+      // Very small functions are still worth inlining regardless, because the
+      // JIT/native backend deopt is more expensive than the code size.
+      static constexpr size_t kTryCatchInlineSizeLimit = 5;
+      if (functionsWithTryCatch.count(intoFunction) &&
+          numSignificantInstructions >= kTryCatchInlineSizeLimit) {
         LLVM_DEBUG(
             llvh::dbgs() << "Cannot inline function '"
                          << FC->getInternalNameStr()
