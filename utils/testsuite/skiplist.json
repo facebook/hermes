@@ -270,8 +270,6 @@
         "test262/test/built-ins/AsyncFromSyncIteratorPrototype/next/yield-iterator-next-rejected-promise-close.js",
         "test262/test/built-ins/AsyncFromSyncIteratorPrototype/next/yield-next-rejected-promise-close.js",
         "test262/test/built-ins/AsyncFromSyncIteratorPrototype/return/absent-value-not-passed.js",
-        "test262/test/built-ins/AsyncFromSyncIteratorPrototype/throw/iterator-result-rejected-promise-close.js",
-        "test262/test/built-ins/AsyncFromSyncIteratorPrototype/throw/throw-result-poisoned-wrapper.js",
         "test262/test/built-ins/AsyncGeneratorPrototype/return/return-suspendedYield-broken-promise-try-catch.js",
         "test262/test/language/expressions/async-function/named-eval-var-scope-syntax-err.js",
         "test262/test/language/expressions/async-function/nameless-eval-var-scope-syntax-err.js",

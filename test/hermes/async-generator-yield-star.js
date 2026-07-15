@@ -111,6 +111,35 @@ async function* outer7() {
     yield* innerPromise();
 }
 
+// Test 11: yield* on a sync iterable whose final result is
+// {done: true, value: rejectedPromise}. Per spec §27.1.6.4 step 12,
+// the close-on-rejection handler is NOT attached when done is true,
+// so wrapSyncResult must not call inner.return(). The rejection
+// propagates via the throw protocol to inner.throw().
+let returnCalled11 = false;
+const syncIter11 = {
+    [Symbol.iterator]: function () {
+        let calls = 0;
+        return {
+            next: function () {
+                calls++;
+                if (calls === 1) return { done: false, value: 'a' };
+                return { done: true, value: Promise.reject('end-rej') };
+            },
+            return: function () {
+                returnCalled11 = true;
+                return { done: true };
+            },
+            throw: function (e) {
+                return { done: true, value: undefined };
+            },
+        };
+    },
+};
+async function* outer11() {
+    yield* syncIter11;
+}
+
 (async function runAll() {
     // Test 1: basic delegation
     var r1 = [];
@@ -221,4 +250,82 @@ async function* outer7() {
         print("test10:", e, closed10);
     }
     // CHECK-NEXT: test10: sync value reject true
+
+    // Test 11: done=true rejection — wrapSyncResult must not close inner
+    var r11 = [];
+    try {
+        for await (var x of outer11()) r11.push(x);
+    } catch (e) {
+        r11.push("caught:" + e);
+    }
+    print("test11:", JSON.stringify(r11), "returnCalled:", returnCalled11);
+    // CHECK-NEXT: test11: ["a","caught:end-rej"] returnCalled: false
+
+    // Test 12: sync delegate .throw with a not-done rejected promise value
+    // closes the iterator before rejecting with the original reason.
+    var closed12 = false;
+    var throwRejectValueIter = {
+        [Symbol.iterator]: function() { return this; },
+        next: function() {
+            return {done: false, value: "throw-start"};
+        },
+        throw: function(e) {
+            return {done: false, value: Promise.reject("throw value reject")};
+        },
+        return: function() {
+            closed12 = true;
+            return {done: true};
+        },
+    };
+    async function* outer12() {
+        yield* throwRejectValueIter;
+    }
+    var ag12 = outer12();
+    await ag12.next();
+    try {
+        await ag12.throw("boom");
+        print("test12: resolved");
+    } catch (e) {
+        print("test12:", e, closed12);
+    }
+    // CHECK-NEXT: test12: throw value reject true
+
+    // Test 13: sync delegate .throw with a not-done promise value whose
+    // constructor getter throws closes the iterator before rejecting with
+    // the original PromiseResolve error.
+    function PoisonedConstructorError() {}
+    var poisonedError13 = new PoisonedConstructorError();
+    var closed13 = false;
+    var throwPoisonedValueIter = {
+        [Symbol.iterator]: function() { return this; },
+        next: function() {
+            return {done: false, value: "poison-start"};
+        },
+        throw: function(e) {
+            var value = Promise.resolve("value");
+            Object.defineProperty(value, "constructor", {
+                get: function() { throw poisonedError13; },
+            });
+            return {done: false, value: value};
+        },
+        return: function() {
+            closed13 = true;
+            return {done: true};
+        },
+    };
+    async function* outer13() {
+        yield* throwPoisonedValueIter;
+    }
+    var ag13 = outer13();
+    await ag13.next();
+    try {
+        await ag13.throw("boom");
+        print("test13: resolved");
+    } catch (e) {
+        print("test13:", e instanceof PoisonedConstructorError, closed13);
+    }
+    var after13 = await ag13.next();
+    print("test13 after:", after13.done, after13.value);
+    // CHECK-NEXT: test13: true true
+    // CHECK-NEXT: test13 after: true undefined
 })();
