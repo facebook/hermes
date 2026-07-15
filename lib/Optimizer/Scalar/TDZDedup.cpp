@@ -26,8 +26,14 @@ namespace {
 
 class TDZDedupContext;
 
-using ScopedHTType = hermes::ScopedHashTable<Value *, bool>;
-using ScopeType = hermes::ScopedHashTableScope<Value *, bool>;
+/// The key identifying a particular TDZ storage location.
+/// For frame variables it is the pair (scope, variable): the same Variable
+/// accessed through two different scope instances is a different storage
+/// location and must not share TDZ state.
+/// For stack locations and values with no scope, the first element is null.
+using TDZKey = std::pair<Value *, Value *>;
+using ScopedHTType = hermes::ScopedHashTable<TDZKey, bool>;
+using ScopeType = hermes::ScopedHashTableScope<TDZKey, bool>;
 
 // StackNode - contains all the needed information to create a stack for doing
 // a depth first traversal of the tree. This includes scopes for values and
@@ -122,46 +128,57 @@ bool TDZDedupContext::processNode(StackNode *SN) {
   for (auto &inst : *BB) {
     // The storage containing the value that can potentially be empty.
     Value *tdzStorage = nullptr;
+    // The scope instance through which a frame variable is accessed, or null
+    // for stack and other values.
+    Value *tdzScope = nullptr;
     ThrowIfInst *TIE = nullptr;
     if ((TIE = llvh::dyn_cast<ThrowIfInst>(&inst)) != nullptr) {
       auto *checkedValue = TIE->getCheckedValue();
 
       if (auto *LFI = llvh::dyn_cast<LoadFrameInst>(checkedValue)) {
         tdzStorage = LFI->getLoadVariable();
+        tdzScope = LFI->getScope();
       } else if (auto *LSI = llvh::dyn_cast<LoadStackInst>(checkedValue)) {
         tdzStorage = LSI->getSingleOperand();
+        tdzScope = nullptr;
       } else {
         tdzStorage = checkedValue;
       }
     } else if (auto *SF = llvh::dyn_cast<StoreFrameInst>(&inst)) {
       tdzStorage = SF->getVariable();
+      tdzScope = SF->getScope();
       // Is the target a TDZ state variable?
       if (!tdzState_.count(tdzStorage))
         continue;
       // Check whether it is setting the target to empty, in which case we
       // mark it is "unavailable".
       if (builder_.getTypeContext().canBeEmpty(SF->getValue()->getType())) {
-        availableValues_.setInCurrentScope(tdzStorage, false);
+        availableValues_.setInCurrentScope({tdzScope, tdzStorage}, false);
         continue;
       }
     } else if (auto *SS = llvh::dyn_cast<StoreStackInst>(&inst)) {
       tdzStorage = SS->getPtr();
+      tdzScope = nullptr;
       // Is the target a TDZ state variable?
       if (!tdzState_.count(tdzStorage))
         continue;
       // Check whether it is setting the target to non-empty.
       if (builder_.getTypeContext().canBeEmpty(SS->getValue()->getType())) {
-        availableValues_.setInCurrentScope(tdzStorage, false);
+        availableValues_.setInCurrentScope({tdzScope, tdzStorage}, false);
         continue;
       }
     } else {
       continue;
     }
 
+    // The key identifying this exact storage location: a Variable accessed
+    // through different scope instances is a different location.
+    TDZKey tdzKey{tdzScope, tdzStorage};
+
     // If the tdz state is not already known to be set to true, add it to
     // the map.
-    if (!availableValues_.lookup(tdzStorage)) {
-      availableValues_.setInCurrentScope(tdzStorage, true);
+    if (!availableValues_.lookup(tdzKey)) {
+      availableValues_.setInCurrentScope(tdzKey, true);
       continue;
     }
 
