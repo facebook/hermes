@@ -1310,12 +1310,12 @@ babel-plugin-polyfill-regenerator@^0.5.3:
   dependencies:
     "@babel/helper-define-polyfill-provider" "^0.4.3"
 
-babel-plugin-syntax-hermes-parser@0.36.1:
-  version "0.36.1"
-  resolved "https://registry.yarnpkg.com/babel-plugin-syntax-hermes-parser/-/babel-plugin-syntax-hermes-parser-0.36.1.tgz#970277618fbec67b400bf8b01e4f61ba96ef5a40"
-  integrity sha512-ycduwJbvdvIMmVvlAZqGggS+pm5Eu4Bk9pcV9Sm2Z4PJNRVsKkv0g7vHj+LeuC1gHTeF67sJXFOq61IlqCa2hA==
+babel-plugin-syntax-hermes-parser@0.37.0:
+  version "0.37.0"
+  resolved "https://registry.yarnpkg.com/babel-plugin-syntax-hermes-parser/-/babel-plugin-syntax-hermes-parser-0.37.0.tgz#287ff4667e6f9c65dd16c2adb27c9920731fc813"
+  integrity sha512-7I9T16lJTjHG6JhHOmM/iqO/UGGQwAcAAD4/tsk+GSjPf9bbusBsPlz1scyGehImMfH1Yopbj0aQYxhTAHdcdg==
   dependencies:
-    hermes-parser "0.36.1"
+    hermes-parser "0.37.0"
 
 babel-plugin-transform-flow-enums@^0.0.2:
   version "0.0.2"
@@ -1446,14 +1446,7 @@ esquery@^1.4.0:
   dependencies:
     estraverse "^5.1.0"
 
-esrecurse@^4.3.0:
-  version "4.3.0"
-  resolved "https://registry.yarnpkg.com/esrecurse/-/esrecurse-4.3.0.tgz#7ad7964d679abb28bee72cec63758b1c5d2c9921"
-  integrity sha512-KmfKL3b6G+RXvP8N1vr3Tq1kL/oCFgn2NYXEtqP8/L3pKapUA4G8cFVaoF3SU323CD4XypR/ffioHmkti6/Tag==
-  dependencies:
-    estraverse "^5.2.0"
-
-estraverse@^5.1.0, estraverse@^5.2.0:
+estraverse@^5.1.0:
   version "5.3.0"
   resolved "https://registry.yarnpkg.com/estraverse/-/estraverse-5.3.0.tgz#2eea5290702f26ab8fe5370370ff86c965d21123"
   integrity sha512-MMdARuVEQziNTeJD8DgMqmhwR11BRQ/cBP+pLtYdSTnf3MIO8fFeiINEbX36ZdNlfU/7A9f3gUw49B3oQsvwBA==
@@ -1521,38 +1514,37 @@ hasown@^2.0.0:
   dependencies:
     function-bind "^1.1.2"
 
-hermes-eslint@0.36.1:
-  version "0.36.1"
-  resolved "https://registry.yarnpkg.com/hermes-eslint/-/hermes-eslint-0.36.1.tgz#c7263e3a3db38621f16b9b122fee14c062faf4ea"
-  integrity sha512-aX8LUlLRHLAkELYWdz4IhRnZ/+Sbmmo5TzDEtsDiDuPIplaStzMnX84aTmPufQOyxZir5GjGxAiqdt+y4GcooA==
+hermes-eslint@0.37.0:
+  version "0.37.0"
+  resolved "https://registry.yarnpkg.com/hermes-eslint/-/hermes-eslint-0.37.0.tgz#f66afae3150d7b7703dcfb30e43297662674c560"
+  integrity sha512-GOZ2xpOe28u7hN5e4NMBCEVZ9KwmigPtFZDXoSRgUWL6sFlppxB5T7WBiLRO00c+sW5R0YM4cbOmnWtTK+DQcQ==
   dependencies:
-    esrecurse "^4.3.0"
-    hermes-estree "0.36.1"
-    hermes-parser "0.36.1"
+    hermes-estree "0.37.0"
+    hermes-parser "0.37.0"
 
-hermes-estree@0.36.1:
-  version "0.36.1"
-  resolved "https://registry.yarnpkg.com/hermes-estree/-/hermes-estree-0.36.1.tgz#71368d9e78238728e11ef1f458a8921d0564a572"
-  integrity sha512-guv1nQ6IJ7S83NRFPWc3SA7IBZrdNC9kapwOq6uXvF4wP+sDCgjzQbKPCoyYmoyZRzztF/n/c36l/rccCZSiCw==
+hermes-estree@0.37.0:
+  version "0.37.0"
+  resolved "https://registry.yarnpkg.com/hermes-estree/-/hermes-estree-0.37.0.tgz#455bf48d059882c543012e862f332ac0696e1b4f"
+  integrity sha512-Frp4+A518C4zZgB2+Qo1srlM3y6nbrFbNNzBF3g7tEuQXHXTb2h39V25JQLNHotxclkD+AZTN/JCCpiTFlhIGg==
 
-hermes-parser@0.36.1:
-  version "0.36.1"
-  resolved "https://registry.yarnpkg.com/hermes-parser/-/hermes-parser-0.36.1.tgz#f619b9f99bf34e80fb6f7024b1c62944d2beb14a"
-  integrity sha512-GApNk4zLHi2UWoWZZkx7LNCOSzLSc5lB55pZ/PhK7ycFeg7u5LcF88p/WbpIi1XUDtE0MpHE3uRR3u3KB7TjSQ==
+hermes-parser@0.37.0:
+  version "0.37.0"
+  resolved "https://registry.yarnpkg.com/hermes-parser/-/hermes-parser-0.37.0.tgz#1f739e17fc9eb99341933b102faf4c5f930def8e"
+  integrity sha512-8PuWcyaF6VHQHL2dbU+QEIkbtHYQrTX/6+ep4VcBLJ3f/ehevowr5Zj8LQfYXQQGFG2O+df7hIMtt4PkkhfK3Q==
   dependencies:
-    hermes-estree "0.36.1"
+    hermes-estree "0.37.0"
 
-hermes-transform@0.36.1:
-  version "0.36.1"
-  resolved "https://registry.yarnpkg.com/hermes-transform/-/hermes-transform-0.36.1.tgz#7adfc0314520e3ac2837403d6664f71d40254fce"
-  integrity sha512-Sqkm+EqykT6fj6AYgxfhaMU55hQ6Zs0z8myIugWNSTAMeuX+zAR9Ptv/HJvE75kDsj523vxj75DVxNXw9q/JGA==
+hermes-transform@0.37.0:
+  version "0.37.0"
+  resolved "https://registry.yarnpkg.com/hermes-transform/-/hermes-transform-0.37.0.tgz#f443e0b125ed5076e6bc3f795c8d0165fe36aca1"
+  integrity sha512-wMf/X3dMz8+/7RJSoydAd5BV/ltYCw1lCX/A7wApEmYpWsxipwLZ5T1SMJl0uWrebZM41ua8Z4gut5dLe5dHlQ==
   dependencies:
     "@babel/code-frame" "^7.16.0"
     esquery "^1.4.0"
     flow-enums-runtime "^0.0.6"
-    hermes-eslint "0.36.1"
-    hermes-estree "0.36.1"
-    hermes-parser "0.36.1"
+    hermes-eslint "0.37.0"
+    hermes-estree "0.37.0"
+    hermes-parser "0.37.0"
     string-width "4.2.3"
 
 is-core-module@^2.13.0:
