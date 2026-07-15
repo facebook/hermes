@@ -153,4 +153,72 @@ async function* outer7() {
     for await (var x of outer7()) r7.push(x);
     print("test7:", JSON.stringify(r7));
     // CHECK-NEXT: test7: [42,43]
+
+    // Test 8: sync delegate .return present but non-callable rejects.
+    var badReturnIter = {
+        [Symbol.iterator]: function() { return this; },
+        next: function() { return {done: false, value: "bad-return"}; },
+        return: 1,
+    };
+    async function* outer8() {
+        yield* badReturnIter;
+    }
+    var ag8 = outer8();
+    await ag8.next();
+    try {
+        await ag8.return("stop");
+        print("test8: resolved");
+    } catch (e) {
+        print("test8:", e instanceof TypeError);
+    }
+    // CHECK-NEXT: test8: true
+
+    // Test 9: sync delegate .throw present but non-callable rejects without
+    // closing; GetMethod fails before the missing-throw close path.
+    var closed9 = false;
+    var badThrowIter = {
+        [Symbol.iterator]: function() { return this; },
+        next: function() { return {done: false, value: "bad-throw"}; },
+        throw: 1,
+        return: function() {
+            closed9 = true;
+            return {done: true};
+        },
+    };
+    async function* outer9() {
+        yield* badThrowIter;
+    }
+    var ag9 = outer9();
+    await ag9.next();
+    try {
+        await ag9.throw("boom");
+        print("test9: resolved");
+    } catch (e) {
+        print("test9:", e instanceof TypeError, closed9);
+    }
+    // CHECK-NEXT: test9: true false
+
+    // Test 10: rejected promise values from sync delegates close the iterator
+    // before rejecting with the original reason.
+    var closed10 = false;
+    var rejectValueIter = {
+        [Symbol.iterator]: function() { return this; },
+        next: function() {
+            return {done: false, value: Promise.reject("sync value reject")};
+        },
+        return: function() {
+            closed10 = true;
+            return {done: true};
+        },
+    };
+    async function* outer10() {
+        yield* rejectValueIter;
+    }
+    try {
+        await outer10().next();
+        print("test10: resolved");
+    } catch (e) {
+        print("test10:", e, closed10);
+    }
+    // CHECK-NEXT: test10: sync value reject true
 })();
