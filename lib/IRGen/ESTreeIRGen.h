@@ -1799,15 +1799,14 @@ class ESTreeIRGen {
   /// \return the instruction performing the load.
   Instruction *emitLoad(Value *from, bool inhibitThrow);
 
-  /// Emit an instruction to a store a value into the specified location.
+  /// Emit IR to store a value into the specified location.
   /// \param storedValue value to store
   /// \param ptr location to store into, either a Variable or
   ///     GlobalObjectProperty.
   /// \param declInit whether this is a declaration initializer, so the TDZ
   /// check
   ///     should be skipped.
-  /// \return the instruction performing the store.
-  Instruction *emitStore(Value *storedValue, Value *ptr, bool declInit);
+  void emitStore(Value *storedValue, Value *ptr, bool declInit);
 
   /// Emit IR to load a private name.
   /// \param from value to perform the lookup on.

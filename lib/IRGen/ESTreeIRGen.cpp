@@ -1549,8 +1549,7 @@ Instruction *ESTreeIRGen::emitLoad(Value *from, bool inhibitThrow) {
   }
 }
 
-Instruction *
-ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
+void ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
   if (auto *var = llvh::dyn_cast<Variable>(ptr)) {
     auto *RSI = emitResolveScopeInstIfNeeded(var->getParent());
     // TODO(T182345760): Move the TDZ tracking and checking into the resolver.
@@ -1602,23 +1601,30 @@ ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
       if (constness == sema::Decl::Constness::Always ||
           (Builder.getFunction()->isStrictMode() &&
            constness == sema::Decl::Constness::StrictModeOnly)) {
-        // If this is a const variable being reassigned, throw a TypeError.
+        // Strict mode or always-const: throw TypeError at runtime.
         Builder.createThrowTypeErrorInst(Builder.getLiteralString(
             "assignment to constant variable '" + var->getName().str() + "'"));
         // Create a new block, since ThrowTypeError is a terminator.
         Builder.setInsertionBlock(
             Builder.createBasicBlock(Builder.getFunction()));
+      } else if (constness == sema::Decl::Constness::StrictModeOnly) {
+        // Per ES2025 §9.1.1.1.5 step 5.b: immutable-binding assignment
+        // throws only if S=true; in sloppy mode (S=false) it's a no-op
+        // and the binding keeps its initialized value.
+        return;
       }
     }
 
-    return Builder.createStoreFrameInst(RSI, storedValue, var);
+    Builder.createStoreFrameInst(RSI, storedValue, var);
+    return;
   } else if (auto *globalProp = llvh::dyn_cast<GlobalObjectProperty>(ptr)) {
     if (globalProp->isDeclared() || !Builder.getFunction()->isStrictMode()) {
-      return Builder.createStorePropertyInst(
+      Builder.createStorePropertyInst(
           storedValue, Builder.getGlobalObject(), globalProp->getName());
     } else {
-      return Builder.createTryStoreGlobalPropertyInst(storedValue, globalProp);
+      Builder.createTryStoreGlobalPropertyInst(storedValue, globalProp);
     }
+    return;
   } else {
     llvm_unreachable("invalid value to load from");
   }
