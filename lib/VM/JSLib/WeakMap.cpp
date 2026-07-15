@@ -41,6 +41,22 @@ HermesValue createWeakMapConstructor(Runtime &runtime) {
   defineMethod(
       runtime,
       weakMapPrototype,
+      Predefined::getSymbolID(Predefined::getOrInsert),
+      nullptr,
+      weakMapPrototypeGetOrInsert,
+      2);
+
+  defineMethod(
+      runtime,
+      weakMapPrototype,
+      Predefined::getSymbolID(Predefined::getOrInsertComputed),
+      nullptr,
+      weakMapPrototypeGetOrInsertComputed,
+      2);
+
+  defineMethod(
+      runtime,
+      weakMapPrototype,
       Predefined::getSymbolID(Predefined::has),
       nullptr,
       weakMapPrototypeHas,
@@ -217,6 +233,59 @@ CallResult<HermesValue> weakMapPrototypeGet(void *, Runtime &runtime) {
   }
 
   return JSWeakMap::getValue(M, runtime, key);
+}
+
+/// 24.3.3.4 WeakMap.prototype.getOrInsert(key, value)
+CallResult<HermesValue> weakMapPrototypeGetOrInsert(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  // 1. Let M be the this value.
+  auto M = args.dyncastThis<JSWeakMap>();
+  // 2. Perform ? RequireInternalSlot(M, [[WeakMapData]]).
+  if (LLVM_UNLIKELY(!M)) {
+    return runtime.raiseTypeError(
+        "WeakMap.prototype.getOrInsert can only be called on a WeakMap");
+  }
+
+  auto key = args.getArgHandle(0);
+  // 3. If CanBeHeldWeakly(key) is false, throw a TypeError exception.
+  if (LLVM_UNLIKELY(!canBeHeldWeakly(runtime, *key))) {
+    return runtime.raiseTypeError(
+        "WeakMap key must be an Object or non-registered Symbol");
+  }
+
+  // rest of the steps in the following call.
+  return JSWeakMap::getOrInsert(M, runtime, key, args.getArgHandle(1));
+}
+
+/// 24.3.3.5 WeakMap.prototype.getOrInsertComputed(key, callback)
+CallResult<HermesValue> weakMapPrototypeGetOrInsertComputed(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  // 1. Let M be the this value.
+  auto M = args.dyncastThis<JSWeakMap>();
+  // 2. Perform ? RequireInternalSlot(M, [[WeakMapData]]).
+  if (LLVM_UNLIKELY(!M)) {
+    return runtime.raiseTypeError(
+        "WeakMap.prototype.getOrInsertComputed can only be called on a WeakMap");
+  }
+
+  auto key = args.getArgHandle(0);
+  // 3. If CanBeHeldWeakly(key) is false, throw a TypeError exception.
+  if (LLVM_UNLIKELY(!canBeHeldWeakly(runtime, *key))) {
+    return runtime.raiseTypeError(
+        "WeakMap key must be an Object or non-registered Symbol");
+  }
+
+  auto callback = args.dyncastArg<Callable>(1);
+  // 4. If IsCallable(callback) is false, throw a TypeError exception.
+  if (LLVM_UNLIKELY(!callback)) {
+    return runtime.raiseTypeError(
+        "callback must be Callable in WeakMap.prototype.getOrInsertComputed");
+  }
+
+  // rest of the steps in the following call.
+  return JSWeakMap::getOrInsertComputed(M, runtime, key, callback);
 }
 
 CallResult<HermesValue> weakMapPrototypeHas(void *, Runtime &runtime) {

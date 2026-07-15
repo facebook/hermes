@@ -101,13 +101,6 @@
   "skip_list": [
     {
       "paths": [
-        "test262/test/built-ins/WeakMap/prototype/getOrInsert",
-        "test262/test/built-ins/WeakMap/prototype/getOrInsertComputed"
-      ],
-      "comment": "WeakMap.prototype.getOrInsert(Computed) (upsert proposal) not yet implemented; Map side is implemented"
-    },
-    {
-      "paths": [
         "test262/test/built-ins/RegExp/escape/cross-realm.js"
       ],
       "comment": "fails on $262.createRealm()"
