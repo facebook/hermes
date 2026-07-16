@@ -433,11 +433,11 @@ class Root {
           if (id != null) {
             const onClick = fiber.props.onClick;
             if (onClick != null) {
-              callbacks.set(id, onClick);
+              callbacks.set(CHECKED_CAST<string>(id), onClick);
             }
             const onChange = fiber.props.onChange;
             if (onChange != null) {
-              callbacks.set(id, onChange);
+              callbacks.set(CHECKED_CAST<string>(id), onChange);
             }
           }
           break;
@@ -480,7 +480,7 @@ class Root {
           CHECKED_CAST<string>(element.type),
         );
         invariant(
-          element.props !== null && typeof element.props === 'object',
+          (element.props: any) !== null && typeof element.props === 'object',
           'Expected component props',
         );
 
@@ -490,13 +490,16 @@ class Root {
         delete props.children;
 
         fiber = new Fiber(type, props, element.key);
-        this.mountChildren(children, fiber);
+        this.mountChildren(CHECKED_CAST<React$Node>(children), fiber);
       } else {
         switch (element.type) {
           case REACT_FRAGMENT_TYPE: {
             const type: FiberType = new FiberTypeFragment();
             fiber = new Fiber(type, (element.props: any), element.key);
-            this.mountChildren(element.props.children, fiber);
+            this.mountChildren(
+              CHECKED_CAST<React$Node>(element.props.children),
+              fiber,
+            );
             break;
           }
           default: {
@@ -560,7 +563,7 @@ class Root {
       switch (prevChild.type.kind) {
         case 'host': {
           invariant(
-            element.props !== null && typeof element.props === 'object',
+            (element.props: any) !== null && typeof element.props === 'object',
             'Expected component props',
           );
 
@@ -575,7 +578,7 @@ class Root {
         }
         case 'fragment': {
           invariant(
-            element.props !== null && typeof element.props === 'object',
+            (element.props: any) !== null && typeof element.props === 'object',
             'Expected component props',
           );
 
@@ -585,7 +588,7 @@ class Root {
         }
         case 'component': {
           invariant(
-            element.props !== null && typeof element.props === 'object',
+            (element.props: any) !== null && typeof element.props === 'object',
             'Expected component props',
           );
           prevChild.props = element.props;
@@ -754,7 +757,7 @@ class FiberTypeText extends FiberType {
  * the framework only looks at the identity of prop values and does not otherwise make any
  * assumptions about which props may exist and what their types are.
  */
-export type Props = any;
+export type Props = {+[prop: string]: mixed};
 
 /**
  * Data storage for the useState() hook

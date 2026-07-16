@@ -60,7 +60,7 @@ const Separator = React.forwardRef(
     return (
       <Primitive.div
         data-orientation={orientation}
-        {...semanticProps}
+        {...(semanticProps: Props)}
         {...domProps}
         ref={forwardedRef}
       />

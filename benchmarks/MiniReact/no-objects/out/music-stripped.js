@@ -27,10 +27,12 @@
   }
   /* file: packages/sh/microtask.js */
   let M$sh_microtask$INTERNAL$microtaskQueue = [];
+  // Use a stub to avoid having a union in the array.
+  function M$sh_microtask$INTERNAL$stub() {}
   function M$sh_microtask$drainMicrotaskQueue() {
     for (let i = 0; i < M$sh_microtask$INTERNAL$microtaskQueue.length; i++) {
       M$sh_microtask$INTERNAL$microtaskQueue[i]();
-      M$sh_microtask$INTERNAL$microtaskQueue[i] = undefined;
+      M$sh_microtask$INTERNAL$microtaskQueue[i] = M$sh_microtask$INTERNAL$stub;
     }
     M$sh_microtask$INTERNAL$microtaskQueue = [];
   }
@@ -357,11 +359,11 @@
               if (id != null) {
                 const onClick = fiber.props.onClick;
                 if (onClick != null) {
-                  M$react_index$INTERNAL$callbacks.set(id, onClick);
+                  M$react_index$INTERNAL$callbacks.set(M$sh_CHECKED_CAST$default(id), onClick);
                 }
                 const onChange = fiber.props.onChange;
                 if (onChange != null) {
-                  M$react_index$INTERNAL$callbacks.set(id, onChange);
+                  M$react_index$INTERNAL$callbacks.set(M$sh_CHECKED_CAST$default(id), onChange);
                 }
               }
               break;
@@ -402,14 +404,14 @@
           };
           delete props.children;
           fiber = new M$react_index$INTERNAL$Fiber(type, props, element.key);
-          this.mountChildren(children, fiber);
+          this.mountChildren(M$sh_CHECKED_CAST$default(children), fiber);
         } else {
           switch (element.type) {
             case M$react_index$INTERNAL$REACT_FRAGMENT_TYPE:
               {
                 const type = new M$react_index$INTERNAL$FiberTypeFragment();
                 fiber = new M$react_index$INTERNAL$Fiber(type, element.props, element.key);
-                this.mountChildren(element.props.children, fiber);
+                this.mountChildren(M$sh_CHECKED_CAST$default(element.props.children), fiber);
                 break;
               }
             default:

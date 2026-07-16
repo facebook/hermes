@@ -26,11 +26,13 @@
     return (value: any);
   }
   /* file: packages/sh/microtask.js */
-  let M$sh_microtask$INTERNAL$microtaskQueue = [];
+  let M$sh_microtask$INTERNAL$microtaskQueue: (() => void)[] = [];
+  // Use a stub to avoid having a union in the array.
+  function M$sh_microtask$INTERNAL$stub(): void {}
   function M$sh_microtask$drainMicrotaskQueue(): void {
     for (let i = 0; i < M$sh_microtask$INTERNAL$microtaskQueue.length; i++) {
       M$sh_microtask$INTERNAL$microtaskQueue[i]();
-      M$sh_microtask$INTERNAL$microtaskQueue[i] = undefined;
+      M$sh_microtask$INTERNAL$microtaskQueue[i] = M$sh_microtask$INTERNAL$stub;
     }
     M$sh_microtask$INTERNAL$microtaskQueue = [];
   }
@@ -367,11 +369,11 @@
               if (id != null) {
                 const onClick = fiber.props.onClick;
                 if (onClick != null) {
-                  M$react_index$INTERNAL$callbacks.set(id, onClick);
+                  M$react_index$INTERNAL$callbacks.set(M$sh_CHECKED_CAST$default<string>(id), onClick);
                 }
                 const onChange = fiber.props.onChange;
                 if (onChange != null) {
-                  M$react_index$INTERNAL$callbacks.set(id, onChange);
+                  M$react_index$INTERNAL$callbacks.set(M$sh_CHECKED_CAST$default<string>(id), onChange);
                 }
               }
               break;
@@ -404,7 +406,7 @@
         } else if (typeof element.type === 'string') {
           M$react_invariant$default(typeof element.type === 'string', 'Expected a host component name such as "div" or "span", got ' + typeof element.type);
           const type: M$react_index$INTERNAL$FiberType = new M$react_index$INTERNAL$FiberTypeHost(M$sh_CHECKED_CAST$default<string>(element.type));
-          M$react_invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
+          M$react_invariant$default((element.props: any) !== null && typeof element.props === 'object', 'Expected component props');
           // const {children, ...props} = element.props;
           const children = element.props.children;
           const props = {
@@ -412,14 +414,14 @@
           };
           delete props.children;
           fiber = new M$react_index$INTERNAL$Fiber(type, props, element.key);
-          this.mountChildren(children, fiber);
+          this.mountChildren(M$sh_CHECKED_CAST$default<M$react_index$React$Node>(children), fiber);
         } else {
           switch (element.type) {
             case M$react_index$INTERNAL$REACT_FRAGMENT_TYPE:
               {
                 const type: M$react_index$INTERNAL$FiberType = new M$react_index$INTERNAL$FiberTypeFragment();
                 fiber = new M$react_index$INTERNAL$Fiber(type, (element.props: any), element.key);
-                this.mountChildren(element.props.children, fiber);
+                this.mountChildren(M$sh_CHECKED_CAST$default<M$react_index$React$Node>(element.props.children), fiber);
                 break;
               }
             default:
@@ -467,7 +469,7 @@
         switch (prevChild.type.kind) {
           case 'host':
             {
-              M$react_invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
+              M$react_invariant$default((element.props: any) !== null && typeof element.props === 'object', 'Expected component props');
               // const {children, ...props} = element.props;
               const children = element.props.children;
               const props = {
@@ -480,14 +482,14 @@
             }
           case 'fragment':
             {
-              M$react_invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
+              M$react_invariant$default((element.props: any) !== null && typeof element.props === 'object', 'Expected component props');
               const children = element.props.children;
               this.reconcileChildren(prevChild, (children: any));
               break;
             }
           case 'component':
             {
-              M$react_invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
+              M$react_invariant$default((element.props: any) !== null && typeof element.props === 'object', 'Expected component props');
               prevChild.props = element.props;
               break;
             }
@@ -623,7 +625,9 @@
    * the framework only looks at the identity of prop values and does not otherwise make any
    * assumptions about which props may exist and what their types are.
    */
-  type M$react_index$Props = any;
+  type M$react_index$Props = {
+    +[prop: string]: mixed
+  };
   /**
    * Data storage for the useState() hook
    */
@@ -943,7 +947,7 @@
     };
     return M$react_index$jsx(M$radix_ui_react_primitive_index$Primitive.div, {
       'data-orientation': orientation,
-      ...semanticProps,
+      ...(semanticProps: M$react_index$Props),
       ...domProps,
       ref: forwardedRef
     }, null);
