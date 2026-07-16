@@ -10,6 +10,8 @@
 
 #include "hermes/napi/node_api.h"
 
+EXTERN_C_START
+
 //===========================================================================
 // Host integration interface
 //===========================================================================
@@ -265,5 +267,7 @@ NAPI_EXTERN napi_status NAPI_CDECL hermes_run_bytecode(
     const char *source_url,
     const hermes_bytecode_flags *flags,
     napi_value *result);
+
+EXTERN_C_END
 
 #endif // HERMES_NAPI_HERMES_NAPI_H
