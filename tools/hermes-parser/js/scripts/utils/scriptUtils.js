@@ -49,6 +49,36 @@ export const GetHermesESTreeJSON: () => ESTreeJSON = () =>
   // $FlowExpectedError[unsupported-syntax]
   require(HermesESTreeJSONFile);
 
+const isFlowTransform = process.env.HERMES_TRANSFORM_TARGET === 'flow';
+
+export const TransformESTreePackage: 'hermes-estree' | 'flow-estree' =
+  isFlowTransform ? 'flow-estree' : 'hermes-estree';
+export const TransformPackage: 'hermes-transform' | 'flow-transform' =
+  isFlowTransform ? 'flow-transform' : 'hermes-transform';
+export const TransformReadonly: 'readonly ' | '+' = isFlowTransform
+  ? '+'
+  : 'readonly ';
+
+export const GetTransformESTreeJSON: () => ESTreeJSON = () => {
+  const nodes = GetHermesESTreeJSON();
+  if (!isFlowTransform) {
+    return nodes;
+  }
+
+  return nodes.map(node =>
+    node.name === 'DeclareVariable'
+      ? {
+          ...node,
+          arguments: [
+            {type: 'NodeList', name: 'declarations', optional: false},
+            {type: 'NodeString', name: 'kind', optional: false},
+            {type: 'NodeBoolean', name: 'implicitDeclare', optional: false},
+          ],
+        }
+      : node,
+  );
+};
+
 type FlowStyle = false | 'loose' | 'strict' | 'strict-local';
 function HEADER(flow: FlowStyle, skipFormat: boolean): string {
   let flowDirective = ``;
@@ -93,6 +123,7 @@ type Package =
   | 'hermes-estree'
   | 'hermes-parser'
   | 'hermes-transform'
+  | 'flow-transform'
   | 'flow-api-translator'
   | 'prettier-plugin-hermes-parser'
   | 'babel-plugin-syntax-hermes-parser';
@@ -100,7 +131,7 @@ type Package =
 type ArtifactOptions = Readonly<{
   code: string,
   flow?: FlowStyle,
-  // will write to ../<package>/<file>
+  // Writes to ../<package>/<file> unless a transform package override is set.
   package: Package,
   file: string,
   skipFormat?: boolean,
@@ -143,7 +174,11 @@ async function formatAndWriteArtifact({
       });
 
   // make sure the folder exists first
-  const folder = path.resolve(__dirname, '..', '..', pkg, path.dirname(file));
+  const packageRoot =
+    pkg === TransformPackage && process.env.HERMES_TRANSFORM_PACKAGE_DIR != null
+      ? process.env.HERMES_TRANSFORM_PACKAGE_DIR
+      : path.resolve(__dirname, '..', '..', pkg);
+  const folder = path.resolve(packageRoot, path.dirname(file));
   mkdirp.sync(folder);
   // write to disk
   const artifactPath = path.resolve(folder, path.basename(file));
