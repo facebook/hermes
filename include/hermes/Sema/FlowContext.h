@@ -498,6 +498,17 @@ class ExactObjectType : public TypeInfo {
         : name(name), type(type), variance(variance) {}
   };
 
+  /// An index signature, e.g. `[k: string]: number`. An exact object has at
+  /// most one indexer, and an object with an indexer has no named fields.
+  struct Indexer {
+    /// The type of the key (e.g. string or number).
+    Type *keyType;
+    /// The type of the value.
+    Type *valueType;
+    /// Variance of the indexer (None == invariant).
+    FieldVariance variance;
+  };
+
  private:
   /// The list of fields on the object, in order.
   llvh::SmallVector<Field, 4> fields_{};
@@ -506,10 +517,15 @@ class ExactObjectType : public TypeInfo {
   /// Contains all fields in this exact object.
   llvh::SmallDenseMap<Identifier, size_t, 4> fieldNameMap_{};
 
+  /// The optional index signature. When set, fields_ is empty.
+  OptValue<Indexer> indexer_;
+
  public:
   /// Initialize a new instance.
-  explicit ExactObjectType(llvh::ArrayRef<Field> fields)
-      : TypeInfo(TypeKind::ExactObject) {
+  explicit ExactObjectType(
+      llvh::ArrayRef<Field> fields,
+      OptValue<Indexer> indexer = llvh::None)
+      : TypeInfo(TypeKind::ExactObject), indexer_(indexer) {
     // Populate the fields_.
     fields_.append(fields.begin(), fields.end());
 
@@ -524,6 +540,16 @@ class ExactObjectType : public TypeInfo {
   /// \return the fields in order.
   llvh::ArrayRef<Field> getFields() const {
     return fields_;
+  }
+
+  /// \return the index signature, None if there isn't one.
+  OptValue<Indexer> getIndexer() const {
+    return indexer_;
+  }
+
+  /// \return true if this object has an index signature.
+  bool hasIndexer() const {
+    return indexer_.hasValue();
   }
 
   /// \return the field index for the given identifier, None if not found.
@@ -1210,8 +1236,9 @@ class FlowContext {
     return &allocTuple_.emplace_back(types);
   }
   ExactObjectType *createExactObject(
-      llvh::ArrayRef<ExactObjectType::Field> fields) {
-    return &allocExactObject_.emplace_back(fields);
+      llvh::ArrayRef<ExactObjectType::Field> fields,
+      OptValue<ExactObjectType::Indexer> indexer = llvh::None) {
+    return &allocExactObject_.emplace_back(fields, indexer);
   }
   TypedFunctionType *createFunction(
       Type *returnType,

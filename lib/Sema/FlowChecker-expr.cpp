@@ -719,21 +719,63 @@ class FlowChecker::ExprVisitor {
     } else if (auto *un = llvh::dyn_cast<ESTree::UnaryExpressionNode>(parent);
                un && un->_argument == node &&
                un->_operator == outer_.kw_.identDelete) {
-      // `delete` is rejected outright by the UnaryExpression visitor; it
-      // is neither a read nor a write for variance purposes.
       k.read = false;
-      k.write = false;
+      k.write = true;
     }
     return k;
   }
 
-  /// Named/computed access on an exact object type.
+  /// Type a member access that resolves through an object \p indexer. \p
+  /// keyType is the key type being used to index: the property's type for
+  /// computed access, or `string` for dot access (the key is the identifier
+  /// name).
+  Type *visitMemberIndexer(
+      ESTree::MemberExpressionNode *node,
+      ESTree::Node *parent,
+      const ExactObjectType::Indexer &indexer,
+      Type *keyType,
+      bool isWrite) {
+    // Check the key can flow into the indexer's key type.
+    if (!outer_.canAFlowIntoB(keyType, indexer.keyType).canFlow) {
+      outer_.sm_.error(
+          node->_property->getSourceRange(),
+          "ft: object index type " + keyType->messageString() +
+              " incompatible with index signature " +
+              indexer.keyType->messageString());
+    }
+
+    MemberAccessKind access = classifyMemberAccess(node, parent, isWrite);
+    if (indexer.variance == FieldVariance::ReadOnly && access.write) {
+      outer_.sm_.error(
+          node->_property->getSourceRange(),
+          "ft: cannot assign to readonly indexer");
+    } else if (indexer.variance == FieldVariance::WriteOnly && access.read) {
+      outer_.sm_.error(
+          node->_property->getSourceRange(),
+          "ft: cannot read writeonly indexer");
+    }
+
+    // An indexer read resolves to `T`. The underlying load actually yields
+    // `T | void` (a missing key reads as `undefined`), but IRGen emits the
+    // narrowing checked cast from `T | void` to `T` at read time, so a read
+    // of a missing key throws.
+    return indexer.valueType;
+  }
+
   Type *visitMemberExactObject(
       ESTree::MemberExpressionNode *node,
       ESTree::Node *parent,
       ExactObjectType *exactObjType,
       bool isWrite) {
     if (node->_computed) {
+      if (auto indexer = exactObjType->getIndexer()) {
+        return visitMemberIndexer(
+            node,
+            parent,
+            *indexer,
+            outer_.getNodeTypeOrAny(node->_property),
+            isWrite);
+      }
       // TODO: determine what this should do for real.
       // Flow allows this and just returns 'any' (deliberately unsound).
       outer_.sm_.error(
@@ -745,6 +787,12 @@ class FlowChecker::ExprVisitor {
     auto optFieldIdx =
         exactObjType->findField(Identifier::getFromPointer(id->_name));
     if (!optFieldIdx) {
+      // A dot access uses a string key; route it through the indexer if one
+      // exists (indexers and named fields are mutually exclusive).
+      if (auto indexer = exactObjType->getIndexer()) {
+        return visitMemberIndexer(
+            node, parent, *indexer, outer_.flowContext_.getString(), isWrite);
+      }
       outer_.sm_.error(
           node->_property->getSourceRange(),
           "ft: property " + id->_name->str() + " not defined in object");
@@ -1179,6 +1227,12 @@ class FlowChecker::ExprVisitor {
     // Name of the key, mapping to index in the fields vector.
     llvh::SmallDenseMap<UniqueString *, size_t> names;
 
+    // If any spread source has an indexer, the result is an indexer object
+    // (indexers and named fields are mutually exclusive). These accumulate the
+    // common key type and all the value types contributed by spread indexers.
+    Type *indexerKeyType = nullptr;
+    llvh::SmallSetVector<Type *, 4> indexerValueTypes{};
+
     auto *constraintObjectType = llvh::dyn_cast_or_null<ExactObjectType>(
         constraint ? constraint->info : nullptr);
 
@@ -1215,6 +1269,24 @@ class FlowChecker::ExprVisitor {
               fields[it->second].type = srcField.type;
               fields[it->second].variance = FieldVariance::None;
             }
+          }
+          // A source with an indexer contributes its indexer to the result.
+          // Such a source has no named fields, so the loop above did nothing.
+          if (auto srcIndexer = spreadObjTy->getIndexer()) {
+            if (srcIndexer->variance == FieldVariance::WriteOnly) {
+              outer_.sm_.error(
+                  spread->getSourceRange(),
+                  "ft: cannot read writeonly indexer");
+            }
+            if (!indexerKeyType) {
+              indexerKeyType = srcIndexer->keyType;
+            } else if (!indexerKeyType->info->equals(
+                           srcIndexer->keyType->info)) {
+              outer_.sm_.error(
+                  spread->getSourceRange(),
+                  "ft: incompatible indexer key types in spread");
+            }
+            indexerValueTypes.insert(srcIndexer->valueType);
           }
         } else {
           outer_.sm_.error(
@@ -1253,6 +1325,10 @@ class FlowChecker::ExprVisitor {
                 Identifier::getFromPointer(name))) {
           constraintValueType =
               constraintObjectType->getFields()[*optField].type;
+        } else if (const auto &indexer = constraintObjectType->getIndexer()) {
+          // Constructing an indexer object: every value is checked against the
+          // indexer's value type.
+          constraintValueType = indexer->valueType;
         }
       }
 
@@ -1290,6 +1366,36 @@ class FlowChecker::ExprVisitor {
     if (assumeAny) {
       // Failed to make an object type that matches the properties.
       outer_.flowContext_.setNodeType(node, outer_.flowContext_.getAny());
+      return;
+    }
+
+    // A spread source had an indexer: the result is an indexer object whose
+    // value type is the union of every named field type and every spread
+    // indexer value type.
+    if (!indexerValueTypes.empty()) {
+      // Named properties use string keys, so they require a string-keyed
+      // indexer (field names cannot index a number-keyed indexer).
+      if (!fields.empty() &&
+          !outer_.canAFlowIntoB(outer_.flowContext_.getString(), indexerKeyType)
+               .canFlow) {
+        outer_.sm_.error(
+            node->getSourceRange(),
+            "ft: object index type string incompatible with index signature " +
+                indexerKeyType->messageString());
+      }
+      llvh::SmallSetVector<Type *, 4> valueTypes{};
+      for (const auto &f : fields)
+        valueTypes.insert(f.type);
+      for (Type *vt : indexerValueTypes)
+        valueTypes.insert(vt);
+      Type *valueType = outer_.flowContext_.createType(
+          outer_.flowContext_.maybeCreateUnion(valueTypes.getArrayRef()));
+      ExactObjectType::Indexer indexer{
+          indexerKeyType, valueType, FieldVariance::None};
+      outer_.setNodeType(
+          node,
+          outer_.flowContext_.createType(
+              outer_.flowContext_.createExactObject({}, indexer), node));
       return;
     }
 
@@ -1728,7 +1834,13 @@ class FlowChecker::ExprVisitor {
       if (auto *mem = llvh::dyn_cast<ESTree::MemberExpressionLikeNode>(
               node->_argument)) {
         Type *objType = outer_.getNodeTypeOrAny(ESTree::getObject(mem));
-        if (!llvh::isa<AnyType>(objType->info)) {
+        // `delete` on an object with an indexer removes a key from the
+        // dictionary without violating its uniform value type, so it is
+        // allowed.
+        bool hasIndexer = false;
+        if (auto *exactObj = llvh::dyn_cast<ExactObjectType>(objType->info))
+          hasIndexer = exactObj->hasIndexer();
+        if (!hasIndexer && !llvh::isa<AnyType>(objType->info)) {
           // `delete` removes a property and so violates any non-`any` object's
           // declared shape.
           outer_.sm_.error(

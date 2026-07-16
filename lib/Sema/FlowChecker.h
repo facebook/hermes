@@ -1257,12 +1257,6 @@ template <typename AnnotationCB>
 Type *FlowChecker::processObjectTypeAnnotation(
     ESTree::ObjectTypeAnnotationNode *node,
     AnnotationCB cb) {
-  if (!node->_indexers.empty()) {
-    sm_.error(
-        node->_indexers.front().getStartLoc(),
-        "ft: indexers are not supported in object types");
-    return flowContext_.getAny();
-  }
   if (!node->_callProperties.empty()) {
     sm_.error(
         node->_callProperties.front().getStartLoc(),
@@ -1342,9 +1336,34 @@ Type *FlowChecker::processObjectTypeAnnotation(
         Identifier::getFromPointer(name), cb(prop->_value), variance);
   }
 
+  // Parse the optional index signature.
+  OptValue<ExactObjectType::Indexer> indexer{};
+  if (!node->_indexers.empty()) {
+    auto it = node->_indexers.begin();
+    auto *indexerNode = llvh::cast<ESTree::ObjectTypeIndexerNode>(&*it);
+    // At most one indexer is allowed.
+    if (std::next(it) != node->_indexers.end()) {
+      sm_.error(
+          std::next(it)->getStartLoc(),
+          "ft: at most one indexer is allowed in an object type");
+    }
+    // An indexer can't be combined with named properties.
+    if (!fields.empty()) {
+      sm_.error(
+          indexerNode->getStartLoc(),
+          "ft: indexers cannot be combined with named properties");
+    } else {
+      FieldVariance variance = parseVariance(
+          llvh::cast_or_null<ESTree::VarianceNode>(indexerNode->_variance));
+      indexer = ExactObjectType::Indexer{
+          cb(indexerNode->_key), cb(indexerNode->_value), variance};
+    }
+  }
+
   // It's possible we've failed on one of the properties, just continue
   // with an empty object type because we're going to fail anyway.
-  return flowContext_.createType(flowContext_.createExactObject(fields), node);
+  return flowContext_.createType(
+      flowContext_.createExactObject(fields, indexer), node);
 }
 
 } // namespace flow

@@ -575,20 +575,35 @@ hermes::OptValue<size_t> ExactObjectType::findField(Identifier id) const {
 int ExactObjectType::_compareImpl(
     const ExactObjectType *other,
     CompareState &state) const {
-  return lexicographicalComparison(
-      fields_.begin(),
-      fields_.end(),
-      other->fields_.begin(),
-      other->fields_.end(),
-      [&state](const Field &ta, const Field &tb) {
-        if (int tmp = ta.name.str().compare(tb.name.str()))
-          return tmp;
-        if (ta.variance != tb.variance)
-          return ta.variance < tb.variance ? -1 : 1;
-        if (int tmp = ta.type->info->compare(tb.type->info, state))
-          return tmp;
-        return 0;
-      });
+  if (int tmp = lexicographicalComparison(
+          fields_.begin(),
+          fields_.end(),
+          other->fields_.begin(),
+          other->fields_.end(),
+          [&state](const Field &ta, const Field &tb) {
+            if (int tmp = ta.name.str().compare(tb.name.str()))
+              return tmp;
+            if (ta.variance != tb.variance)
+              return ta.variance < tb.variance ? -1 : 1;
+            if (int tmp = ta.type->info->compare(tb.type->info, state))
+              return tmp;
+            return 0;
+          }))
+    return tmp;
+  // Compare the optional indexers. Absence sorts before presence.
+  if (indexer_.hasValue() != other->indexer_.hasValue())
+    return indexer_.hasValue() ? 1 : -1;
+  if (indexer_.hasValue()) {
+    const Indexer &a = *indexer_;
+    const Indexer &b = *other->indexer_;
+    if (int tmp = a.keyType->info->compare(b.keyType->info, state))
+      return tmp;
+    if (a.variance != b.variance)
+      return a.variance < b.variance ? -1 : 1;
+    if (int tmp = a.valueType->info->compare(b.valueType->info, state))
+      return tmp;
+  }
+  return 0;
 }
 
 bool ExactObjectType::_equalsImpl(
@@ -604,12 +619,27 @@ bool ExactObjectType::_equalsImpl(
     if (!fields_[i].type->info->equals(other->fields_[i].type->info, state))
       return false;
   }
+  if (indexer_.hasValue() != other->indexer_.hasValue())
+    return false;
+  if (indexer_.hasValue()) {
+    const Indexer &a = *indexer_;
+    const Indexer &b = *other->indexer_;
+    if (a.variance != b.variance)
+      return false;
+    if (!a.keyType->info->equals(b.keyType->info, state))
+      return false;
+    if (!a.valueType->info->equals(b.valueType->info, state))
+      return false;
+  }
   return true;
 }
 
 unsigned ExactObjectType::_hashImpl() const {
   return (unsigned)llvh::hash_combine(
-      (unsigned)TypeKind::ExactObject, fields_.size());
+      (unsigned)TypeKind::ExactObject,
+      fields_.size(),
+      indexer_.hasValue(),
+      indexer_.hasValue() ? (unsigned)indexer_->variance : 0u);
 }
 
 /// Compare two instances of the same TypeKind.

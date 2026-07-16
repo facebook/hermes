@@ -1973,6 +1973,59 @@ bool FlowChecker::expandObjectDestructuring(
     ESTree::ObjectPatternNode *obj,
     ExactObjectType *objType,
     OnChildCB onChild) {
+  // An object with an indexer has no named fields (they are mutually
+  // exclusive), so destructuring resolves every property through the indexer.
+  if (const auto &indexer = objType->getIndexer()) {
+    for (ESTree::Node &propNode : obj->_properties) {
+      if (auto *prop = llvh::dyn_cast<ESTree::PropertyNode>(&propNode)) {
+        if (prop->_computed) {
+          sm_.error(
+              prop->_key->getSourceRange(),
+              "ft: computed properties not supported in destructuring");
+          return false;
+        }
+        if (!llvh::isa<ESTree::IdentifierNode>(prop->_key)) {
+          sm_.error(
+              prop->_key->getSourceRange(),
+              "ft: property key must be an identifier");
+          return false;
+        }
+        // A named property uses a string key; it must flow into the indexer's
+        // key type (e.g. a `{[number]: T}` indexer rejects named properties).
+        if (!canAFlowIntoB(flowContext_.getString(), indexer->keyType)
+                 .canFlow) {
+          sm_.error(
+              prop->_key->getSourceRange(),
+              "ft: object index type " +
+                  flowContext_.getString()->messageString() +
+                  " incompatible with index signature " +
+                  indexer->keyType->messageString());
+        }
+        // Destructuring reads through the indexer, so writeonly is not allowed.
+        if (indexer->variance == FieldVariance::WriteOnly) {
+          sm_.error(
+              prop->_key->getSourceRange(),
+              "ft: cannot read writeonly indexer");
+        }
+        onChild(prop->_value, indexer->valueType);
+      } else if (
+          auto *rest = llvh::dyn_cast<ESTree::RestElementNode>(&propNode)) {
+        // The parser guarantees a rest element is the last property. The rest
+        // binding reads through the indexer and collects the remaining keys
+        // into a fresh exact object with the same indexer.
+        if (indexer->variance == FieldVariance::WriteOnly) {
+          sm_.error(
+              rest->getSourceRange(), "ft: cannot read writeonly indexer");
+        }
+        Type *restType = flowContext_.createType(
+            flowContext_.createExactObject({}, *indexer));
+        onChild(rest->_argument, restType);
+        break;
+      }
+    }
+    return true;
+  }
+
   // Track which fields of \p objType have been consumed by named
   // properties, so a trailing rest element can be typed as an exact object
   // of the remaining fields.
@@ -2878,6 +2931,61 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
 FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     ExactObjectType *a,
     ExactObjectType *b) {
+  // Decide whether a source value of variance \p av and type \p aVal flows
+  // into a destination value of variance \p bv and type \p bVal (used for both
+  // named fields and indexers).
+  auto valueFlows =
+      [this](
+          Type *aVal, FieldVariance av, Type *bVal, FieldVariance bv) -> bool {
+    // Invariant source can flow into a destination of any variance.
+    // A ReadOnly or WriteOnly source can only flow into the same variance.
+    if (av != FieldVariance::None && av != bv)
+      return false;
+    switch (bv) {
+      case FieldVariance::None:
+        // Invariant: types must be equal.
+        return aVal->info->equals(bVal->info);
+      case FieldVariance::ReadOnly:
+        // Covariant: a's value must flow into b's value without a cast.
+        return canAFlowIntoB(aVal, bVal).canFlowWithoutCast();
+      case FieldVariance::WriteOnly:
+        // Contravariant: b's value must flow into a's value without a cast.
+        return canAFlowIntoB(bVal, aVal).canFlowWithoutCast();
+    }
+    llvm_unreachable("invalid FieldVariance");
+  };
+
+  // The destination is an indexer object. The source flows in if it provides
+  // values compatible with the indexer, either via its own indexer or, for a
+  // string-keyed indexer, via its named fields (object width subtyping).
+  if (b->hasIndexer()) {
+    const ExactObjectType::Indexer &bi = *b->getIndexer();
+    if (a->hasIndexer()) {
+      const ExactObjectType::Indexer &ai = *a->getIndexer();
+      // Keys are invariant.
+      if (!ai.keyType->info->equals(bi.keyType->info))
+        return {};
+      return valueFlows(ai.valueType, ai.variance, bi.valueType, bi.variance)
+          ? CanFlowResult{.canFlow = true}
+          : CanFlowResult{};
+    } else {
+      // Source has named fields (possibly none). An empty object flows into any
+      // indexer; a named field requires a string-keyed indexer since field
+      // names are strings.
+      if (!a->getFields().empty() && !llvh::isa<StringType>(bi.keyType->info))
+        return {};
+      for (const auto &f : a->getFields()) {
+        if (!valueFlows(f.type, f.variance, bi.valueType, bi.variance))
+          return {};
+      }
+      return {.canFlow = true};
+    }
+  }
+
+  // The destination has no indexer, so an indexer source can't flow in.
+  if (a->hasIndexer())
+    return {};
+
   auto aFields = a->getFields();
   auto bFields = b->getFields();
   if (aFields.size() != bFields.size()) {
@@ -2887,38 +2995,12 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
   for (size_t i = 0, e = aFields.size(); i < e; ++i) {
     if (aFields[i].name != bFields[i].name)
       return {};
-    FieldVariance av = aFields[i].variance;
-    FieldVariance bv = bFields[i].variance;
-    // An invariant source can flow into a destination of any variance
-    // (the destination gives up a capability). A ReadOnly or WriteOnly
-    // source can only flow into the same variance, since flowing into
-    // an invariant destination would require regaining the dropped
-    // capability and ReadOnly vs. WriteOnly are mutually incompatible.
-    if (av != FieldVariance::None && av != bv)
+    if (!valueFlows(
+            aFields[i].type,
+            aFields[i].variance,
+            bFields[i].type,
+            bFields[i].variance))
       return {};
-    switch (bv) {
-      case FieldVariance::None:
-        // Invariant: types must be equal.
-        if (!aFields[i].type->info->equals(bFields[i].type->info))
-          return {};
-        break;
-      case FieldVariance::ReadOnly: {
-        // Covariant: a's field type must flow into b's field type without a
-        // checked cast.
-        CanFlowResult cf = canAFlowIntoB(aFields[i].type, bFields[i].type);
-        if (!cf.canFlow || cf.needCheckedCast)
-          return {};
-        break;
-      }
-      case FieldVariance::WriteOnly: {
-        // Contravariant: b's field type must flow into a's field type
-        // without a checked cast.
-        CanFlowResult cf = canAFlowIntoB(bFields[i].type, aFields[i].type);
-        if (!cf.canFlow || cf.needCheckedCast)
-          return {};
-        break;
-      }
-    }
   }
 
   return {.canFlow = true};

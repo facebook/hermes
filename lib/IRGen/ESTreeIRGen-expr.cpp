@@ -1373,14 +1373,29 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
       auto propName = Identifier::getFromPointer(
           llvh::cast<ESTree::IdentifierNode>(mem->_property)->_name);
       auto optIndex = objType->findField(propName);
-      assert(optIndex.hasValue() && "Expected field to exist");
-      const auto &field = objType->getFields()[*optIndex];
+      if (optIndex.hasValue()) {
+        const auto &field = objType->getFields()[*optIndex];
+        return MemberExpressionResult{
+            Builder.createPrLoadInst(
+                baseValue,
+                *optIndex,
+                Builder.getLiteralString(propName),
+                flowTypeToIRType(field.type)),
+            nullptr,
+            baseValue};
+      }
+    }
+    // Either a computed access or a dot access with no named field: this is an
+    // indexer read. The dynamic load yields `T | void` (a missing key reads as
+    // `undefined`); narrow it to `T` with a checked cast, so a read of a
+    // missing key throws. The FlowChecker types the member expression as `T`.
+    if (const auto &indexer = objType->getIndexer()) {
+      Type valueIRType = flowTypeToIRType(indexer->valueType);
+      auto *loadProp = Builder.createLoadPropertyInst(baseValue, propValue);
+      loadProp->setType(
+          getTypeContext().unionTy(valueIRType, Type::createUndefined()));
       return MemberExpressionResult{
-          Builder.createPrLoadInst(
-              baseValue,
-              *optIndex,
-              Builder.getLiteralString(propName),
-              flowTypeToIRType(field.type)),
+          Builder.createCheckedTypeCastInst(loadProp, valueIRType),
           nullptr,
           baseValue};
     }
@@ -1631,15 +1646,18 @@ void ESTreeIRGen::emitMemberStore(
       auto propName = Identifier::getFromPointer(
           llvh::cast<ESTree::IdentifierNode>(mem->_property)->_name);
       auto optIndex = objType->findField(propName);
-      assert(optIndex.hasValue() && "Expected field to exist");
-      const auto &field = objType->getFields()[*optIndex];
-      Builder.createPrStoreInst(
-          storedValue,
-          baseValue,
-          *optIndex,
-          Builder.getLiteralString(propName),
-          getTypeContext().isNonPtr(flowTypeToIRType(field.type)));
-      return;
+      if (optIndex.hasValue()) {
+        const auto &field = objType->getFields()[*optIndex];
+        Builder.createPrStoreInst(
+            storedValue,
+            baseValue,
+            *optIndex,
+            Builder.getLiteralString(propName),
+            getTypeContext().isNonPtr(flowTypeToIRType(field.type)));
+        return;
+      }
+      // No named field: this is an indexer object. Fall through to dynamic
+      // by-name access, the same lowering used for computed indexer access.
     }
   }
 
@@ -1817,7 +1835,12 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
 
   if (flow::ExactObjectType *objType = llvh::dyn_cast<flow::ExactObjectType>(
           flowContext_.getNodeTypeOrAny(Expr)->info)) {
-    return genTypedObjectExpr(Expr, objType);
+    // Indexer-typed object literals (e.g. produced by spreading a dictionary)
+    // have no fixed slots, so the slot-based typed lowering cannot serve them.
+    // Fall through to the dynamic lowering below, which copies spread sources
+    // with copyDataProperties.
+    if (!objType->hasIndexer())
+      return genTypedObjectExpr(Expr, objType);
   }
 
   /// Store information about a property. Is it an accessor (getter/setter) or

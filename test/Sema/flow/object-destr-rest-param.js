@@ -1,0 +1,88 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+// RUN: %shermes -fno-std-globals --typed --dump-sema %s | %FileCheckOrRegen %s --match-full-lines
+
+'use strict';
+
+// Rest destructuring in function parameter position.
+
+// Indexer-typed parameter: the rest binding is an exact object with the same
+// indexer.
+function fi({a, ...restIdx}: {[string]: number}) {
+  return restIdx;
+}
+
+// Regular exact-object parameter: the rest binding is an exact object of the
+// remaining fields.
+function fr({a, ...restReg}: {a: number, b: number}) {
+  return restReg;
+}
+
+// Auto-generated content below. Please do not modify manually.
+
+// CHECK:%untyped_function.1 = untyped_function()
+// CHECK-NEXT:%object.2 = object({
+// CHECK-NEXT:  [string]: number
+// CHECK-NEXT:})
+// CHECK-NEXT:%function.3 = function(%object.2): any
+// CHECK-NEXT:%object.4 = object({
+// CHECK-NEXT:  a: number
+// CHECK-NEXT:  b: number
+// CHECK-NEXT:})
+// CHECK-NEXT:%function.5 = function(%object.4): any
+// CHECK-NEXT:%object.6 = object({
+// CHECK-NEXT:  b: number
+// CHECK-NEXT:})
+
+// CHECK:SemContext
+// CHECK-NEXT:Func strict
+// CHECK-NEXT:    Scope %s.1
+// CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
+// CHECK-NEXT:        Decl %d.2 'fi' Var : %function.3
+// CHECK-NEXT:        Decl %d.3 'fr' Var : %function.5
+// CHECK-NEXT:        Decl %d.4 'arguments' Var Arguments
+// CHECK-NEXT:        hoistedFunction fi
+// CHECK-NEXT:        hoistedFunction fr
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.2
+// CHECK-NEXT:            Decl %d.5 'a' Parameter : number
+// CHECK-NEXT:            Decl %d.6 'restIdx' Parameter : %object.2
+// CHECK-NEXT:            Decl %d.7 'arguments' Var Arguments
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.3
+// CHECK-NEXT:            Decl %d.8 'a' Parameter : number
+// CHECK-NEXT:            Decl %d.9 'restReg' Parameter : %object.6
+// CHECK-NEXT:            Decl %d.10 'arguments' Var Arguments
+
+// CHECK:FunctionExpression : %untyped_function.1
+// CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
+// CHECK-NEXT:    BlockStatement
+// CHECK-NEXT:        ExpressionStatement
+// CHECK-NEXT:            StringLiteral : string
+// CHECK-NEXT:        FunctionDeclaration : %function.3
+// CHECK-NEXT:            Id 'fi' [D:E:%d.2 'fi']
+// CHECK-NEXT:            ObjectPattern : %object.2
+// CHECK-NEXT:                Property
+// CHECK-NEXT:                    Id 'a'
+// CHECK-NEXT:                    Id 'a' [D:E:%d.5 'a'] : number
+// CHECK-NEXT:                RestElement
+// CHECK-NEXT:                    Id 'restIdx' [D:E:%d.6 'restIdx'] : %object.2
+// CHECK-NEXT:            BlockStatement
+// CHECK-NEXT:                ReturnStatement
+// CHECK-NEXT:                    Id 'restIdx' [D:E:%d.6 'restIdx'] : %object.2
+// CHECK-NEXT:        FunctionDeclaration : %function.5
+// CHECK-NEXT:            Id 'fr' [D:E:%d.3 'fr']
+// CHECK-NEXT:            ObjectPattern : %object.4
+// CHECK-NEXT:                Property
+// CHECK-NEXT:                    Id 'a'
+// CHECK-NEXT:                    Id 'a' [D:E:%d.8 'a'] : number
+// CHECK-NEXT:                RestElement
+// CHECK-NEXT:                    Id 'restReg' [D:E:%d.9 'restReg'] : %object.6
+// CHECK-NEXT:            BlockStatement
+// CHECK-NEXT:                ReturnStatement
+// CHECK-NEXT:                    Id 'restReg' [D:E:%d.9 'restReg'] : %object.6

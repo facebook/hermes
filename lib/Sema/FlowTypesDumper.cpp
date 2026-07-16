@@ -12,6 +12,19 @@
 namespace hermes {
 namespace flow {
 
+/// \return the prefix string denoting a field's variance, if any.
+static llvh::StringRef getVariancePrefix(FieldVariance variance) {
+  switch (variance) {
+    case FieldVariance::None:
+      return "";
+    case FieldVariance::ReadOnly:
+      return "+";
+    case FieldVariance::WriteOnly:
+      return "-";
+  }
+  llvm_unreachable("invalid FieldVariance");
+}
+
 /// Get the type name formatted as a variable identifier.
 static llvh::StringRef getTypeAsVarName(const TypeInfo *type) {
   switch (type->getKind()) {
@@ -234,21 +247,18 @@ void FlowTypesDumper::printTypeDescription(
     }
 
     case TypeKind::ExactObject: {
+      auto *exactObj = llvh::cast<ExactObjectType>(type);
       os << "({\n";
-      for (const auto &field : llvh::cast<ExactObjectType>(type)->getFields()) {
-        os << "  ";
-        switch (field.variance) {
-          case FieldVariance::None:
-            break;
-          case FieldVariance::ReadOnly:
-            os << '+';
-            break;
-          case FieldVariance::WriteOnly:
-            os << '-';
-            break;
-        }
-        os << field.name << ": ";
+      for (const auto &field : exactObj->getFields()) {
+        os << "  " << getVariancePrefix(field.variance) << field.name << ": ";
         printTypeRef(os, field.type);
+        os << '\n';
+      }
+      if (const auto &indexer = exactObj->getIndexer()) {
+        os << "  " << getVariancePrefix(indexer->variance) << '[';
+        printTypeRef(os, indexer->keyType);
+        os << "]: ";
+        printTypeRef(os, indexer->valueType);
         os << '\n';
       }
       os << "})";

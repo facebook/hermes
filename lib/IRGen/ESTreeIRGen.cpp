@@ -1374,6 +1374,48 @@ void ESTreeIRGen::emitDestructuringTypedObject(
     ESTree::ObjectPatternNode *target,
     flow::ExactObjectType *srcType,
     Value *source) {
+  // An indexer object has no fixed-slot named fields, so the slot-based PrLoad
+  // path below cannot serve it. Lower it dynamically: each named property is a
+  // by-name load narrowed to the indexer value type (a missing key throws),
+  // and the rest binding copies the remaining keys via copyDataProperties.
+  if (const auto &indexer = srcType->getIndexer()) {
+    Type valueIRType = flowTypeToIRType(indexer->valueType);
+    llvh::SmallVector<Value *, 4> excludedItems{};
+    for (auto &elem : target->_properties) {
+      if (auto *rest = llvh::dyn_cast<ESTree::RestElementNode>(&elem)) {
+        emitRestProperty(declInit, rest, excludedItems, source);
+        break;
+      }
+      auto *propNode = cast<ESTree::PropertyNode>(&elem);
+
+      ESTree::Node *valueNode = propNode->_value;
+      ESTree::Node *init = nullptr;
+      if (auto *assign =
+              llvh::dyn_cast<ESTree::AssignmentPatternNode>(valueNode)) {
+        valueNode = assign->_left;
+        init = assign->_right;
+      }
+
+      Identifier nameHint = llvh::isa<ESTree::IdentifierNode>(valueNode)
+          ? getNameFieldFromID(valueNode)
+          : Identifier{};
+
+      // FlowChecker validated the key is a non-computed identifier.
+      Identifier key = getNameFieldFromID(
+          llvh::cast<ESTree::IdentifierNode>(propNode->_key));
+      excludedItems.push_back(Builder.getLiteralString(key));
+      Value *loaded = Builder.createLoadPropertyInst(source, key);
+      // Apply the default (if any) before narrowing: a missing key reads as
+      // `undefined`, which selects the initializer rather than throwing. With
+      // no initializer the cast narrows `T | void` to `T`, so a missing key
+      // throws.
+      Value *optInit = emitOptionalInitialization(loaded, init, nameHint);
+      Value *cast = Builder.createCheckedTypeCastInst(optInit, valueIRType);
+      createLRef(valueNode, declInit).emitStore(cast);
+    }
+    return;
+  }
+
   // Track which fields of \p srcType the named properties have consumed,
   // so a trailing rest element can be built from the remaining fields.
   llvh::BitVector consumed(srcType->getFields().size());

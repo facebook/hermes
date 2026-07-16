@@ -58,6 +58,38 @@ var obj: {a: number, b: string} = {a: 1, b: "xyz"};
 
 They must have exactly the set of properties listed in their type (no extra properties allowed). Properties must be in the same order as the type requires. This allows the compiler to make access extremely efficient.
 
+#### Variance
+
+Object properties (and indexers, below) may carry a variance sigil:
+```
+var obj: {+ro: number, -wo: string} = {ro: 1, wo: "x"};
+```
+`+` or `readonly` makes a property read-only (covariant); `-` or `writeonly` makes it write-only (contravariant). The default (no sigil) is invariant: readable and writable, and subtyping requires the property type to match exactly.
+
+#### Indexers
+
+An object type may declare a single _indexer_ (index signature) instead of named properties, describing a dictionary with a uniform value type:
+```
+var dict: {[string]: number} = {};
+var n: number = dict["x"];   // read
+dict["y"] = 3;               // write
+var m: number = dict.x;      // dot access works too
+dict.y = 3;
+```
+
+An object type has at most one indexer, and an indexer cannot be combined with named properties. The key type is checked against the index expression.
+
+Reads yield `T` but are checked by a checked cast at runtime (so a read of a missing key throws if `undefined` is not in `T`). Writes require the value type `T`.
+
+Non-computed access (`dict.x`) routes through the indexer using a `string` key, so it requires a `string`-keyed indexer.
+
+Spreading an object that has an indexer produces an object with an indexer of the same key type. If the result also has named properties (literal properties, or fields from another spread source), they fold into the indexer and its value type becomes the union of all the value types:
+```
+var d: {[string]: number} = {};
+var a = {...d};            // {[string]: number}
+var b = {...d, x: "s"};    // {[string]: number | string}
+```
+
 ### Functions
 
 Function types can be quite complex:
