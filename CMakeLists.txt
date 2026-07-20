@@ -322,7 +322,7 @@ set(LLVM_FORCE_ENABLE_STATS OFF CACHE BOOL
 set(QEMU_RUN_PREFIX "" CACHE STRING
   "Command prefix for invoking cross-compiled binaries with QEMU.")
 
-set(JSI_UNSTABLE ON CACHE BOOL "Enable the JSI unstable APIs.")
+set(JSI_UNSTABLE OFF CACHE BOOL "Enable the JSI unstable APIs.")
 
 if (NOT QEMU_RUN_PREFIX STREQUAL "")
   add_definitions(-DQEMU_MODE)
