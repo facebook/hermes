@@ -48,12 +48,10 @@ id<string>('a');
 // CHECK-NEXT:       StoreFrameInst %1: environment, %6: object, [%VS1.id#1]: any
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [%VS1.id]: any
 // CHECK-NEXT:  %9 = CheckedTypeCastInst (:object) %8: any, type(object)
-// CHECK-NEXT:  %10 = CallInst [njsf] (:any) %9: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 1: number
-// CHECK-NEXT:  %11 = CheckedTypeCastInst (:number) %10: any, type(number)
-// CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [%VS1.id#1]: any
-// CHECK-NEXT:  %13 = CheckedTypeCastInst (:object) %12: any, type(object)
-// CHECK-NEXT:  %14 = CallInst [njsf] (:any) %13: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, "a": string
-// CHECK-NEXT:  %15 = CheckedTypeCastInst (:string) %14: any, type(string)
+// CHECK-NEXT:  %10 = CallInst [njsf] (:number) %9: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 1: number
+// CHECK-NEXT:  %11 = LoadFrameInst (:any) %1: environment, [%VS1.id#1]: any
+// CHECK-NEXT:  %12 = CheckedTypeCastInst (:object) %11: any, type(object)
+// CHECK-NEXT:  %13 = CallInst [njsf] (:string) %12: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, "a": string
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

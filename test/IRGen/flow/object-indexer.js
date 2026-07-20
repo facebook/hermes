@@ -53,16 +53,15 @@ return function main() {
 // CHECK-NEXT:  %20 = CheckedTypeCastInst (:object) %19: any, type(object)
 // CHECK-NEXT:  %21 = LoadPropertyInst (:undefined|object) %20: object, "g": string
 // CHECK-NEXT:  %22 = CheckedTypeCastInst (:object) %21: undefined|object, type(object)
-// CHECK-NEXT:  %23 = CallInst [njsf] (:any) %22: object, empty: any, false: boolean, empty: any, undefined: undefined, %20: object
-// CHECK-NEXT:  %24 = CheckedTypeCastInst (:number) %23: any, type(number)
-// CHECK-NEXT:        StoreFrameInst %1: environment, %24: number, [%VS1.r]: any
-// CHECK-NEXT:  %26 = LoadFrameInst (:any) %1: environment, [%VS1.d]: any
-// CHECK-NEXT:  %27 = CheckedTypeCastInst (:object) %26: any, type(object)
-// CHECK-NEXT:  %28 = LoadPropertyInst (:undefined|number) %27: object, "x": string
-// CHECK-NEXT:  %29 = CheckedTypeCastInst (:number) %28: undefined|number, type(number)
-// CHECK-NEXT:        StoreFrameInst %1: environment, %29: number, [%VS1.dn]: any
-// CHECK-NEXT:  %31 = LoadFrameInst (:any) %1: environment, [%VS1.d]: any
-// CHECK-NEXT:  %32 = CheckedTypeCastInst (:object) %31: any, type(object)
-// CHECK-NEXT:        StorePropertyStrictInst 4: number, %32: object, "y": string
+// CHECK-NEXT:  %23 = CallInst [njsf] (:number) %22: object, empty: any, false: boolean, empty: any, undefined: undefined, %20: object
+// CHECK-NEXT:        StoreFrameInst %1: environment, %23: number, [%VS1.r]: any
+// CHECK-NEXT:  %25 = LoadFrameInst (:any) %1: environment, [%VS1.d]: any
+// CHECK-NEXT:  %26 = CheckedTypeCastInst (:object) %25: any, type(object)
+// CHECK-NEXT:  %27 = LoadPropertyInst (:undefined|number) %26: object, "x": string
+// CHECK-NEXT:  %28 = CheckedTypeCastInst (:number) %27: undefined|number, type(number)
+// CHECK-NEXT:        StoreFrameInst %1: environment, %28: number, [%VS1.dn]: any
+// CHECK-NEXT:  %30 = LoadFrameInst (:any) %1: environment, [%VS1.d]: any
+// CHECK-NEXT:  %31 = CheckedTypeCastInst (:object) %30: any, type(object)
+// CHECK-NEXT:        StorePropertyStrictInst 4: number, %31: object, "y": string
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

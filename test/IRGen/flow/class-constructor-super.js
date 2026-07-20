@@ -90,7 +90,6 @@ new D();
 // CHECK-NEXT:  %3 = LoadFrameInst (:any) %1: environment, [%VS1.C]: any
 // CHECK-NEXT:  %4 = CheckedTypeCastInst (:object) %3: any, type(object)
 // CHECK-NEXT:  %5 = GetNewTargetInst (:object) %new.target: object
-// CHECK-NEXT:  %6 = CallInst [njsf] (:any) %4: object, empty: any, false: boolean, empty: any, %5: object, %0: object
-// CHECK-NEXT:  %7 = CheckedTypeCastInst (:undefined) %6: any, type(undefined)
+// CHECK-NEXT:  %6 = CallInst [njsf] (:undefined) %4: object, empty: any, false: boolean, empty: any, %5: object, %0: object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

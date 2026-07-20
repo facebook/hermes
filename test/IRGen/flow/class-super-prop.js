@@ -100,8 +100,7 @@ class B extends A {
 // CHECK-NEXT:  %7 = GetNewTargetInst (:object) %new.target: object
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) %2: environment, [%VS3.x]: any
 // CHECK-NEXT:  %9 = CheckedTypeCastInst (:number) %8: any, type(number)
-// CHECK-NEXT:  %10 = CallInst [njsf] (:any) %6: object, empty: any, false: boolean, empty: any, %7: object, %0: object, %9: number
-// CHECK-NEXT:  %11 = CheckedTypeCastInst (:undefined) %10: any, type(undefined)
+// CHECK-NEXT:  %10 = CallInst [njsf] (:undefined) %6: object, empty: any, false: boolean, empty: any, %7: object, %0: object, %9: number
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

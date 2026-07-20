@@ -99,14 +99,12 @@ function foo(c: C, d: D){
 // CHECK-NEXT:  %7 = CheckedTypeCastInst (:object) %6: any, type(object)
 // CHECK-NEXT:  %8 = TypedLoadParentInst (:object) %7: object
 // CHECK-NEXT:  %9 = PrLoadInst (:object) %8: object, 0: number, "override": string
-// CHECK-NEXT:  %10 = CallInst [njsf] (:any) %9: object, empty: any, false: boolean, empty: any, undefined: undefined, %7: object
-// CHECK-NEXT:  %11 = CheckedTypeCastInst (:number) %10: any, type(number)
-// CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [%VS2.d]: any
-// CHECK-NEXT:  %13 = CheckedTypeCastInst (:object) %12: any, type(object)
-// CHECK-NEXT:  %14 = TypedLoadParentInst (:object) %13: object
-// CHECK-NEXT:  %15 = PrLoadInst (:object) %14: object, 0: number, "override": string
-// CHECK-NEXT:  %16 = CallInst [njsf] (:any) %15: object, %"override 1#"(): functionCode, true: boolean, empty: any, undefined: undefined, %13: object
-// CHECK-NEXT:  %17 = CheckedTypeCastInst (:number) %16: any, type(number)
+// CHECK-NEXT:  %10 = CallInst [njsf] (:number) %9: object, empty: any, false: boolean, empty: any, undefined: undefined, %7: object
+// CHECK-NEXT:  %11 = LoadFrameInst (:any) %1: environment, [%VS2.d]: any
+// CHECK-NEXT:  %12 = CheckedTypeCastInst (:object) %11: any, type(object)
+// CHECK-NEXT:  %13 = TypedLoadParentInst (:object) %12: object
+// CHECK-NEXT:  %14 = PrLoadInst (:object) %13: object, 0: number, "override": string
+// CHECK-NEXT:  %15 = CallInst [njsf] (:number) %14: object, %"override 1#"(): functionCode, true: boolean, empty: any, undefined: undefined, %12: object
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

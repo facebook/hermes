@@ -80,27 +80,23 @@ let d: string = box.identity("hello");
 // CHECK-NEXT:  %26 = LoadFrameInst (:any) %1: environment, [%VS1.box]: any
 // CHECK-NEXT:  %27 = CheckedTypeCastInst (:object) %26: any, type(object)
 // CHECK-NEXT:  %28 = LoadFrameInst (:object) %1: environment, [%VS1.identity]: object
-// CHECK-NEXT:  %29 = CallInst [njsf] (:any) %28: object, %identity(): functionCode, true: boolean, empty: any, undefined: undefined, %27: object, 42: number
-// CHECK-NEXT:  %30 = CheckedTypeCastInst (:number) %29: any, type(number)
-// CHECK-NEXT:        StoreFrameInst %1: environment, %30: number, [%VS1.a]: any
-// CHECK-NEXT:  %32 = LoadFrameInst (:any) %1: environment, [%VS1.box]: any
-// CHECK-NEXT:  %33 = CheckedTypeCastInst (:object) %32: any, type(object)
-// CHECK-NEXT:  %34 = LoadFrameInst (:object) %1: environment, [%VS1.identity#1]: object
-// CHECK-NEXT:  %35 = CallInst [njsf] (:any) %34: object, %"identity 1#"(): functionCode, true: boolean, empty: any, undefined: undefined, %33: object, "hello": string
-// CHECK-NEXT:  %36 = CheckedTypeCastInst (:string) %35: any, type(string)
-// CHECK-NEXT:        StoreFrameInst %1: environment, %36: string, [%VS1.b]: any
-// CHECK-NEXT:  %38 = LoadFrameInst (:any) %1: environment, [%VS1.box]: any
-// CHECK-NEXT:  %39 = CheckedTypeCastInst (:object) %38: any, type(object)
-// CHECK-NEXT:  %40 = LoadFrameInst (:object) %1: environment, [%VS1.identity]: object
-// CHECK-NEXT:  %41 = CallInst [njsf] (:any) %40: object, %identity(): functionCode, true: boolean, empty: any, undefined: undefined, %39: object, 42: number
-// CHECK-NEXT:  %42 = CheckedTypeCastInst (:number) %41: any, type(number)
-// CHECK-NEXT:        StoreFrameInst %1: environment, %42: number, [%VS1.c]: any
-// CHECK-NEXT:  %44 = LoadFrameInst (:any) %1: environment, [%VS1.box]: any
-// CHECK-NEXT:  %45 = CheckedTypeCastInst (:object) %44: any, type(object)
-// CHECK-NEXT:  %46 = LoadFrameInst (:object) %1: environment, [%VS1.identity#1]: object
-// CHECK-NEXT:  %47 = CallInst [njsf] (:any) %46: object, %"identity 1#"(): functionCode, true: boolean, empty: any, undefined: undefined, %45: object, "hello": string
-// CHECK-NEXT:  %48 = CheckedTypeCastInst (:string) %47: any, type(string)
-// CHECK-NEXT:        StoreFrameInst %1: environment, %48: string, [%VS1.d]: any
+// CHECK-NEXT:  %29 = CallInst [njsf] (:number) %28: object, %identity(): functionCode, true: boolean, empty: any, undefined: undefined, %27: object, 42: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %29: number, [%VS1.a]: any
+// CHECK-NEXT:  %31 = LoadFrameInst (:any) %1: environment, [%VS1.box]: any
+// CHECK-NEXT:  %32 = CheckedTypeCastInst (:object) %31: any, type(object)
+// CHECK-NEXT:  %33 = LoadFrameInst (:object) %1: environment, [%VS1.identity#1]: object
+// CHECK-NEXT:  %34 = CallInst [njsf] (:string) %33: object, %"identity 1#"(): functionCode, true: boolean, empty: any, undefined: undefined, %32: object, "hello": string
+// CHECK-NEXT:        StoreFrameInst %1: environment, %34: string, [%VS1.b]: any
+// CHECK-NEXT:  %36 = LoadFrameInst (:any) %1: environment, [%VS1.box]: any
+// CHECK-NEXT:  %37 = CheckedTypeCastInst (:object) %36: any, type(object)
+// CHECK-NEXT:  %38 = LoadFrameInst (:object) %1: environment, [%VS1.identity]: object
+// CHECK-NEXT:  %39 = CallInst [njsf] (:number) %38: object, %identity(): functionCode, true: boolean, empty: any, undefined: undefined, %37: object, 42: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %39: number, [%VS1.c]: any
+// CHECK-NEXT:  %41 = LoadFrameInst (:any) %1: environment, [%VS1.box]: any
+// CHECK-NEXT:  %42 = CheckedTypeCastInst (:object) %41: any, type(object)
+// CHECK-NEXT:  %43 = LoadFrameInst (:object) %1: environment, [%VS1.identity#1]: object
+// CHECK-NEXT:  %44 = CallInst [njsf] (:string) %43: object, %"identity 1#"(): functionCode, true: boolean, empty: any, undefined: undefined, %42: object, "hello": string
+// CHECK-NEXT:        StoreFrameInst %1: environment, %44: string, [%VS1.d]: any
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

@@ -920,12 +920,16 @@ Value *ESTreeIRGen::emitCall(
         newTarget,
         thisVal,
         args);
-    if (llvh::isa<flow::BaseFunctionType>(
+    if (auto *baseFunctionType = llvh::dyn_cast<flow::BaseFunctionType>(
             flowContext_.getNodeTypeOrAny(getCallee(call))->info)) {
       // Every BaseFunctionType currently is going to be compiled to a
       // NativeJSFunction, so always set this flag.
       // Eventually we will have bytecode, etc.
       callInst->getAttributesRef(Mod).isNativeJSFunction = true;
+      if (auto *typedFunc =
+              llvh::dyn_cast<flow::TypedFunctionType>(baseFunctionType)) {
+        callInst->setType(flowTypeToIRType(typedFunc->getReturnType()));
+      }
     }
     return callInst;
   }

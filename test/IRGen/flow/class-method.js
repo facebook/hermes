@@ -56,9 +56,8 @@ return new C().method();
 // CHECK-NEXT:  %15 = AllocTypedObjectInst (:object) %14: object
 // CHECK-NEXT:  %16 = TypedLoadParentInst (:object) %15: object
 // CHECK-NEXT:  %17 = PrLoadInst (:object) %16: object, 0: number, "method": string
-// CHECK-NEXT:  %18 = CallInst [njsf] (:any) %17: object, %method(): functionCode, true: boolean, empty: any, undefined: undefined, %15: object
-// CHECK-NEXT:  %19 = CheckedTypeCastInst (:number) %18: any, type(number)
-// CHECK-NEXT:        ReturnInst %19: number
+// CHECK-NEXT:  %18 = CallInst [njsf] (:number) %17: object, %method(): functionCode, true: boolean, empty: any, undefined: undefined, %15: object
+// CHECK-NEXT:        ReturnInst %18: number
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS2 []
