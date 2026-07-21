@@ -717,6 +717,7 @@ class FlowChecker::DeclareScopeTypes {
     // Instantiating generic type aliases may cause new forward declarations
     // to be created. To account for this, keep iterating until no more are
     // introduced.
+    // Once that's done, resync the TypeInfo across aliases.
     size_t unionIdx = 0;
     size_t genericIdx = 0;
     while (unionIdx < forwardUnions.size() ||
@@ -738,9 +739,11 @@ class FlowChecker::DeclareScopeTypes {
         completeForwardType(type, visited);
       }
     }
+    syncForwardGenericClassAliasCopies();
 
-    // It's possible that unions can be further simplified now that we've
-    // instantiated all generics, so use a post-processing step for that.
+    // It's possible that unions and generic class specialization keys can be
+    // further simplified now that we've instantiated all generics, so use a
+    // post-processing step for that.
     fixupUnionsAndGenericTables();
 
     // Parse all forward-declared class types.
@@ -770,6 +773,63 @@ class FlowChecker::DeclareScopeTypes {
     return outer.sm_.getErrorCount() == errorsBefore;
   }
 
+  /// \return whether \p type is in forwardGenericInstantiations and has a
+  /// genericClassDecl.
+  bool isForwardGenericClass(Type *type) const {
+    auto it = forwardGenericInstantiations.find(type);
+    return it != forwardGenericInstantiations.end() &&
+        it->second.typeDecl->genericClassDecl;
+  }
+
+  /// \return the forward generic class source for \p type when \p type is an
+  /// alias copy of one, otherwise nullptr.
+  Type *getForwardGenericClassAliasSource(Type *type) const {
+    auto aliasIt = typeAliasResolutions.find(type);
+    if (aliasIt == typeAliasResolutions.end())
+      return nullptr;
+
+    Type *source = aliasIt->second;
+    return source != type && isForwardGenericClass(source) ? source : nullptr;
+  }
+
+  /// \return whether this type can contribute to an unresolvable type cycle
+  /// (which would produce an error).
+  bool isUnresolvedCycleType(Type *type) const {
+    if (llvh::isa<UnionType>(type->info))
+      return true;
+    if (llvh::isa<GenericType>(type->info))
+      return !isForwardGenericClass(type);
+    return false;
+  }
+
+  void syncForwardGenericClassAlias(Type *type, Type *source) {
+    assert(isForwardGenericClass(source) && "expected a generic class source");
+    type->info = source->info;
+
+    auto aliasIt = forwardGenericInstantiations.find(type);
+    auto sourceIt = forwardGenericInstantiations.find(source);
+    if (aliasIt != forwardGenericInstantiations.end() &&
+        sourceIt != forwardGenericInstantiations.end()) {
+      aliasIt->second.classSpecialization =
+          sourceIt->second.classSpecialization;
+    }
+
+    if (outer.flowContext_.isArrayClassType(source)) {
+      outer.flowContext_.registerArrayClassType(
+          type, outer.flowContext_.getArrayElementType(source));
+    }
+  }
+
+  /// Refresh alias Types that copied a forward generic class, since the source
+  /// TypeInfo and Array registration can change during completion/fixup.
+  void syncForwardGenericClassAliasCopies() {
+    for (auto &resolution : typeAliasResolutions) {
+      if (Type *source = getForwardGenericClassAliasSource(resolution.first)) {
+        syncForwardGenericClassAlias(resolution.first, source);
+      }
+    }
+  }
+
   /// Complete the forward declaration of the given \p type,
   /// replacing its \c info field with the resolved type.
   /// Must be the both the entry point of the DFS and the recursive step,
@@ -779,6 +839,12 @@ class FlowChecker::DeclareScopeTypes {
         llvh::dbgs() << "Completing forward type: " << type << " "
                      << type->info->getKindName() << " at depth "
                      << visited.size() << '\n');
+
+    if (Type *source = getForwardGenericClassAliasSource(type)) {
+      completeForwardType(source, visited);
+      syncForwardGenericClassAlias(type, source);
+      return;
+    }
 
     // Check for looping types and mark them.
     bool inserted = visited.insert(type);
@@ -798,10 +864,9 @@ class FlowChecker::DeclareScopeTypes {
       // which we must if it's just a cycle of unions/aliases/generics
       // which don't have a real type to eventually complete to.
       for (auto *t : llvh::reverse(visited)) {
-        // It's not an error if there's a non-union or non-generic type in the
-        // cycle, because we'll be definitely create a real type.
-        if (!llvh::isa<UnionType>(t->info) &&
-            !llvh::isa<GenericType>(t->info)) {
+        // Generic classes are nominal wrappers, so they break cycles just like
+        // tuples or object types. Generic aliases remain structural.
+        if (!isUnresolvedCycleType(t)) {
           break;
         }
         if (t == type) {
@@ -840,7 +905,9 @@ class FlowChecker::DeclareScopeTypes {
     });
 
     // First try and complete any generics so we can proceed.
-    if (llvh::isa<GenericType>(type->info)) {
+    if (llvh::isa<GenericType>(type->info) ||
+        (isForwardGenericClass(type) &&
+         !forwardGenericInstantiations.at(type).classSpecialization)) {
       // Forward generics must be instantiated and handled.
       assert(
           forwardGenericInstantiations.count(type) &&
@@ -951,9 +1018,6 @@ class FlowChecker::DeclareScopeTypes {
   /// longer Generic).
   /// Mutually recursive with completeForwardType and completeForwardUnion.
   void completeForwardGeneric(Type *type, llvh::SetVector<Type *> &visited) {
-    if (!llvh::isa<GenericType>(type->info))
-      return;
-
     // Copy because of potential reallocation in the loop during recursive
     // discovery of new forwardGenericInstantiations.
     const GenericTypeInstantiation generic =
@@ -961,10 +1025,31 @@ class FlowChecker::DeclareScopeTypes {
     TypeDecl *typeDecl = generic.typeDecl;
     assert(!typeDecl->type && "typeDecl must be generic");
 
+    bool isGenericClass = typeDecl->genericClassDecl;
+    if (!llvh::isa<GenericType>(type->info) &&
+        (!isGenericClass ||
+         forwardGenericInstantiations.at(type).classSpecialization))
+      return;
+
+    if (isGenericClass && llvh::isa<GenericType>(type->info)) {
+      // Install a temporary nominal type before completing arguments so
+      // recursive references like C<Cycle> see a cycle breaker below.
+      // We need a new type for each one so that the specialization isn't
+      // deduplicated.
+      //
+      // This is NOT necessarily the deduplicated class specialization yet.
+      // The same forward Type gets fixed up below after
+      // specializeGenericWithParsedTypes uses the completed argument TypeInfos.
+      type->info = outer.flowContext_.createClass(
+          typeDecl->genericClassDecl->name, generic.typeArgTypes);
+    }
+
     for (Type *arg : generic.typeArgTypes) {
       completeForwardType(arg, visited);
 
-      // If a type argument can't be properly resolved, we're done.
+      // If a type argument can't be properly resolved, we're done. Generic
+      // classes do break cycles (see above), but their arguments still need
+      // concrete TypeInfo for specialization and deduplication.
       if (llvh::isa<GenericType>(arg->info)) {
         outer.sm_.error(
             type->node->getSourceRange(),
@@ -974,7 +1059,7 @@ class FlowChecker::DeclareScopeTypes {
       }
     }
 
-    if (!typeDecl->genericClassDecl) {
+    if (!isGenericClass) {
       // No genericClassDecl, this is a generic type alias.
       auto *aliasNode = llvh::cast<ESTree::TypeAliasNode>(typeDecl->astNode);
       GenericInfo<Type> &genericInfo =
@@ -1059,8 +1144,10 @@ class FlowChecker::DeclareScopeTypes {
         generic.annotation->getSourceRange(),
         generic.typeArgTypes,
         typeDecl->genericClassDecl->scope);
-    if (!newDecl)
+    if (!newDecl) {
       type->info = outer.flowContext_.getAnyInfo();
+      return;
+    }
 
     // Write it back to the actual vector.
     forwardGenericInstantiations.at(type).classSpecialization = specialization;
@@ -1185,6 +1272,8 @@ class FlowChecker::DeclareScopeTypes {
         type->info = llvh::cast<ClassConstructorType>(classConsType->info)
                          ->getClassType()
                          ->info;
+        generic.classSpecialization = newSpecialization;
+        syncForwardGenericClassAliasCopies();
       }
     }
   }
