@@ -14,7 +14,7 @@ import * as React from 'react';
 export declare function Foo(props: {}): React.ReactNode;
 export declare function Foo(props: {
   foo: string;
-  bar?: string;
+  bar?: string | undefined;
 }): React.ReactNode;
 type ExtraPropsFoo = {foo: string};
 export declare function Foo(props: ExtraPropsFoo): React.ReactNode;

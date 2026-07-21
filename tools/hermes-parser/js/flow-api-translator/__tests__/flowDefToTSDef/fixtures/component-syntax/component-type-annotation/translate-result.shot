@@ -12,13 +12,13 @@ exports[`flowDefToTSDef component-syntax/component-type-annotation 1`] = `
 
 import * as React from 'react';
 type T = (props: {}) => React.ReactNode;
-type T = (props: {foo: string; bar?: string}) => React.ReactNode;
+type T = (props: {foo: string; bar?: string | undefined}) => React.ReactNode;
 type ExtraPropsFoo = {foo: string};
 type T = (props: ExtraPropsFoo) => React.ReactNode;
 type ExtraPropsBar = {bar: string};
 type T = (
   props: Omit<ExtraPropsBar, 'ref' | 'foo'> & {
-    ref?: React.Ref<Foo>;
+    ref?: React.Ref<Foo> | undefined;
     foo: string;
   },
 ) => React.ReactNode;

@@ -26,7 +26,10 @@ import {
   unexpectedTranslationError as unexpectedTranslationErrorBase,
 } from './utils/ErrorUtils';
 import {removeAtFlowFromDocblock} from './utils/DocblockUtils';
-import {extractPropertyKeyLiterals} from './utils/TSNodeUtils';
+import {
+  ensureTypeIncludesUndefined,
+  extractPropertyKeyLiterals,
+} from './utils/TSNodeUtils';
 import {EOL} from 'os';
 
 type DeclarationOrUnsupported<T> = T | TSESTree.TSTypeAliasDeclaration;
@@ -3851,7 +3854,12 @@ const getTransforms = (
         typeAnnotation: {
           type: 'TSTypeAnnotation',
           loc: DUMMY_LOC,
-          typeAnnotation: transformTypeAnnotationType(node.value),
+          typeAnnotation:
+            node.optional === true
+              ? ensureTypeIncludesUndefined(
+                  transformTypeAnnotationType(node.value),
+                )
+              : transformTypeAnnotationType(node.value),
         },
       };
     },
