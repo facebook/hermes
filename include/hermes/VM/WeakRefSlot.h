@@ -55,6 +55,9 @@ class WeakRefSlot {
     return value_.root.getObjectNoBarrierUnsafe();
   }
 
+  /// Return the SymbolID, with a read barrier.
+  inline SymbolID getSymbol(GC &gc) const;
+
   /// Return the symbol, without a read barrier.
   SymbolID getSymbolNoBarrierUnsafe() const {
     return value_.root.getSymbolNoBarrierUnsafe();
