@@ -35,6 +35,11 @@ HermesValue WeakRefSlot::getValueNoBarrierUnsafe(PointerBase &base) const {
   return value_.root.unboxToHV(base);
 }
 
+SymbolID WeakRefSlot::getSymbol(GC &gc) const {
+  assert(hasValue() && "tried to access collected referent");
+  return value_.root.getSymbol(gc);
+}
+
 } // namespace vm
 } // namespace hermes
 
