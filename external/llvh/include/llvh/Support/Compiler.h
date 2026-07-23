@@ -344,7 +344,8 @@
 
 /// \macro LLVM_ALIGNAS
 /// Used to specify a minimum alignment for a structure or variable.
-#if __GNUC__ && !__has_feature(cxx_alignas) && !LLVM_GNUC_PREREQ(4, 8, 1)
+#if defined(__GNUC__) && __GNUC__ && !__has_feature(cxx_alignas) && \
+    !LLVM_GNUC_PREREQ(4, 8, 1)
 # define LLVM_ALIGNAS(x) __attribute__((aligned(x)))
 #else
 # define LLVM_ALIGNAS(x) alignas(x)
