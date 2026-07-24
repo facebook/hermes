@@ -543,7 +543,7 @@ class ExactObjectType : public TypeInfo {
   }
 
   /// \return the index signature, None if there isn't one.
-  OptValue<Indexer> getIndexer() const {
+  const OptValue<Indexer> &getIndexer() const {
     return indexer_;
   }
 

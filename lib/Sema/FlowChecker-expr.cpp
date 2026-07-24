@@ -768,7 +768,7 @@ class FlowChecker::ExprVisitor {
       ExactObjectType *exactObjType,
       bool isWrite) {
     if (node->_computed) {
-      if (auto indexer = exactObjType->getIndexer()) {
+      if (const auto &indexer = exactObjType->getIndexer()) {
         return visitMemberIndexer(
             node,
             parent,
@@ -789,7 +789,7 @@ class FlowChecker::ExprVisitor {
     if (!optFieldIdx) {
       // A dot access uses a string key; route it through the indexer if one
       // exists (indexers and named fields are mutually exclusive).
-      if (auto indexer = exactObjType->getIndexer()) {
+      if (const auto &indexer = exactObjType->getIndexer()) {
         return visitMemberIndexer(
             node, parent, *indexer, outer_.flowContext_.getString(), isWrite);
       }
@@ -1272,7 +1272,7 @@ class FlowChecker::ExprVisitor {
           }
           // A source with an indexer contributes its indexer to the result.
           // Such a source has no named fields, so the loop above did nothing.
-          if (auto srcIndexer = spreadObjTy->getIndexer()) {
+          if (const auto &srcIndexer = spreadObjTy->getIndexer()) {
             if (srcIndexer->variance == FieldVariance::WriteOnly) {
               outer_.sm_.error(
                   spread->getSourceRange(),
