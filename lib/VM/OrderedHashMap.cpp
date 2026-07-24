@@ -215,8 +215,6 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::rehash(
   // Create a new hash table.
   std::vector<uint32_t> newHashTable;
   newHashTable.resize(*newCapacity, kHashTableElementUnused);
-  runtime.getHeap().creditExternalMemory(
-      *self, *newCapacity * sizeof(uint32_t));
 
   // Create a new data table.
   auto dataTableRes = StorageType::create(
@@ -275,9 +273,19 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::rehash(
   rawSelf->updateIteratorIndicesForRehash(runtime);
 
   rawSelf->deletedCount_ = 0;
-  uint32_t oldSizeInBytes = rawSelf->hashTable_.size() * sizeof(uint32_t);
+  // The external memory credit tracks hashTable_.size() * sizeof(uint32_t).
+  // The new table may be larger or smaller than the old one, so settle the
+  // difference in whichever direction it went.
+  const uint32_t oldSizeInBytes = rawSelf->hashTable_.size() * sizeof(uint32_t);
+  const uint32_t newSizeInBytes = newHashTable.size() * sizeof(uint32_t);
   rawSelf->hashTable_ = std::move(newHashTable);
-  runtime.getHeap().debitExternalMemory(*self, oldSizeInBytes);
+  if (newSizeInBytes >= oldSizeInBytes) {
+    runtime.getHeap().creditExternalMemory(
+        *self, newSizeInBytes - oldSizeInBytes);
+  } else {
+    runtime.getHeap().debitExternalMemory(
+        *self, oldSizeInBytes - newSizeInBytes);
+  }
   rawSelf->dataTable_.setNonNull(runtime, *lv.newDataTable, runtime.getHeap());
   return ExecutionStatus::RETURNED;
 }
@@ -671,11 +679,19 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::clear(
     return ExecutionStatus::RETURNED;
   }
 
-  // Clear the hash table.
+  // Clear the hash table. The external memory credit tracks
+  // hashTable_.size() * sizeof(uint32_t), so debit the difference between the
+  // discarded table and the reinitialized one.
+  const uint32_t oldSizeInBytes = self->hashTable_.size() * sizeof(uint32_t);
   self->hashTable_ = std::vector<uint32_t>();
   // Resize the hash table to the initial size.
   self->hashTable_.resize(kInitialCapacity, kHashTableElementUnused);
   self->capacity_ = kInitialCapacity;
+  constexpr uint32_t newSizeInBytes = kInitialCapacity * sizeof(uint32_t);
+  assert(
+      oldSizeInBytes >= newSizeInBytes &&
+      "Capacity never shrinks below kInitialCapacity");
+  runtime.getHeap().debitExternalMemory(*self, oldSizeInBytes - newSizeInBytes);
 
   // Resize the data table back to 0.
   self->dataTable_.getNonNull(runtime)->clear(runtime);
