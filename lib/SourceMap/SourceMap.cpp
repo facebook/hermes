@@ -28,12 +28,15 @@ SourceMap::SourceMap(
     rootedSources_.reserve(sources_.size());
     llvh::SmallString<32> buf{};
     for (const auto &p : sources_) {
-      if (llvh::sys::path::is_absolute(p)) {
+      // Source-map paths are always POSIX-style (forward slashes) regardless of
+      // the host platform, so force posix style rather than the native default
+      // (which would emit backslashes on Windows).
+      if (llvh::sys::path::is_absolute(p, llvh::sys::path::Style::posix)) {
         rootedSources_.push_back(p);
       } else {
         buf = sourceRoot_;
-        llvh::sys::path::append(buf, p);
-        llvh::sys::path::remove_dots(buf, true);
+        llvh::sys::path::append(buf, llvh::sys::path::Style::posix, p);
+        llvh::sys::path::remove_dots(buf, true, llvh::sys::path::Style::posix);
         rootedSources_.push_back(buf.str());
       }
     }
