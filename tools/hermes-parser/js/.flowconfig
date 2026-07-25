@@ -25,10 +25,10 @@ module.name_mapper='^prettier-plugin-hermes-parser$' -> '<PROJECT_ROOT>/prettier
 
 enums=true
 component_syntax=false
-experimental.pattern_matching=false
+pattern_matching=false
 
 [version]
-^0.319.0
+^0.324.0
 
 [lints]
 untyped-type-import=error
