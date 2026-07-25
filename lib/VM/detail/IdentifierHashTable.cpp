@@ -125,7 +125,18 @@ void IdentifierHashTable::insert(uint32_t idx, SymbolID id) {
   ++nonEmptyEntryCount_;
 
   if (shouldGrow()) {
-    growAndRehash(capacity() * 2);
+    if (size_ >= (capacity() >> 2)) {
+      growAndRehash(capacity() * 2);
+    } else {
+      // The load factor is dominated by deleted entries, not live ones.
+      // Rehash at the current capacity to reclaim the deleted entries
+      // instead of growing. This keeps the table capacity proportional to
+      // the peak live identifier count; without it, sustained insert/free
+      // churn of unique identifiers doubles the capacity indefinitely,
+      // because deleted entries count towards shouldGrow() and are only
+      // reclaimed by a rehash.
+      growAndRehash(capacity());
+    }
   }
 }
 
@@ -139,7 +150,9 @@ void IdentifierHashTable::remove(const StringPrimitive *str) {
 
 void IdentifierHashTable::growAndRehash(uint32_t newCapacity) {
   // Guard against potential overflow in the calculation of new capacity.
-  if (LLVM_UNLIKELY(newCapacity <= capacity())) {
+  // newCapacity == capacity() is allowed: it rehashes in place, reclaiming
+  // deleted entries without growing.
+  if (LLVM_UNLIKELY(newCapacity < capacity())) {
     hermes_fatal("too many identifiers created");
   }
   assert(llvh::isPowerOf2_32(newCapacity) && "capacity must be power of 2");
