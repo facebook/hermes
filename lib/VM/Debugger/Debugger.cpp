@@ -244,8 +244,12 @@ ExecutionStatus Debugger::runDebugger(
         // Continue to run the debugger loop.
 
         // Done stepping.
-        pauseReason =
-            curStepMode_ ? PauseReason::StepFinish : *asyncTriggerPauseReason_;
+        // Prefer a pending async-trigger reason: runUntilValidPauseLocation's
+        // Ret branch can synthesize curStepMode_ while servicing an async
+        // interrupt, which would surface implicit CDP interrupts as
+        // user-visible StepFinish pauses.
+        pauseReason = asyncTriggerPauseReason_ ? *asyncTriggerPauseReason_
+                                               : PauseReason::StepFinish;
         curStepMode_ = llvh::None;
         asyncTriggerPauseReason_ = llvh::None;
       } else {

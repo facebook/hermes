@@ -620,6 +620,10 @@ class Debugger {
     auto aLoc = getLocationForState(a);
     auto bLoc = getLocationForState(b);
 
+    // Locations may be missing (null codeBlock or no debug info).
+    if (!aLoc.hasValue() || !bLoc.hasValue())
+      return false;
+
     // Same statement in the same codeBlock, but different offsets.
     return a.codeBlock == b.codeBlock && aLoc->statement == bLoc->statement &&
         a.offset != b.offset;
@@ -627,6 +631,8 @@ class Debugger {
 
   OptValue<hbc::DebugSourceLocation> getLocationForState(
       const InterpreterState &state) const {
+    if (state.codeBlock == nullptr)
+      return llvh::None;
     return state.codeBlock->getSourceLocation(state.offset);
   }
 
