@@ -127,7 +127,7 @@ void installTraceableBuiltinWrappers(jsi::Runtime &jsRuntime) {
   // rounded.
   // NOTE: This mapping needs to be synced with MathStdFunctions.def (we can't
   // access it here) and Builtins.def.
-  static constexpr TraceableMathBuiltin traceableMathBuiltins[] = {
+  static const TraceableMathBuiltin traceableMathBuiltins[] = {
       {Predefined::acos, BuiltinMethod::Math_acos, 1, std::acos, nullptr},
       {Predefined::acosh, BuiltinMethod::Math_acosh, 1, ::acosh, nullptr},
       {Predefined::asin, BuiltinMethod::Math_asin, 1, std::asin, nullptr},
