@@ -1929,12 +1929,16 @@ void SemanticResolver::visitFunctionBodyAfterParamsVisited(
     return;
 
   // Check for local eval and run the unresolver pass in non-strict mode.
-  // TODO: enable this when non-strict direct eval is supported.
+  // TODO: enable this when non-strict direct eval is supported. Guarded with
+  // `#if 0` rather than `if (false && ...)` so clang17 does not flag the body
+  // as -Werror,-Wunreachable-code on the Windows clang17 toolchain.
+#if 0
   LexicalScope *lexScope = curFunctionInfo()->getFunctionBodyScope();
-  if (false && lexScope->localEval && !curFunctionInfo()->strict) {
+  if (lexScope->localEval && !curFunctionInfo()->strict) {
     uint32_t depth = lexScope->depth;
     Unresolver::run(semCtx_, depth, node);
   }
+#endif
 
   // Determine whether the function can run the implicit return.
   if (!sm_.getErrorCount()) {
