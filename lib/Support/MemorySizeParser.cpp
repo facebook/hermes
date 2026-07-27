@@ -7,6 +7,8 @@
 
 #include "hermes/Support/MemorySizeParser.h"
 
+#include <cstdint>
+
 namespace hermes::cli {
 
 /// Validate that \p size is always within the range of gcheapsize_t. And when
@@ -16,8 +18,15 @@ static bool validateSize([[maybe_unused]] uint64_t size) {
   if (size >= (1ULL << 32))
     return false;
 #endif
-  // Memory size can't go beyond the maximum of gcheapsize_t.
-  return size <= std::numeric_limits<size_t>::max();
+#if SIZE_MAX < UINT64_MAX
+  // Memory size can't go beyond the maximum of gcheapsize_t. Only meaningful
+  // where size_t is narrower than uint64_t (e.g. 32-bit); on platforms where
+  // they're the same width (e.g. 64-bit Windows) this comparison is always
+  // true, so it's compiled out to avoid -Wtautological-type-limit-compare.
+  if (size > std::numeric_limits<size_t>::max())
+    return false;
+#endif
+  return true;
 }
 
 bool MemorySizeParser::parse(

@@ -1876,7 +1876,6 @@ CompileResult generateBytecodeForExecution(
         std::move(BM), std::move(compilationData));
   } else {
     llvm_unreachable("Invalid bytecode kind for execution");
-    result = InvalidFlags;
   }
   return result;
 }
