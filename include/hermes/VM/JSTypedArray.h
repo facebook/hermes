@@ -113,6 +113,15 @@ class JSTypedArrayBase : public JSObject {
   inline static HermesValue
   polyReadNoAlloc(JSTypedArrayBase *self, Runtime &runtime, size_type index);
 
+  /// Polymorphic write to the data in the TypedArray. This function never
+  /// allocates.
+  /// \pre self->attached() is true and index is within bound.
+  static void polyWriteNoAlloc(
+      JSTypedArrayBase *self,
+      Runtime &runtime,
+      size_type index,
+      HermesValue value);
+
   /// \return Whether this JSTypedArrayBase is attached to some buffer.
   bool attached(PointerBase &base) const {
     assert(

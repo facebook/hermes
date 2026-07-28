@@ -1157,6 +1157,28 @@ cons.forEach(function(ta) {
   }, TypeError);
 });
 
+(function bigintElementWrites() {
+  var int64MinBit = 9223372036854775808n; // 2^63
+  var uint64Max = 18446744073709551615n;  // 2^64 - 1
+  var uint64Mod = 18446744073709551616n;  // 2^64
+
+  var u = new BigUint64Array(3);
+  u[0] = int64MinBit;
+  u[1] = uint64Max;
+  u[2] = uint64Mod;
+  assert.equal(u[0], int64MinBit);
+  assert.equal(u[1], uint64Max);
+  assert.equal(u[2], 0n);
+
+  var s = new BigInt64Array(3);
+  s[0] = int64MinBit;
+  s[1] = uint64Max;
+  s[2] = uint64Mod;
+  assert.equal(s[0], -int64MinBit);
+  assert.equal(s[1], -1n);
+  assert.equal(s[2], 0n);
+})();
+
 (function negativeZeroSort() {
   var x = new Float64Array([+0, -0]);
   x.sort();

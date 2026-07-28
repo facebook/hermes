@@ -460,6 +460,32 @@ uint64_t JSTypedArray<uint64_t, CellKind::BigUint64ArrayKind>::toDestType(
   return digits.size() == 0 ? 0ull : static_cast<uint64_t>(digits[0]);
 }
 
+void JSTypedArrayBase::polyWriteNoAlloc(
+    JSTypedArrayBase *self,
+    Runtime &runtime,
+    size_type index,
+    HermesValue value) {
+  NoAllocScope noAllocs{runtime};
+  assert(self->attached(runtime) && "at() requires a JSArrayBuffer");
+  assert(
+      index < self->getLength() &&
+      "That index is out of bounds of this TypedArray");
+
+  switch (self->getKind()) {
+#define TYPED_ARRAY(name, type)                                           \
+  case CellKind::name##ArrayKind: {                                       \
+    auto *typedArray =                                                    \
+        vmcast<JSTypedArray<type, CellKind::name##ArrayKind>>(self);      \
+    typedArray->monoAt(runtime, index) =                                  \
+        JSTypedArray<type, CellKind::name##ArrayKind>::toDestType(value); \
+    return;                                                               \
+  }
+#include "hermes/VM/TypedArrays.def"
+    default:
+      llvm_unreachable("Unknown TypedArray kind");
+  }
+}
+
 template <typename T>
 struct _getOwnRetEncoder {
   static HermesValue encodeMayAlloc(Runtime &, T element) {
@@ -590,14 +616,15 @@ CallResult<bool> JSTypedArray<T, C>::_setOwnIndexedImpl(
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  T destValue = JSTypedArray<T, C>::toDestType(*res);
+  NoAllocScope noAllocs{runtime};
   if (LLVM_UNLIKELY(!typedArrayHandle->attached(runtime))) {
     // ES15 10.4.5.5 [[Set]]
     // Return true if array buffer is detached.
     return true;
   }
   if (LLVM_LIKELY(index < typedArrayHandle->getLength())) {
-    typedArrayHandle->monoAt(runtime, index) = destValue;
+    JSTypedArrayBase::polyWriteNoAlloc(
+        typedArrayHandle.get(), runtime, index, *res);
   }
   return true;
 }
