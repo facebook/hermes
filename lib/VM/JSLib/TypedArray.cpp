@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 #include "JSLibInternal.h"
 #include "hermes/Support/FastArraySearch.h"
+#include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/JSArrayBuffer.h"
 #include "hermes/VM/JSLib/Base64Util.h"
 #include "hermes/VM/JSLib/Sorting.h"
@@ -509,6 +510,10 @@ CallResult<HermesValue> mapFilterLoop(
 }
 
 /// Sort model for TypedArray.prototype.sort with a user-provided compareFn.
+/// For TypedArray of BigInt64/BigUint64, we should construct it with an
+/// ArrayStorage; for TypedArray of other kinds, we should pass a
+/// JSTypedArrayBase. Note that we could make it templated on the input type,
+/// but it does not worth the extra binary size.
 class TypedArraySortModel : public SortModel {
  protected:
   /// Runtime to sort in.
@@ -520,12 +525,17 @@ class TypedArraySortModel : public SortModel {
   /// JS comparison function, return -1 for less, 0 for equal, 1 for greater.
   Handle<Callable> compareFn_;
 
-  /// Object to sort.
-  Handle<JSTypedArrayBase> self_;
+  /// Captured elements to sort. It should be either a JSTypedArrayBase or
+  /// ArrayStorage.
+  Handle<> items_;
+
+  /// Whether \c items_ is a JSTypedArrayBase.
+  bool inputIsTypedArray_;
 
   struct : Locals {
     PinnedValue<> a;
     PinnedValue<> b;
+    PinnedValue<> callResult;
   } lv_;
   LocalsRAII lraii_;
 
@@ -533,32 +543,57 @@ class TypedArraySortModel : public SortModel {
   /// can be flushed.
   GCScope::Marker gcMarker_;
 
+  /// Get the element at index from items_. This does not allocate.
+  HermesValue getElement(uint32_t index) const {
+    if (inputIsTypedArray_) {
+      JSTypedArrayBase *typedArray = vmcast<JSTypedArrayBase>(items_.get());
+      return JSTypedArrayBase::polyReadNoAlloc(typedArray, runtime_, index);
+    }
+    ArrayStorage *arrStorage = vmcast<ArrayStorage>(items_.get());
+    return arrStorage->at(index);
+  }
+
+  /// Set the element at index of items_ to \p value. This does not allocate.
+  void setElement(uint32_t index, HermesValue value) {
+    if (inputIsTypedArray_) {
+      JSTypedArrayBase *typedArray = vmcast<JSTypedArrayBase>(items_.get());
+      return JSTypedArrayBase::polyWriteNoAlloc(
+          typedArray, runtime_, index, value);
+    }
+    ArrayStorage *arrStorage = vmcast<ArrayStorage>(items_.get());
+    return arrStorage->set(index, value, runtime_.getHeap());
+  }
+
  public:
   TypedArraySortModel(
       Runtime &runtime,
-      Handle<JSTypedArrayBase> obj,
+      Handle<> items,
       Handle<Callable> compareFn)
       : runtime_(runtime),
         gcScope_(runtime),
         compareFn_(compareFn),
-        self_(obj),
+        items_(items),
         lraii_(runtime, &lv_),
-        gcMarker_(gcScope_.createMarker()) {}
+        gcMarker_(gcScope_.createMarker()) {
+    inputIsTypedArray_ = vmisa<JSTypedArrayBase>(items_.get());
+    assert(inputIsTypedArray_ || vmisa<ArrayStorage>(items_.get()));
+#ifndef NDEBUG
+    if (inputIsTypedArray_) {
+      auto *typedArray = vmcast<JSTypedArrayBase>(*items_);
+      assert(
+          (typedArray->getKind() != CellKind::BigInt64ArrayKind &&
+           typedArray->getKind() != CellKind::BigUint64ArrayKind) &&
+          "Use ArrayStorage for BigInt64/BigUint64 typed array");
+    }
+#endif
+  }
 
   // Swap elements at indices a and b.
   virtual ExecutionStatus swap(uint32_t a, uint32_t b) override {
-    lv_.a =
-        JSObject::getOwnIndexed(createPseudoHandle(self_.get()), runtime_, a);
-    lv_.b =
-        JSObject::getOwnIndexed(createPseudoHandle(self_.get()), runtime_, b);
-    if (JSObject::setOwnIndexed(self_, runtime_, a, lv_.b) ==
-        ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    if (JSObject::setOwnIndexed(self_, runtime_, b, lv_.a) ==
-        ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
-    }
+    NoAllocScope noAlloc{runtime_};
+    HermesValue tmp = getElement(a);
+    setElement(a, getElement(b));
+    setElement(b, tmp);
     return ExecutionStatus::RETURNED;
   }
 
@@ -566,38 +601,21 @@ class TypedArraySortModel : public SortModel {
   virtual CallResult<int> compare(uint32_t a, uint32_t b) override {
     GCScopeMarkerRAII gcMarker{gcScope_, gcMarker_};
 
-    struct : public Locals {
-      PinnedValue<> aVal;
-      PinnedValue<> callResult;
-    } lv;
-    LocalsRAII lraii(runtime_, &lv);
-
-    CallResult<PseudoHandle<HermesValue>> callRes{ExecutionStatus::EXCEPTION};
-    {
-      lv.aVal =
-          JSObject::getOwnIndexed(createPseudoHandle(self_.get()), runtime_, a);
-      HermesValue bVal =
-          JSObject::getOwnIndexed(createPseudoHandle(self_.get()), runtime_, b);
-      HermesValue aVal = lv.aVal.getHermesValue();
-
-      // ES7 22.2.3.26 2a.
-      // Let v be toNumber_RJS(Call(comparefn, undefined, x, y)).
-      callRes = Callable::executeCall2(
-          compareFn_, runtime_, Runtime::getUndefinedValue(), aVal, bVal);
-    }
-
+    lv_.a = getElement(a);
+    lv_.b = getElement(b);
+    auto callRes = Callable::executeCall2(
+        compareFn_,
+        runtime_,
+        Runtime::getUndefinedValue(),
+        lv_.a.getHermesValue(),
+        lv_.b.getHermesValue());
     if (callRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    lv.callResult = std::move(*callRes);
-    auto intRes = toNumber_RJS(runtime_, lv.callResult);
+    lv_.callResult = std::move(*callRes);
+    auto intRes = toNumber_RJS(runtime_, lv_.callResult);
     if (intRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
-    }
-    // ES7 22.2.3.26 2b.
-    // If IsDetachedBuffer(buffer) is true, throw a TypeError exception.
-    if (LLVM_UNLIKELY(!self_->attached(runtime_))) {
-      return runtime_.raiseTypeError("Callback to sort() detached the array");
     }
     // Cannot return intRes's value directly because it can be NaN
     auto res = intRes->getNumber();
@@ -1958,12 +1976,6 @@ CallResult<HermesValue> typedArrayPrototypeReverse(void *, Runtime &runtime) {
 /// ES7 22.2.3.26
 CallResult<HermesValue> typedArrayPrototypeSort(void *, Runtime &runtime) {
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
-  if (JSTypedArrayBase::validateTypedArray(runtime, args.getThisHandle()) ==
-      ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto self = args.vmcastThis<JSTypedArrayBase>();
-  const JSTypedArrayBase::size_type len = self->getLength();
 
   // Null if not a callable compareFn.
   auto compareFn = Handle<Callable>::dyn_vmcast(args.getArgHandle(0));
@@ -1971,12 +1983,74 @@ CallResult<HermesValue> typedArrayPrototypeSort(void *, Runtime &runtime) {
     return runtime.raiseTypeError("TypedArray sort argument must be callable");
   }
 
+  if (JSTypedArrayBase::validateTypedArray(runtime, args.getThisHandle()) ==
+      ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto self = args.vmcastThis<JSTypedArrayBase>();
+  const JSTypedArrayBase::size_type len = self->getLength();
+
   if (compareFn) {
-    // Fallback to SortModel when a compareFn is provided, since the
-    // callback can invoke arbitrary JS.
-    TypedArraySortModel sm(runtime, self, compareFn);
-    if (LLVM_UNLIKELY(quickSort(&sm, 0, len) == ExecutionStatus::EXCEPTION))
-      return ExecutionStatus::EXCEPTION;
+    // If this array is BigUint64 or BigInt64 typed array, we copy the source
+    // to an ArrayStorage. Otherwise, we copy the source to another TypedArray.
+    // The reason is that to encode BigUint64/BigInt64 value into a HermesValue,
+    // we need to allocate BigIntPrimitive for every compareFn call, which would
+    // be very expensive.
+    if (self->getKind() == CellKind::BigUint64ArrayKind ||
+        self->getKind() == CellKind::BigInt64ArrayKind) {
+      struct : public Locals {
+        PinnedValue<ArrayStorage> arrStorage;
+        PinnedValue<> value;
+      } lv;
+      LocalsRAII lraii(runtime, &lv);
+
+      auto itemsRes = ArrayStorage::create(runtime, len, 0);
+      if (LLVM_UNLIKELY(itemsRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      lv.arrStorage.castAndSetHermesValue<ArrayStorage>(*itemsRes);
+
+      // ES16 23.1.3.30.1 SortIndexedProperties, we need to copy the values into
+      // an internal list.
+      for (JSTypedArrayBase::size_type i = 0; i < len; ++i) {
+        lv.value = JSTypedArrayBase::polyReadMayAlloc(self.get(), runtime, i);
+        lv.arrStorage->pushWithinCapacity(runtime, *lv.value);
+      }
+      TypedArraySortModel sm(runtime, lv.arrStorage, compareFn);
+      if (LLVM_UNLIKELY(quickSort(&sm, 0, len) == ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+
+      if (self->attached(runtime)) {
+        for (JSTypedArrayBase::size_type i = 0; i < len; ++i) {
+          HermesValue value = lv.arrStorage->at(i);
+          JSTypedArrayBase::polyWriteNoAlloc(*self, runtime, i, value);
+        }
+      }
+    } else {
+      struct : public Locals {
+        PinnedValue<JSTypedArrayBase> newTypedArray;
+      } lv;
+      LocalsRAII lraii(runtime, &lv);
+
+      auto newTypedArrayRes = self->allocate(runtime, len);
+      if (LLVM_UNLIKELY(newTypedArrayRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      lv.newTypedArray = *newTypedArrayRes;
+      // This should just call setToCopyOfBytes() and should not throw
+      // exception.
+      [[maybe_unused]] auto status = JSTypedArrayBase::setToCopyOfTypedArray(
+          runtime, lv.newTypedArray, 0, self, 0, len);
+      assert(status == ExecutionStatus::RETURNED);
+      TypedArraySortModel sm(runtime, lv.newTypedArray, compareFn);
+      if (LLVM_UNLIKELY(quickSort(&sm, 0, len) == ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+      if (self->attached(runtime)) {
+        status = JSTypedArrayBase::setToCopyOfTypedArray(
+            runtime, self, 0, lv.newTypedArray, 0, len);
+        assert(status == ExecutionStatus::RETURNED);
+      }
+    }
   } else if (len > 0) {
     typedArraySortDirect(self->data(runtime), self->getKind(), len);
   }
