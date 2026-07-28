@@ -602,7 +602,7 @@ impl Field {
         let name = format_ident!("{}", name);
         parse_type(&self.type_).unwrap();
         let type_name: Type = syn::parse_str(&self.type_)
-            .unwrap_or_else(|_| panic!("Expected a type name, got `{}`", &self.type_));
+            .unwrap_or_else(|_| panic!("Expected a type name, got `{}`", self.type_));
 
         let type_ = quote!(#type_name);
         let mut field = quote!(pub #name: #type_);
@@ -637,7 +637,7 @@ impl Field {
         let name = format_ident!("{}", name);
         parse_type(&self.type_).unwrap();
         let type_name: Type = syn::parse_str(&self.type_)
-            .unwrap_or_else(|_| panic!("Expected a type name, got `{}`", &self.type_));
+            .unwrap_or_else(|_| panic!("Expected a type name, got `{}`", self.type_));
         let type_ = quote!(#type_name);
         let mut field = quote!(pub #name: #type_);
         if self.optional {
@@ -941,7 +941,7 @@ impl Operator {
             .iter()
             .map(|(name, operator)| {
                 let name = format_ident!("{}", name);
-                let comment = format!(" {}", &operator);
+                let comment = format!(" {}", operator);
                 quote! {
                     #[doc = #comment]
                     #[serde(rename = #operator)]
