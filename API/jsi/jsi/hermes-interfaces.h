@@ -182,7 +182,8 @@ class JSI_EXPORT IHermes : public jsi::ICast {
   /// the emitted code contains async break checks).
 
   /// Asynchronously terminates the current execution. This can be called on
-  /// any thread.
+  /// any thread. A pending, not-yet-observed termination request can be
+  /// cancelled via the ICancelAsyncTimeout interface, where supported.
   virtual void asyncTriggerTimeout() = 0;
 
   /// Register this runtime for execution time limit monitoring, with a time
@@ -219,6 +220,35 @@ class JSI_EXPORT IHermes : public jsi::ICast {
 
  protected:
   ~IHermes() = default;
+};
+
+/// Cancellation counterpart to IHermes::asyncTriggerTimeout(), for runtimes
+/// that support it. Obtained via castInterface; a null result means the
+/// runtime does not support cancellation.
+class ICancelAsyncTimeout : public jsi::ICast {
+ public:
+  static constexpr jsi::UUID uuid{
+      0x46e249ba,
+      0xd059,
+      0x4900,
+      0x9f22,
+      0xbbbc43b52e0b};
+
+  /// Cancel a pending timeout previously requested with
+  /// IHermes::asyncTriggerTimeout() that has not yet been observed by
+  /// executing JS. \return true if a pending timeout was cancelled, false if
+  /// there was none (either none was triggered, or it already terminated an
+  /// execution). Unlike asyncTriggerTimeout(), this may only be called on
+  /// the thread that executes JS on this runtime -- either between
+  /// executions or from a native frame invoked by executing JS. Calling it
+  /// from another thread would race the interpreter's consumption of the
+  /// request. This is the analog of V8's Isolate::CancelTerminateExecution:
+  /// without it, a timeout that fires after the targeted execution completed
+  /// remains pending and terminates the next, unrelated execution.
+  virtual bool asyncCancelTimeout() = 0;
+
+ protected:
+  ~ICancelAsyncTimeout() = default;
 };
 
 /// Interface for provide Hermes backend specific methods.

@@ -745,6 +745,16 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
     triggerAsyncBreak(AsyncBreakReasonBits::Timeout);
   }
 
+  /// Cancel a timeout async break requested via triggerTimeoutAsyncBreak()
+  /// that has not yet been observed by the interpreter. Unlike
+  /// triggerTimeoutAsyncBreak(), this may only be called on the thread that
+  /// executes JS -- either between executions or from a native frame invoked
+  /// by executing JS; see testAndClearAsyncBreakRequest(). \return whether a
+  /// request was pending.
+  bool cancelTimeoutAsyncBreak() {
+    return testAndClearTimeoutAsyncBreakRequest();
+  }
+
 #ifdef HERMES_ENABLE_DEBUGGER
   /// Encapsulates useful information about a stack frame, needed by the
   /// debugger. It requres extra context and cannot be extracted from a
@@ -1511,8 +1521,11 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// \p reasonBit request bit afterward.
   uint8_t testAndClearAsyncBreakRequest(uint8_t reasonBits) {
     /// Note that while the triggerTimeoutAsyncBreak() function may be called
-    /// from any thread, this one may only be called from within the Interpreter
-    /// loop.
+    /// from any thread, this one may only be called on the thread that
+    /// executes JS: either from within the Interpreter loop, or from a host
+    /// API while no JS is executing (e.g. HermesRuntime::asyncCancelTimeout).
+    /// Concurrent calls could both pass the fast path and then race the
+    /// fetch_and, making the loser observe oldFlag == 0.
     uint8_t flag = asyncBreakRequestFlag_.load(std::memory_order_relaxed);
     if (LLVM_LIKELY((flag & (uint8_t)reasonBits) == 0)) {
       // Fast path.

@@ -9,6 +9,7 @@
 
 #include "external/hermes_sandbox_impl_compiled.h"
 #include "hermes/ADT/ManagedChunkedList.h"
+#include "jsi/hermes-interfaces.h"
 #include "jsi/jsilib.h"
 
 #include <atomic>
@@ -897,6 +898,7 @@ class NativeTable {
 #define THROW_UNIMPLEMENTED() throwUnimplementedImpl(__func__)
 
 class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
+                                 public facebook::hermes::ICancelAsyncTimeout,
                                  public W2CHermesRAII {
   class ManagedPointerHolder;
 
@@ -1741,6 +1743,20 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
 
   void asyncTriggerTimeout() override {
     asyncTimeout_.store(true, std::memory_order_relaxed);
+  }
+
+  bool asyncCancelTimeout() override {
+    // The flag lives on the host side and the sandboxed interpreter polls it
+    // through a host callback (see the testAndClearAsyncTimeout vtable use),
+    // so clearing it here fully cancels a not-yet-observed request.
+    return testAndClearAsyncTimeout();
+  }
+
+  ICast *castInterface(const UUID &interfaceUUID) override {
+    if (interfaceUUID == facebook::hermes::ICancelAsyncTimeout::uuid) {
+      return static_cast<facebook::hermes::ICancelAsyncTimeout *>(this);
+    }
+    return Runtime::castInterface(interfaceUUID);
   }
 
   /// Return true if an asynchronous timeout has been triggered.

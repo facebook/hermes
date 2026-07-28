@@ -540,6 +540,42 @@ TEST_P(HermesRuntimeTest, TriggerAsyncTimeout) {
     runTest(hsrt);
 }
 
+TEST_P(HermesRuntimeTest, CancelAsyncTimeout) {
+  auto runTest = [](auto *rt) {
+    // Cancellation lives on its own castInterface-obtained interface rather
+    // than on the runtime class, so that adding it does not change any
+    // existing vtable; null would mean the runtime does not support it.
+    auto *cancel = castInterface<ICancelAsyncTimeout>(rt);
+    ASSERT_NE(cancel, nullptr);
+
+    // Nothing pending: there is nothing to cancel.
+    EXPECT_FALSE(cancel->asyncCancelTimeout());
+
+    // A timeout triggered while no JS is running would terminate the next
+    // script at its first async break check (see TriggerAsyncTimeout above).
+    // Cancelling consumes the pending request, so the script must run to
+    // completion instead.
+    rt->asyncTriggerTimeout();
+    EXPECT_TRUE(cancel->asyncCancelTimeout());
+    // The request was consumed by the first cancel.
+    EXPECT_FALSE(cancel->asyncCancelTimeout());
+
+    // A loop is required: backward branches are where async break checks
+    // are emitted.
+    const char *loop = "var x = 0; for (var i = 0; i < 1000; ++i) x += i; x";
+    EXPECT_EQ(
+        rt->evaluateJavaScript(std::make_unique<StringBuffer>(loop), "")
+            .getNumber(),
+        499500);
+  };
+
+  // Only these runtimes support asyncTriggerTimeout/asyncCancelTimeout.
+  if (auto *hrt = dynamic_cast<HermesRuntime *>(rt.get()))
+    runTest(hrt);
+  else if (auto *hsrt = dynamic_cast<HermesSandboxRuntime *>(rt.get()))
+    runTest(hsrt);
+}
+
 TEST(HermesRuntimeCrashManagerTest, CrashGetStackTrace) {
   class CrashManagerImpl : public hermes::vm::CrashManager {
    public:
