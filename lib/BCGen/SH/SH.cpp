@@ -2855,6 +2855,23 @@ void generateFunction(
     OS << "  SHLegacyValue np" << i << " = _sh_ljs_undefined();\n";
   }
 
+  switch (F.getProhibitInvoke()) {
+    case Function::ProhibitInvoke::ProhibitNone:
+      break;
+    case Function::ProhibitInvoke::ProhibitConstruct:
+      OS << "  if (!_sh_ljs_is_undefined(frame["
+         << hbc::StackFrameLayout::NewTarget << "]))\n"
+         << "    _sh_throw_type_error_ascii(shr, \"Function is not a "
+            "constructor\");\n";
+      break;
+    case Function::ProhibitInvoke::ProhibitCall:
+      OS << "  if (_sh_ljs_is_undefined(frame["
+         << hbc::StackFrameLayout::NewTarget << "]))\n"
+         << "    _sh_throw_type_error_ascii(shr, \"Class constructor invoked "
+            "without new\");\n";
+      break;
+  }
+
   // Initialize SHJmpBuf and emit the setjmp for the function-level try.
   // Every caught exception will jump to this _sh_try and be handled in the
   // switch statement under L_catch.

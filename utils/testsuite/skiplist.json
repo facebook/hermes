@@ -3761,14 +3761,6 @@
     },
     {
       "paths": [
-        "test262/test/language/statements/generators/invoke-as-constructor.js",
-        "test262/test/language/expressions/generators/invoke-as-constructor.js",
-        "test262/test/built-ins/AsyncFunction/instance-construct-throws.js"
-      ],
-      "comment": "No calls are currently checked in SH."
-    },
-    {
-      "paths": [
         "test262/test/annexB/built-ins/RegExp/RegExp-leading-escape-BMP.js",
         "test262/test/annexB/built-ins/RegExp/RegExp-trailing-escape-BMP.js",
         "test262/test/annexB/language/eval-code/indirect/global-if-decl-else-decl-a-eval-global-init.js",
