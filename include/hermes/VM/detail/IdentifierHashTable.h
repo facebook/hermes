@@ -56,8 +56,18 @@ class IdentifierHashTable {
     return cap - (cap >> 2) < nonEmptyEntryCount_;
   }
 
-  /// Grow the hash table and rehash with \p newCapacity.
+  /// Grow the hash table to \p newCapacity and rehash into it. Aborts unless
+  /// \p newCapacity is strictly greater than the current capacity; this also
+  /// guards against a wrapped-around computation in the caller (e.g. an
+  /// overflowing capacity() * 2 or NextPowerOf2()).
   void growAndRehash(uint32_t newCapacity);
+
+  /// Rehash all valid entries into a freshly allocated table of \p newCapacity,
+  /// dropping deleted entries. \p newCapacity must be a power of two that is
+  /// greater than or equal to the current capacity. Unlike growAndRehash() an
+  /// equal capacity is allowed (in-place compaction), so this must not be used
+  /// where an overflow check is required.
+  void rehash(uint32_t newCapacity);
 
   /// HashIteratorWrapper is a thin wrapper around char* and char16_t*
   /// to make sure that when iterating on it, *itr always return a
