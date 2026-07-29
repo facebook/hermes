@@ -209,9 +209,6 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::rehash(
     return ExecutionStatus::EXCEPTION;
   }
 
-  // Set new capacity first to update the hash function.
-  self->capacity_ = *newCapacity;
-
   // Create a new hash table.
   std::vector<uint32_t> newHashTable;
   newHashTable.resize(*newCapacity, kHashTableElementUnused);
@@ -225,6 +222,12 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::rehash(
     return ExecutionStatus::EXCEPTION;
   }
   lv.newDataTable.template castAndSetHermesValue<StorageType>(*dataTableRes);
+
+  // Publish the new capacity so the re-add loop below hashes into the new
+  // table. This happens only after the fallible allocation above succeeds; an
+  // early return on OOM must leave capacity_ consistent with the still-current
+  // hashTable_.
+  self->capacity_ = *newCapacity;
 
   // Now re-add all entries to the hash table.
   uint32_t totalEntries = self->size_ + self->deletedCount_;
