@@ -707,7 +707,7 @@ class Emitter {
   struct StringSwitchCase {
     // The string id of the case label.
     uint32_t caseLabelStringId;
-    // A JIT label for the start of JITted code for the the basic block
+    // A JIT label for the start of JITted code for the basic block
     // corresponding to the case.
     const asmjit::Label *target;
 

@@ -59,7 +59,7 @@ class WeakRefKey {
     return gc.getObjectID(slot_->key.getSymbolNoBarrierUnsafe());
   }
 
-  /// \return The mapped value by the the key object.
+  /// \return The mapped value by the key object.
   HermesValue getMappedValue(GC &gc) const {
     // During marking phase in Hades, mutator thread may read a mapped value A
     // and store it to a marked object B, then deletes the entry. In

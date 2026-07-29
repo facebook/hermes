@@ -1327,7 +1327,7 @@ HermesValue Debugger::evalInFrame(
 
   bool singleFunction = false;
 
-  // If we are debugging inside of a class constuctor, we make an arrow
+  // If we are debugging inside of a class constructor, we make an arrow
   // function for the eval expression. It would be invalid to call that arrow
   // function with a non-undefined new.target.
   Handle<> newTarget =

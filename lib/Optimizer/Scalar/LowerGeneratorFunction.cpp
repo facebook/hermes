@@ -34,7 +34,7 @@
 // All 'local' instructions must be removed from the inner function and lifted
 // into the outer function as a variable. Local here means any instructions that
 // refer to stack values, such as AllocStackInst or instructions that read
-// paramters.
+// parameters.
 //
 // The creation of the switch changes the dominance structure between the
 // existing blocks. Values that now cross blocks without proper dominance need

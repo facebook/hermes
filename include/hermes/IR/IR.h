@@ -436,7 +436,7 @@ class Parameter : public Value {
   Parameter(const Parameter &) = delete;
   void operator=(const Parameter &) = delete;
 
-  /// The function that contains this paramter.
+  /// The function that contains this parameter.
   Function *parent_;
 
   /// The formal name of the parameter
@@ -475,7 +475,7 @@ class JSParam : public Value {
     assert(parent_ && "Invalid parent");
   }
 
-  /// The function that contains this paramter.
+  /// The function that contains this parameter.
   Function *parent_;
 
  public:

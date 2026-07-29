@@ -128,7 +128,7 @@ class DebugMutex {
 
  private:
   std::recursive_mutex inner_;
-  // Sometimes we want to assert that the the current thread does not hold the
+  // Sometimes we want to assert that the current thread does not hold the
   // mutex. Since the mutex is not held, TSAN complains that the access to tid_
   // is not thread safe. It is safe to use this atomic with any memory ordering
   // because all we care about is the last value assigned to tid_ by the

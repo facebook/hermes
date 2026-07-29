@@ -403,7 +403,7 @@ class IdentifierTable {
 
   /// Create or lookup a SymbolID from a string \str. If \p primHandle is not
   /// null, it is assumed to be backing str.
-  /// \param str Required. The string to to use.
+  /// \param str Required. The string to use.
   /// \param primHandle optional StringPrimitive. If this is specified, then
   ///     \p str must refer to its contents.
   /// \param hash the hash of the string \p str.
@@ -443,7 +443,7 @@ class IdentifierTable {
   /// whether \p primHandle is available, assigning it the given \p strId.
   /// If \p primHandle is not null, it is assumed to be backing str.
   /// \tparam Unique indicates that this string should be uniqued.
-  /// \param str Required. The string to to use.
+  /// \param str Required. The string to use.
   /// \param primHandle optional StringPrimitive. If this is specified, then
   ///     \p str must refer to its contents.
   /// \return the new allocated string.

@@ -443,7 +443,7 @@ struct HermesABIRuntimeVTable {
       struct HermesABIPropNameID a,
       struct HermesABIPropNameID b);
 
-  /// Call the function \p fn with \p arg_count \p args, and with the the this
+  /// Call the function \p fn with \p arg_count \p args, and with the this
   /// parameter set to \p js_this.
   struct HermesABIValueOrError (*call)(
       struct HermesABIRuntime *rt,

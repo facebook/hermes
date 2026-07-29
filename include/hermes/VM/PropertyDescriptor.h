@@ -54,7 +54,7 @@ struct PropertyFlags {
       uint16_t hostObject : 1;
       /// This property is a builtin method or object, and it could be
       /// accessed by the CallBuiltin instruction. The property is made
-      /// read-only and is not allowed to be overriden.
+      /// read-only and is not allowed to be overridden.
       uint16_t staticBuiltin : 1;
       /// This flag indicates this is a proxy exotic Object.  This flag
       /// should only be used as a marker for certain temporary
