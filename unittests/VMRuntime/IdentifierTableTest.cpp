@@ -92,6 +92,54 @@ TEST_F(IdentifierTableLargeHeapTest, LookupTest) {
 }
 #endif
 
+// The identifier hash table must keep its memory bounded when a bounded set
+// of live entries is churned repeatedly. Freed entries leave "deleted"
+// tombstones that count towards the load factor which triggers a rehash, so
+// the table must reclaim them in place rather than growing capacity forever.
+//
+// This interns ~500K unique symbols, so it is gated off under handle
+// sanitization, where it would be prohibitively slow.
+#if HERMESVM_SANITIZE_HANDLES == 0
+TEST_F(IdentifierTableLargeHeapTest, HashTableBoundedWithDeletedEntries) {
+  IdentifierTable &table = runtime.getIdentifierTable();
+
+  constexpr size_t kBatch = 1000;
+  constexpr size_t kRounds = 500;
+
+  size_t counter = 0;
+  auto internAndDropBatch = [&]() {
+    for (size_t i = 0; i < kBatch; ++i) {
+      // Flush handles each iteration so the interned symbols are not kept
+      // alive by the handle scope and can be freed by the collection below.
+      GCScopeMarkerRAII marker{runtime};
+      std::string s = "unique_ident_" + std::to_string(counter++);
+      auto symRes =
+          table.getSymbolHandle(runtime, ASCIIRef{s.data(), s.size()});
+      ASSERT_FALSE(isException(symRes));
+    }
+    // With no remaining references, the just-interned symbols are freed,
+    // turning their hash table slots into tombstones.
+    runtime.collect("test");
+  };
+
+  // Warm up so the table reaches its steady-state capacity for kBatch entries.
+  internAndDropBatch();
+  const size_t baseline = table.additionalMemorySize();
+
+  for (size_t r = 0; r < kRounds; ++r) {
+    internAndDropBatch();
+  }
+
+  // The live entry count per round is constant, so the footprint must stay
+  // bounded. Without in-place rehashing it grows with the total number of
+  // interned strings (tens of x over this loop).
+  const size_t finalSize = table.additionalMemorySize();
+  EXPECT_LE(finalSize, baseline * 2)
+      << "IdentifierHashTable grew unboundedly with deleted entries: baseline="
+      << baseline << " final=" << finalSize;
+}
+#endif
+
 using IdentifierTableTest = RuntimeTestFixture;
 
 TEST_F(IdentifierTableTest, NotUniquedSymbol) {
