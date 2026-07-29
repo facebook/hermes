@@ -72,3 +72,37 @@ export function extractPropertyKeyLiterals(
   }
   return literals;
 }
+
+/**
+ * Returns a type that is guaranteed to include `undefined`, without duplicating
+ * it when already present.
+ *
+ * Flow's optional members permit `undefined`, so the faithful TypeScript
+ * translation of `foo?: T` is `foo?: T | undefined` (the two are distinct under
+ * `exactOptionalPropertyTypes`).
+ */
+export function ensureTypeIncludesUndefined(
+  typeAnnotation: TSESTree.TypeNode,
+): TSESTree.TypeNode {
+  if (typeAnnotation.type === 'TSUndefinedKeyword') {
+    return typeAnnotation;
+  }
+  if (typeAnnotation.type === 'TSUnionType') {
+    if (typeAnnotation.types.some(type => type.type === 'TSUndefinedKeyword')) {
+      return typeAnnotation;
+    }
+    return {
+      type: 'TSUnionType',
+      loc: DUMMY_LOC,
+      types: [
+        ...typeAnnotation.types,
+        {type: 'TSUndefinedKeyword', loc: DUMMY_LOC},
+      ],
+    };
+  }
+  return {
+    type: 'TSUnionType',
+    loc: DUMMY_LOC,
+    types: [typeAnnotation, {type: 'TSUndefinedKeyword', loc: DUMMY_LOC}],
+  };
+}

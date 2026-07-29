@@ -12,7 +12,7 @@ exports[`flowDefToTSDef class/members/property/optional 1`] = `
  */
 
 declare class Foo {
-  prop?: string;
+  prop?: string | undefined;
 }
 "
 `;
