@@ -421,7 +421,12 @@ ExecutionStatus Debugger::debuggerLoop(
             }
             breakAtPossibleNextInstructions(state);
             if (breakpointOpt) {
-              state.codeBlock->installBreakpointAtOffset(state.offset);
+              // Re-installing a previously-installed breakpoint: the page is
+              // already known writable.
+              bool ok =
+                  state.codeBlock->installBreakpointAtOffset(state.offset);
+              (void)ok;
+              assert(ok && "re-installing existing breakpoint cannot fail");
             }
             if (stepMode == StepMode::Into) {
               // Stepping in could enter another code block,
@@ -767,18 +772,26 @@ Debugger::getBreakpointLocation(CodeBlock *codeBlock, uint32_t offset) const {
 }
 
 auto Debugger::installBreakpoint(CodeBlock *codeBlock, uint32_t offset)
-    -> BreakpointLocation & {
+    -> BreakpointLocation * {
   auto opcodes = codeBlock->getOpcodeArray();
   assert(offset < opcodes.size() && "invalid offset to set breakpoint");
-  auto &location =
-      breakpointLocations_
-          .try_emplace(codeBlock->getOffsetPtr(offset), opcodes[offset])
-          .first->second;
+  auto *opcodePtr = codeBlock->getOffsetPtr(offset);
+  auto emplaceResult =
+      breakpointLocations_.try_emplace(opcodePtr, opcodes[offset]);
+  auto &location = emplaceResult.first->second;
   if (location.count() == 0) {
     // count used to be 0, so patch this in now that the count > 0.
-    codeBlock->installBreakpointAtOffset(offset);
+    if (!codeBlock->installBreakpointAtOffset(offset)) {
+      // Patching failed (e.g. statically embedded bytecode in a read-only
+      // segment that the OS refuses to remap). Roll back the entry we just
+      // inserted so state stays consistent, and signal failure to caller.
+      if (emplaceResult.second) {
+        breakpointLocations_.erase(emplaceResult.first);
+      }
+      return nullptr;
+    }
   }
-  return location;
+  return &location;
 }
 
 void Debugger::uninstallBreakpoint(
@@ -796,12 +809,16 @@ void Debugger::uninstallBreakpoint(
   }
 }
 
-void Debugger::setUserBreakpoint(
+bool Debugger::setUserBreakpoint(
     CodeBlock *codeBlock,
     uint32_t offset,
     BreakpointID id) {
-  BreakpointLocation &location = installBreakpoint(codeBlock, offset);
-  location.userBreakpointIDs.insert(id);
+  BreakpointLocation *location = installBreakpoint(codeBlock, offset);
+  if (!location) {
+    return false;
+  }
+  location->userBreakpointIDs.insert(id);
+  return true;
 }
 
 void Debugger::doSetNonUserBreakpoint(
@@ -809,15 +826,22 @@ void Debugger::doSetNonUserBreakpoint(
     uint32_t offset,
     uint32_t callStackDepth,
     bool isStepBreakpoint) {
-  BreakpointLocation &location = installBreakpoint(codeBlock, offset);
+  BreakpointLocation *location = installBreakpoint(codeBlock, offset);
+  if (!location) {
+    // Best-effort: step/restoration breakpoints are an optimization for
+    // pause-on-entry while stepping. If the target lives in a read-only
+    // bytecode segment we cannot patch, just skip it -- stepping will simply
+    // not pause at the entry of that code block.
+    return;
+  }
   std::vector<Breakpoint> &breakpoints =
       isStepBreakpoint ? tempBreakpoints_ : restorationBreakpoints_;
-  if (location.callStackDepths.count(callStackDepth) == 0) {
-    location.callStackDepths.insert(callStackDepth);
+  if (location->callStackDepths.count(callStackDepth) == 0) {
+    location->callStackDepths.insert(callStackDepth);
   }
 
-  if ((isStepBreakpoint && !location.hasStepBreakpoint) ||
-      (!isStepBreakpoint && !location.hasRestorationBreakpoint)) {
+  if ((isStepBreakpoint && !location->hasStepBreakpoint) ||
+      (!isStepBreakpoint && !location->hasRestorationBreakpoint)) {
     // Leave the resolved location empty for now,
     // let the caller fill it in lazily.
     Breakpoint breakpoint{};
@@ -828,9 +852,9 @@ void Debugger::doSetNonUserBreakpoint(
   }
 
   if (isStepBreakpoint) {
-    location.hasStepBreakpoint = true;
+    location->hasStepBreakpoint = true;
   } else {
-    location.hasRestorationBreakpoint = true;
+    location->hasRestorationBreakpoint = true;
   }
 }
 
@@ -843,17 +867,22 @@ void Debugger::setStepBreakpoint(
 }
 
 void Debugger::setOnLoadBreakpoint(CodeBlock *codeBlock, uint32_t offset) {
-  BreakpointLocation &location = installBreakpoint(codeBlock, offset);
+  BreakpointLocation *location = installBreakpoint(codeBlock, offset);
+  if (!location) {
+    // Best-effort: pauseOnScriptLoad cannot pause inside a code block whose
+    // bytecode page is not writable. Skip.
+    return;
+  }
   // Leave the resolved location empty for now,
   // let the caller fill it in lazily.
   Breakpoint breakpoint{};
   breakpoint.codeBlock = codeBlock;
   breakpoint.offset = offset;
   breakpoint.enabled = true;
-  assert(!location.onLoad && "can't set duplicate on-load breakpoint");
-  location.onLoad = true;
+  assert(!location->onLoad && "can't set duplicate on-load breakpoint");
+  location->onLoad = true;
   tempBreakpoints_.push_back(breakpoint);
-  assert(location.count() && "invalid count following set breakpoint");
+  assert(location->count() && "invalid count following set breakpoint");
 }
 
 void Debugger::unsetUserBreakpoint(
@@ -1017,8 +1046,12 @@ void Debugger::setRestorationBreakpoint(
 
 bool Debugger::restoreBreakpointIfAny() {
   if (breakpointToRestore_.first != nullptr) {
-    breakpointToRestore_.first->installBreakpointAtOffset(
+    // Re-installing a previously-installed breakpoint: the page is already
+    // known writable.
+    bool ok = breakpointToRestore_.first->installBreakpointAtOffset(
         breakpointToRestore_.second);
+    (void)ok;
+    assert(ok && "re-installing existing breakpoint cannot fail");
     breakpointToRestore_ = {nullptr, 0};
     return true;
   }
@@ -1046,7 +1079,10 @@ ExecutionStatus Debugger::stepInstruction(InterpreterState &state) {
     // Temporarily uninstall the breakpoint so we can run the real instruction.
     uninstallBreakpoint(codeBlock, offset, locationOpt->opCode);
     status = runtime_.stepFunction(newState);
-    codeBlock->installBreakpointAtOffset(offset);
+    // Re-install: page already known writable.
+    bool ok = codeBlock->installBreakpointAtOffset(offset);
+    (void)ok;
+    assert(ok && "re-installing existing breakpoint cannot fail");
   } else {
     status = runtime_.stepFunction(newState);
   }
@@ -1092,7 +1128,10 @@ ExecutionStatus Debugger::processInstUnderDebuggerOpCode(
       runtime_.setCurrentIP(ip);
       ExecutionStatus status = runtime_.stepFunction(newState);
       runtime_.invalidateCurrentIP();
-      codeBlock->installBreakpointAtOffset(offset);
+      // Re-install: page already known writable.
+      bool ok = codeBlock->installBreakpointAtOffset(offset);
+      (void)ok;
+      assert(ok && "re-installing existing breakpoint cannot fail");
       if (status == ExecutionStatus::EXCEPTION) {
         return status;
       }

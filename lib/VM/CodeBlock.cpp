@@ -324,8 +324,10 @@ uint32_t CodeBlock::getVirtualOffset() const {
 #ifdef HERMES_ENABLE_DEBUGGER
 
 /// Makes the page that \p address is in writable.
-/// If it fails, aborts execution.
-static void makeWritable(void *address, size_t length) {
+/// \return true on success, false if the page cannot be made writable (e.g.
+///   the bytecode lives in a read-only segment of the binary that the OS
+///   refuses to remap, such as macOS __DATA_CONST under hardened runtime).
+static bool makeWritable(void *address, size_t length) {
   void *endAddress = static_cast<void *>(static_cast<char *>(address) + length);
 
   // Align the address to page size before setting the pagesize.
@@ -335,14 +337,11 @@ static void makeWritable(void *address, size_t length) {
   size_t totalLength =
       static_cast<char *>(endAddress) - static_cast<char *>(alignedAddress);
 
-  bool success = oscompat::vm_protect(
+  return oscompat::vm_protect(
       alignedAddress, totalLength, oscompat::ProtectMode::ReadWrite);
-  if (!success) {
-    hermes_fatal("mprotect failed before modifying breakpoint");
-  }
 }
 
-void CodeBlock::installBreakpointAtOffset(uint32_t offset) {
+bool CodeBlock::installBreakpointAtOffset(uint32_t offset) {
   auto opcodes = getOpcodeArray();
   assert(offset < opcodes.size() && "patch offset out of bounds");
   hbc::opcode_atom_t *address =
@@ -354,9 +353,12 @@ void CodeBlock::installBreakpointAtOffset(uint32_t offset) {
       sizeof(inst::DebuggerInst) == 1,
       "debugger instruction can only be a single opcode atom");
 
-  makeWritable(address, sizeof(inst::DebuggerInst));
+  if (!makeWritable(address, sizeof(inst::DebuggerInst))) {
+    return false;
+  }
   *address = debuggerOpcode;
   ++numInstalledBreakpoints_;
+  return true;
 }
 
 void CodeBlock::uninstallBreakpointAtOffset(

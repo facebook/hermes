@@ -28,7 +28,9 @@ class HERMES_EXPORT HermesSandboxRuntime : public jsi::Runtime {
       const std::string &sourceURL) = 0;
 
   /// Asynchronously terminates the current execution. This can be called on
-  /// any thread.
+  /// any thread. A pending, not-yet-observed termination request can be
+  /// cancelled via the ICancelAsyncTimeout interface (obtained with
+  /// castInterface).
   virtual void asyncTriggerTimeout() = 0;
 };
 

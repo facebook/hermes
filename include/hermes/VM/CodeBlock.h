@@ -371,7 +371,11 @@ class CodeBlock final : private llvh::TrailingObjects<
   /// at location \p offset.
   /// Requires that there's a breakpoint registered at \p offset.
   /// Increments the user count of the associated runtime module.
-  void installBreakpointAtOffset(uint32_t offset);
+  /// \return true on success; false if the bytecode page cannot be made
+  ///   writable (e.g. statically embedded bytecode in a read-only segment
+  ///   that the OS refuses to remap, such as macOS __DATA_CONST under
+  ///   hardened runtime). On failure, no state is modified.
+  LLVM_NODISCARD bool installBreakpointAtOffset(uint32_t offset);
 
   /// Uninstalls the debugger instruction from the opcode stream
   /// at location \p offset, replacing it with \p opCode.
