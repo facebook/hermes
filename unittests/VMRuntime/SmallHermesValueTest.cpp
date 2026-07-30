@@ -12,6 +12,7 @@
 #include "hermes/VM/PrimitiveBox.h"
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/StringRefUtils.h"
+#include "hermes/VM/WeakRoot-inline.h"
 
 #include <cfloat>
 #include <climits>
@@ -212,6 +213,63 @@ TEST_F(SmallHermesValueRuntimeTest, StringTest) {
   auto HV = SHV.unboxToHV(runtime);
   EXPECT_TRUE(HV.isString());
   EXPECT_EQ(HV.getString(), message.get());
+}
+
+TEST_F(
+    SmallHermesValueRuntimeTest,
+    WeakSmallHermesValuePreservesPointerTagsAcrossEvacuation) {
+  auto weakValue = std::make_shared<WeakSmallHermesValue>();
+  runtime.addCustomWeakRootsFunction(
+      [weakValue](GC *, WeakRootAcceptor &acceptor) {
+        acceptor.acceptWeak(*weakValue);
+      });
+
+  struct : Locals {
+    PinnedValue<StringPrimitive> str;
+#ifdef HERMESVM_BOXED_DOUBLES
+    PinnedValue<SmallHermesValue> boxedDouble;
+#endif
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  auto strRes =
+      StringPrimitive::create(runtime, createUTF16Ref(u"weak string"));
+  ASSERT_NE(ExecutionStatus::EXCEPTION, strRes);
+  lv.str.castAndSetHermesValue<StringPrimitive>(*strRes);
+  weakValue->set(SmallHermesValue::encodeStringValue(*lv.str, runtime));
+
+  runtime.collect("test");
+
+  EXPECT_EQ(
+      weakValue->getPointerNoBarrierUnsafe(runtime),
+      static_cast<GCCell *>(*lv.str));
+
+  HermesValue value =
+      weakValue->unboxToHVWithReadBarrier(runtime, runtime.getHeap());
+  ASSERT_TRUE(value.isString());
+  EXPECT_EQ(value.getString(), *lv.str);
+
+#ifdef HERMESVM_BOXED_DOUBLES
+  constexpr double kBoxedDoubleValue = std::numeric_limits<double>::max();
+  lv.boxedDouble =
+      SmallHermesValue::encodeNumberValue(kBoxedDoubleValue, runtime);
+  ASSERT_TRUE(lv.boxedDouble.getSmallHermesValue().isBoxedDouble());
+  weakValue->set(lv.boxedDouble.getSmallHermesValue());
+
+  runtime.collect("test");
+
+  const auto boxedDouble = lv.boxedDouble.getSmallHermesValue();
+  ASSERT_TRUE(boxedDouble.isBoxedDouble());
+  EXPECT_EQ(
+      weakValue->getPointerNoBarrierUnsafe(runtime),
+      boxedDouble.getPointer(runtime));
+  EXPECT_EQ(weakValue->getRaw(), boxedDouble.getRaw());
+
+  HermesValue boxedDoubleValue =
+      weakValue->unboxToHVWithReadBarrier(runtime, runtime.getHeap());
+  ASSERT_TRUE(boxedDoubleValue.isNumber());
+  EXPECT_EQ(boxedDoubleValue.getNumber(), kBoxedDoubleValue);
+#endif
 }
 
 TEST_F(SmallHermesValueRuntimeTest, BigIntTest) {

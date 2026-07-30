@@ -176,7 +176,8 @@ struct MallocGC::MarkingAcceptor final : public RootAcceptor,
       // Reset weak root if target GCCell is dead.
       if (header->isMarked()) {
 #if HERMESVM_SANITIZE_HANDLES != 0
-        wshv.setObject(pointerBase_, header->getForwardingPointer()->data());
+        wshv.set(wshv.updatePointer(
+            header->getForwardingPointer()->data(), pointerBase_));
 #endif
       } else {
         wshv.invalidate();

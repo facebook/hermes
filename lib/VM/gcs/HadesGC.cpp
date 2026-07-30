@@ -601,7 +601,7 @@ class HadesGC::EvacAcceptor final : public RootAcceptor,
         assert(
             forwardedCell.getNonNull(pointerBase_)->isValid() &&
             "Cell was forwarded incorrectly");
-        wshv.setObject(forwardedCell);
+        wshv.set(wshv.updatePointer(forwardedCell));
       } else {
         // The target GCCell is dead, invalidate it.
         wshv.invalidate();

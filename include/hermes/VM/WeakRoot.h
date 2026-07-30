@@ -151,6 +151,7 @@ class WeakSmallHermesValue final : private SmallHermesValue {
   using SmallHermesValue::getRaw;
   using SmallHermesValue::unboxToHV;
   using SmallHermesValue::unboxToHVWithReadBarrier;
+  using SmallHermesValue::updatePointer;
 
   inline SymbolID getSymbol(GC &gc) const;
   SymbolID getSymbolNoBarrierUnsafe() const {
