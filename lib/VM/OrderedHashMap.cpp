@@ -234,6 +234,16 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::rehash(
   uint32_t newDataTableKeyIndex = 0;
   uint32_t oldDataTableKeyIndex = 0;
 
+  // For each of the deleted entry, we store the entry index to help iterators
+  // adjust their entry index in the next step.
+  // Suppose you have the following data table (kElementsPerEntry = 1), and 'x'
+  // marks the deleted entries.
+  // entry index: 0 1 2 3 4 5 6 7 8
+  //            : 0 x 2 x 4 x 6 x 8
+  // We'll record the deleted indices as: [1 3 5 7]
+  std::vector<uint32_t> deletedEntryIndices;
+  deletedEntryIndices.reserve(self->deletedCount_);
+
   NoHandleScope noHandle{runtime};
 
   const uint32_t mask = self->capacity_ - 1;
@@ -263,6 +273,9 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::rehash(
       newHashTable[bucket] = newDataTableKeyIndex;
 
       newDataTableKeyIndex += BucketType::kElementsPerEntry;
+    } else {
+      // Entry is deleted.
+      deletedEntryIndices.push_back(i);
     }
     oldDataTableKeyIndex += BucketType::kElementsPerEntry;
   }
@@ -273,7 +286,7 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::rehash(
 
   // Adjust any active iterators to handle the fact that we removed deleted
   // entries in the new data table.
-  rawSelf->updateIteratorIndicesForRehash(runtime);
+  rawSelf->updateIteratorIndicesForRehash(deletedEntryIndices);
 
   rawSelf->deletedCount_ = 0;
   // The external memory credit tracks hashTable_.size() * sizeof(uint32_t).
@@ -295,25 +308,7 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::rehash(
 
 template <typename BucketType, typename Derived>
 void OrderedHashMapBase<BucketType, Derived>::updateIteratorIndicesForRehash(
-    Runtime &runtime) {
-  // For each of the deleted entry, we store the entry index to help iterators
-  // adjust their entry index in the next step.
-  // Suppose you have the following data table (kElementsPerEntry = 1), and 'x'
-  // marks the deleted entries.
-  // entry index: 0 1 2 3 4 5 6 7 8
-  //            : 0 x 2 x 4 x 6 x 8
-  // We'll record the deleted indices as: [1 3 5 7]
-  std::vector<uint32_t> deletedEntryIndices;
-  deletedEntryIndices.reserve(deletedCount_);
-  uint32_t oldDataTableKeyIndex = 0;
-  for (uint32_t i = 0; i < size_ + deletedCount_; i++) {
-    auto shv = dataTable_.getNonNull(runtime)->at(oldDataTableKeyIndex);
-    if (shv.isEmpty()) {
-      // Entry is deleted
-      deletedEntryIndices.push_back(i);
-    }
-    oldDataTableKeyIndex += BucketType::kElementsPerEntry;
-  }
+    llvh::ArrayRef<uint32_t> deletedEntryIndices) {
   assert(
       deletedEntryIndices.size() == deletedCount_ &&
       "Should encounter same number of deleted elements as the deletedCount_");

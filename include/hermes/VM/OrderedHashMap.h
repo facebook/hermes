@@ -375,7 +375,10 @@ class OrderedHashMapBase {
   /// after a rehash. A rehash will remove any deleted entries of the
   /// OrderedHashMap, so indices need to be adjusted to account for those
   /// removed entries.
-  void updateIteratorIndicesForRehash(Runtime &runtime);
+  /// \param deletedEntryIndices the entry index of every deleted entry, in
+  /// ascending order.
+  void updateIteratorIndicesForRehash(
+      llvh::ArrayRef<uint32_t> deletedEntryIndices);
 
   /// Calculate the next capacity based on the current capacity and key count.
   /// If there are enough unused capacity, then the next capacity will shrink.
