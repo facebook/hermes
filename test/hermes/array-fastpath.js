@@ -11,11 +11,11 @@
 "use strict";
 
 // Tests for the fast paths of the Array.prototype methods that access the
-// indexed storage directly: shift/unshift/slice, and the ones that run a
-// callback per element (forEach/map/filter). Covers the fast paths themselves
-// and the conditions that must make them fall back to the generic path:
-// holes, mutation from an argument coercion or from a callback mid-iteration,
-// accessors, modified prototypes, and frozen/sealed arrays.
+// indexed storage directly: shift/unshift/slice/splice, and the ones that run
+// a callback per element (forEach/map/filter). Covers the fast paths
+// themselves and the conditions that must make them fall back to the generic
+// path: holes, mutation from an argument coercion or from a callback
+// mid-iteration, accessors, modified prototypes, and frozen/sealed arrays.
 
 print('shift');
 // CHECK-LABEL: shift
@@ -414,6 +414,40 @@ var flt = a.filter(function(v, i) {
 delete Array.prototype[1];
 print(flt);
 // CHECK-NEXT: 1,p1,3
+
+print('splice');
+// CHECK-LABEL: splice
+// Equal insert and delete counts: neither storage-shifting branch of the
+// fast path runs.
+a = [1, 2, 3, 4];
+print(a.splice(1, 2, 'x', 'y'), a);
+// CHECK-NEXT: 2,3 1,x,y,4
+// Insert-only splice in the middle (overlapping backward copy), then a
+// delete-only splice; heap values must survive a GC.
+a = ['s1', 's2', 's3'];
+print(a.splice(1, 0, 1.5, 'n1').length, a.length);
+// CHECK-NEXT: 0 5
+gc();
+print(a);
+// CHECK-NEXT: s1,1.5,n1,s2,s3
+print(a.splice(2, 2), a);
+// CHECK-NEXT: n1,s2 s1,1.5,s3
+// Deleting more than inserting, with at least one item to insert: the
+// storage shrinks and only then are the arguments copied in. Encoding a
+// double argument may allocate, so the array must be left consistent (its
+// element count within the shrunk storage) across that allocation.
+a = [1, 2, 3, 4, 5];
+print(a.splice(1, 3, 2.5), a, a.length);
+// CHECK-NEXT: 2,3,4 1,2.5,5 3
+gc();
+print(a);
+// CHECK-NEXT: 1,2.5,5
+a = ['a', 'b', 'c', 'd', 'e'];
+print(a.splice(0, 4, 'z', 1.5), a);
+// CHECK-NEXT: a,b,c,d z,1.5,e
+gc();
+print(a);
+// CHECK-NEXT: z,1.5,e
 
 print('chained');
 // CHECK-LABEL: chained

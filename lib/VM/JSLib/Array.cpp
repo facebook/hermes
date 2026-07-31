@@ -2680,10 +2680,7 @@ CallResult<HermesValue> arrayPrototypeSlice(void *, Runtime &runtime) {
   return lv.A.getHermesValue();
 }
 
-/// Fast path for Array.prototype.slice() when the array is a normal array.
-/// \pre \p O is an array with fast index properties and there are no index-like
-///   properties in any parents.
-/// \pre \p The storage for \p O starts at 0 and ends at its length.
+/// Fast path for Array.prototype.splice() when the array is a normal array.
 /// \param O the array to splice.
 /// \param len the length of O.
 /// \param A the array to populate with deleted elements.
@@ -2691,6 +2688,9 @@ CallResult<HermesValue> arrayPrototypeSlice(void *, Runtime &runtime) {
 /// \param actualDeleteCount the number of elements to delete.
 /// \param itemCount the number of elements to insert from \p args.
 /// \param args the original NativeArgs to splice().
+/// \pre \p O is an array with fast index properties and there are no index-like
+///   properties in any parents.
+/// \pre The storage for \p O starts at 0 and ends at its length.
 /// \return the result of the splice (\p A).
 static CallResult<HermesValue> arrayPrototypeSpliceFastPath(
     Runtime &runtime,
@@ -2714,16 +2714,20 @@ static CallResult<HermesValue> arrayPrototypeSpliceFastPath(
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  {
+  if (actualDeleteCount > 0) {
     NoAllocScope noAlloc(runtime);
     JSArray::StorageType *aStorage = A->getIndexedStorageNullable(runtime);
     JSArray::StorageType *oStorage = O->getIndexedStorageNullable(runtime);
-    for (uint32_t j = 0; j < actualDeleteCount; ++j) {
-      assert(aStorage && oStorage && "storage must not be null");
-      uint32_t from = actualStart + j;
-      SmallHermesValue elem = oStorage->at(from);
-      aStorage->set(j, elem, runtime.getHeap());
-    }
+    assert(aStorage && oStorage && "storage must not be null");
+    assert(
+        actualStart + actualDeleteCount <= oStorage->size() &&
+        "deleted range must be within the source storage");
+    JSArray::StorageType::GCHVType::copy(
+        oStorage->data() + actualStart,
+        oStorage->data() + actualStart + actualDeleteCount,
+        aStorage->data(),
+        aStorage,
+        runtime.getHeap());
   }
 
   // Final length of O.
@@ -2742,16 +2746,22 @@ static CallResult<HermesValue> arrayPrototypeSpliceFastPath(
 
     NoAllocScope noAlloc(runtime);
     JSArray::StorageType *oStorage = O->getIndexedStorageNullable(runtime);
-    for (uint32_t k = actualStart; k < len - actualDeleteCount; ++k) {
-      assert(oStorage && "storage must not be null");
-      uint32_t from = k + actualDeleteCount;
-      uint32_t to = k + itemCount;
-      SmallHermesValue elem = oStorage->at(from);
-      oStorage->set(to, elem, runtime.getHeap());
-    }
+    assert(oStorage && "storage must not be null");
+    assert(len <= oStorage->size() && "moved range must be within the storage");
+    JSArray::StorageType::GCHVType::copy(
+        oStorage->data() + actualStart + actualDeleteCount,
+        oStorage->data() + len,
+        oStorage->data() + actualStart + itemCount,
+        oStorage,
+        runtime.getHeap());
 
     // Shrink the array size to the new length.
     JSArray::StorageType::resizeWithinCapacity(oStorage, runtime, finalLen);
+    // Update the elemCount immediately so it never exceeds the storage size:
+    // the argument copy loop below may allocate, and anything observing the
+    // array during a GC must not see elemCount past the end of the storage.
+    assert(oStorage->size() == finalLen && O->getBeginIndex() == 0);
+    O->setElemCountUnsafe(finalLen);
   } else if (itemCount > actualDeleteCount) {
     // Inserting more items than deleting.
 
@@ -2763,20 +2773,22 @@ static CallResult<HermesValue> arrayPrototypeSpliceFastPath(
       return ExecutionStatus::EXCEPTION;
     }
 
-    // Start from the right, and copy elements to the right.
-    // This makes space to insert the elements from the arguments.
-    // Loop k from (len - actualDeleteCount) to actualStart (exclusive),
-    // just like the spec does for the slow path.
+    // Copy elements to the right, backwards, to avoid overwriting elements
+    // that have not been moved yet. This makes space to insert the elements
+    // from the arguments.
 
     NoAllocScope noAlloc(runtime);
     JSArray::StorageType *oStorage = O->getIndexedStorageNullable(runtime);
-    for (uint32_t k = len - actualDeleteCount; k > actualStart; --k) {
-      assert(oStorage && "storage must not be null");
-      uint32_t from = k + actualDeleteCount - 1;
-      uint32_t to = k + itemCount - 1;
-      SmallHermesValue elem = oStorage->at(from);
-      oStorage->set(to, elem, runtime.getHeap());
-    }
+    assert(oStorage && "storage must not be null");
+    assert(
+        finalLen <= oStorage->size() &&
+        "destination range must be within the storage");
+    JSArray::StorageType::GCHVType::copy_backward(
+        oStorage->data() + actualStart + actualDeleteCount,
+        oStorage->data() + len,
+        oStorage->data() + finalLen,
+        oStorage,
+        runtime.getHeap());
   }
 
   // Finally, just copy the elements from the args into the array
