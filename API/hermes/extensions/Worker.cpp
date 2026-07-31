@@ -16,6 +16,7 @@
 #include <condition_variable>
 #include <deque>
 #include <mutex>
+#include <string>
 #include <thread>
 
 #include "hermes/Platform/Logging.h"
@@ -519,34 +520,41 @@ void WorkerNativeState::startWorkerThread(std::string script) {
   });
 }
 
-/// Called by the JS constructor in `11-Worker.js` to mark the first argument.
-/// The arguments in \p args must be provided in the following order:
-/// 1. the object to be marked as Worker
-/// 2. the script to be executed by the Worker
-jsi::Value initializeWorker(
-    jsi::Runtime &rt,
-    const jsi::Value &,
-    const jsi::Value *args,
-    size_t count) {
-  // This is only called by the Worker extension script in `11-Worker.js`, so we
-  // can guarantee that the argument count is 2.
-  assert(count == 2);
-
-  // Verify the user-provided script argument
-  if (LLVM_UNLIKELY(!args[1].isString())) {
-    throwTypeError(
-        rt, "Must provide the source code as a String for the Worker to run");
+/// Throw a TypeError if \p ab is detached. Call this before querying a
+/// buffer's size or a view's byteOffset/byteLength, or copying its data: on a
+/// detached buffer ArrayBuffer::size()/data() throw a non-TypeError exception,
+/// and the DataView byteOffset/byteLength getters throw as well. Checking up
+/// front yields a consistent "detached buffer" TypeError.
+void checkBufferAttached(jsi::Runtime &rt, const jsi::ArrayBuffer &ab) {
+  if (ab.detached(rt)) {
+    throwTypeError(rt, "Cannot create Worker from a detached buffer");
   }
+}
 
-  // Mark the self object as a Worker
-  // This is provided by the `11-Worker.js` script, so it should always be an
-  // Object.
-  auto self = args[0].asObject(rt);
+/// Copy \p length bytes starting at \p offset of \p ab into a std::string.
+/// Throws TypeError if the range is empty. std::string carries arbitrary
+/// binary faithfully (no UTF-8 re-encoding).
+/// \pre \p ab is attached; callers must call checkBufferAttached first.
+std::string copyBufferBytes(
+    jsi::Runtime &rt,
+    jsi::ArrayBuffer ab,
+    size_t offset,
+    size_t length) {
+  if (length == 0) {
+    throwTypeError(rt, "Cannot create Worker from empty binary input");
+  }
+  const uint8_t *data = ab.data(rt);
+  return std::string(reinterpret_cast<const char *>(data + offset), length);
+}
+
+/// Create the Worker runtime/thread and attach state to \p self, running the
+/// bytes in \p script (source or bytecode, decided by evaluateJavaScript).
+/// Shared by all constructor input types.
+void startWorker(jsi::Runtime &rt, jsi::Object self, std::string script) {
   auto *api = jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
   auto workerRuntime = api->makeHermesRuntime(::hermes::vm::RuntimeConfig());
   auto workerState = std::make_shared<WorkerState>(rt, self);
 
-  // Install the event-processing handlers onto the Worker runtime
   installPostMessageFromWorker(*workerRuntime, workerState);
   installCloseFromWorker(*workerRuntime, workerState);
 
@@ -563,9 +571,61 @@ jsi::Value initializeWorker(
     workerState->id = eventLoopControl->registerTaskQueueSource();
   }
 
-  // Start the worker thread
-  std::string script = args[1].asString(rt).utf8(rt);
   workerNativeState->startWorkerThread(std::move(script));
+}
+
+/// Called by the JS constructor in `11-Worker.js` to mark the first argument.
+/// The arguments in \p args must be provided in the following order:
+/// 1. the object to be marked as Worker
+/// 2. the script to be executed by the Worker
+jsi::Value initializeWorker(
+    jsi::Runtime &rt,
+    const jsi::Value &,
+    const jsi::Value *args,
+    size_t count) {
+  // This is only called by the Worker extension script in `11-Worker.js`, so we
+  // can guarantee that the argument count is 2.
+  assert(count == 2);
+
+  // The self object is provided by `11-Worker.js`, so it is always an Object.
+  auto self = args[0].asObject(rt);
+  const jsi::Value &input = args[1];
+
+  std::string script;
+  if (input.isString()) {
+    script = input.asString(rt).utf8(rt);
+  } else if (input.isObject()) {
+    jsi::Object obj = input.asObject(rt);
+    if (obj.isArrayBuffer(rt)) {
+      jsi::ArrayBuffer ab = obj.getArrayBuffer(rt);
+      checkBufferAttached(rt, ab);
+      size_t size = ab.size(rt);
+      script = copyBufferBytes(rt, std::move(ab), 0, size);
+    } else if (obj.isTypedArray(rt)) {
+      jsi::TypedArray ta = obj.getTypedArray(rt);
+      jsi::ArrayBuffer ab = ta.buffer(rt);
+      checkBufferAttached(rt, ab);
+      size_t offset = ta.byteOffset(rt);
+      size_t length = ta.byteLength(rt);
+      script = copyBufferBytes(rt, std::move(ab), offset, length);
+    } else if (isDataView(rt, obj)) {
+      jsi::ArrayBuffer ab = dataViewBuffer(rt, obj);
+      checkBufferAttached(rt, ab);
+      size_t offset = dataViewByteOffset(rt, obj);
+      size_t length = dataViewByteLength(rt, obj);
+      script = copyBufferBytes(rt, std::move(ab), offset, length);
+    } else {
+      throwTypeError(
+          rt,
+          "Worker script must be a string, ArrayBuffer, TypedArray, or DataView");
+    }
+  } else {
+    throwTypeError(
+        rt,
+        "Worker script must be a string, ArrayBuffer, TypedArray, or DataView");
+  }
+
+  startWorker(rt, std::move(self), std::move(script));
   return jsi::Value::undefined();
 }
 /// This implements the `terminate` method of the Worker object, which takes in

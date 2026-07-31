@@ -3261,6 +3261,110 @@ worker;
   terminate.callWithThis(*rt, worker);
 }
 
+TEST_P(HermesWorkerTest, WorkerFromArrayBuffer) {
+  // Source carried in an ArrayBuffer must construct a Worker (no throw).
+  auto code = R"(
+var bytes = new TextEncoder().encode("var x = 1;");
+var worker = new Worker(bytes.buffer);
+worker;
+)";
+  auto worker = eval(code).asObject(*rt);
+  worker.getPropertyAsFunction(*rt, "terminate").callWithThis(*rt, worker);
+}
+
+TEST_P(HermesWorkerTest, WorkerFromTypedArrayWithOffset) {
+  // A Uint8Array view with a non-zero byteOffset must slice correctly.
+  auto code = R"(
+var whole = new TextEncoder().encode("XXvar y = 2;");
+var view = new Uint8Array(whole.buffer, 2); // skip the leading "XX"
+var worker = new Worker(view);
+worker;
+)";
+  auto worker = eval(code).asObject(*rt);
+  worker.getPropertyAsFunction(*rt, "terminate").callWithThis(*rt, worker);
+}
+
+TEST_P(HermesWorkerTest, WorkerFromDataView) {
+  auto code = R"(
+var bytes = new TextEncoder().encode("var z = 3;");
+var dv = new DataView(bytes.buffer);
+var worker = new Worker(dv);
+worker;
+)";
+  auto worker = eval(code).asObject(*rt);
+  worker.getPropertyAsFunction(*rt, "terminate").callWithThis(*rt, worker);
+}
+
+TEST_P(HermesWorkerTest, WorkerFromBinaryErrors) {
+  // Non-buffer, non-string argument.
+  EXPECT_THROW(eval("new Worker({});"), JSError);
+  // Empty binary input.
+  EXPECT_THROW(eval("new Worker(new ArrayBuffer(0));"), JSError);
+  EXPECT_THROW(eval("new Worker(new Uint8Array(0));"), JSError);
+
+  // Detached buffers must throw a TypeError specifically: a plain Error must
+  // not leak from ArrayBuffer.size(), and a genuine but detached DataView must
+  // still be recognized as a DataView rather than misclassified. Detach via
+  // HermesInternal, matching the existing DetachedArrayBuffer /
+  // ArrayBufferDetached tests in this file.
+  auto thrownName = [&](const char *js) -> std::string {
+    try {
+      eval(js);
+    } catch (const JSError &e) {
+      return e.value()
+          .asObject(*rt)
+          .getProperty(*rt, "name")
+          .asString(*rt)
+          .utf8(*rt);
+    }
+    return "<no throw>";
+  };
+  EXPECT_EQ(
+      thrownName(R"(
+var ab = new ArrayBuffer(8);
+HermesInternal.detachArrayBuffer(ab);
+new Worker(ab);
+)"),
+      "TypeError");
+  EXPECT_EQ(
+      thrownName(R"(
+var ab = new ArrayBuffer(8);
+var dv = new DataView(ab);
+HermesInternal.detachArrayBuffer(ab);
+new Worker(dv);
+)"),
+      "TypeError");
+}
+
+TEST_P(HermesWorkerTest, WorkerFromBytecode) {
+  // Compile a trivial script to Hermes bytecode.
+  std::string bytecode;
+  ASSERT_TRUE(hermes::compileJS("var x = 1;", bytecode));
+
+  auto *api = castInterface<IHermesRootAPI>(makeHermesRootAPI());
+  ASSERT_TRUE(api->isHermesBytecode(
+      reinterpret_cast<const uint8_t *>(bytecode.data()), bytecode.size()));
+
+  // Expose the bytecode to JS as a Uint8Array so `new Worker` receives the
+  // exact bytes (bytecode magic contains bytes >= 0x80, which the old
+  // string/utf8 path would have corrupted).
+  auto u8ctor = rt->global().getPropertyAsFunction(*rt, "Uint8Array");
+  auto arr =
+      u8ctor.callAsConstructor(*rt, (double)bytecode.size()).asObject(*rt);
+  for (size_t i = 0; i < bytecode.size(); ++i) {
+    arr.setProperty(
+        *rt,
+        PropNameID::forUtf8(*rt, std::to_string(i)),
+        (double)(uint8_t)bytecode[i]);
+  }
+  rt->global().setProperty(*rt, "__bc", arr);
+
+  // Constructing from the bytecode bytes must succeed (worker thread starts
+  // and evaluateJavaScript takes the bytecode path).
+  auto worker = eval("var w = new Worker(__bc); w;").asObject(*rt);
+  worker.getPropertyAsFunction(*rt, "terminate").callWithThis(*rt, worker);
+}
+
 INSTANTIATE_TEST_CASE_P(
     Runtimes,
     HermesWorkerTest,

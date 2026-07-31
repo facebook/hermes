@@ -889,6 +889,7 @@ if(HERMES_ENABLE_TEST_SUITE)
     jsi_unstable=${JSI_UNSTABLE}
     qemu_run_prefix=${QEMU_RUN_PREFIX}
     napi_enabled=${HERMES_ENABLE_NAPI}
+    python=${Python_EXECUTABLE}
     )
 
   if(HERMES_ENABLE_NAPI)
