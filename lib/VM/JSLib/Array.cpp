@@ -4043,6 +4043,10 @@ everySomeHelper(Runtime &runtime, NativeArgs args, const bool every) {
         "Array.prototype.every() requires a callable argument");
   }
 
+  // Reads elements directly out of the indexed storage when possible.
+  ElementReader reader{
+      runtime, lv.O, len, lv.tmpPropNameStorage, lv.descObj};
+
   // Loop through and run the callback.
   auto marker = gcScope.createMarker();
   // Index to check the callback on.
@@ -4050,18 +4054,13 @@ everySomeHelper(Runtime &runtime, NativeArgs args, const bool every) {
   while (k < len) {
     gcScope.flushToMarker(marker);
 
-    ComputedPropertyDescWithSymStorage desc{lv.tmpPropNameStorage};
     lv.k = HermesValue::encodeTrustedNumberValue(k);
-    JSObject::getComputedPrimitiveDescriptor(
-        lv.O, runtime, lv.k, lv.descObj, desc);
-    CallResult<PseudoHandle<>> propRes = JSObject::getComputedPropertyValue_RJS(
-        lv.O, runtime, lv.descObj, desc, lv.k);
-    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+    CallResult<bool> kPresent = reader.read(lv.k, lv.kValue);
+    if (LLVM_UNLIKELY(kPresent == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    if (LLVM_LIKELY(!(*propRes)->isEmpty())) {
+    if (*kPresent) {
       // kPresent is true, call the callback on the kth element.
-      lv.kValue = std::move(*propRes);
       auto callRes = Callable::executeCall3(
           callbackFn,
           runtime,

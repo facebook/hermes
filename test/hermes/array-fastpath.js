@@ -12,9 +12,9 @@
 
 // Tests for the fast paths of the Array.prototype methods that access the
 // indexed storage directly: shift/unshift/slice/splice, and the ones that run
-// a callback per element (forEach/map/filter). Covers the fast paths
-// themselves and the conditions that must make them fall back to the generic
-// path: holes, mutation from an argument coercion or from a callback
+// a callback per element (forEach/map/filter/every/some). Covers the fast
+// paths themselves and the conditions that must make them fall back to the
+// generic path: holes, mutation from an argument coercion or from a callback
 // mid-iteration, accessors, modified prototypes, and frozen/sealed arrays.
 
 print('shift');
@@ -414,6 +414,62 @@ var flt = a.filter(function(v, i) {
 delete Array.prototype[1];
 print(flt);
 // CHECK-NEXT: 1,p1,3
+
+print('every/some');
+// CHECK-LABEL: every/some
+a = [2, 4, 6];
+print(a.every(function(x) { return x % 2 === 0; }),
+      a.some(function(x) { return x > 5; }));
+// CHECK-NEXT: true true
+// Holes are skipped.
+a = [1, , 3];
+acc = [];
+print(a.every(function(v, i) { acc.push(v, i); return true; }), acc);
+// CHECK-NEXT: true 1,0,3,2
+// Callback shrinks the array; the removed slots read as holes.
+a = [1, 2, 3, 4];
+acc = [];
+print(a.some(function(v, i) {
+  acc.push(v);
+  if (i === 0)
+    a.length = 2;
+  return false;
+}), acc);
+// CHECK-NEXT: false 1,2
+// Callback throws; the exception propagates.
+a = [1, 2, 3];
+try {
+  a.every(function(x, i) {
+    if (i === 1)
+      throw new Error('every boom');
+    return true;
+  });
+} catch (e) {
+  print(e.message);
+}
+// CHECK-NEXT: every boom
+// Callback triggers GC mid-iteration.
+a = [1.5, 'two', 3.5];
+acc = [];
+print(a.every(function(v) { gc(); acc.push(v); return true; }), acc);
+// CHECK-NEXT: true 1.5,two,3.5
+// Callback pollutes Array.prototype mid-iteration; the hole at index 1 is
+// then read through the prototype.
+a = [1, , 3];
+acc = [];
+print(a.some(function(v, i) {
+  if (i === 0)
+    Array.prototype[1] = 'p1';
+  acc.push(v);
+  return false;
+}), acc);
+delete Array.prototype[1];
+// CHECK-NEXT: false 1,p1,3
+// Non-array receivers take the generic path.
+print(Array.prototype.every.call({0: 2, 1: 4, length: 2}, function(v) {
+  return v % 2 === 0;
+}));
+// CHECK-NEXT: true
 
 print('splice');
 // CHECK-LABEL: splice
