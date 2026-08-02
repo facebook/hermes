@@ -97,7 +97,7 @@ val installCMake by
     tasks.registering(CustomExecTask::class) {
       onlyIfProvidedPathDoesNotExists.set(cmakePath)
       commandLine(
-          windowsAwareCommandLine(getSDKManagerPath(), "--install", "cmake;${cmakeVersion}")
+          windowsAwareCommandLine(getSDKManagerPath(), "--install", "cmake;${cmakeVersion}"),
       )
     }
 
