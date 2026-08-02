@@ -24,7 +24,7 @@ class SerializeHermesCompilerPackageJson(project: Project) {
     val version =
         jsonSlurper["version"] as? String
             ?: throw IllegalStateException(
-                "Expected version to be a string in package.json, but got ${jsonSlurper["version"]}"
+                "Expected version to be a string in package.json, but got ${jsonSlurper["version"]}",
             )
     PackageJson(version)
   }
