@@ -17,6 +17,7 @@
 #include <jsi/test/testlib.h>
 
 #include <atomic>
+#include <stdexcept>
 #include <tuple>
 
 using namespace facebook::jsi;
@@ -3512,6 +3513,52 @@ TEST_P(HermesRuntimeTest, CreateErrorTest) {
           caughtObj, rt->global().getPropertyAsFunction(*rt, "URIError")));
     }
   }
+}
+
+// Minimal IWorkerSetup used only to verify registration. The full
+// configurable harness lives with the tests that exercise it.
+class MinimalWorkerSetup : public IWorkerSetup {
+ public:
+  virtual ~MinimalWorkerSetup() = default;
+  ICast *castInterface(const UUID &uuid) override {
+    return uuid == IWorkerSetup::uuid ? static_cast<IWorkerSetup *>(this)
+                                      : nullptr;
+  }
+  std::shared_ptr<const Buffer> resolveScript(
+      const std::string &,
+      std::string &) override {
+    return nullptr;
+  }
+  void initWorkerRuntime(Runtime &) override {}
+  void configureWorkerRuntime(::hermes::vm::RuntimeConfig &) override {}
+};
+
+TEST_P(HermesRuntimeTest, WorkerSetupRegistration) {
+  auto *setter = castInterface<ISetWorkerSetup>(rt.get());
+  ASSERT_NE(setter, nullptr);
+
+  MinimalWorkerSetup provider;
+  setter->setWorkerSetup(&provider);
+  // The opaque ICast* casts back to the provider interface.
+  EXPECT_EQ(setter->getWorkerSetup(), static_cast<ICast *>(&provider));
+  EXPECT_EQ(
+      castInterface<IWorkerSetup>(setter->getWorkerSetup()),
+      static_cast<IWorkerSetup *>(&provider));
+
+  // The provider is set-once: registering again throws.
+  MinimalWorkerSetup provider2;
+  EXPECT_THROW(setter->setWorkerSetup(&provider2), std::logic_error);
+}
+
+TEST_P(HermesRuntimeTest, WorkerSetupSetAfterReadThrows) {
+  auto *setter = castInterface<ISetWorkerSetup>(rt.get());
+  ASSERT_NE(setter, nullptr);
+
+  // Reading the provider is what Worker creation does; it locks the provider
+  // even when none was registered, so a later registration is rejected.
+  (void)setter->getWorkerSetup();
+  MinimalWorkerSetup provider;
+  EXPECT_THROW(setter->setWorkerSetup(&provider), std::logic_error);
 }
 
 INSTANTIATE_TEST_CASE_P(
