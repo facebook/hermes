@@ -2425,16 +2425,14 @@ void SemanticResolver::validateAndDeclareIdentifier(
   // I am willing to live with this sacrifice.
   // Aliasing of "arguments" becomes especially iffy when type annotations are
   // added.
-  // Guarded with `#if 0` rather than `if (false)` so clang17 does not flag
-  // the body as -Werror,-Wunreachable-code on the Windows clang17 toolchain.
-#if 0
-  // Redeclaration of `arguments` in non-strict mode is allowed at the
-  // function level, so we don't need to declare a new variable.
-  if (!curFunctionInfo()->strict && ident->_name == kw_.identArguments &&
-      kind == Decl::Kind::Var) {
-    return;
+  if ((false)) {
+    // Redeclaration of `arguments` in non-strict mode is allowed at the
+    // function level, so we don't need to declare a new variable.
+    if (!curFunctionInfo()->strict && ident->_name == kw_.identArguments &&
+        kind == Decl::Kind::Var) {
+      return;
+    }
   }
-#endif
 
   // Ignore declarations in enclosing functions.
   if (prevName.isValid() && !declInCurFunction(prevName.decl)) {
