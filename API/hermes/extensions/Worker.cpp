@@ -420,7 +420,7 @@ void postError(
 
   try {
     serialized = serializationInterface->serialize(error);
-  } catch (const jsi::JSError &error) {
+  } catch (const jsi::JSError &) {
     /// If we encounter an error while serializing the original JSError, then
     /// give up
     ::hermes::hermesLog("HermesWorker", "Failed to serialize Worker error.");
