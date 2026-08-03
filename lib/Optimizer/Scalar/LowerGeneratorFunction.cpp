@@ -200,6 +200,14 @@ void LowerToStateMachine::convert() {
   auto *valueParam =
       builder_.createJSDynamicParam(inner_, builder_.createIdentifier("value"));
   movePastFirstInBlock(builder_, &*inner_->begin());
+  // Reset the leaked user source location so the synthetic resume prologue is
+  // not mistaken for real user code (e.g. a breakpoint on that line resolving
+  // here). Use the inner function's own declaration location rather than "no
+  // location": it matches a normal function's prologue and the sibling
+  // scaffolding (getParentOuterScope_), and gives the executing-generator
+  // TypeError thrown from this entry dispatch a real line in stack traces
+  // rather than a raw-address fallback.
+  builder_.setLocation(inner_->getSourceRange().Start);
   auto *loadActionParam = builder_.createLoadParamInst(actionParam);
   auto *loadValueParam = builder_.createLoadParamInst(valueParam);
 
@@ -615,6 +623,9 @@ void LowerToStateMachine::lowerToSwitch(
   auto *throwBecauseExecutingBB = builder_.createBasicBlock(inner_);
   auto *checkIfCompletedBB = builder_.createBasicBlock(inner_);
   builder_.setInsertionBlock(newBeginBB);
+  // Don't leak a user source line onto the synthetic entry dispatch; this
+  // location persists through the scaffolding created below.
+  builder_.setLocation(inner_->getSourceRange().Start);
 
   auto *loadState =
       builder_.createLoadFrameInst(getParentOuterScope_, genState);
@@ -852,6 +863,9 @@ void LowerToStateMachine::lowerToSwitch(
   }
 
   builder_.setInsertionBlock(userCodeSwitchBB);
+  // The user-block loop above left a user source line on the builder; reset it
+  // so the synthetic dispatch/catch scaffolding isn't taken for user code.
+  builder_.setLocation(inner_->getSourceRange().Start);
   builder_.createStoreFrameInst(
       getParentOuterScope_,
       builder_.getLiteralNumber((uint8_t)State::Executing),
