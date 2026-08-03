@@ -109,6 +109,18 @@ class SamplingProfiler;
 class JSArray;
 #endif
 
+/// Wrap \p code in a source Buffer suitable for compiling with \p compileFlags.
+/// When the resulting module will retain its source buffer -- i.e. lazy or
+/// full-debug-info compilation, matching keepCompilationData in
+/// createBCProviderFromSrc -- the bytes are copied so the buffer owns them.
+/// Otherwise they are borrowed from \p code, which is safe because the buffer
+/// is dropped once compilation finishes. Copying in the retained case avoids a
+/// use-after-free when \p code does not outlive the module (e.g. a transient
+/// eval or debugger command string).
+std::unique_ptr<Buffer> makeCompilationSourceBuffer(
+    llvh::StringRef code,
+    const hbc::CompileFlags &compileFlags);
+
 /// Number of stack words after the top of frame that we always ensure are
 /// available. This is necessary so we can perform native calls with small
 /// number of arguments without checking.

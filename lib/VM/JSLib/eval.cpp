@@ -59,14 +59,8 @@ CallResult<HermesValue> evalInEnvironment(
 
   std::unique_ptr<hbc::BCProvider> bytecode;
   {
-    std::unique_ptr<hermes::Buffer> buffer;
-    if (compileFlags.lazy) {
-      buffer.reset(new hermes::OwnedMemoryBuffer(
-          llvh::MemoryBuffer::getMemBufferCopy(utf8code)));
-    } else {
-      buffer.reset(new hermes::OwnedMemoryBuffer(
-          llvh::MemoryBuffer::getMemBuffer(utf8code)));
-    }
+    std::unique_ptr<hermes::Buffer> buffer =
+        makeCompilationSourceBuffer(utf8code, compileFlags);
 
     if (codeBlock) {
       assert(

@@ -447,6 +447,47 @@ TEST_F(DebuggerAPITest, GetLoadedScriptsTest) {
   EXPECT_TRUE(foundAfterGC);
 }
 
+// Regression test: the source passed to Runtime::run must not be borrowed when
+// the compiled module retains its source buffer, which it does under the
+// debugger (full debug info). Here the source string is destroyed right after
+// debugJavaScript returns. A later by-line breakpoint resolution walks every
+// runtime module's source; with eager compilation this used to borrow the
+// source string, so the read hit freed memory (ASan: heap-use-after-free in
+// SourceErrorManager::findForCoordsImpl). The buffer must own its bytes.
+TEST_F(DebuggerAPITest, RunDoesNotBorrowTransientSourceTest) {
+  // Force eager compilation so Runtime::run takes the (previously) borrowing
+  // path; lazy compilation already copied the source.
+  std::unique_ptr<HermesRuntime> runtime = makeHermesRuntime(
+      hermes::vm::RuntimeConfig::Builder()
+          .withCompilationMode(
+              hermes::vm::CompilationMode::ForceEagerCompilation)
+          .build());
+
+  {
+    // Heap-allocated (non-SSO) source that is freed at the end of this scope,
+    // immediately after compilation completes.
+    std::string transientSource =
+        "function foo() {\n  var x = 1;\n  return x;\n}\nfoo();\n";
+    runtime->debugJavaScript(transientSource, "transient.js", {});
+  }
+
+  // Resolving a by-line breakpoint (no column) walks each module's source via
+  // findSMRangeForLine; if the module borrowed the now-freed source, this reads
+  // freed memory. With the fix the buffer is owned, so this is safe.
+  SourceLocation loc;
+  loc.line = 3; // 'return x;'
+  runtime->getDebugger().setBreakpoint(loc);
+
+  // Reaching here without an ASan failure is the assertion; also confirm the
+  // runtime is still usable.
+  EXPECT_EQ(
+      7,
+      runtime->global()
+          .getPropertyAsFunction(*runtime, "eval")
+          .call(*runtime, "3 + 4")
+          .asNumber());
+}
+
 TEST_F(DebuggerAPITest, ImplicitAsyncPauseTest) {
   rt->getDebugger().triggerAsyncPause(AsyncPauseKind::Implicit);
   eval("var x = 5;");
