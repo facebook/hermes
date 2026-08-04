@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env fbpython
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is licensed under the MIT license found in the
@@ -80,7 +80,7 @@ def measure_executable(path):
                      """,
         re.X,
     )
-    text = subprocess.check_output(["size", "-A", "-d", path])
+    text = subprocess.check_output(["size", "-A", "-d", path], text=True)
     for line in text.split("\n"):
         match = reg.match(line)
         if not match:
@@ -91,7 +91,7 @@ def measure_executable(path):
             metrics[key] += int(secsize)
     # Add __LINKEDIT on Darwin, available through size -m
     if sys.platform == "darwin":
-        m_output = subprocess.check_output(["size", "-m", "-d", path])
+        m_output = subprocess.check_output(["size", "-m", "-d", path], text=True)
         linkedit_match = re.search(r"__LINKEDIT: (\d+)", m_output)
         if linkedit_match:
             metrics["symbols"] += int(linkedit_match.group(1))
@@ -101,7 +101,9 @@ def measure_executable(path):
     for key, size in metrics.items():
         result[key] = human_readable_size(size)
     result["name"] = os.path.basename(path)
-    result["sha1"] = subprocess.check_output(["openssl", "sha1", path]).split()[1]
+    result["sha1"] = subprocess.check_output(
+        ["openssl", "sha1", path], text=True
+    ).split()[1]
     result["filesize"] = human_readable_size(os.path.getsize(path))
     return result
 
