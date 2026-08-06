@@ -329,6 +329,13 @@ class OrderedHashMapBase {
   /// rehash and clear.
   uint32_t deletedCount_{0};
 
+  /// Set to true by every structural modification of the table — i.e. any
+  /// operation that can relocate entries and so make a previously-resolved
+  /// bucket index stale.
+  /// Placed here to reuse the tail padding after the three
+  /// uint32_t fields.
+  bool cachedBucketInvalidated_{false};
+
   /// \param hashTableCapacity hash table's capacity in number of elements
   /// \return the actual number of elements to allocate for data table based on
   /// the desired hash table capacity

@@ -198,6 +198,9 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::rehash(
     Handle<Derived> self,
     Runtime &runtime,
     bool beforeAdd) {
+  // A rehash rebuilds the table, relocating every entry and invalidating any
+  // cached bucket index.
+  self->cachedBucketInvalidated_ = true;
   struct : public Locals {
     PinnedValue<StorageType> newDataTable;
   } lv;
@@ -481,6 +484,11 @@ OrderedHashMapBase<BucketType, Derived>::getOrInsertComputed(
     }
   }
 
+  // Clear the flag so we can detect whether the callback structurally modifies
+  // the map; save its prior value to restore on the exception path.
+  bool savedInvalidated = self->cachedBucketInvalidated_;
+  self->cachedBucketInvalidated_ = false;
+
   struct : public Locals {
     PinnedValue<> value;
   } lv;
@@ -488,10 +496,27 @@ OrderedHashMapBase<BucketType, Derived>::getOrInsertComputed(
   CallResult<PseudoHandle<>> callRes = Callable::executeCall1(
       callback, runtime, Runtime::getUndefinedValue(), key.getHermesValue());
   if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
+    // The callback threw, so this call inserts nothing. The flag must reflect
+    // whether a cached bucket held by an enclosing call is now stale, which is
+    // the case if the map was modified before this call (savedInvalidated) or
+    // if the callback modified it before throwing (e.g. a rehash triggered by a
+    // nested getOrInsertComputed). Combine both.
+    self->cachedBucketInvalidated_ =
+        savedInvalidated || self->cachedBucketInvalidated_;
     return ExecutionStatus::EXCEPTION;
   }
   lv.value = std::move(*callRes);
-  // The callback may have modified the map, so do an insert from scratch.
+
+  // Fast path: the bucket above is still valid and can be used for insertion.
+  if (LLVM_LIKELY(!self->cachedBucketInvalidated_)) {
+    if (LLVM_UNLIKELY(
+            doInsert(self, runtime, bucket, key, lv.value) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return lv.value.getHermesValue();
+  }
+  // The callback modified the map, so do an insert from scratch.
   if (LLVM_UNLIKELY(
           insert(self, runtime, key, lv.value) == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -529,6 +554,8 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::doInsert(
     uint32_t bucket,
     Handle<> key,
     Handle<> value) {
+  // Appending an entry can invalidate a cached bucket index.
+  self->cachedBucketInvalidated_ = true;
   struct : public Locals {
     PinnedValue<StorageType> dataTable;
   } lv;
@@ -591,6 +618,9 @@ bool OrderedHashMapBase<BucketType, Derived>::erase(
   deleteBucket(self, runtime, bucket, *dataTableKeyIndex);
   self->deletedCount_++;
   self->size_--;
+  // A deleted entry (and any shrink-rehash below) can invalidate a cached
+  // bucket index.
+  self->cachedBucketInvalidated_ = true;
 
   if (shouldShrink(self->capacity_, self->size_))
     rehash(self, runtime);
@@ -673,9 +703,12 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::clear(
     Runtime &runtime) {
   self->assertInitialized();
   if (self->size_ == 0 && self->deletedCount_ == 0) {
-    // Empty set.
+    // Empty set: nothing to do, so the table layout is unchanged.
     return ExecutionStatus::RETURNED;
   }
+
+  // Clearing rebuilds the table and invalidates any cached bucket index.
+  self->cachedBucketInvalidated_ = true;
 
   // Clear the hash table. The external memory credit tracks
   // hashTable_.size() * sizeof(uint32_t), so debit the difference between the
