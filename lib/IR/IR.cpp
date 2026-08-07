@@ -393,6 +393,10 @@ void Instruction::setOperand(Value *Val, unsigned Index) {
   // Remove the current instruction from the old value that we are removing.
   if (CurrentValue) {
     CurrentValue->removeUse(Operands[Index]);
+    if (auto *variableScope = llvh::dyn_cast<VariableScope>(CurrentValue);
+        variableScope && !variableScope->hasUsers()) {
+      getModule()->markVariableScopeAsMaybeDead(variableScope);
+    }
   }
 
   // Register this instruction as a user of the new value and set the operand.
@@ -777,6 +781,12 @@ void Module::insert(iterator position, Function *F) {
   FunctionList.insert(position, F);
 }
 
+void Module::destroyVariableScope(VariableScope *varScope) {
+  assert(!varScope->hasUsers() && "cannot destroy a varScope with users");
+  maybeDeadVariableScopes_.erase(varScope);
+  variableScopes_.erase(*varScope);
+}
+
 void Module::populateCJSModuleUseGraph() {
   if (!cjsModuleUseGraph_.empty()) {
     return;
@@ -962,15 +972,17 @@ void Module::resetForMoreCompilation() {
   // its variables.
   // Don't delete any unused variables from VariableScopes here, because they
   // may be captured in the future.
-  for (auto it = variableScopes_.begin(); it != variableScopes_.end();) {
-    if (it->hasUsers()) {
-      // Skip VariableScopes with users.
-      ++it;
-    } else {
-      // If no users, delete the VariableScope.
-      it->removeFromScopeChain();
-      variableScopes_.erase(it++);
-    }
+  // We do iterate the SmallPtrSet here but the order doesn't matter.
+  llvh::SmallVector<VariableScope *, 16> deadVariableScopes{};
+  for (VariableScope *varScope : maybeDeadVariableScopes_) {
+    if (!varScope->hasUsers())
+      deadVariableScopes.push_back(varScope);
+  }
+  maybeDeadVariableScopes_.clear();
+  // Delete the VariableScopes with no users.
+  for (VariableScope *varScope : deadVariableScopes) {
+    varScope->removeFromScopeChain();
+    destroyVariableScope(varScope);
   }
 }
 
