@@ -167,8 +167,10 @@ class Debugger {
   OptValue<StepMode> curStepMode_{llvh::None};
 
   /// If not None, the debugger is attempting to find a place to break after an
-  /// AsyncTrigger, and the PauseReason should be set to this value instead of
-  /// StepFinish.
+  /// AsyncTrigger, and the pause it eventually reaches is reported with this
+  /// reason rather than StepFinish. Finishing a step takes priority: this is
+  /// cleared only where it is consumed, so a pause that abandons the trigger
+  /// leaves it set and it may be stale.
   OptValue<PauseReason> asyncTriggerPauseReason_{llvh::None};
 
   /// If true, all code blocks are breakpointed,
@@ -629,6 +631,9 @@ class Debugger {
         a.offset != b.offset;
   }
 
+  /// \return the source location of \p state, or None if \p state has no
+  /// CodeBlock (as in a default-constructed InterpreterState) or its CodeBlock
+  /// has no debug info at that offset.
   OptValue<hbc::DebugSourceLocation> getLocationForState(
       const InterpreterState &state) const {
     if (state.codeBlock == nullptr)

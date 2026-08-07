@@ -596,6 +596,43 @@ static std::unique_ptr<hermes::Buffer> makeAsyncBreakCode() {
   return builder.generateBytecodeBuffer();
 };
 
+/// \return the bytecode buffer for a module in which no instruction has a
+/// source location, so that servicing an async break has to walk all the way
+/// to the Ret to look for a valid pause location.
+static std::unique_ptr<hermes::Buffer> makeAsyncBreakAtRetCode() {
+  using Loc = hermes::hbc::DebugSourceLocation;
+  hermes::hbc::SimpleBytecodeBuilder builder;
+  hermes::hbc::BytecodeInstructionGenerator instGen;
+
+  hermes::hbc::DebugInfo debugInfo{};
+  hermes::hbc::DebugInfoGenerator debugGen{debugInfo};
+  debugGen.addFilename("ret.js");
+
+  instGen.emitAsyncBreakCheck();
+  uint32_t addOffset = instGen.getCurrentLocation();
+  instGen.emitAddEmptyString(0, 0);
+  uint32_t retOffset = instGen.getCurrentLocation();
+  instGen.emitRet(0);
+
+  debugGen.appendSourceLocations(
+      Loc{0, 1, 0, 0, 0}, // Use filename 1 to generate a region.
+      0,
+      {
+          // AsyncBreakCheck, offset 0 has no source location.
+          Loc{0, 0, 0, 0, 0},
+      });
+  std::move(debugGen).generate();
+  builder.setDebugInfo(&debugInfo);
+
+  EXPECT_FALSE(debugInfo.getLocationForAddress(0, 0).hasValue());
+  EXPECT_FALSE(debugInfo.getLocationForAddress(0, addOffset).hasValue());
+  EXPECT_FALSE(debugInfo.getLocationForAddress(0, retOffset).hasValue());
+
+  builder.addFunction(1, 1, instGen.acquireBytecode());
+
+  return builder.generateBytecodeBuffer();
+};
+
 } // namespace
 
 TEST_F(DebuggerAPITest, ExplicitAsyncBreakLocationTest) {
@@ -622,6 +659,25 @@ TEST_F(DebuggerAPITest, ImplicitAsyncBreakLocationTest) {
       observer.pauseReasons);
   ASSERT_EQ(observer.stackTraces.size(), 1);
   EXPECT_EQ(observer.stackTraces.front().callFrameForIndex(0).location.line, 1);
+}
+
+TEST_F(DebuggerAPITest, ImplicitAsyncBreakAtRetTest) {
+  // Looking for a valid pause location walks to a Ret, which must not
+  // synthesize a step out: there is no step in progress, so preStepState_
+  // holds no meaningful value and the pending implicit trigger, not
+  // StepFinish, is the reason for the pause that eventually happens.
+  auto buffer = makeAsyncBreakAtRetCode();
+  rt->getDebugger().triggerAsyncPause(AsyncPauseKind::Implicit);
+  rt->evaluateJavaScript(
+      std::make_shared<BufferAdapter>(std::move(buffer)), "ret.js");
+
+  // Walking to the Ret leaves every code block breakpointed, so the next
+  // script pauses on entry. That is where the trigger gets delivered.
+  eval("var x = 5;");
+
+  EXPECT_EQ(
+      std::vector<PauseReason>({PauseReason::AsyncTriggerImplicit}),
+      observer.pauseReasons);
 }
 
 #endif

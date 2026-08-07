@@ -471,7 +471,11 @@ CallResult<bool> Debugger::runUntilValidPauseLocation(InterpreterState &state) {
       // We're stepping out now.
       breakpointCaller(/*forRestorationBreakpoint*/ false);
       pauseOnAllCodeBlocks_ = true;
-      curStepMode_ = StepMode::Out;
+      // Only convert an in-progress step to a step out. This is also reached
+      // while looking for a pause location for an AsyncTrigger, where there is
+      // no step to convert and preStepState_ holds no meaningful value.
+      if (curStepMode_)
+        curStepMode_ = StepMode::Out;
       isDebugging_ = false;
       return false;
     }
