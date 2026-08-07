@@ -91,4 +91,36 @@ TEST(VariableTest, ReorderHidden) {
   }
 }
 
+TEST(VariableTest, DeleteScopeAfterLastUserIsRemoved) {
+  auto Ctx = std::make_shared<Context>();
+  Module M{Ctx};
+  IRBuilder Builder{&M};
+
+  auto *topLevel = Builder.createTopLevelFunction("global", true);
+  auto *topLevelBlock = Builder.createBasicBlock(topLevel);
+  Builder.setInsertionBlock(topLevelBlock);
+  Builder.createUnreachableInst();
+
+  auto *varScope = Builder.createVariableScope(nullptr);
+  auto *compiledFunction = Builder.createFunction(
+      "compiled", Function::DefinitionKind::ES5Function, true);
+  auto *compiledBlock = Builder.createBasicBlock(compiledFunction);
+  Builder.setInsertionBlock(compiledBlock);
+  Builder.createCreateScopeInst(varScope, Builder.getEmptySentinel());
+  Builder.createReturnInst(Builder.getLiteralUndefined());
+  compiledFunction->moveToCompiledFunctionList();
+
+  // Clear the initial candidate set while the scope still has a user.
+  M.assignIndexToVariables();
+  M.resetForMoreCompilation();
+  ASSERT_EQ(1u, M.getVariableScopes().size());
+
+  // This is the same removal path used by BytecodeFunction's destructor.
+  compiledFunction->eraseFromCompiledFunctionsNoDestroy();
+  Value::destroy(compiledFunction);
+  M.resetForMoreCompilation();
+
+  EXPECT_TRUE(M.getVariableScopes().empty());
+}
+
 } // end anonymous namespace

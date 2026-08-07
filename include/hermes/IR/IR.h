@@ -1445,6 +1445,11 @@ class VariableScope
     return children_;
   }
 
+  /// \return whether assignIndexToVariables() has been called already.
+  bool hasAssignedIndices() const {
+    return numVisibleVariables_ != UINT32_MAX;
+  }
+
   /// \return the number of variables that are visible in this scope.
   /// The first numVisibleVariables in this VariableScope are visible to the
   /// debugger.
@@ -2145,7 +2150,25 @@ class Module : public Value {
   FunctionListType compiledFunctions_{};
 
   /// List of all the VariableScopes owned by this module.
+  ///
+  /// Invariant: VariableScopes at the start of the list have Variables with
+  /// assigned indices, while VariableScopes at the end of the list have
+  /// Variables with unassigned indices. New VariableScopes are never added to
+  /// the middle of the list, but they may be deleted from the middle of the
+  /// list without violating the invariant.
   VariableScopeListType variableScopes_{};
+
+  /// List of VariableScopes that may have no users, letting lazy
+  /// compilation reclaim dead scopes without rescanning all of variableScopes_.
+  ///
+  /// Invariant: every user-less scope is a member, so no dead scope is missed.
+  /// Membership does not imply user-less, so entries are re-checked before
+  /// deletion.
+  /// Maintained by addVariableScope() (new scopes) and
+  /// markVariableScopeAsMaybeDead() (last user removed).
+  /// Once it's iterated, this list is cleared but a VariableScope may be
+  /// re-added by one of the above mechanisms.
+  llvh::SmallPtrSet<VariableScope *, 16> maybeDeadVariableScopes_{};
 
   GlobalObject globalObject_{};
   LiteralEmpty literalEmpty{};
@@ -2306,12 +2329,32 @@ class Module : public Value {
     return topLevelFunction_;
   }
 
-  /// Get the list of variable scopes owned by this module.
+  /// \return the list of variable scopes owned by this module.
+  /// NOTE: DO NOT append or remove from the returned list.
+  /// ONLY use addVariableScope and destroyVariableScope for that.
   VariableScopeListType &getVariableScopes() {
     return variableScopes_;
   }
+  /// \return the list of variable scopes owned by this module.
+  /// NOTE: DO NOT append or remove from the returned list.
+  /// ONLY use addVariableScope and destroyVariableScope for that.
   const VariableScopeListType &getVariableScopes() const {
     return variableScopes_;
+  }
+
+  /// Add a VariableScope owned by this Module.
+  void addVariableScope(VariableScope *varScope) {
+    variableScopes_.push_back(varScope);
+    maybeDeadVariableScopes_.insert(varScope);
+  }
+
+  /// Remove and destroy a VariableScope owned by this Module.
+  /// \pre \p variableScope has no users.
+  void destroyVariableScope(VariableScope *varScope);
+
+  /// Remember that a VariableScope lost its last user.
+  void markVariableScopeAsMaybeDead(VariableScope *varScope) {
+    maybeDeadVariableScopes_.insert(varScope);
   }
 
   OptimizationContext &getOptimizationContext() {
@@ -2321,10 +2364,19 @@ class Module : public Value {
     return optContext_;
   }
 
-  /// Assign index to all Variables in all VariableScopes.
+  /// Assign indices to Variables in newly-created VariableScopes.
   void assignIndexToVariables() {
-    for (VariableScope &varScope : variableScopes_)
-      varScope.assignIndexToVariables();
+    // Iterate variableScopes_ backwards, and stop at the first one that has
+    // already been assigned indices. This prevents rescanning VariableScopes
+    // unnecessarily and causing slowdown.
+    // See the invariant on variableScopes_ for why this works.
+    for (auto it = variableScopes_.rbegin(); it != variableScopes_.rend();
+         ++it) {
+      VariableScope *varScope = &*it;
+      if (varScope->hasAssignedIndices())
+        break;
+      varScope->assignIndexToVariables();
+    }
   }
 
   /// Create the specified global property if it doesn't exist. If it does
