@@ -578,6 +578,23 @@ class JNumberFormat : public jni::JavaClass<JNumberFormat> {
             "formatToParts");
     return method(self(), jsTimeValue);
   }
+
+  jni::local_ref<jstring> format(jni::alias_ref<jstring> numberString) {
+    static const auto method =
+        javaClassStatic()
+            ->getMethod<jni::alias_ref<jstring>(jni::alias_ref<jstring>)>(
+                "format");
+    return method(self(), numberString);
+  }
+
+  jni::local_ref<JPartsList> formatToParts(
+      jni::alias_ref<jstring> numberString) {
+    static const auto method =
+        javaClassStatic()
+            ->getMethod<jni::alias_ref<JPartsList>(jni::alias_ref<jstring>)>(
+                "formatToParts");
+    return method(self(), numberString);
+  }
 };
 
 class NumberFormatAndroid : public NumberFormat {
@@ -608,6 +625,16 @@ class NumberFormatAndroid : public NumberFormat {
 
   std::vector<Part> formatToParts(double number) noexcept {
     return partsFromJava(jNumberFormat_->formatToParts(number));
+  }
+
+  std::u16string format(const std::string &numberString) noexcept {
+    return stringFromJava(jNumberFormat_->format(
+        jni::make_jstring(numberString)));
+  }
+
+  std::vector<Part> formatToParts(const std::string &numberString) noexcept {
+    return partsFromJava(jNumberFormat_->formatToParts(
+        jni::make_jstring(numberString)));
   }
 
  private:
@@ -670,6 +697,16 @@ std::u16string NumberFormat::format(double number) noexcept {
 
 std::vector<Part> NumberFormat::formatToParts(double number) noexcept {
   return static_cast<NumberFormatAndroid *>(this)->formatToParts(number);
+}
+
+std::u16string NumberFormat::format(
+    const std::string &numberString) noexcept {
+  return static_cast<NumberFormatAndroid *>(this)->format(numberString);
+}
+
+std::vector<Part> NumberFormat::formatToParts(
+    const std::string &numberString) noexcept {
+  return static_cast<NumberFormatAndroid *>(this)->formatToParts(numberString);
 }
 
 } // namespace platform_intl
