@@ -147,12 +147,14 @@ void populateCCCfg(CCCfg &cfg) {
   init(cfg.ldlibs, "LDLIBS", "");
 
   llvh::SmallVector<llvh::StringRef, 2> vec{};
-  llvh::StringLiteral(SHERMES_CC_LIB_PATH).split(vec, ':', -1, false);
+  llvh::StringLiteral(SHERMES_CC_LIB_PATH)
+      .split(vec, llvh::sys::EnvPathSeparator, -1, false);
   for (auto sr : vec)
     cfg.hermesLibPath.push_back(sr.str());
 
   vec.clear();
-  llvh::StringLiteral(SHERMES_CC_INCLUDE_PATH).split(vec, ':', -1, false);
+  llvh::StringLiteral(SHERMES_CC_INCLUDE_PATH)
+      .split(vec, llvh::sys::EnvPathSeparator, -1, false);
   for (auto sr : vec)
     cfg.hermesIncludePath.push_back(sr.str());
 }
