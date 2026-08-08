@@ -9,7 +9,7 @@ jobs:
       HERMES_TARBALL_ARTIFACTS_DIR: /tmp/hermes/hermes-runtime-darwin
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Install dependencies
         shell: bash
         run: |
@@ -37,7 +37,7 @@ jobs:
           cmake --build build --target hermesc -j 4
           cp build/bin/hermesc /tmp/hermes/linux64-bin/.
       - name: Upload linux artifacts
-        uses: actions/upload-artifact@v4.3.4
+        uses: actions/upload-artifact@v6
         with:
           name: hermes-linux-bin
           path: /tmp/hermes/linux64-bin
