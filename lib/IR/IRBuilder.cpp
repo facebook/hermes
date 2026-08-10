@@ -177,7 +177,7 @@ Variable *IRBuilder::createVariable(
 
 VariableScope *IRBuilder::createVariableScope(VariableScope *parentScope) {
   auto *newScope = new VariableScope(parentScope);
-  M->getVariableScopes().push_back(newScope);
+  M->addVariableScope(newScope);
   return newScope;
 }
 
