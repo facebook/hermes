@@ -54,6 +54,19 @@ CallResult<HermesValue> emptyFunction(void *, Runtime &runtime) {
   return HermesValue::encodeUndefinedValue();
 }
 
+/// WHATWG HTML: queueMicrotask ( callback )
+/// https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#dom-queuemicrotask
+CallResult<HermesValue> queueMicrotask(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  auto callable = args.dyncastArg<Callable>(0);
+  if (LLVM_UNLIKELY(!callable)) {
+    return runtime.raiseTypeError(
+        "The argument to queueMicrotask must be callable");
+  }
+  runtime.enqueueJob(callable.get());
+  return HermesValue::encodeUndefinedValue();
+}
+
 /// Given a character \p c in radix \p radix, checks if it's valid.
 static bool isValidRadixChar(char16_t c, int radix) {
   // c is 0..9.
@@ -756,6 +769,13 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
 
   // Define the 'btoa' function.
   defineGlobalFunc(Predefined::getSymbolID(Predefined::btoa), btoa, 1);
+
+  // Define the 'queueMicrotask' function, only when the microtask queue is
+  // enabled.
+  if (LLVM_UNLIKELY(runtime.hasMicrotaskQueue())) {
+    defineGlobalFunc(
+        Predefined::getSymbolID(Predefined::queueMicrotask), queueMicrotask, 1);
+  }
 
   // Define the 'decodeURI' function.
   defineGlobalFunc(
