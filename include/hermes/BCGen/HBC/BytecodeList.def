@@ -693,7 +693,7 @@ DEFINE_OPCODE_0(AsyncBreakCheck)
 DEFINE_OPCODE_1(ProfilePoint, UInt16)
 
 /// Create a base class.
-/// Arg1 is the output register for the the closure.
+/// Arg1 is the output register for the closure.
 /// Arg2 is the output register for the home object.
 /// Arg3 is the current environment.
 /// Arg4 is index in the function table.
@@ -701,7 +701,7 @@ DEFINE_OPCODE_4(CreateBaseClass, Reg8, Reg8, Reg8, UInt16)
 DEFINE_OPCODE_4(CreateBaseClassLongIndex, Reg8, Reg8, Reg8, UInt32)
 
 /// Create a derived class.
-/// Arg1 is the output register for the the closure.
+/// Arg1 is the output register for the closure.
 /// Arg2 is the output register for the home object.
 /// Arg3 is the current environment.
 /// Arg4 is the superClass.

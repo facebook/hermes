@@ -292,7 +292,7 @@ void dumpStackFrame(
 /// Dump information about this frame to llvh::errs().
 void dumpStackFrame(ConstStackFramePtr frame);
 /// Dump information about this frame to llvh::errs(). This overload is only
-/// needed for calls directly from teh debugger.
+/// needed for calls directly from the debugger.
 void dumpStackFrame(StackFramePtr frame);
 
 static_assert(

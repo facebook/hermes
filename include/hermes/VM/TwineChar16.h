@@ -45,7 +45,7 @@ class StringPrimitive;
 /// Each TwineChar16 has two child nodes, which can either be leaves or other
 /// twines. If they are leaves, then they contain some form of string directly
 /// (char *, char16_t *, UTF16Ref, or StringPrimitive *). We also store the size
-/// of the strings stored in the the left and right nodes, allowing for constant
+/// of the strings stored in the left and right nodes, allowing for constant
 /// time size() calls. The resultant string can be read by visiting the leaves
 /// in preorder.
 ///

@@ -196,7 +196,7 @@ enum XorPtrKeyID {
 ///     void symbolAllocationBarrier(SymbolID sym);
 ///
 ///   We copied HermesValues into the given region.  Note that \p numHVs is
-///   the number of HermesValues in the the range, not the char length.
+///   the number of HermesValues in the range, not the char length.
 ///   Do any necessary barriers.
 ///     void writeBarrierRange(GCHermesValue* start, uint32_t numHVs);
 ///     void writeBarrierRange(

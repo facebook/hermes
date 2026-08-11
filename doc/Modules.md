@@ -90,7 +90,7 @@ This allows lookup of the CJS modules either via `hermes::Function *` or by stri
 
 If the caller of the Hermes CLI passes `-static-require`,
 then we attempt to resolve all `require` calls at compilation time.
-This occurs in `ResolveStaticRequire.cpp`, which is able to resolve files if they were povided
+This occurs in `ResolveStaticRequire.cpp`, which is able to resolve files if they were provided
 by the user at invocation time and if all `require` calls only take string literals as arguments.
 If every `require` call is able to be resolved, every one of these `require` calls is replaced
 with a call to `HermesBuiltin_requireFast` with an ID for the CJS module,
@@ -102,7 +102,7 @@ This requires two special bits of logic in `hbc::generateBytecodeModule`.
 - We add a mapping from a CJS module to the HBC function ID.
   This allows us to actually run `require` when JS execution demands it.
   If `require`s have been resolved, we add to the `cjsModulesStatic_` table in the HBC file,
-  else we add to to the `cjsModules_` table in the HBC file (which maps from strings instead of IDs).
+  else we add to the `cjsModules_` table in the HBC file (which maps from strings instead of IDs).
 - To accommodate bundle splitting, we also pass a `SegmentRange` to the function.
   This allows us to only compile the functions which are needed by the CJS modules in the segment.
   We then set a `cjsModuleOffset_` field in the HBC file,

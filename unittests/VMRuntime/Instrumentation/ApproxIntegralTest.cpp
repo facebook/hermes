@@ -94,7 +94,7 @@ TEST(ApproxIntegralTest, ErrorConvergence) {
 }
 
 /// When the estimated area is not a whole number, its value is rounded down.
-/// When the the area of the estimate's constituent trapezoids are not
+/// When the area of the estimate's constituent trapezoids are not
 /// necessarily whole, the contribution of integer rounding error to the overall
 /// error term should not grow with the number of samples, but should remain
 /// constant.

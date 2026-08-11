@@ -1160,7 +1160,7 @@ CallResult<PseudoHandle<>> JSObject::getNamedWithReceiver_RJS(
       if (selfHandle->getParent(runtime) == propObj &&
           !selfHandle->getClass(runtime)->isDictionary()) {
         // Property found on an object in the prototype chain.  The proto
-        // cache only works for the immediate proto of the the object,
+        // cache only works for the immediate proto of the object,
         // so don't cache for deeper prototypes.  We also don't cache
         // if the object HC is a dictionary; those may gain properties without
         // changing the HC value, which breaks the "negative caching" of
@@ -3602,7 +3602,7 @@ ExecutionStatus setProtoClasses(
 /// Verifies that the classes of obj's prototype chain still matches those
 /// previously prefixed to arr by setProtoClasses.
 /// Assumes that the first elements are the count of HiddenClasses and the count
-/// of the object's own properties, and element 2 is is the object's own
+/// of the object's own properties, and element 2 is the object's own
 /// HiddenClass, so it doesn't check those.
 ///
 /// \param obj The object whose prototype chain should be verified

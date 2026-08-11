@@ -94,7 +94,7 @@ export default function mutate(
         return node;
       }
 
-      // Prettier currently relies on comparing the the start positions to know if the import/export specifier should have a
+      // Prettier currently relies on comparing the start positions to know if the import/export specifier should have a
       // rename (eg `Name` vs `Name as Name`) when the name is exactly the same
       // So we need to ensure that the range is always the same to avoid the useless code printing
       if (node.type === 'ImportSpecifier') {

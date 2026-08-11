@@ -467,7 +467,7 @@ void HBCISel::generateJumpTable() {
     }
 
     BCFGen_->updateTableOffset(
-        // Offset is located two bytes from begining of instruction.
+        // Offset is located two bytes from beginning of instruction.
         entry.offset + 1 + 1,
         startOfTable * sizeof(uint32_t),
         entry.offset);
@@ -506,7 +506,7 @@ void HBCISel::generateStringSwitchTable() {
           basicBlockMap_[stringSwitchCase.target].first - entry.offset);
     }
     BCFGen_->updateTableOffset(
-        // Offset is located 6 bytes from begining of instruction.
+        // Offset is located 6 bytes from beginning of instruction.
         // (Opcode, value register, global index).
         entry.offset + 1 + 1 + 4,
         // baseOffset is the byte size of the jump table.

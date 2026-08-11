@@ -989,7 +989,7 @@ void SemanticResolver::visit(ClassPrivatePropertyNode *node) {
     // initializers are not allowed to reference `arguments`. If we didn't do
     // this then a class in the global scope would allow a field initializer to
     // reference `arguments`, since it would treat it as a normal identifier.
-    // This will insert the `arguments` identifer into the binding table scope
+    // This will insert the `arguments` identifier into the binding table scope
     // which is created by the class declaration / expression node.
     declareArguments();
     visitESTreeNode(*this, node->_value, node);

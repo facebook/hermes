@@ -617,7 +617,7 @@ PseudoHandle<StringPrimitive> BufferedStringPrimitive<T>::create(
 }
 
 #ifndef NDEBUG
-/// Assert the the combined length of the two strings is valid.
+/// Assert the combined length of the two strings is valid.
 static void assertValidLength(StringPrimitive *a, StringPrimitive *b) {
   SafeUInt32 len(a->getStringLength());
   len.add(b->getStringLength());

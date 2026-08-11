@@ -46,7 +46,7 @@ enum class TimeType : int8_t {
 ///    If one interval is not found, let it point to an empty interval in the
 ///    cache array (if no empty interval in it, reset the least recently used
 ///    one to empty and use it). Assign before to candidate_.
-/// 4. Check if the the before interval is empty, if yes, compute the DST of t,
+/// 4. Check if the before interval is empty, if yes, compute the DST of t,
 ///    and set its interval to [t, t]. Otherwise, go to step 5.
 /// 5. Check if t is included in the new non-empty before interval, if yes,
 ///    return its DST. Otherwise, go to step 6.

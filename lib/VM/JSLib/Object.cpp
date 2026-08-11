@@ -1190,7 +1190,7 @@ CallResult<HermesValue> objectAssign(void *, Runtime &runtime) {
       // 5.c.iii.1. Let propValue be Get(from, nextKey).
 
       // getComputed_RJS would work here in all cases.  But, just
-      // changing it to make proxy work is is a surprisingly large
+      // changing it to make proxy work is a surprisingly large
       // regression if used always, even with no Proxy objects.  So we
       // check if we can use getComputedPropertyValue_RJS and do so.
       CallResult<PseudoHandle<>> propRes = fromHandle->isProxyObject()

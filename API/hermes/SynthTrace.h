@@ -372,7 +372,7 @@ class SynthTrace {
   /// If we're tracing to a file, pointer to a stream onto
   /// traceFilename_.  Null otherwise.
   std::unique_ptr<llvh::raw_ostream> traceStream_;
-  /// If we're tracing to a file, pointer to a JSONEmitter writting
+  /// If we're tracing to a file, pointer to a JSONEmitter writing
   /// into *traceStream_.  Null otherwise.
   std::unique_ptr<::hermes::JSONEmitter> json_;
   /// The records accumulated in the trace.  Only used when not tracing
