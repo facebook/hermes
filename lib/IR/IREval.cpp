@@ -540,6 +540,15 @@ Literal *hermes::evalBinaryOperator(
 
       if ((leftNull && rightLiteralNum) || (rightNull && leftLiteralNum) ||
           (leftNull && rightNull)) {
+        // `null` coerces to +0. Multiplying 0 by a non-finite value is NaN,
+        // not 0: 0 * (+-Infinity) == NaN. (NaN operands are already handled
+        // above.) Only fold to a signed zero when the numeric operand is
+        // finite.
+        LiteralNumber *numOperand =
+            leftLiteralNum ? leftLiteralNum : rightLiteralNum;
+        if (numOperand && std::isinf(numOperand->getValue())) {
+          return builder.getLiteralNaN();
+        }
         if ((leftLiteralNum && std::signbit(leftLiteralNum->getValue())) ||
             (rightLiteralNum && std::signbit(rightLiteralNum->getValue()))) {
           return builder.getLiteralNegativeZero();
