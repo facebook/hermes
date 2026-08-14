@@ -73,7 +73,13 @@ void SerialExecutor::add(std::function<void()> task) {
     threadState_ = ThreadState::Initialized;
   }
 
-  tasks_.push_back(task);
+  tasks_.push_back(std::move(task));
+  // Some C++ std implementations of move for std::function does not empty the
+  // source task if it's a small lambda (inlined storage). So we explicitly
+  // reset it to nullptr. This is an edge case for finalizer executor: the
+  // source task may hold a shared_ptr alive and hence not destructed in the
+  // background thread.
+  task = nullptr;
   wakeUpSig_.notify_one();
 }
 
