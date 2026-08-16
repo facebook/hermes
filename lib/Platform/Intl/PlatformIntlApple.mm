@@ -7,8 +7,10 @@
 
 #include "hermes/Platform/Intl/BCP47Parser.h"
 #include "hermes/Platform/Intl/PlatformIntl.h"
+#include "SupportedValues.h"
 
 #import <Foundation/Foundation.h>
+#include <algorithm>
 #include <shared_mutex>
 #include <thread>
 #include <unordered_set>
@@ -908,6 +910,40 @@ vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
   // 1. Let ll be ? CanonicalizeLocaleList(locales).
   // 2. Return CreateArrayFromList(ll).
   return canonicalizeLocaleList(runtime, locales);
+}
+
+namespace {
+
+std::vector<std::u16string> availableTimeZonesApple() {
+  std::vector<std::u16string> result;
+  for (NSString *name in NSTimeZone.knownTimeZoneNames)
+    result.push_back(nsStringToU16String(name));
+  finalizeSupportedTimeZones(result);
+  return result;
+}
+
+std::vector<std::u16string> availableCurrenciesApple() {
+  std::vector<std::u16string> result;
+  for (NSString *code in [NSLocale ISOCurrencyCodes])
+    result.push_back(nsStringToU16String(code));
+  sortAndUnique(result);
+  return result;
+}
+
+} // namespace
+
+// https://tc39.es/ecma402/#sec-intl.supportedvaluesof
+vm::CallResult<std::vector<std::u16string>> supportedValuesOf(
+    vm::Runtime &runtime,
+    const std::u16string &key) {
+  if (auto common = trySupportedValuesOfCommon(key))
+    return std::move(*common);
+  if (key == u"timeZone")
+    return availableTimeZonesApple();
+  if (key == u"currency")
+    return availableCurrenciesApple();
+  return runtime.raiseRangeError(
+      vm::TwineChar16("Invalid key: ") + vm::TwineChar16(key.c_str()));
 }
 
 /// https://402.ecma-international.org/8.0/#sup-string.prototype.tolocalelowercase

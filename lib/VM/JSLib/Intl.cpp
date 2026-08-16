@@ -1741,6 +1741,26 @@ vm::CallResult<vm::HermesValue> intlGetCanonicalLocales(
   return vm::localesToJS(runtime, std::move(cr.getValue()));
 }
 
+// https://tc39.es/ecma402/#sec-intl.supportedvaluesof
+vm::CallResult<vm::HermesValue> intlSupportedValuesOf(
+    void *,
+    vm::Runtime &runtime) {
+  vm::NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  // 1. Set key to ? ToString(key).
+  vm::CallResult<std::u16string> keyRes =
+      vm::stringFromJS(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(keyRes == vm::ExecutionStatus::EXCEPTION)) {
+    return vm::ExecutionStatus::EXCEPTION;
+  }
+
+  auto cr = platform_intl::supportedValuesOf(runtime, *keyRes);
+  if (cr == vm::ExecutionStatus::EXCEPTION) {
+    return vm::ExecutionStatus::EXCEPTION;
+  }
+  // 16. Return CreateArrayFromList(list).
+  return vm::localesToJS(runtime, std::move(cr.getValue()));
+}
+
 } // namespace
 
 vm::HermesValue createIntlObject(vm::Runtime &runtime) {
@@ -1756,6 +1776,14 @@ vm::HermesValue createIntlObject(vm::Runtime &runtime) {
       vm::Predefined::getSymbolID(vm::Predefined::getCanonicalLocales),
       nullptr,
       intlGetCanonicalLocales,
+      1);
+
+  defineMethod(
+      runtime,
+      lv.intl,
+      vm::Predefined::getSymbolID(vm::Predefined::supportedValuesOf),
+      nullptr,
+      intlSupportedValuesOf,
       1);
 
   {

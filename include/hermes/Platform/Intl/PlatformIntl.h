@@ -84,6 +84,10 @@ using Part = std::unordered_map<std::u16string, std::u16string>;
 vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales);
+/// https://tc39.es/ecma402/#sec-intl.supportedvaluesof
+vm::CallResult<std::vector<std::u16string>> supportedValuesOf(
+    vm::Runtime &runtime,
+    const std::u16string &key);
 vm::CallResult<std::u16string> toLocaleLowerCase(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,

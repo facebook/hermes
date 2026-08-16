@@ -6,6 +6,7 @@
  */
 
 #include "hermes/Platform/Intl/PlatformIntl.h"
+#include "SupportedValues.h"
 
 // Android ICU uses different package names than ICU4J, and claims
 // other differences.  So for now, consider this impl specific to
@@ -219,6 +220,22 @@ class JIntl : public jni::JavaClass<JIntl> {
     return method(javaClassStatic(), locales);
   }
 
+  static jni::local_ref<JLocalesList> availableTimeZones() {
+    static const auto method =
+        javaClassStatic()
+            ->getStaticMethod<jni::local_ref<JLocalesList>()>(
+                "availableTimeZones");
+    return method(javaClassStatic());
+  }
+
+  static jni::local_ref<JLocalesList> availableCurrencies() {
+    static const auto method =
+        javaClassStatic()
+            ->getStaticMethod<jni::local_ref<JLocalesList>()>(
+                "availableCurrencies");
+    return method(javaClassStatic());
+  }
+
   static jni::local_ref<jstring> toLocaleLowerCase(
       jni::alias_ref<JLocalesList> locales,
       jni::alias_ref<jstring> str) {
@@ -253,6 +270,26 @@ vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
   } catch (const std::exception &ex) {
     return runtime.raiseRangeError(ex.what());
   }
+}
+
+// https://tc39.es/ecma402/#sec-intl.supportedvaluesof
+vm::CallResult<std::vector<std::u16string>> supportedValuesOf(
+    vm::Runtime &runtime,
+    const std::u16string &key) {
+  if (auto common = trySupportedValuesOfCommon(key))
+    return std::move(*common);
+  try {
+    if (key == u"timeZone") {
+      return localesFromJava(runtime, JIntl::availableTimeZones());
+    }
+    if (key == u"currency") {
+      return localesFromJava(runtime, JIntl::availableCurrencies());
+    }
+  } catch (const std::exception &ex) {
+    return runtime.raiseRangeError(ex.what());
+  }
+  return runtime.raiseRangeError(
+      vm::TwineChar16("Invalid key: ") + vm::TwineChar16(key.c_str()));
 }
 
 vm::CallResult<std::u16string> toLocaleLowerCase(
