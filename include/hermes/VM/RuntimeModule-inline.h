@@ -48,6 +48,17 @@ HermesValue RuntimeModule::getModuleExport(uint32_t modIndex) const {
   }
 }
 
+HermesValue RuntimeModule::getModuleImportedDefault(uint32_t modIndex) const {
+  // Mirrors getModuleExport, over the importDefault memoization cache.
+  if (LLVM_LIKELY(
+          moduleImportedDefaults_ &&
+          modIndex < moduleImportedDefaults_->size())) {
+    return moduleImportedDefaults_->at(modIndex);
+  } else {
+    return HermesValue::encodeEmptyValue();
+  }
+}
+
 } // namespace vm
 } // namespace hermes
 

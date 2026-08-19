@@ -350,6 +350,7 @@ void RuntimeModule::markRoots(RootAcceptor &acceptor, bool markLongLived) {
   }
 
   acceptor.acceptPtr(moduleExports_);
+  acceptor.acceptPtr(moduleImportedDefaults_);
 }
 
 void RuntimeModule::markWeakRoots(
@@ -414,6 +415,13 @@ void RuntimeModule::setModuleExport(
     uint32_t modIndex,
     Handle<> modExport) {
   module_export_cache::set(runtime, moduleExports_, modIndex, modExport);
+}
+
+void RuntimeModule::setModuleImportedDefault(
+    Runtime &runtime,
+    uint32_t modIndex,
+    Handle<> value) {
+  module_export_cache::set(runtime, moduleImportedDefaults_, modIndex, value);
 }
 
 void RuntimeModule::initializeStringSwitchImmTable(

@@ -608,6 +608,15 @@ DEFINE_RET_TARGET(CallWithNewTargetLong)
 DEFINE_OPCODE_3(CallRequire, Reg8, Reg8, UInt32)
 DEFINE_RET_TARGET(CallRequire)
 
+/// Metro importDefault of a module by (literal) index: returns the ESM/CJS
+/// default-interop value, served from a per-RuntimeModule native cache. Like
+/// CallRequire but for the importDefault helper.
+/// Arg1 is the destination of the return value.
+/// Arg2 is the importDefault closure to invoke on a cache miss.
+/// Arg3 is the module index argument, as an immediate.
+DEFINE_OPCODE_3(CallRequireImportDefault, Reg8, Reg8, UInt32)
+DEFINE_RET_TARGET(CallRequireImportDefault)
+
 // Enforce the order.
 ASSERT_MONOTONE_INCREASING(
     Call,

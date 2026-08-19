@@ -50,4 +50,9 @@ ATTRIBUTE(CallInst, isNativeJSFunction, "njsf")
 /// function, which has known semantics we can assume in optimization.
 ATTRIBUTE(CallInst, isMetroRequire, "metro-require")
 
+/// Indicates that the call is known to be a call to the Metro importDefault
+/// helper (ESM/CJS default-import interop over a module id), which has known
+/// semantics we can assume in optimization / lower to a native cached read.
+ATTRIBUTE(CallInst, isMetroImportDefault, "metro-import-default")
+
 #undef ATTRIBUTE

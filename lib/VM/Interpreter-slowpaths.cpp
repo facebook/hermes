@@ -1415,6 +1415,35 @@ ExecutionStatus doCallRequireSlowPath_RJS(
   return ExecutionStatus::RETURNED;
 }
 
+ExecutionStatus doCallRequireImportDefaultSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip,
+    RuntimeModule *runtimeModule) {
+  uint32_t modIndex = ip->iCallRequireImportDefault.op3;
+
+  // The value should be a Callable (the importDefault helper), or else we
+  // raise.
+  const auto importDefaultFunc = Handle<>(&O2REG(CallRequireImportDefault));
+  auto importDefaultCallable = Handle<Callable>::dyn_vmcast(importDefaultFunc);
+  if (LLVM_UNLIKELY(!importDefaultCallable)) {
+    return runtime.raiseTypeErrorForValue(
+        importDefaultFunc, " is not a function");
+  }
+
+  CallResult<PseudoHandle<>> value = Callable::executeCall1(
+      importDefaultCallable,
+      runtime,
+      HandleRootOwner::getUndefinedValue(),
+      HermesValue::encodeTrustedNumberValue(modIndex));
+  if (LLVM_UNLIKELY(value == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+  O1REG(CallRequireImportDefault) = value->get();
+  runtimeModule->setModuleImportedDefault(
+      runtime, modIndex, Handle<>(&O1REG(CallRequireImportDefault)));
+  return ExecutionStatus::RETURNED;
+}
+
 ExecutionStatus doGetByIdSlowPath_RJS(
     Runtime &runtime,
     PinnedHermesValue *frameRegs,

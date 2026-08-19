@@ -1815,6 +1815,17 @@ void HBCISel::generateCallInst(CallInst *Inst, BasicBlock *next) {
     return;
   }
 
+  // Handle Metro importDefault calls specially (native cached default read).
+  if (Inst->getAttributes(Inst->getModule()).isMetroImportDefault) {
+    auto *litNum = llvh::cast<LiteralNumber>(Inst->getArgument(1));
+    assert(
+        litNum->isUInt32Representible() &&
+        "Or should not have been optimized.");
+    BCFGen_->emitCallRequireImportDefault(
+        encodeValue(Inst), encodeValue(Inst->getCallee()), litNum->asUInt32());
+    return;
+  }
+
   auto output = encodeValue(Inst);
   auto function = encodeValue(Inst->getCallee());
   bool newTargetIsUndefined = llvh::isa<LiteralUndefined>(Inst->getNewTarget());

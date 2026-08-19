@@ -86,8 +86,14 @@ class MetroRequireImpl {
   bool run();
 
  private:
-  void resolveMetroModule(Function *moduleFunction);
-  void resolveRequireCall(Function *moduleFunction, CallInst *call);
+  void resolveMetroModule(
+      Function *moduleFunction,
+      unsigned paramIndex,
+      bool isImportDefault);
+  void resolveRequireCall(
+      Function *moduleFunction,
+      CallInst *call,
+      bool isImportDefault);
 
   /// Attempt to resolve the specified require() target. On failure report a
   /// warning at the specified location and return nullptr.
@@ -112,13 +118,32 @@ bool MetroRequireImpl::run() {
 }
 
 static constexpr unsigned kRequireIndex = 2;
+static constexpr unsigned kImportDefaultIndex = 3;
 
-void MetroRequireImpl::resolveMetroModule(Function *moduleFactoryFunction) {
+bool MetroRequireImpl::run() {
+  for (const auto &jsModuleFactoryFunc : M_->jsModuleFactoryFunctions()) {
+    // The `require` param (index 2) and the `importDefault` param (index 3) are
+    // both tracked; calls to them with a literal module id are marked so
+    // codegen can lower them to the native cached read (CallRequire /
+    // CallRequireImportDefault).
+    resolveMetroModule(
+        jsModuleFactoryFunc, kRequireIndex, /*isImportDefault*/ false);
+    resolveMetroModule(
+        jsModuleFactoryFunc, kImportDefaultIndex, /*isImportDefault*/ true);
+  }
+
+  return resolvedRequireCalls_;
+}
+
+void MetroRequireImpl::resolveMetroModule(
+    Function *moduleFactoryFunction,
+    unsigned paramIndex,
+    bool isImportDefault) {
   // Module factory functions must have enough arguments (including 'this')
-  // to make kRequireIndex a valid argument index.
-  assert(
-      moduleFactoryFunction->getJSDynamicParams().size() > kRequireIndex &&
-      "Metro module functions missing parameters");
+  // to make paramIndex a valid argument index.
+  if (moduleFactoryFunction->getJSDynamicParams().size() <= paramIndex) {
+    return;
+  }
 
   // A phi is the 'require' function iff all it's input values are.
   // But we will discover this only over time, as the different arguments
@@ -180,10 +205,10 @@ void MetroRequireImpl::resolveMetroModule(Function *moduleFactoryFunction) {
     }
   };
 
-  // Add all usages of the "require" parameter to the worklist, which then may
+  // Add all usages of the tracked parameter to the worklist, which then may
   // add more usages and so on.
   for (auto *I :
-       moduleFactoryFunction->getJSDynamicParam(kRequireIndex)->getUsers()) {
+       moduleFactoryFunction->getJSDynamicParam(paramIndex)->getUsers()) {
     assert(
         llvh::isa<LoadParamInst>(I) &&
         "Use of JSDynamicParam must be LoadParamInst");
@@ -211,7 +236,8 @@ void MetroRequireImpl::resolveMetroModule(Function *moduleFactoryFunction) {
       }
 
       if (call->getCallee() == U.V) {
-        resolveRequireCall(moduleFactoryFunction, llvh::cast<CallInst>(call));
+        resolveRequireCall(
+            moduleFactoryFunction, llvh::cast<CallInst>(call), isImportDefault);
       }
     } else if (auto *SS = llvh::dyn_cast<StoreStackInst>(U.I)) {
       // Storing "require" into a stack location.  Record that this location
@@ -299,7 +325,8 @@ void MetroRequireImpl::resolveMetroModule(Function *moduleFactoryFunction) {
 
 void MetroRequireImpl::resolveRequireCall(
     Function *moduleFactoryFunction,
-    CallInst *call) {
+    CallInst *call,
+    bool isImportDefault) {
   ++NumRequireCalls;
   constexpr unsigned kRequireArgs = 2;
   if (call->getNumArguments() < kRequireArgs) {
@@ -357,7 +384,12 @@ void MetroRequireImpl::resolveRequireCall(
     return;
   }
 
-  call->getAttributesRef(moduleFactoryFunction->getParent()).isMetroRequire = 1;
+  auto &attrs = call->getAttributesRef(moduleFactoryFunction->getParent());
+  if (isImportDefault) {
+    attrs.isMetroImportDefault = 1;
+  } else {
+    attrs.isMetroRequire = 1;
+  }
   resolvedRequireCalls_ = true;
 
   ++NumRequireCallsResolved;

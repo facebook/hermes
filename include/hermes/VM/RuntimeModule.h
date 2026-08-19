@@ -176,6 +176,10 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   /// the module has not yet been initialized.
   ArrayStorageBase<HermesValue> *moduleExports_{nullptr};
 
+  /// Indexed by module id: the memoized importDefault (ESM/CJS default-interop)
+  /// value of each module.  isEmpty means not yet computed.
+  ArrayStorageBase<HermesValue> *moduleImportedDefaults_{nullptr};
+
   /// Registers the created RuntimeModule with \p domain, resulting in
   /// \p domain owning it. The RuntimeModule will be freed when the
   /// domain is collected..
@@ -462,6 +466,15 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   /// of the cache, and attempts to reallocate it fail.  If that occurs,
   /// the array size will remain unchanged.
   void setModuleExport(Runtime &runtime, uint32_t modIndex, Handle<> modExport);
+
+  /// Returns the memoized importDefault value for module \p modIndex, or empty
+  /// if not yet computed.
+  inline HermesValue getModuleImportedDefault(uint32_t modIndex) const;
+
+  /// Attempts to memoize the importDefault value for module \p modIndex. Same
+  /// failure semantics as setModuleExport.
+  void
+  setModuleImportedDefault(Runtime &runtime, uint32_t modIndex, Handle<> value);
 
   /// The \p cases pointer points the the start of the string switch
   /// table for a StringSwitchImm instruction; \p size is the size of that

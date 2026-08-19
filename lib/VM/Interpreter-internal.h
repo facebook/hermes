@@ -164,6 +164,12 @@ ExecutionStatus doCallRequireSlowPath_RJS(
     const Inst *ip,
     RuntimeModule *runtimeModule);
 
+ExecutionStatus doCallRequireImportDefaultSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip,
+    RuntimeModule *runtimeModule);
+
 ExecutionStatus doGetByIdSlowPath_RJS(
     Runtime &runtime,
     PinnedHermesValue *frameRegs,

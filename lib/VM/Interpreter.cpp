@@ -1362,6 +1362,26 @@ tailCall:
         DISPATCH;
       }
 
+      CASE(CallRequireImportDefault) {
+        uint32_t modIndex = ip->iCallRequireImportDefault.op3;
+        RuntimeModule *runtimeModule = curCodeBlock->getRuntimeModule();
+        HermesValue cached = runtimeModule->getModuleImportedDefault(modIndex);
+        if (LLVM_LIKELY(!cached.isEmpty())) {
+          // Cache hit: return the memoized importDefault value.
+          O1REG(CallRequireImportDefault) = cached;
+        } else {
+          CAPTURE_IP_ASSIGN(
+              ExecutionStatus res,
+              doCallRequireImportDefaultSlowPath_RJS(
+                  runtime, frameRegs, ip, runtimeModule));
+          if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+            goto exception;
+          gcScope.flushToSmallCount(KEEP_HANDLES);
+        }
+        ip = NEXTINST(CallRequireImportDefault);
+        DISPATCH;
+      }
+
       CASE(GetBuiltinClosure) {
         uint8_t methodIndex = ip->iCallBuiltin.op2;
         Callable *closure = runtime.getBuiltinCallable(methodIndex);
