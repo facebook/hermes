@@ -1475,6 +1475,12 @@ CallResult<HermesValue> getSubstitution(
   // Don't use a StringView iterator, as any calls to createStringView can
   // allocate and move the underlying char storage.
   for (size_t i = 0, e = replacementView.length(); i < e;) {
+    // A single $ substitution can expand to the whole input string, so result
+    // can grow past MAX_STRING_LENGTH before the bounds check in
+    // StringPrimitive::create() below runs. Bail out early with a RangeError
+    // instead, as overflowing the intermediate SmallVector would crash.
+    if (LLVM_UNLIKELY(result.size() > StringPrimitive::MAX_STRING_LENGTH))
+      return runtime.raiseRangeError("String length exceeds limit");
     // Go character by character and account for $ replacement strings.
     char16_t c0 = replacementView[i];
     if (c0 != u'$' || i + 1 == e) {
