@@ -1156,11 +1156,17 @@ class FlowChecker::ExprVisitor {
     // Name of the key, mapping to index in the fields vector.
     llvh::SmallDenseMap<UniqueString *, size_t> names;
 
-    // If any spread source has an indexer, the result is an indexer object
-    // (indexers and named fields are mutually exclusive). These accumulate the
-    // common key type and all the value types contributed by spread indexers.
+    // A spread indexer or any computed property forces an indexer object.
+    // indexerKeyType holds the spread key type; indexerValueTypes accumulates
+    // value types from spreads, computed properties, and mixed-in named fields.
     Type *indexerKeyType = nullptr;
     llvh::SmallSetVector<Type *, 4> indexerValueTypes{};
+
+    // Computed properties (e.g. `{[k]: v}`) also force an indexer object.
+    bool sawComputed = false;
+    // The indexer key type is the union of all computed key types, plus string
+    // when named fields are present.
+    llvh::SmallSetVector<Type *, 4> computedKeyTypes{};
 
     auto *constraintObjectType = llvh::dyn_cast_or_null<ExactObjectType>(
         constraint ? constraint->info : nullptr);
@@ -1227,9 +1233,8 @@ class FlowChecker::ExprVisitor {
 
       auto *prop = llvh::dyn_cast<ESTree::PropertyNode>(&node);
       // prop->_kind being "init" makes sure this isn't a getter/setter.
-      if (!prop || prop->_computed || prop->_kind != outer_.kw_.identInit ||
-          prop->_method) {
-        // Exact object type doesn't support this, so bail.
+      if (!prop || prop->_kind != outer_.kw_.identInit || prop->_method) {
+        // Exact object type doesn't support getters/setters/methods, so bail.
         outer_.sm_.warning(
             node.getSourceRange(),
             "ft: unsupported property for typed object, assuming 'any'");
@@ -1237,7 +1242,37 @@ class FlowChecker::ExprVisitor {
         break;
       }
 
-      visitESTreeNodeNoReplace(*this, prop->_key, prop, nullptr);
+      if (prop->_computed) {
+        visitESTreeNode(*this, prop->_key, prop, nullptr);
+        Type *constraintValueType = nullptr;
+        if (constraintObjectType) {
+          // If the result is constrained to an indexer object, the value is
+          // checked against the indexer's value type.
+          if (auto optIndexer = constraintObjectType->getIndexer())
+            constraintValueType = optIndexer->valueType;
+        }
+        visitESTreeNode(*this, prop->_value, prop, constraintValueType);
+        Type *valueType = outer_.getNodeTypeOrAny(prop->_value);
+        if (constraintValueType) {
+          auto cf = outer_.canAFlowIntoB(valueType, constraintValueType);
+          if (!cf.canFlow) {
+            outer_.sm_.error(
+                prop->_value->getSourceRange(),
+                "ft: incompatible computed property value type");
+          }
+          if (cf.needCheckedCast) {
+            prop->_value = outer_.implicitCheckedCast(
+                prop->_value, constraintValueType, cf);
+          }
+          valueType = constraintValueType;
+        }
+        computedKeyTypes.insert(outer_.getNodeTypeOrAny(prop->_key));
+        indexerValueTypes.insert(valueType);
+        sawComputed = true;
+        continue;
+      }
+
+      visitESTreeNode(*this, prop->_key, prop, nullptr);
 
       UniqueString *name = outer_.propertyKeyAsIdentifier(prop->_key);
       if (!name || name == outer_.kw_.identUnderscoreProto) {
@@ -1262,7 +1297,7 @@ class FlowChecker::ExprVisitor {
       }
 
       // Use the value constraint to visit the value node.
-      visitESTreeNodeNoReplace(*this, prop->_value, prop, constraintValueType);
+      visitESTreeNode(*this, prop->_value, prop, constraintValueType);
 
       Type *valueType = outer_.getNodeTypeOrAny(prop->_value);
 
@@ -1298,10 +1333,30 @@ class FlowChecker::ExprVisitor {
       return;
     }
 
-    // A spread source had an indexer: the result is an indexer object whose
-    // value type is the union of every named field type and every spread
-    // indexer value type.
+    // Mixing computed (indexer) and named properties is not supported. Warn,
+    // but still produce the indexer type below. Named fields may come from
+    // explicit properties or spread sources, so check `fields` directly.
+    if (sawComputed && !fields.empty()) {
+      outer_.sm_.warning(
+          node->getSourceRange(),
+          "ft: mixing computed and named properties in a typed object "
+          "will result in an indexer");
+    }
+
+    // Produce an indexer object if any spread had an indexer or any computed
+    // property was present. The key and value types are the unions of all
+    // contributing key and value types.
     if (!indexerValueTypes.empty()) {
+      // Fold the computed key types and string into the indexer key type.
+      if (sawComputed) {
+        if (!fields.empty())
+          computedKeyTypes.insert(outer_.flowContext_.getString());
+        if (indexerKeyType)
+          computedKeyTypes.insert(indexerKeyType);
+        indexerKeyType =
+            outer_.flowContext_.createType(outer_.flowContext_.maybeCreateUnion(
+                computedKeyTypes.getArrayRef()));
+      }
       // Named properties use string keys, so they require a string-keyed
       // indexer (field names cannot index a number-keyed indexer).
       if (!fields.empty() &&

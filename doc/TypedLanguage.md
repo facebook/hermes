@@ -83,11 +83,20 @@ Reads yield `T` but are checked by a checked cast at runtime (so a read of a mis
 
 Non-computed access (`dict.x`) routes through the indexer using a `string` key, so it requires a `string`-keyed indexer.
 
-Spreading an object that has an indexer produces an object with an indexer of the same key type. If the result also has named properties (literal properties, or fields from another spread source), they fold into the indexer and its value type becomes the union of all the value types:
+Spreading an object that has an indexer produces an object with an indexer of the same key type. If the result also has named properties, they fold into the indexer and its value type becomes the union of all the value types:
 ```
 var d: {[string]: number} = {};
 var a = {...d};            // {[string]: number}
 var b = {...d, x: "s"};    // {[string]: number | string}
+```
+
+A computed property (`{[k]: v}`) in an object literal also produces an indexer object: the key type is the union of all computed key types, and the value type is the union of all value types. Mixing computed and named properties results in an indexer.
+
+```
+var k: string;
+var x = {[k]: 1};          // {[string]: number}
+var n: number;
+var y = {[n]: 1};          // {[number]: number}
 ```
 
 ### Functions
