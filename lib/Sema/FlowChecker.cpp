@@ -2801,7 +2801,21 @@ Type *FlowChecker::parseFunctionTypeAnnotation(
 
 FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     TypeInfo *a,
-    TypeInfo *b) {
+    TypeInfo *b,
+    CanFlowState &state,
+    ThisFlowDirection thisFlow) {
+  auto &active = thisFlow == ThisFlowDirection::Default
+      ? state.defaultFlow
+      : state.methodOverrideFlow;
+  CanFlowKey key{a, b};
+
+  // Revisiting an active relation provides no new information. Assume it can
+  // flow and let the original check validate the rest of the type structure.
+  if (!active.insert(key))
+    return {.canFlow = true};
+
+  auto popOnExit = llvh::make_scope_exit([&active]() { active.pop_back(); });
+
   if (a == b)
     return {.canFlow = true};
 
@@ -2820,7 +2834,7 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
   if (UnionType *unionA = llvh::dyn_cast<UnionType>(a)) {
     bool needCheckedCast = false;
     for (auto *aType : unionA->getTypes()) {
-      CanFlowResult tmp = canAFlowIntoB(aType->info, b);
+      CanFlowResult tmp = canAFlowIntoB(aType->info, b, state);
       if (!tmp.canFlow)
         return tmp;
       needCheckedCast |= tmp.needCheckedCast;
@@ -2838,7 +2852,7 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     // If we find an arm that does not need a checked cast, we're done.
     bool foundWithCast = false;
     for (auto *bType : unionB->getTypes()) {
-      CanFlowResult tmp = canAFlowIntoB(a, bType->info);
+      CanFlowResult tmp = canAFlowIntoB(a, bType->info, state);
       if (tmp.canFlow) {
         if (!tmp.needCheckedCast)
           return {.canFlow = true};
@@ -2856,7 +2870,7 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     auto *tupleB = llvh::dyn_cast<TupleType>(b);
     if (!tupleB)
       return {};
-    return canAFlowIntoB(tupleA, tupleB);
+    return canAFlowIntoB(tupleA, tupleB, state);
   }
 
   // Objects are invariant, so if `a` is an object, `b` must be an object with
@@ -2865,14 +2879,14 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     auto *objectB = llvh::dyn_cast<ExactObjectType>(b);
     if (!objectB)
       return {};
-    return canAFlowIntoB(objectA, objectB);
+    return canAFlowIntoB(objectA, objectB, state);
   }
 
   if (ClassType *classA = llvh::dyn_cast<ClassType>(a)) {
     ClassType *classB = llvh::dyn_cast<ClassType>(b);
     if (!classB)
       return {};
-    return canAFlowIntoB(classA, classB);
+    return canAFlowIntoB(classA, classB, state);
   }
 
   if (auto *consA = llvh::dyn_cast<ClassConstructorType>(a)) {
@@ -2882,22 +2896,22 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     // Delegate to the underlying ClassType comparison.
     return canAFlowIntoB(
         llvh::cast<ClassType>(consA->getClassType()->info),
-        llvh::cast<ClassType>(consB->getClassType()->info));
+        llvh::cast<ClassType>(consB->getClassType()->info),
+        state);
   }
 
   if (BaseFunctionType *funcA = llvh::dyn_cast<BaseFunctionType>(a)) {
     BaseFunctionType *funcB = llvh::dyn_cast<BaseFunctionType>(b);
     if (!funcB)
       return {};
-    return canAFlowIntoB(funcA, funcB);
+    return canAFlowIntoB(funcA, funcB, thisFlow, state);
   }
 
   return {};
 }
 
-FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
-    ClassType *a,
-    ClassType *b) {
+FlowChecker::CanFlowResult
+FlowChecker::canAFlowIntoB(ClassType *a, ClassType *b, CanFlowState &state) {
   // It can flow into any superclass.
   ClassType *cur = a;
   while (cur) {
@@ -2909,9 +2923,8 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
   return {};
 }
 
-FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
-    TupleType *a,
-    TupleType *b) {
+FlowChecker::CanFlowResult
+FlowChecker::canAFlowIntoB(TupleType *a, TupleType *b, CanFlowState &state) {
   auto aTypes = a->getTypes();
   auto bTypes = b->getTypes();
   if (aTypes.size() != bTypes.size()) {
@@ -2930,12 +2943,13 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
 
 FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     ExactObjectType *a,
-    ExactObjectType *b) {
+    ExactObjectType *b,
+    CanFlowState &state) {
   // Decide whether a source value of variance \p av and type \p aVal flows
   // into a destination value of variance \p bv and type \p bVal (used for both
   // named fields and indexers).
   auto valueFlows =
-      [this](
+      [this, &state](
           Type *aVal, FieldVariance av, Type *bVal, FieldVariance bv) -> bool {
     // Invariant source can flow into a destination of any variance.
     // A ReadOnly or WriteOnly source can only flow into the same variance.
@@ -2947,10 +2961,10 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
         return aVal->info->equals(bVal->info);
       case FieldVariance::ReadOnly:
         // Covariant: a's value must flow into b's value without a cast.
-        return canAFlowIntoB(aVal, bVal).canFlowWithoutCast();
+        return canAFlowIntoB(aVal, bVal, state).canFlowWithoutCast();
       case FieldVariance::WriteOnly:
         // Contravariant: b's value must flow into a's value without a cast.
-        return canAFlowIntoB(bVal, aVal).canFlowWithoutCast();
+        return canAFlowIntoB(bVal, aVal, state).canFlowWithoutCast();
     }
     llvm_unreachable("invalid FieldVariance");
   };
@@ -3009,7 +3023,8 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
 FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     BaseFunctionType *a,
     BaseFunctionType *b,
-    ThisFlowDirection thisFlow) {
+    ThisFlowDirection thisFlow,
+    CanFlowState &state) {
   // Function a can flow into b when:
   // * they're the same kind of function (async, generator, etc)
   // * all parameters of b can flow into parameters of a
@@ -3056,8 +3071,8 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
   if (aType->getThisParam() && bType->getThisParam()) {
     // Both functions have `this`, it must be checked.
     CanFlowResult flowRes = thisFlow == ThisFlowDirection::Default
-        ? canAFlowIntoB(bType->getThisParam(), aType->getThisParam())
-        : canAFlowIntoB(aType->getThisParam(), bType->getThisParam());
+        ? canAFlowIntoB(bType->getThisParam(), aType->getThisParam(), state)
+        : canAFlowIntoB(aType->getThisParam(), bType->getThisParam(), state);
     if (!flowRes.canFlow || flowRes.needCheckedCast)
       return {};
   }
@@ -3098,7 +3113,7 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
         }
         for (size_t i = aNonRest; i < bNonRest; ++i) {
           CanFlowResult flowRes =
-              canAFlowIntoB(bType->getParams()[i].type, aElem);
+              canAFlowIntoB(bType->getParams()[i].type, aElem, state);
           if (!flowRes.canFlow || flowRes.needCheckedCast)
             return {};
         }
@@ -3123,7 +3138,7 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
         }
         for (size_t i = bNonRest; i < aNonRest; ++i) {
           CanFlowResult flowRes =
-              canAFlowIntoB(bElem, aType->getParams()[i].type);
+              canAFlowIntoB(bElem, aType->getParams()[i].type, state);
           if (!flowRes.canFlow || flowRes.needCheckedCast)
             return {};
         }
@@ -3134,7 +3149,7 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     for (size_t i = 0; i < minParamCount; ++i) {
       Type *paramA = aType->getParams()[i].type;
       Type *paramB = bType->getParams()[i].type;
-      CanFlowResult flowRes = canAFlowIntoB(paramB, paramA);
+      CanFlowResult flowRes = canAFlowIntoB(paramB, paramA, state);
       if (!flowRes.canFlow || flowRes.needCheckedCast)
         return {};
     }
@@ -3150,7 +3165,7 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
       Type *bElem = restElemOrNull(bType);
       if (!aElem || !bElem)
         return {};
-      CanFlowResult flowRes = canAFlowIntoB(bElem, aElem);
+      CanFlowResult flowRes = canAFlowIntoB(bElem, aElem, state);
       if (!flowRes.canFlow || flowRes.needCheckedCast)
         return {};
     }
@@ -3158,7 +3173,7 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
 
   {
     CanFlowResult flowRes =
-        canAFlowIntoB(aType->getReturnType(), bType->getReturnType());
+        canAFlowIntoB(aType->getReturnType(), bType->getReturnType(), state);
     if (!flowRes.canFlow || flowRes.needCheckedCast)
       return {};
   }

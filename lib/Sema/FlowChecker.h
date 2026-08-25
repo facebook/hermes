@@ -647,17 +647,6 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
     }
   };
 
-  /// Return true if type \p a can "flow" into type \p b.
-  /// TODO: generate message explaining why not.
-  CanFlowResult canAFlowIntoB(Type *a, Type *b) {
-    assert(a->info && b->info && "types haven't been populated yet");
-    return canAFlowIntoB(a->info, b->info);
-  }
-  CanFlowResult canAFlowIntoB(TypeInfo *a, TypeInfo *b);
-  CanFlowResult canAFlowIntoB(ClassType *a, ClassType *b);
-  CanFlowResult canAFlowIntoB(TupleType *a, TupleType *b);
-  CanFlowResult canAFlowIntoB(ExactObjectType *a, ExactObjectType *b);
-
   /// How to handle 'this' parameters when checking if function types can flow.
   enum class ThisFlowDirection {
     /// Supertype this parameters flow into subtype this parameters.
@@ -666,11 +655,48 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
     MethodOverride,
   };
 
+  /// An ordered pair of (a, b).
+  using CanFlowKey = std::pair<TypeInfo *, TypeInfo *>;
+
+  /// State shared by all recursive checks in one flow query.
+  class CanFlowState {
+   public:
+    /// Ordinary flow relations currently being evaluated.
+    llvh::SetVector<CanFlowKey> defaultFlow{};
+    /// Method override flow relations currently being evaluated.
+    llvh::SetVector<CanFlowKey> methodOverrideFlow{};
+  };
+
+  /// Return true if type \p a can "flow" into type \p b.
+  /// TODO: generate message explaining why not.
+  CanFlowResult canAFlowIntoB(Type *a, Type *b) {
+    assert(a->info && b->info && "types haven't been populated yet");
+    return canAFlowIntoB(a->info, b->info);
+  }
+  CanFlowResult canAFlowIntoB(Type *a, Type *b, CanFlowState &state) {
+    assert(a->info && b->info && "types haven't been populated yet");
+    return canAFlowIntoB(a->info, b->info, state);
+  }
+  CanFlowResult canAFlowIntoB(TypeInfo *a, TypeInfo *b) {
+    CanFlowState state{};
+    return canAFlowIntoB(a, b, state);
+  }
+  CanFlowResult canAFlowIntoB(
+      TypeInfo *a,
+      TypeInfo *b,
+      CanFlowState &state,
+      ThisFlowDirection thisFlow = ThisFlowDirection::Default);
+  CanFlowResult canAFlowIntoB(ClassType *a, ClassType *b, CanFlowState &state);
+  CanFlowResult canAFlowIntoB(TupleType *a, TupleType *b, CanFlowState &state);
+  CanFlowResult
+  canAFlowIntoB(ExactObjectType *a, ExactObjectType *b, CanFlowState &state);
+
   /// \param thisFlow how to handle 'this' parameter.
   CanFlowResult canAFlowIntoB(
       BaseFunctionType *a,
       BaseFunctionType *b,
-      ThisFlowDirection thisFlow = ThisFlowDirection::Default);
+      ThisFlowDirection thisFlow,
+      CanFlowState &state);
 
   /// Different from regular function type flowing, because 'this' parameters
   /// must be handled specially in the method override scenario.
@@ -679,7 +705,9 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// would fail to typecheck.
   /// \return whether \p a can be a method override for \p b.
   bool canAOverrideB(BaseFunctionType *a, BaseFunctionType *b) {
-    return canAFlowIntoB(a, b, ThisFlowDirection::MethodOverride).canFlow;
+    CanFlowState state;
+    return canAFlowIntoB(a, b, state, ThisFlowDirection::MethodOverride)
+        .canFlow;
   }
 
   /// Try to narrow a union with a single non-optional arm to the non-optional

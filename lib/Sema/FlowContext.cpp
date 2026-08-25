@@ -689,7 +689,7 @@ bool TypedFunctionType::_equalsImpl(
     if (!params_[i].type->info->equals(other->params_[i].type->info, state))
       return false;
   }
-  if (!return_->info->equals(other->return_->info))
+  if (!return_->info->equals(other->return_->info, state))
     return false;
   return true;
 }
