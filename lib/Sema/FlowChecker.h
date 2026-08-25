@@ -37,12 +37,10 @@ struct TypeArrayDenseMapInfo
   static bool isEqual(
       llvh::ArrayRef<TypeInfo *> LHS,
       llvh::ArrayRef<TypeInfo *> RHS) {
-    if (LHS == RHS)
-      return true;
-    auto const EMPTY = getEmptyKey();
-    auto const TOMB = getTombstoneKey();
-    if (LHS == EMPTY || LHS == TOMB || RHS == EMPTY || RHS == TOMB)
-      return false;
+    if (RHS.data() == getEmptyKey().data())
+      return LHS.data() == getEmptyKey().data();
+    if (RHS.data() == getTombstoneKey().data())
+      return LHS.data() == getTombstoneKey().data();
     if (LHS.size() != RHS.size())
       return false;
     for (size_t i = 0, e = LHS.size(); i < e; ++i)
