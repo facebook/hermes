@@ -228,6 +228,13 @@ Tuples are never inferred without context — `[1,"x"]` alone is `Array<number|s
 
 When a generic call omits type arguments, each type parameter is attempted to be inferred. Arguments are processed in two passes: first those whose parameter type is a bare type variable, then those with complex types like `(T) => U` from left to right. Inference succeeds only if every placeholder is resolved.
 
+Type arguments may also be supplied partially, in which case only the unspecified trailing type parameters are inferred:
+
+```
+function makePair<T, U>(a: T, b: U): [T, U] { return [a, b]; }
+makePair<number>(1, 'a');  // T = number (explicit), U = string (inferred)
+```
+
 Matching is structural: same-kind containers (`Array`, `Tuple`, `ExactObject`, function types) recurse into their components, a union constraint tries each arm against a non-union concrete, etc.
 
 Limitations:

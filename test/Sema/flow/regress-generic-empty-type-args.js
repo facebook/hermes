@@ -29,7 +29,4 @@ new C().m<>(1);
 // CHECK:{{.*}}regress-generic-empty-type-args.js:19:11: error: type argument mismatch, expected 1, found 0
 // CHECK-NEXT:new BoxNew<>(1);
 // CHECK-NEXT:          ^~
-// CHECK-NEXT:{{.*}}regress-generic-empty-type-args.js:25:1: error: type argument mismatch, expected 1, found 0
-// CHECK-NEXT:new C().m<>(1);
-// CHECK-NEXT:^~~~~~~~~~~~~~
-// CHECK-NEXT:Emitted 2 errors. exiting.
+// CHECK-NEXT:Emitted 1 errors. exiting.

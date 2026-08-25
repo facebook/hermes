@@ -167,6 +167,10 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
     /// Null for non-method generics.
     flow::ClassType *containingClassType = nullptr;
 
+    /// The number of type parameters declared on the generic.
+    /// Cached to avoid re-computing it from the AST.
+    size_t numTypeParams;
+
     /// Map from the list of type arguments to the specialization.
     llvh::DenseMap<TypeArgsRef, Spec *, TypeArrayDenseMapInfo>
         specializations{};
@@ -180,7 +184,8 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
         const TypeBindingTableScopePtrTy &bindingTableScope)
         : originalNode(originalNode),
           parent(parent),
-          bindingTableScope(bindingTableScope) {
+          bindingTableScope(bindingTableScope),
+          numTypeParams(computeNumTypeParams(originalNode)) {
       // We need to insert into the parent.
       assert(
           (llvh::isa<ESTree::ProgramNode>(parent) ||
@@ -211,6 +216,32 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
           TypeArgsRef{outer.typeArgStorage_.back()}, specialization);
       assert(inserted && "double specialization not allowed");
       return it->first;
+    }
+
+   private:
+    /// \return the number of type parameters declared on \p originalNode, based
+    ///   on its node kind (generic function, class, method, or type alias).
+    static size_t computeNumTypeParams(ESTree::Node *originalNode) {
+      ESTree::Node *typeParams = nullptr;
+      if (auto *func = llvh::dyn_cast<ESTree::FunctionLikeNode>(originalNode)) {
+        typeParams = ESTree::getTypeParameters(func);
+      } else if (
+          auto *classDecl =
+              llvh::dyn_cast<ESTree::ClassDeclarationNode>(originalNode)) {
+        typeParams = classDecl->_typeParameters;
+      } else if (
+          auto *method =
+              llvh::dyn_cast<ESTree::MethodDefinitionNode>(originalNode)) {
+        typeParams = llvh::cast<ESTree::FunctionExpressionNode>(method->_value)
+                         ->_typeParameters;
+      } else if (
+          auto *alias = llvh::dyn_cast<ESTree::TypeAliasNode>(originalNode)) {
+        typeParams = alias->_typeParameters;
+      }
+      return typeParams
+          ? llvh::cast<ESTree::TypeParameterDeclarationNode>(typeParams)
+                ->_params.size()
+          : 0;
     }
   };
 
@@ -923,7 +954,8 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// Try to visit the arguments to the call expression and typecheck them.
   /// Infer a possible set of type arguments to use for the call
   /// using an eager type assignment mechanism based on the types of the
-  /// arguments.
+  /// arguments. Any type arguments explicitly provided on \p node (a partial
+  /// leading list) are used as-is; only the trailing ones are inferred.
   /// NOTE: the inferred type arguments may not be compatible with
   /// every argument, so they must be typechecked by the caller after creating a
   /// generic specialization.
@@ -1048,6 +1080,8 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
       ESTree::MethodDefinitionNode *method);
 
   /// Try to infer type arguments for a generic method call.
+  /// Any type arguments explicitly provided on \p node (a partial leading list)
+  /// are used as-is; only the trailing ones are inferred.
   /// \param node the call expression.
   /// \param callee the member expression for the method call.
   /// \param method the MethodDefinitionNode for the generic method.

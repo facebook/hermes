@@ -3918,9 +3918,20 @@ FlowChecker::inferTypeArgumentsForGenericFunctionCall(
   size_t numTypeParams = typeParams->_params.size();
   assert(numTypeParams > 0 && "expected at least one type parameter");
 
-  // Keep pointers to all the placeholder types.
+  // Seed the leading type arguments with any explicitly provided ones (parsed
+  // in the call-site scope), and fill the trailing ones with placeholders to be
+  // inferred from the call arguments.
   llvh::SmallVector<Type *, 2> typeArgs{};
-  for (size_t i = 0; i < numTypeParams; ++i) {
+  if (auto *typeArgsNode =
+          llvh::cast_or_null<ESTree::TypeParameterInstantiationNode>(
+              node->_typeArguments)) {
+    for (ESTree::Node &arg : typeArgsNode->_params)
+      typeArgs.push_back(parseTypeAnnotation(&arg));
+  }
+  assert(
+      typeArgs.size() < numTypeParams &&
+      "explicit type args must be partial when inferring");
+  while (typeArgs.size() < numTypeParams) {
     typeArgs.push_back(
         flowContext_.createType(flowContext_.getInferencePlaceholderInfo()));
   }
@@ -4201,9 +4212,20 @@ FlowChecker::inferTypeArgumentsForGenericMethodCall(
   size_t numTypeParams = typeParams->_params.size();
   assert(numTypeParams > 0 && "expected at least one type parameter");
 
-  // Keep pointers to all the placeholder types.
+  // Seed the leading type arguments with any explicitly provided ones (parsed
+  // in the call-site scope), and fill the trailing ones with placeholders to be
+  // inferred from the call arguments.
   llvh::SmallVector<Type *, 2> typeArgs{};
-  for (size_t i = 0; i < numTypeParams; ++i) {
+  if (auto *typeArgsNode =
+          llvh::cast_or_null<ESTree::TypeParameterInstantiationNode>(
+              node->_typeArguments)) {
+    for (ESTree::Node &arg : typeArgsNode->_params)
+      typeArgs.push_back(parseTypeAnnotation(&arg));
+  }
+  assert(
+      typeArgs.size() < numTypeParams &&
+      "explicit type args must be partial when inferring");
+  while (typeArgs.size() < numTypeParams) {
     typeArgs.push_back(
         flowContext_.createType(flowContext_.getInferencePlaceholderInfo()));
   }

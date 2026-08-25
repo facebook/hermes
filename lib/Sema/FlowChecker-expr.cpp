@@ -2365,11 +2365,20 @@ class FlowChecker::ExprVisitor {
             llvh::dyn_cast<ESTree::IdentifierNode>(node->_callee)) {
       sema::Decl *decl = outer_.getDecl(identCallee);
       if (decl->generic) {
-        if (node->_typeArguments) {
+        // The number of explicitly provided type arguments (0 if none).
+        size_t numProvided = node->_typeArguments
+            ? llvh::cast<ESTree::TypeParameterInstantiationNode>(
+                  node->_typeArguments)
+                  ->_params.size()
+            : 0;
+        if (node->_typeArguments &&
+            numProvided >= outer_.getGenericInfoMustExist(decl).numTypeParams) {
+          // All type arguments provided (or too many, which errors during
+          // specialization): specialize directly.
           outer_.resolveCallToGenericFunctionSpecialization(
               node, identCallee, decl);
         } else {
-          // Attempt to infer the type arguments.
+          // No or partial type arguments: infer the missing trailing ones.
           auto [visited, typeArgs] =
               outer_.inferTypeArgumentsForGenericFunctionCall(
                   node, identCallee, decl);
@@ -2378,7 +2387,7 @@ class FlowChecker::ExprVisitor {
           if (typeArgs.empty()) {
             outer_.sm_.error(
                 node->getStartLoc(),
-                "could not infer type arguments for generic function");
+                "ft: could not infer type arguments for generic function");
             return;
           }
           outer_.resolveCallToGenericFunctionSpecializationWithParsedTypes(
@@ -2441,8 +2450,32 @@ class FlowChecker::ExprVisitor {
           shouldVisitArguments = false;
           overloadResolved = true;
         } else if (llvh::isa<GenericType>(field->type->info)) {
-          outer_.resolveCallToGenericMethodSpecialization(
-              node, memCallee, field->method);
+          size_t numProvided =
+              llvh::cast<ESTree::TypeParameterInstantiationNode>(
+                  node->_typeArguments)
+                  ->_params.size();
+          if (numProvided >= outer_.getGenericMethodInfoMustExist(field->method)
+                                 .numTypeParams) {
+            // All type arguments provided (or too many, which errors during
+            // specialization): specialize directly.
+            outer_.resolveCallToGenericMethodSpecialization(
+                node, memCallee, field->method);
+          } else {
+            // Partial type arguments: infer the missing trailing ones.
+            auto [didVisitArgs, typeArgs] =
+                outer_.inferTypeArgumentsForGenericMethodCall(
+                    node, memCallee, field->method);
+            if (didVisitArgs)
+              shouldVisitArguments = false;
+            if (typeArgs.empty()) {
+              outer_.sm_.error(
+                  node->getStartLoc(),
+                  "ft: could not infer type arguments for generic method");
+              return;
+            }
+            outer_.resolveCallToGenericMethodSpecializationWithParsedTypes(
+                node, memCallee, typeArgs, field->method);
+          }
         } else {
           outer_.sm_.error(
               node->_typeArguments->getSourceRange(),
