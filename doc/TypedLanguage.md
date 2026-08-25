@@ -152,6 +152,14 @@ class Wrapper<T> { x: T }
 type NumberTuple<T> = [T, number];
 ```
 
+#### Bounds
+
+A type parameter may have a bound (`<T extends Bound>`). Each type argument must flow into the bound, otherwise it's an error. Bounds are checked for each specialization of a generic. A bound may reference an earlier type parameter. Example:
+
+```
+function g<T extends Base, U extends T>(x: T, y: U): void {}
+```
+
 ## Typechecking
 
 ### Compile-time Typechecking

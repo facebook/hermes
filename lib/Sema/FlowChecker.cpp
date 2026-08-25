@@ -2809,6 +2809,15 @@ Type *FlowChecker::parseFunctionTypeAnnotation(
   return result;
 }
 
+void FlowChecker::validateGenericBound(const GenericBoundCheck &check) {
+  if (!canAFlowIntoB(check.argument, check.bound).canFlowWithoutCast()) {
+    sm_.error(
+        check.errorRange,
+        llvh::Twine("ft: type argument for type parameter '") +
+            check.parameterName->str() + "' is incompatible with its bound");
+  }
+}
+
 FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     TypeInfo *a,
     TypeInfo *b,
@@ -3265,54 +3274,6 @@ ESTree::Node *FlowChecker::implicitCheckedCast(
   return cast;
 }
 
-bool FlowChecker::validateAndBindTypeParameters(
-    ESTree::TypeParameterDeclarationNode *params,
-    SMRange errorRange,
-    llvh::ArrayRef<Type *> typeArgTypes,
-    sema::LexicalScope *scope) {
-  size_t i = 0;
-  // Whether we had to stop early due to not enough generic type arguments.
-  bool tooFewTypeArgs = false;
-  for (ESTree::Node &tparam : params->_params) {
-    if (i >= typeArgTypes.size()) {
-      // Not enough type arguments provided, break and error.
-      tooFewTypeArgs = true;
-      break;
-    }
-    if (auto *paramName = llvh::dyn_cast<ESTree::TypeParameterNode>(&tparam)) {
-      if (paramName->_bound) {
-        sm_.warning(
-            paramName->_bound->getSourceRange(),
-            "type parameter bounds not yet supported");
-      }
-      if (paramName->_variance) {
-        sm_.warning(
-            paramName->_variance->getSourceRange(),
-            "type parameter variance not yet supported");
-      }
-      bindingTable_.try_emplace(
-          paramName->_name, TypeDecl{typeArgTypes[i], scope, &tparam});
-    } else {
-      sm_.error(
-          tparam.getSourceRange(),
-          "only named type parameters supported in generics");
-    }
-    ++i;
-  }
-
-  // Check that there aren't too many (or too few) type arguments provided.
-  if (tooFewTypeArgs || i != typeArgTypes.size()) {
-    sm_.error(
-        errorRange,
-        llvh::Twine("type argument mismatch, expected ") +
-            llvh::Twine(params->_params.size()) + ", found " +
-            llvh::Twine(typeArgTypes.size()));
-    return false;
-  }
-
-  return true;
-}
-
 sema::Decl *FlowChecker::specializeGeneric(
     sema::Decl *oldDecl,
     ESTree::TypeParameterInstantiationNode *typeArgsNode,
@@ -3441,7 +3402,11 @@ FlowChecker::specializeGenericWithParsedTypes(
 
       ScopeRAII paramScope{*this};
       bool populated = validateAndBindTypeParameters(
-          typeParamsNode, errorRange, typeArgTypes, oldDecl->scope);
+          typeParamsNode,
+          errorRange,
+          typeArgTypes,
+          oldDecl->scope,
+          [this](ESTree::Node *n) { return parseTypeAnnotation(n); });
       if (!populated) {
         LLVM_DEBUG(llvh::dbgs() << "Failed to bind type parameters\n");
         return {nullptr, nullptr};
@@ -3875,7 +3840,17 @@ Type *FlowChecker::resolveGenericClassSpecializationForType(
   if (!newDecl)
     return flowContext_.getAny();
 
-  Type *classConsType = getDeclType(newDecl);
+  Type *classConsType = flowContext_.findDeclType(newDecl);
+  if (!classConsType) {
+    // The specialization is still in-flight: reaching it again means its own
+    // bound re-entered it (e.g. "class Node<T: Node<Base>>"). A bound may not
+    // reference the generic being declared, so report it instead of silently
+    // resolving to "any" (which would accept any argument).
+    sm_.error(
+        genericTypeNode->getSourceRange(),
+        "ft: type parameter bound cannot reference the generic being declared");
+    return flowContext_.getAny();
+  }
   return llvh::cast<ClassConstructorType>(classConsType->info)->getClassType();
 }
 
@@ -4081,7 +4056,11 @@ FlowChecker::specializeGenericMethodWithParsedTypes(
 
     ScopeRAII paramScope{*this};
     if (!validateAndBindTypeParameters(
-            typeParamsNode, errorRange, typeArgTypes, generic.classScope)) {
+            typeParamsNode,
+            errorRange,
+            typeArgTypes,
+            generic.classScope,
+            [this](ESTree::Node *n) { return parseTypeAnnotation(n); })) {
       LLVM_DEBUG(llvh::dbgs() << "Failed to bind type parameters\n");
       return {};
     }

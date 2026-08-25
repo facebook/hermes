@@ -291,9 +291,25 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
           classScope(classScope) {}
   };
 
+  /// A resolved generic bound comparison to perform after type resolution.
+  struct GenericBoundCheck {
+    /// The concrete type argument.
+    Type *argument;
+    /// The resolved bound.
+    Type *bound;
+    /// The generic parameter name.
+    UniqueString *parameterName;
+    /// The source range used for diagnostics.
+    SMRange errorRange;
+  };
+
   /// List of generics that we haven't parsed yet because they might
   /// refer to other generics that haven't been parsed yet.
   std::vector<DeferredGenericClass> *deferredParseGenerics_ = nullptr;
+
+  /// Bound checks deferred until the active scope resolver completes types.
+  llvh::SmallVectorImpl<GenericBoundCheck> *deferredGenericBoundChecks_ =
+      nullptr;
 
   /// Queue of the generics that we haven't finished typechecking yet,
   /// which need their bodies typechecked.
@@ -744,23 +760,35 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
     return semContext_.getExpressionDecl(id);
   }
 
+  /// Validate that a resolved type argument satisfies its bound.
+  void validateGenericBound(const GenericBoundCheck &check);
+
   /// Add the \p typeArgTypes to the binding table based on the names provided
-  /// in \p node.
+  /// in \p params, checking that each type argument satisfies its type
+  /// parameter's bound (if any). Each bound check is performed as the parameter
+  /// is bound; when a scope resolver is active the check is deferred to
+  /// validateTypes() rather than run eagerly.
   /// Ensure that there are the correct number of type arguments and that they
   /// are valid to pass.
   /// \param params the type parameter declaration.
   /// \param errorRange used for reporting errors when binding fails.
   /// \param typeArgTypes the actual Types to instantiate the arguments with.
   /// \param scope the lexical scope to associate with each TypeDecl.
+  /// \param resolveBound a callable \c Type*(ESTree::Node*) resolving a bound
+  ///   annotation in the current scope. It differs by call site
+  ///   (parseTypeAnnotation vs the DeclareScopeTypes resolver), and is resolved
+  ///   per instantiation since a bound may reference earlier type parameters.
   /// \pre the binding table's scope is set to the new scope in which to place
   ///   the bindings (i.e. a direct child of the binding table scope the generic
   ///   was declared with).
   /// \return true on success, false on failure and report an error.
+  template <typename ResolveBoundFn>
   LLVM_NODISCARD bool validateAndBindTypeParameters(
       ESTree::TypeParameterDeclarationNode *params,
       SMRange errorRange,
       llvh::ArrayRef<Type *> typeArgTypes,
-      sema::LexicalScope *scope);
+      sema::LexicalScope *scope,
+      ResolveBoundFn resolveBound);
 
   /// Match a constraint type (containing placeholders) against a concrete type.
   /// Fills in InferencePlaceholder types by mutating their info pointers.
@@ -1390,6 +1418,73 @@ Type *FlowChecker::processObjectTypeAnnotation(
   // with an empty object type because we're going to fail anyway.
   return flowContext_.createType(
       flowContext_.createExactObject(fields, indexer), node);
+}
+
+template <typename ResolveBoundFn>
+bool FlowChecker::validateAndBindTypeParameters(
+    ESTree::TypeParameterDeclarationNode *params,
+    SMRange errorRange,
+    llvh::ArrayRef<Type *> typeArgTypes,
+    sema::LexicalScope *scope,
+    ResolveBoundFn resolveBound) {
+  size_t i = 0;
+  // Whether we had to stop early due to not enough generic type arguments.
+  bool tooFewTypeArgs = false;
+  for (ESTree::Node &tparam : params->_params) {
+    if (i >= typeArgTypes.size()) {
+      // Not enough type arguments provided, break and error.
+      tooFewTypeArgs = true;
+      break;
+    }
+    if (auto *paramName = llvh::dyn_cast<ESTree::TypeParameterNode>(&tparam)) {
+      if (paramName->_bound) {
+        // Earlier type parameters are already bound, so a bound referring to
+        // one (e.g. <T, U: T>) resolves to its concrete argument.
+        auto *boundAnnotation =
+            llvh::cast<ESTree::TypeAnnotationNode>(paramName->_bound)
+                ->_typeAnnotation;
+        Type *bound = resolveBound(boundAnnotation);
+        if (bound) {
+          GenericBoundCheck check{
+              typeArgTypes[i], bound, paramName->_name, errorRange};
+          if (deferredGenericBoundChecks_) {
+            deferredGenericBoundChecks_->push_back(check);
+          } else {
+            validateGenericBound(check);
+          }
+        } else {
+          sm_.error(
+              errorRange,
+              llvh::Twine("ft: unable to resolve type parameter bound ") +
+                  paramName->_name->str());
+        }
+      }
+      if (paramName->_variance) {
+        sm_.warning(
+            paramName->_variance->getSourceRange(),
+            "type parameter variance not yet supported");
+      }
+      bindingTable_.try_emplace(
+          paramName->_name, TypeDecl{typeArgTypes[i], scope, &tparam});
+    } else {
+      sm_.error(
+          tparam.getSourceRange(),
+          "only named type parameters supported in generics");
+    }
+    ++i;
+  }
+
+  // Check that there aren't too many (or too few) type arguments provided.
+  if (tooFewTypeArgs || i != typeArgTypes.size()) {
+    sm_.error(
+        errorRange,
+        llvh::Twine("type argument mismatch, expected ") +
+            llvh::Twine(params->_params.size()) + ", found " +
+            llvh::Twine(typeArgTypes.size()));
+    return false;
+  }
+
+  return true;
 }
 
 } // namespace flow
