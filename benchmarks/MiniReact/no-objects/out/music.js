@@ -832,13 +832,30 @@
    * Primitive
    * -----------------------------------------------------------------------------------------------*/
 
+  // Port of '@radix-ui/react-slot' (SlotClone) for MiniReact: clone the single
+  // child element, merging the slot's props onto the child's own props (child
+  // wins, matching Radix's default) and forwarding the ref. MiniReact has no
+  // cloneElement, so the element is rebuilt via React.jsx(type, props, key). The
+  // handler-chaining/className-merging that Radix's mergeProps does is omitted.
+  const M$radix_ui_react_primitive_index$INTERNAL$Slot: any = M$react_index$forwardRef((props: any, forwardedRef: any): M$react_index$React$MixedElement => {
+    const {
+      children,
+      ...slotProps
+    } = props;
+    const child: any = children;
+    return M$react_index$jsx(child.type, {
+      ...slotProps,
+      ...child.props,
+      ref: forwardedRef
+    }, child.key);
+  });
   const M$radix_ui_react_primitive_index$Primitive = M$radix_ui_react_primitive_index$INTERNAL$NODES.reduce<M$radix_ui_react_primitive_index$INTERNAL$Primitives>((primitive: M$radix_ui_react_primitive_index$INTERNAL$Primitives, node: string, _i: number): M$radix_ui_react_primitive_index$INTERNAL$Primitives => {
     const Node = M$react_index$forwardRef((props /* PrimitivePropsWithRef<typeof node> */: any, forwardedRef: any): M$react_index$React$MixedElement => {
       const {
         asChild,
         ...primitiveProps
       } = props;
-      const Comp: any = asChild ? Slot : node;
+      const Comp: any = asChild ? M$radix_ui_react_primitive_index$INTERNAL$Slot : node;
       // TODO?
       // React.useEffect(() => {
       //   (window as any)[Symbol.for('radix-ui')] = true;

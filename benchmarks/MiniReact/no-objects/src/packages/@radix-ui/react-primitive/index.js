@@ -57,6 +57,23 @@ type Primitives = any;
  * Primitive
  * -----------------------------------------------------------------------------------------------*/
 
+// Port of '@radix-ui/react-slot' (SlotClone) for MiniReact: clone the single
+// child element, merging the slot's props onto the child's own props (child
+// wins, matching Radix's default) and forwarding the ref. MiniReact has no
+// cloneElement, so the element is rebuilt via React.jsx(type, props, key). The
+// handler-chaining/className-merging that Radix's mergeProps does is omitted.
+const Slot: any = React.forwardRef(
+  (props: any, forwardedRef: any): React$MixedElement => {
+    const {children, ...slotProps} = props;
+    const child: any = children;
+    return React.jsx(
+      child.type,
+      {...slotProps, ...child.props, ref: forwardedRef},
+      child.key,
+    );
+  },
+);
+
 const Primitive = NODES.reduce<Primitives>(
   (primitive: Primitives, node: string, _i: number): Primitives => {
     const Node = React.forwardRef(
