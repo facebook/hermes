@@ -1831,6 +1831,11 @@ void FlowChecker::resolveDestructuringTypes(
     worklist.emplace_back(n, ty);
   };
 
+  // Defaults (`x = init`) are checked after the worklist drains, so a default
+  // may reference an earlier binding in the same pattern.
+  llvh::SmallVector<std::pair<ESTree::AssignmentPatternNode *, Type *>, 2>
+      deferredDefaults{};
+
   while (!worklist.empty()) {
     auto [node, t] = worklist.pop_back_val();
     if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(node)) {
@@ -1900,6 +1905,28 @@ void FlowChecker::resolveDestructuringTypes(
             "ft: incompatible type for object pattern, "
             "expected object type");
       }
+    } else if (
+        auto *assign = llvh::dyn_cast<ESTree::AssignmentPatternNode>(node)) {
+      // A defaulted binding `x = default` inside a destructuring pattern.
+      // Defer checking the default until every binding in the pattern has been
+      // recorded, so a default may reference an earlier binding in the same
+      // pattern, e.g. `let {a, b = a} = o`.
+      deferredDefaults.emplace_back(assign, t);
+      worklist.emplace_back(assign->_left, t);
+    }
+  }
+
+  // Now that all bindings have been recorded, check the defaults.
+  for (auto [assign, t] : deferredDefaults) {
+    visitExpression(assign->_right, assign, t);
+    Type *initType = getNodeTypeOrAny(assign->_right);
+    CanFlowResult cf = canAFlowIntoB(initType, t);
+    if (!cf.canFlow) {
+      sm_.error(
+          assign->_right->getSourceRange(),
+          "ft: incompatible default value type");
+    } else {
+      assign->_right = implicitCheckedCast(assign->_right, t, cf);
     }
   }
 }
@@ -1927,6 +1954,13 @@ bool FlowChecker::expandTupleDestructuring(
       sm_.error(
           rest->getSourceRange(),
           "ft: rest element not allowed when destructuring a tuple");
+      return false;
+    }
+    if (llvh::isa<ESTree::AssignmentPatternNode>(&element)) {
+      sm_.error(
+          element.getSourceRange(),
+          "ft: default values are not yet supported "
+          "in typed tuple destructuring");
       return false;
     }
     if (i >= tuple->getTypes().size()) {
