@@ -95,10 +95,10 @@ let trec: TRec;
 // CHECK-NEXT:                ObjectExpression : %object.4
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'x'
-// CHECK-NEXT:                        StringLiteral : string
+// CHECK-NEXT:                        StringLiteral : "3"
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'x'
-// CHECK-NEXT:                        StringLiteral : string
+// CHECK-NEXT:                        StringLiteral : "hi"
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'y'
 // CHECK-NEXT:                        BooleanLiteral : boolean

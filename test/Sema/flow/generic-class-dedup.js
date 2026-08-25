@@ -110,4 +110,4 @@ c1 = new C<number | string>('abc');
 // CHECK-NEXT:                        UnionTypeAnnotation
 // CHECK-NEXT:                            NumberTypeAnnotation
 // CHECK-NEXT:                            StringTypeAnnotation
-// CHECK-NEXT:                    StringLiteral : string
+// CHECK-NEXT:                    StringLiteral : "abc"

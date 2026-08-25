@@ -133,5 +133,5 @@ function test(): void {
 // CHECK-NEXT:                                Id 'call'
 // CHECK-NEXT:                            Id 'undefined' [D:E:%d.18 'undefined'] : void
 // CHECK-NEXT:                            NumericLiteral : number
-// CHECK-NEXT:                            StringLiteral : string
+// CHECK-NEXT:                            StringLiteral : "hi"
 // CHECK-NEXT:                        Id 'r2' [D:E:%d.16 'r2']

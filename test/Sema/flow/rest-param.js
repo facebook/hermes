@@ -83,14 +83,14 @@ type G = (...rest: MyArr) => void;
 // CHECK-NEXT:            CallExpression : void
 // CHECK-NEXT:                Id 'foo' [D:E:%d.2 'foo'] : %function.2
 // CHECK-NEXT:                NumericLiteral : number
-// CHECK-NEXT:                StringLiteral : string
+// CHECK-NEXT:                StringLiteral : "a"
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            CallExpression : void
 // CHECK-NEXT:                Id 'foo' [D:E:%d.2 'foo'] : %function.2
 // CHECK-NEXT:                NumericLiteral : number
-// CHECK-NEXT:                StringLiteral : string
-// CHECK-NEXT:                StringLiteral : string
-// CHECK-NEXT:                StringLiteral : string
+// CHECK-NEXT:                StringLiteral : "a"
+// CHECK-NEXT:                StringLiteral : "b"
+// CHECK-NEXT:                StringLiteral : "c"
 // CHECK-NEXT:        FunctionDeclaration : %function.5
 // CHECK-NEXT:            Id 'bar' [D:E:%d.3 'bar']
 // CHECK-NEXT:            RestElement

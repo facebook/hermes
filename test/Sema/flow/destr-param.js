@@ -97,7 +97,7 @@ function qux({x}: {x: number} = {x: 0}): void {
 // CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:    BlockStatement
 // CHECK-NEXT:        ExpressionStatement
-// CHECK-NEXT:            StringLiteral : string
+// CHECK-NEXT:            StringLiteral : "use strict"
 // CHECK-NEXT:        FunctionDeclaration : %function.3
 // CHECK-NEXT:            Id 'foo' [D:E:%d.2 'foo']
 // CHECK-NEXT:            ObjectPattern : %object.2

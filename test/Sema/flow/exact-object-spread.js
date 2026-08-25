@@ -69,7 +69,7 @@ let copy: {x: number} = {...empty, x: 1};
 // CHECK-NEXT:                        NumericLiteral : number
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'y'
-// CHECK-NEXT:                        StringLiteral : string
+// CHECK-NEXT:                        StringLiteral : "hi"
 // CHECK-NEXT:                Id 'src' [D:E:%d.2 'src']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
@@ -107,7 +107,7 @@ let copy: {x: number} = {...empty, x: 1};
 // CHECK-NEXT:                ObjectExpression : %object.4
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'y'
-// CHECK-NEXT:                        StringLiteral : string
+// CHECK-NEXT:                        StringLiteral : "hi"
 // CHECK-NEXT:                Id 'b' [D:E:%d.7 'b']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator

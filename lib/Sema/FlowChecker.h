@@ -760,6 +760,15 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
       Type *exprType,
       Type *targetType);
 
+  /// Widen "fresh" literal types for the inferred type of an un-annotated
+  /// non-const variable: a StringLiteralType becomes String, and direct union
+  /// arms that are string literals are widened (one level; union arms are
+  /// already flattened, so a union of string literals becomes String). This
+  /// matches TS-style let/var widening; const declarations keep the literal
+  /// type.
+  /// \return the widened type, or \p type unchanged if nothing was widened.
+  Type *widenLiteralType(Type *type);
+
   /// If \c canFlow.needCheckedCast is set and \c compile_ is set, allocate an
   /// implicit checked cast node from the specified \p argument to
   /// the specified type \p toType and return it. Otherwise return the argument.

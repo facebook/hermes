@@ -34,7 +34,7 @@ function main(
 // CHECK:{{.*}}equality-loose-error.js:20:3: error: ft: == cannot be applied to number and number (use === / !== for general comparisons)
 // CHECK-NEXT:  1 == 2;
 // CHECK-NEXT:  ^~~~~~
-// CHECK-NEXT:{{.*}}equality-loose-error.js:21:3: error: ft: != cannot be applied to string and string (use === / !== for general comparisons)
+// CHECK-NEXT:{{.*}}equality-loose-error.js:21:3: error: ft: != cannot be applied to "a" and "b" (use === / !== for general comparisons)
 // CHECK-NEXT:  "a" != "b";
 // CHECK-NEXT:  ^~~~~~~~~~
 // CHECK-NEXT:{{.*}}equality-loose-error.js:22:3: error: ft: == cannot be applied to number and string (use === / !== for general comparisons)

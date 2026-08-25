@@ -30,6 +30,22 @@ The TypeScript type syntax is partially supported (use `-parse-ts` to convert TS
 
 * `empty` has no values. It is the subtype of all other types.
 
+### Literal Types
+
+* String literal types: `"left"`, `"right"`
+
+`"abc"` is typed as `"abc"`. Literal types flows into their general (widened) types, and into another literal only when the value is identical. Operators treat a literal as the widened type. This can be used for tagged unions and string enums.
+
+#### Widening
+
+A fresh literal is widened to its general type (`"abc"` -> `string`) when it becomes the inferred type of a mutable binding, for example:
+
+* `let`/`var`: `let x = 'a'` infers `string`.
+* Array literals: `['a','b']` infers `Array<string>`.
+* Object fields, indexer keys, and indexer values.
+
+The literal is kept (no widening) for `const`, or any annotated context (e.g. `Array<"a">`).
+
 ### Unions
 
 `A | B` indicates a union between two types `A` and `B`. Values that are either `A` or `B` are valid values of `A | B`. Unions may be cyclic, but cycles must include another type. For example: `type A = A` is invalid, but `type A = [A, B] | null` is valid.

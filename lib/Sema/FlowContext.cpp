@@ -162,6 +162,11 @@ static void messageStringImpl(const Type *type, llvh::raw_ostream &os) {
     return;
   }
 
+  if (auto *strLitType = llvh::dyn_cast<StringLiteralType>(type->info)) {
+    os << '"' << strLitType->getValue()->str() << '"';
+    return;
+  }
+
   os << type->info->getKindName();
 }
 
@@ -184,6 +189,8 @@ llvh::StringRef TypeInfo::getKindName() const {
       return "boolean";
     case TypeKind::String:
       return "string";
+    case TypeKind::StringLiteral:
+      return "string literal";
     case TypeKind::CPtr:
       return "c_ptr";
     case TypeKind::Number:
@@ -563,6 +570,23 @@ bool TupleType::_equalsImpl(const TupleType *other, CompareState &state) const {
 
 unsigned TupleType::_hashImpl() const {
   return (unsigned)llvh::hash_combine((unsigned)TypeKind::Tuple, types_.size());
+}
+
+int StringLiteralType::_compareImpl(
+    const StringLiteralType *other,
+    CompareState &state) const {
+  return value_->str().compare(other->value_->str());
+}
+
+bool StringLiteralType::_equalsImpl(
+    const StringLiteralType *other,
+    CompareState &state) const {
+  return value_ == other->value_;
+}
+
+unsigned StringLiteralType::_hashImpl() const {
+  return (unsigned)llvh::hash_combine(
+      (unsigned)TypeKind::StringLiteral, (uintptr_t)value_);
 }
 
 hermes::OptValue<size_t> ExactObjectType::findField(Identifier id) const {

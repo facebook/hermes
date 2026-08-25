@@ -58,7 +58,7 @@ function delBadDotKey(d: {[number]: string}): void {
 // CHECK-NEXT:{{.*}}object-indexer-member-error.js:22:12: error: ft: cannot read writeonly indexer
 // CHECK-NEXT:  return o["k"];
 // CHECK-NEXT:           ^~~
-// CHECK-NEXT:{{.*}}object-indexer-member-error.js:27:3: error: ft: incompatible assignment type: cannot implicitly cast from string to number
+// CHECK-NEXT:{{.*}}object-indexer-member-error.js:27:3: error: ft: incompatible assignment type: cannot implicitly cast from "str" to number
 // CHECK-NEXT:  d["k"] = "str";
 // CHECK-NEXT:  ^~~~~~~~~~~~~~
 // CHECK-NEXT:{{.*}}object-indexer-member-error.js:32:12: error: ft: object index type string incompatible with index signature number

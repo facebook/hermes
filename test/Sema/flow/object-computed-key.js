@@ -62,9 +62,10 @@ function f6(o: {[number]: string}, k: string) {
 // CHECK-NEXT:  [number]: number
 // CHECK-NEXT:})
 // CHECK-NEXT:%object.12 = object({
-// CHECK-NEXT:  [%union.13]: %union.13
+// CHECK-NEXT:  [%union.14]: %union.14
 // CHECK-NEXT:})
-// CHECK-NEXT:%union.13 = union(string | number)
+// CHECK-NEXT:%union.13 = union(number | "s")
+// CHECK-NEXT:%union.14 = union(string | number)
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict mayReachImplicitReturn
@@ -135,7 +136,7 @@ function f6(o: {[number]: string}, k: string) {
 // CHECK-NEXT:                            NumericLiteral : number
 // CHECK-NEXT:                        Property
 // CHECK-NEXT:                            Id 'k2' [D:E:%d.12 'k2'] : string
-// CHECK-NEXT:                            StringLiteral : string
+// CHECK-NEXT:                            StringLiteral : "s"
 // CHECK-NEXT:        FunctionDeclaration : %function.4
 // CHECK-NEXT:            Id 'f3' [D:E:%d.4 'f3']
 // CHECK-NEXT:            Id 'k' [D:E:%d.14 'k']

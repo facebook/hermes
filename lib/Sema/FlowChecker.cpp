@@ -658,7 +658,7 @@ class FlowChecker::ParseClassType {
       // property's initializer.
       outer_.visitedInits_.insert(value);
       outer_.visitExpression(value, prop, nullptr);
-      fieldType = outer_.getNodeTypeOrAny(value);
+      fieldType = outer_.widenLiteralType(outer_.getNodeTypeOrAny(value));
     } else {
       // Unable to infer, just assume 'any'.
       fieldType = outer_.flowContext_.getAny();
@@ -2206,11 +2206,12 @@ class FlowChecker::AnnotateScopeDecls {
                  llvh::isa<ESTree::RegExpLiteralNode>(declarator->_init) ||
                  llvh::isa<ESTree::BigIntLiteralNode>(declarator->_init))) {
               outer.visitExpression(declarator->_init, declarator, nullptr);
-              outer.recordDecl(
-                  outer.getDecl(id),
-                  outer.getNodeTypeOrAny(declarator->_init),
-                  id,
-                  declarator);
+              Type *initType = outer.getNodeTypeOrAny(declarator->_init);
+              // let/var widen a fresh literal type to its base type; const
+              // keeps the literal type.
+              if (decl->kind != sema::Decl::Kind::Const)
+                initType = outer.widenLiteralType(initType);
+              outer.recordDecl(decl, initType, id, declarator);
               continue;
             }
           } else if (
@@ -2327,8 +2328,13 @@ class FlowChecker::AnnotateScopeDecls {
                 "ft: global property type annotations are unsound and are ignored");
           }
         } else if (!id->_typeAnnotation && declarator->_init) {
-          if (Type *inferred = tryInferInitExpression(declarator))
-            type = inferred;
+          if (Type *inferred = tryInferInitExpression(declarator)) {
+            // let/var widen a fresh literal type to its base type; const keeps
+            // the literal type.
+            type = decl->kind != sema::Decl::Kind::Const
+                ? outer.widenLiteralType(inferred)
+                : inferred;
+          }
         }
 
         outer.recordDecl(decl, type, id, declarator);
@@ -2741,6 +2747,12 @@ Type *FlowChecker::parseTypeAnnotation(ESTree::Node *node) {
       return flowContext_.getBoolean();
     case ESTree::NodeKind::StringTypeAnnotation:
       return flowContext_.getString();
+    case ESTree::NodeKind::StringLiteralTypeAnnotation:
+      return flowContext_.createType(
+          flowContext_.createStringLiteral(
+              llvh::cast<ESTree::StringLiteralTypeAnnotationNode>(node)
+                  ->_value),
+          node);
     case ESTree::NodeKind::NumberTypeAnnotation:
       return flowContext_.getNumber();
     case ESTree::NodeKind::BigIntTypeAnnotation:
@@ -3026,6 +3038,16 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     if (!funcB)
       return {};
     return canAFlowIntoB(funcA, funcB, thisFlow, state);
+  }
+
+  // String literal flows into string, and into another string literal when
+  // the value is identical.
+  if (auto *litA = llvh::dyn_cast<StringLiteralType>(a)) {
+    if (llvh::isa<StringType>(b))
+      return {.canFlow = true};
+    if (auto *litB = llvh::dyn_cast<StringLiteralType>(b))
+      return {.canFlow = litA->getValue() == litB->getValue()};
+    return {};
   }
 
   return {};
@@ -3330,6 +3352,32 @@ Type *FlowChecker::getNonOptionalSingleType(Type *exprType) {
   return nullptr;
 }
 
+Type *FlowChecker::widenLiteralType(Type *type) {
+  if (llvh::isa<StringLiteralType>(type->info))
+    return flowContext_.getString();
+
+  if (auto *unionType = llvh::dyn_cast<UnionType>(type->info)) {
+    // Widen any direct string-literal arms to String. Don't recurse into the
+    // arms: union arms are already flattened, and recursing could loop on
+    // cyclic union arms.
+    bool changed = false;
+    llvh::SmallVector<Type *, 4> arms{};
+    for (Type *arm : unionType->getTypes()) {
+      if (llvh::isa<StringLiteralType>(arm->info)) {
+        arms.push_back(flowContext_.getString());
+        changed = true;
+      } else {
+        arms.push_back(arm);
+      }
+    }
+    if (!changed)
+      return type;
+    return flowContext_.createType(flowContext_.maybeCreateUnion(arms));
+  }
+
+  return type;
+}
+
 std::pair<Type *, FlowChecker::CanFlowResult> FlowChecker::tryNarrowType(
     Type *exprType,
     Type *targetType) {
@@ -3342,6 +3390,11 @@ std::pair<Type *, FlowChecker::CanFlowResult> FlowChecker::tryNarrowType(
 
   // Try to narrow the expression type to a single type.
   Type *narrowType = getNonOptionalSingleType(exprType);
+  // Try to widen literal arms and retry, so that e.g.
+  // ?("x" | "y") narrows to string.
+  if (!narrowType)
+    narrowType = getNonOptionalSingleType(widenLiteralType(exprType));
+  // Done if we haven't managed to find a narrower type.
   if (!narrowType)
     return {exprType, cf};
 

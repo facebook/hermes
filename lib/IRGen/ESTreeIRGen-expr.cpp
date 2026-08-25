@@ -1428,6 +1428,8 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
 
   // Check if we are loading a string property.
   if (llvh::isa<flow::StringType>(
+          flowContext_.getNodeTypeOrAny(mem->_object)->info) ||
+      llvh::isa<flow::StringLiteralType>(
           flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
     if (!mem->_computed) {
       auto *ident = llvh::cast<ESTree::IdentifierNode>(mem->_property);

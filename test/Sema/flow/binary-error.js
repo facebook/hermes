@@ -43,61 +43,61 @@ function main() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:{{.*}}binary-error.js:11:3: error: ft: incompatible binary operation: + cannot be applied to string and number
+// CHECK:{{.*}}binary-error.js:11:3: error: ft: incompatible binary operation: + cannot be applied to "a" and number
 // CHECK-NEXT:  'a' + 1;
 // CHECK-NEXT:  ^~~~~~~
-// CHECK-NEXT:{{.*}}binary-error.js:12:3: error: ft: incompatible binary operation: - cannot be applied to string and number
+// CHECK-NEXT:{{.*}}binary-error.js:12:3: error: ft: incompatible binary operation: - cannot be applied to "a" and number
 // CHECK-NEXT:  'a' - 1;
 // CHECK-NEXT:  ^~~~~~~
-// CHECK-NEXT:{{.*}}binary-error.js:13:3: error: ft: incompatible binary operation: * cannot be applied to string and number
+// CHECK-NEXT:{{.*}}binary-error.js:13:3: error: ft: incompatible binary operation: * cannot be applied to "a" and number
 // CHECK-NEXT:  'a' * 1;
 // CHECK-NEXT:  ^~~~~~~
-// CHECK-NEXT:{{.*}}binary-error.js:14:3: error: ft: incompatible binary operation: / cannot be applied to string and number
+// CHECK-NEXT:{{.*}}binary-error.js:14:3: error: ft: incompatible binary operation: / cannot be applied to "a" and number
 // CHECK-NEXT:  'a' / 1;
 // CHECK-NEXT:  ^~~~~~~
-// CHECK-NEXT:{{.*}}binary-error.js:16:3: error: ft: incompatible binary operation: + cannot be applied to number and string
+// CHECK-NEXT:{{.*}}binary-error.js:16:3: error: ft: incompatible binary operation: + cannot be applied to number and "a"
 // CHECK-NEXT:  1 + 'a';
 // CHECK-NEXT:  ^~~~~~~
-// CHECK-NEXT:{{.*}}binary-error.js:17:3: error: ft: incompatible binary operation: - cannot be applied to number and string
+// CHECK-NEXT:{{.*}}binary-error.js:17:3: error: ft: incompatible binary operation: - cannot be applied to number and "a"
 // CHECK-NEXT:  1 - 'a';
 // CHECK-NEXT:  ^~~~~~~
-// CHECK-NEXT:{{.*}}binary-error.js:18:3: error: ft: incompatible binary operation: * cannot be applied to number and string
+// CHECK-NEXT:{{.*}}binary-error.js:18:3: error: ft: incompatible binary operation: * cannot be applied to number and "a"
 // CHECK-NEXT:  1 * 'a';
 // CHECK-NEXT:  ^~~~~~~
-// CHECK-NEXT:{{.*}}binary-error.js:19:3: error: ft: incompatible binary operation: / cannot be applied to number and string
+// CHECK-NEXT:{{.*}}binary-error.js:19:3: error: ft: incompatible binary operation: / cannot be applied to number and "a"
 // CHECK-NEXT:  1 / 'a';
 // CHECK-NEXT:  ^~~~~~~
-// CHECK-NEXT:{{.*}}binary-error.js:21:3: error: ft: incompatible binary operation: - cannot be applied to string and string
+// CHECK-NEXT:{{.*}}binary-error.js:21:3: error: ft: incompatible binary operation: - cannot be applied to "a" and "a"
 // CHECK-NEXT:  'a' - 'a';
 // CHECK-NEXT:  ^~~~~~~~~
-// CHECK-NEXT:{{.*}}binary-error.js:22:3: error: ft: incompatible binary operation: * cannot be applied to string and string
+// CHECK-NEXT:{{.*}}binary-error.js:22:3: error: ft: incompatible binary operation: * cannot be applied to "a" and "a"
 // CHECK-NEXT:  'a' * 'a';
 // CHECK-NEXT:  ^~~~~~~~~
-// CHECK-NEXT:{{.*}}binary-error.js:23:3: error: ft: incompatible binary operation: / cannot be applied to string and string
+// CHECK-NEXT:{{.*}}binary-error.js:23:3: error: ft: incompatible binary operation: / cannot be applied to "a" and "a"
 // CHECK-NEXT:  'a' / 'a';
 // CHECK-NEXT:  ^~~~~~~~~
-// CHECK-NEXT:{{.*}}binary-error.js:25:3: error: ft: incompatible binary operation: < cannot be applied to number and string
+// CHECK-NEXT:{{.*}}binary-error.js:25:3: error: ft: incompatible binary operation: < cannot be applied to number and "a"
 // CHECK-NEXT:  1 < 'a';
 // CHECK-NEXT:  ^~~~~~~
-// CHECK-NEXT:{{.*}}binary-error.js:26:3: error: ft: incompatible binary operation: <= cannot be applied to number and string
+// CHECK-NEXT:{{.*}}binary-error.js:26:3: error: ft: incompatible binary operation: <= cannot be applied to number and "a"
 // CHECK-NEXT:  1 <= 'a';
 // CHECK-NEXT:  ^~~~~~~~
-// CHECK-NEXT:{{.*}}binary-error.js:27:3: error: ft: incompatible binary operation: > cannot be applied to number and string
+// CHECK-NEXT:{{.*}}binary-error.js:27:3: error: ft: incompatible binary operation: > cannot be applied to number and "a"
 // CHECK-NEXT:  1 > 'a';
 // CHECK-NEXT:  ^~~~~~~
-// CHECK-NEXT:{{.*}}binary-error.js:28:3: error: ft: incompatible binary operation: >= cannot be applied to number and string
+// CHECK-NEXT:{{.*}}binary-error.js:28:3: error: ft: incompatible binary operation: >= cannot be applied to number and "a"
 // CHECK-NEXT:  1 >= 'a';
 // CHECK-NEXT:  ^~~~~~~~
-// CHECK-NEXT:{{.*}}binary-error.js:30:3: error: ft: incompatible binary operation: < cannot be applied to string and number
+// CHECK-NEXT:{{.*}}binary-error.js:30:3: error: ft: incompatible binary operation: < cannot be applied to "a" and number
 // CHECK-NEXT:  'a' < 1;
 // CHECK-NEXT:  ^~~~~~~
-// CHECK-NEXT:{{.*}}binary-error.js:31:3: error: ft: incompatible binary operation: <= cannot be applied to string and number
+// CHECK-NEXT:{{.*}}binary-error.js:31:3: error: ft: incompatible binary operation: <= cannot be applied to "a" and number
 // CHECK-NEXT:  'a' <= 1;
 // CHECK-NEXT:  ^~~~~~~~
-// CHECK-NEXT:{{.*}}binary-error.js:32:3: error: ft: incompatible binary operation: > cannot be applied to string and number
+// CHECK-NEXT:{{.*}}binary-error.js:32:3: error: ft: incompatible binary operation: > cannot be applied to "a" and number
 // CHECK-NEXT:  'a' > 1;
 // CHECK-NEXT:  ^~~~~~~
-// CHECK-NEXT:{{.*}}binary-error.js:33:3: error: ft: incompatible binary operation: >= cannot be applied to string and number
+// CHECK-NEXT:{{.*}}binary-error.js:33:3: error: ft: incompatible binary operation: >= cannot be applied to "a" and number
 // CHECK-NEXT:  'a' >= 1;
 // CHECK-NEXT:  ^~~~~~~~
 // CHECK-NEXT:{{.*}}binary-error.js:35:3: error: ft: incompatible binary operation: | cannot be applied to number and bigint

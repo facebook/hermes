@@ -135,6 +135,11 @@ class FlowChecker::FindLoopingTypes {
     return false;
   }
 
+  bool isLooping(Type *, StringLiteralType *) {
+    // Literals carry no nested types.
+    return false;
+  }
+
   bool isLooping(Type *, TypeWithId *type) {
     // Nominal type. Stop checking for recursion.
     return false;

@@ -39,7 +39,7 @@ function foo() {
 // CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:    BlockStatement
 // CHECK-NEXT:        ExpressionStatement
-// CHECK-NEXT:            StringLiteral : string
+// CHECK-NEXT:            StringLiteral : "use strict"
 // CHECK-NEXT:        FunctionDeclaration : %untyped_function.1
 // CHECK-NEXT:            Id 'foo' [D:E:%d.2 'foo']
 // CHECK-NEXT:            BlockStatement
@@ -52,5 +52,5 @@ function foo() {
 // CHECK-NEXT:                        StringTypeAnnotation
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
-// CHECK-NEXT:                            StringLiteral : string
+// CHECK-NEXT:                            StringLiteral : "a"
 // CHECK-NEXT:                            Id 'x' [D:E:%d.5 'x']

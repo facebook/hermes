@@ -40,7 +40,7 @@ static llvh::StringRef getTypeAsVarName(const TypeInfo *type) {
 }
 
 size_t FlowTypesDumper::getNumber(const TypeInfo *type) {
-  if (type->isSingleton())
+  if (type->isSingleton() || type->isLiteral())
     return 0;
 
   auto [it, inserted] = typeNumber_.try_emplace(type, types_.size());
@@ -52,7 +52,9 @@ size_t FlowTypesDumper::getNumber(const TypeInfo *type) {
 void FlowTypesDumper::printTypeRef(
     llvh::raw_ostream &os,
     const TypeInfo *type) {
-  if (!type->isSingleton())
+  if (auto *strLit = llvh::dyn_cast<StringLiteralType>(type))
+    os << '"' << strLit->getValue()->str() << '"';
+  else if (!type->isSingleton())
     os << "%" << getTypeAsVarName(type) << "." << getNumber(type);
   else
     os << getTypeAsVarName(type);
@@ -245,6 +247,11 @@ void FlowTypesDumper::printTypeDescription(
       os << ')';
       break;
     }
+
+    case TypeKind::StringLiteral:
+      os << '"' << llvh::cast<StringLiteralType>(type)->getValue()->str()
+         << '"';
+      break;
 
     case TypeKind::ExactObject: {
       auto *exactObj = llvh::cast<ExactObjectType>(type);

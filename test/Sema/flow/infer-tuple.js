@@ -45,7 +45,7 @@ let e: [[number, bool], string] = [[1, true], "hi"];
 // CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:    BlockStatement
 // CHECK-NEXT:        ExpressionStatement
-// CHECK-NEXT:            StringLiteral : string
+// CHECK-NEXT:            StringLiteral : "use strict"
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                ArrayExpression : %tuple.2
@@ -78,5 +78,5 @@ let e: [[number, bool], string] = [[1, true], "hi"];
 // CHECK-NEXT:                    ArrayExpression : %tuple.3
 // CHECK-NEXT:                        NumericLiteral : number
 // CHECK-NEXT:                        BooleanLiteral : boolean
-// CHECK-NEXT:                    StringLiteral : string
+// CHECK-NEXT:                    StringLiteral : "hi"
 // CHECK-NEXT:                Id 'e' [D:E:%d.6 'e']

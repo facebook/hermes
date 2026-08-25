@@ -208,7 +208,7 @@ let e: number = box.pair<number, string>(10, "test");
 // CHECK-NEXT:                        Id 'identity' [D:E:%d.11 'identity']
 // CHECK-NEXT:                    TypeParameterInstantiation
 // CHECK-NEXT:                        StringTypeAnnotation
-// CHECK-NEXT:                    StringLiteral : string
+// CHECK-NEXT:                    StringLiteral : "hello"
 // CHECK-NEXT:                Id 'b' [D:E:%d.5 'b']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
@@ -224,7 +224,7 @@ let e: number = box.pair<number, string>(10, "test");
 // CHECK-NEXT:                    MemberExpression : %function.6
 // CHECK-NEXT:                        Id 'box' [D:E:%d.3 'box'] : %class.2
 // CHECK-NEXT:                        Id 'identity' [D:E:%d.11 'identity']
-// CHECK-NEXT:                    StringLiteral : string
+// CHECK-NEXT:                    StringLiteral : "hello"
 // CHECK-NEXT:                Id 'd' [D:E:%d.7 'd']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
@@ -236,5 +236,5 @@ let e: number = box.pair<number, string>(10, "test");
 // CHECK-NEXT:                        NumberTypeAnnotation
 // CHECK-NEXT:                        StringTypeAnnotation
 // CHECK-NEXT:                    NumericLiteral : number
-// CHECK-NEXT:                    StringLiteral : string
+// CHECK-NEXT:                    StringLiteral : "test"
 // CHECK-NEXT:                Id 'e' [D:E:%d.8 'e']
