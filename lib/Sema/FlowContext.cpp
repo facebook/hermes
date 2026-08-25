@@ -217,6 +217,8 @@ llvh::StringRef TypeInfo::getKindName() const {
       return "c_ptr";
     case TypeKind::Number:
       return "number";
+    case TypeKind::Symbol:
+      return "symbol";
     case TypeKind::BigInt:
       return "bigint";
     case TypeKind::Any:

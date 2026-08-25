@@ -85,6 +85,7 @@ void FlowTypesDumper::printTypeDescription(
     case TypeKind::Generic:
     case TypeKind::InferencePlaceholder:
     case TypeKind::Number:
+    case TypeKind::Symbol:
     case TypeKind::BigInt:
     case TypeKind::Any:
     case TypeKind::Empty:

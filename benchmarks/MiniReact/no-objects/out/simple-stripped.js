@@ -81,7 +81,7 @@
    * have moved.
    */
 
-  const M$react_index$INTERNAL$REACT_FRAGMENT_TYPE = 1 /* Symbol.for('react.fragment') */;
+  const M$react_index$INTERNAL$REACT_FRAGMENT_TYPE = Symbol.for('react.fragment');
   /* eslint-disable lint/strictly-null, lint/react-state-props-mutation, lint/flow-react-element */
 
   /**

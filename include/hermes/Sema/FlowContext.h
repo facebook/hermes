@@ -32,6 +32,7 @@ namespace flow {
   _HERMES_SEMA_FLOW_DEFKIND(Generic)              \
   _HERMES_SEMA_FLOW_DEFKIND(InferencePlaceholder) \
   _HERMES_SEMA_FLOW_DEFKIND(Number)               \
+  _HERMES_SEMA_FLOW_DEFKIND(Symbol)               \
   _HERMES_SEMA_FLOW_DEFKIND(BigInt)               \
   _HERMES_SEMA_FLOW_DEFKIND(Any)                  \
   _HERMES_SEMA_FLOW_DEFKIND(Empty)                \
@@ -251,6 +252,7 @@ using CPtrType = SingleType<TypeKind::CPtr, PrimaryType>;
 /// Must not escape the FlowChecker, and will be replaced by a concrete type.
 using GenericType = SingleType<TypeKind::Generic, PrimaryType>;
 using NumberType = SingleType<TypeKind::Number, PrimaryType>;
+using SymbolType = SingleType<TypeKind::Symbol, PrimaryType>;
 using BigIntType = SingleType<TypeKind::BigInt, PrimaryType>;
 
 using InferencePlaceholderType =

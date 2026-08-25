@@ -2766,6 +2766,8 @@ Type *FlowChecker::parseTypeAnnotation(ESTree::Node *node) {
           node);
     case ESTree::NodeKind::NumberTypeAnnotation:
       return flowContext_.getNumber();
+    case ESTree::NodeKind::SymbolTypeAnnotation:
+      return flowContext_.getSymbol();
     case ESTree::NodeKind::NumberLiteralTypeAnnotation:
       return flowContext_.createType(
           flowContext_.createNumberLiteral(

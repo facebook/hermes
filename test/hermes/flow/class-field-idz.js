@@ -17,6 +17,9 @@ class C {
   p3: void | A;
   p4: A;
   p5: A | B;
+  // Symbol is a primitive but has no representable literal default, so it is
+  // also IDZ-checked.
+  p6: symbol;
 
   constructor() {
     this.p1 = 1;
@@ -36,6 +39,7 @@ class C {
     // These should have ThrowIf
     try { print(this.p4) } catch (e) { print('caught', e.name); }
     try { print(this.p5) } catch (e) { print('caught', e.name); }
+    try { print(this.p6) } catch (e) { print('caught', e.name); }
   }
 }
 
@@ -44,5 +48,6 @@ new C().method();
 // CHECK: 1
 // CHECK-NEXT: 2
 // CHECK-NEXT: undefined
+// CHECK-NEXT: caught ReferenceError
 // CHECK-NEXT: caught ReferenceError
 // CHECK-NEXT: caught ReferenceError

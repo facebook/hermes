@@ -601,6 +601,13 @@ class TypeContext {
   /// \return true if any of the types in \p t are primitive.
   bool canBePrimitive(Type t) const;
 
+  /// \return true if a class field of type \p t must be stored uninitialized
+  /// and IDZ-checked on load because it has no representable literal default.
+  /// True for object types and symbol; false for non-symbol primitives (which
+  /// default to 0/""/false/0n/undefined/null) and for any (defaults to
+  /// undefined).
+  bool isIDZType(Type t) const;
+
   /// \return true if \p t is not referenced by a pointer
   /// (Number, Boolean, Null, Undefined only). Returns false for NoType.
   bool isNonPtr(Type t) const;

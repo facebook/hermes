@@ -33,17 +33,31 @@ new Foo();
 
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHECK-NEXT:  %1 = LIRLoadConstInst (:null) null: null
-// CHECK-NEXT:  %2 = AllocTypedNonEnumObjectInst (:object) %1: null
-// CHECK-NEXT:       StoreFrameInst %0: environment, %2: object, [%VS0.?O.prototype]: object
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) empty: any, empty: any, %O(): functionCode
-// CHECK-NEXT:       StorePropertyStrictInst %2: object, %4: object, "prototype": string
-// CHECK-NEXT:  %6 = AllocTypedNonEnumObjectInst (:object) %1: null
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %Foo(): functionCode
-// CHECK-NEXT:       StorePropertyStrictInst %6: object, %7: object, "prototype": string
-// CHECK-NEXT:  %9 = LIRLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:        ReturnInst %9: undefined
+// CHECK-NEXT:  %0 = LIRLoadConstInst (:null) null: null
+// CHECK-NEXT:  %1 = AllocTypedNonEnumObjectInst (:object) %0: null
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) empty: any, empty: any, %Symbol(): functionCode
+// CHECK-NEXT:       StorePropertyStrictInst %1: object, %2: object, "prototype": string
+// CHECK-NEXT:  %4 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:  %5 = AllocTypedNonEnumObjectInst (:object) %0: null
+// CHECK-NEXT:       StoreFrameInst %4: environment, %5: object, [%VS0.?O.prototype]: object
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) empty: any, empty: any, %O(): functionCode
+// CHECK-NEXT:       StorePropertyStrictInst %5: object, %7: object, "prototype": string
+// CHECK-NEXT:  %9 = AllocTypedNonEnumObjectInst (:object) %0: null
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %4: environment, %VS0: any, %Foo(): functionCode
+// CHECK-NEXT:        StorePropertyStrictInst %9: object, %10: object, "prototype": string
+// CHECK-NEXT:  %12 = LIRLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:        ReturnInst %12: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:base constructor Symbol(): any [typed,noReturn]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = LIRGetGlobalObjectInst (:object)
+// CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst (:any) %0: object, "TypeError": string
+// CHECK-NEXT:  %2 = CreateThisInst (:undefined|object) %1: any, %1: any, empty: any
+// CHECK-NEXT:  %3 = LIRLoadConstInst (:string) "Symbol is not a constructor": string
+// CHECK-NEXT:  %4 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, %1: any, %2: undefined|object, %3: string
+// CHECK-NEXT:  %5 = GetConstructedObjectInst (:object) %2: undefined|object, %4: any
+// CHECK-NEXT:       ThrowInst %5: object
 // CHECK-NEXT:function_end
 
 // CHECK:base constructor O(): undefined [typed]
