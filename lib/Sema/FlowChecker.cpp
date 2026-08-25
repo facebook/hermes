@@ -579,7 +579,17 @@ class FlowChecker::ParseClassType {
           superClass->getStartLoc(), "ft: super type must be a class");
       return nullptr;
     }
-    return superClassConsType->getClassType();
+    Type *superClassType = superClassConsType->getClassType();
+    // The super class type must already be fully parsed. It won't be if the
+    // class extends itself or if the super class is declared later in source,
+    // since classes are parsed in declaration order.
+    if (!llvh::cast<ClassType>(superClassType->info)->isInitialized()) {
+      outer_.sm_.error(
+          superClass->getStartLoc(),
+          "ft: super class used before it is defined");
+      return nullptr;
+    }
+    return superClassType;
   }
 
   Type *parseClassProperty(ESTree::ClassPropertyNode *prop) {
