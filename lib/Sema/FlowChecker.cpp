@@ -2251,30 +2251,39 @@ class FlowChecker::AnnotateScopeDecls {
   void annotateAllScopeDecls(
       const sema::ScopeDecls &decls,
       ESTree::Node *scopeNode) {
+    // Annotate function declaration signatures first, mirroring JS function
+    // hoisting, so their types are available to variable initializers that
+    // reference them regardless of textual order.
+    for (ESTree::Node *declNode : decls) {
+      auto *funcDecl =
+          llvh::dyn_cast<ESTree::FunctionDeclarationNode>(declNode);
+      if (!funcDecl)
+        continue;
+      ESTree::Node *parent = nullptr;
+      if (auto *program = llvh::dyn_cast<ESTree::ProgramNode>(scopeNode)) {
+        parent = program;
+      } else if (
+          auto *func = llvh::dyn_cast<ESTree::FunctionLikeNode>(scopeNode)) {
+        parent = ESTree::getBlockStatement(func);
+      } else {
+        parent = scopeNode;
+        assert(
+            llvh::isa<ESTree::BlockStatementNode>(parent) ||
+            llvh::isa<ESTree::SwitchStatementNode>(parent));
+      }
+      annotateFunctionDeclaration(funcDecl, parent);
+    }
+
     for (ESTree::Node *declNode : decls) {
       if (auto *declaration =
               llvh::dyn_cast<ESTree::VariableDeclarationNode>(declNode)) {
         // VariableDeclaration.
         //
         annotateVariableDeclaration(declaration);
-      } else if (
-          auto *funcDecl =
-              llvh::dyn_cast<ESTree::FunctionDeclarationNode>(declNode)) {
-        // FunctionDeclaration.
+      } else if (llvh::isa<ESTree::FunctionDeclarationNode>(declNode)) {
+        // FunctionDeclaration: already annotated in the hoisting pass above.
         //
-        ESTree::Node *parent = nullptr;
-        if (auto *program = llvh::dyn_cast<ESTree::ProgramNode>(scopeNode)) {
-          parent = program;
-        } else if (
-            auto *func = llvh::dyn_cast<ESTree::FunctionLikeNode>(scopeNode)) {
-          parent = ESTree::getBlockStatement(func);
-        } else {
-          parent = scopeNode;
-          assert(
-              llvh::isa<ESTree::BlockStatementNode>(parent) ||
-              llvh::isa<ESTree::SwitchStatementNode>(parent));
-        }
-        annotateFunctionDeclaration(funcDecl, parent);
+        continue;
       } else if (
           auto *id = llvh::dyn_cast<ESTree::ImportDeclarationNode>(declNode)) {
         // ImportDeclaration.

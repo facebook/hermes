@@ -42,10 +42,10 @@ function makeIndexer(k1: string, k2: string) {
 
 // CHECK:%untyped_function.1 = untyped_function()
 // CHECK-NEXT:%union.2 = union(1 | 2)
-// CHECK-NEXT:%object.3 = object({
+// CHECK-NEXT:%function.3 = function(k1: string, k2: string): any
+// CHECK-NEXT:%object.4 = object({
 // CHECK-NEXT:  a: number
 // CHECK-NEXT:})
-// CHECK-NEXT:%function.4 = function(k1: string, k2: string): any
 // CHECK-NEXT:%union.5 = union(string | number)
 // CHECK-NEXT:%object.6 = object({
 // CHECK-NEXT:  [string]: %union.5
@@ -60,8 +60,8 @@ function makeIndexer(k1: string, k2: string) {
 // CHECK-NEXT:        Decl %d.4 't' Let : %union.2
 // CHECK-NEXT:        Decl %d.5 's' Let : number
 // CHECK-NEXT:        Decl %d.6 's2' Let : number
-// CHECK-NEXT:        Decl %d.7 'o' Let : %object.3
-// CHECK-NEXT:        Decl %d.8 'makeIndexer' Var : %function.4
+// CHECK-NEXT:        Decl %d.7 'o' Let : %object.4
+// CHECK-NEXT:        Decl %d.8 'makeIndexer' Var : %function.3
 // CHECK-NEXT:        Decl %d.9 'arguments' Var Arguments
 // CHECK-NEXT:        hoistedFunction makeIndexer
 // CHECK-NEXT:    Func strict noImplicitReturn
@@ -111,7 +111,7 @@ function makeIndexer(k1: string, k2: string) {
 // CHECK-NEXT:                Id 's2' [D:E:%d.6 's2']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                ObjectExpression : %object.3
+// CHECK-NEXT:                ObjectExpression : %object.4
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'a'
 // CHECK-NEXT:                        NumericLiteral : 1
@@ -119,10 +119,10 @@ function makeIndexer(k1: string, k2: string) {
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            AssignmentExpression : 2
 // CHECK-NEXT:                MemberExpression : number
-// CHECK-NEXT:                    Id 'o' [D:E:%d.7 'o'] : %object.3
+// CHECK-NEXT:                    Id 'o' [D:E:%d.7 'o'] : %object.4
 // CHECK-NEXT:                    Id 'a'
 // CHECK-NEXT:                NumericLiteral : 2
-// CHECK-NEXT:        FunctionDeclaration : %function.4
+// CHECK-NEXT:        FunctionDeclaration : %function.3
 // CHECK-NEXT:            Id 'makeIndexer' [D:E:%d.8 'makeIndexer']
 // CHECK-NEXT:            Id 'k1' [D:E:%d.10 'k1']
 // CHECK-NEXT:            Id 'k2' [D:E:%d.11 'k2']
