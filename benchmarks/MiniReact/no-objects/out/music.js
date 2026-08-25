@@ -138,10 +138,10 @@
       // can't statically prove this
       state = M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$State<T>>(nextState);
     } else {
-      let nextState = M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$State<mixed>>(_workInProgressState).next;
+      let nextState = _workInProgressState.next;
       if (nextState === null) {
         nextState = new M$react_index$INTERNAL$State<mixed>(initial);
-        M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$State<mixed>>(_workInProgressState).next = nextState;
+        _workInProgressState.next = nextState;
       }
       // NOTE: in case of a re-render we assume that the hook types match but
       // can't statically prove this
@@ -453,8 +453,7 @@
       }
     }
     reconcileFiber(parent: M$react_index$INTERNAL$Fiber, prevChild: M$react_index$INTERNAL$Fiber | null, element: M$react_index$React$MixedElement): M$react_index$INTERNAL$Fiber {
-      if (prevChild !== null && M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$Fiber>(prevChild).type === (element.type: any)) {
-        let prevChild: M$react_index$INTERNAL$Fiber = M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$Fiber>(prevChild);
+      if (prevChild !== null && prevChild.type === (element.type: any)) {
         // Only host and fragment nodes have to be reconciled: otherwise this is a
         // function component and its children will be reconciled when they are later
         // emitted in a host position (ie as a direct result of render)
