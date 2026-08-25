@@ -43,7 +43,7 @@ w++;
 // CHECK-NEXT:            StringLiteral : "use strict"
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:                NumericLiteral : 0
 // CHECK-NEXT:                Id 'x' [D:E:%d.2 'x']
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            UpdateExpression : number
@@ -57,14 +57,14 @@ w++;
 // CHECK-NEXT:                Id 'y' [D:E:%d.3 'y'] : bigint
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:                NumericLiteral : 0
 // CHECK-NEXT:                Id 'z' [D:E:%d.4 'z']
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            UpdateExpression : %union.2
 // CHECK-NEXT:                Id 'z' [D:E:%d.4 'z'] : %union.2
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:                NumericLiteral : 0
 // CHECK-NEXT:                Id 'w' [D:E:%d.5 'w']
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            UpdateExpression : any

@@ -132,7 +132,7 @@ function main(
 // CHECK-NEXT:                ExpressionStatement
 // CHECK-NEXT:                    BinaryExpression : boolean
 // CHECK-NEXT:                        Id 'n' [D:E:%d.6 'n'] : number
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 1
 // CHECK-NEXT:                ExpressionStatement
 // CHECK-NEXT:                    BinaryExpression : boolean
 // CHECK-NEXT:                        Id 's' [D:E:%d.7 's'] : string
@@ -145,7 +145,7 @@ function main(
 // CHECK-NEXT:                    BinaryExpression : boolean
 // CHECK-NEXT:                        Id 'optFoo' [D:E:%d.10 'optFoo'] : %union.6
 // CHECK-NEXT:                        UnaryExpression : void
-// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                            NumericLiteral : 0
 // CHECK-NEXT:                ExpressionStatement
 // CHECK-NEXT:                    BinaryExpression : boolean
 // CHECK-NEXT:                        Id 'optFoo' [D:E:%d.10 'optFoo'] : %union.6

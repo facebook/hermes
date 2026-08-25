@@ -76,7 +76,7 @@ function f(x: any) {
 // CHECK-NEXT:                ObjectExpression : %object.2
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'a'
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 1
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'b'
 // CHECK-NEXT:                        StringLiteral : "x"

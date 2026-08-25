@@ -66,7 +66,7 @@ let trec: TRec;
 // CHECK-NEXT:                ObjectExpression : %object.2
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'x'
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 3
 // CHECK-NEXT:                Id 't' [D:E:%d.2 't']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
@@ -85,11 +85,11 @@ let trec: TRec;
 // CHECK-NEXT:                    Id 'x'
 // CHECK-NEXT:                Id 't2x' [D:E:%d.5 't2x']
 // CHECK-NEXT:        ExpressionStatement
-// CHECK-NEXT:            AssignmentExpression : number
+// CHECK-NEXT:            AssignmentExpression : 5
 // CHECK-NEXT:                MemberExpression : number
 // CHECK-NEXT:                    Id 't' [D:E:%d.2 't'] : %object.2
 // CHECK-NEXT:                    Id 'x'
-// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:                NumericLiteral : 5
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                ObjectExpression : %object.4

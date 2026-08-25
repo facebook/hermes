@@ -29,7 +29,7 @@ delete o.a;
 
 // CHECK:%untyped_function.1 = untyped_function()
 // CHECK-NEXT:%object.2 = object({
-// CHECK-NEXT:  a: number
+// CHECK-NEXT:  a: 1
 // CHECK-NEXT:})
 
 // CHECK:SemContext
@@ -47,7 +47,7 @@ delete o.a;
 // CHECK-NEXT:    BlockStatement
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:                NumericLiteral : 1
 // CHECK-NEXT:                Id 't' [D:E:%d.2 't']
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            UnaryExpression : number
@@ -60,7 +60,7 @@ delete o.a;
 // CHECK-NEXT:                BigIntLiteral : bigint
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            UnaryExpression : boolean
-// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:                NumericLiteral : 1
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            UnaryExpression : number
 // CHECK-NEXT:                Id 't' [D:E:%d.2 't'] : number
@@ -69,13 +69,13 @@ delete o.a;
 // CHECK-NEXT:                BigIntLiteral : bigint
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            UnaryExpression : string
-// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:                NumericLiteral : 1
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            UnaryExpression : void
-// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:                NumericLiteral : 1
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:                NumericLiteral : 1
 // CHECK-NEXT:                Id 'x' [D:E:%d.3 'x']
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            UpdateExpression : number
@@ -98,7 +98,7 @@ delete o.a;
 // CHECK-NEXT:                ObjectExpression : %object.2
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'a'
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 1
 // CHECK-NEXT:                Id 'o' [D:E:%d.5 'o']
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            UnaryExpression : boolean

@@ -75,9 +75,12 @@ void FlowChecker::matchConstraintToType(
       // Found a placeholder, replace it with the type that matches it. Widen
       // fresh literal types so that e.g. head(['a', 'b']) infers T = string,
       // not T = "a".
-      constraint->info = llvh::isa<StringLiteralType>(type->info)
-          ? flowContext_.getStringInfo()
-          : type->info;
+      if (llvh::isa<StringLiteralType>(type->info))
+        constraint->info = flowContext_.getStringInfo();
+      else if (llvh::isa<NumberLiteralType>(type->info))
+        constraint->info = flowContext_.getNumberInfo();
+      else
+        constraint->info = type->info;
       continue;
     }
 
@@ -151,6 +154,7 @@ void FlowChecker::matchConstraintToType(
       case TypeKind::InferencePlaceholderArray:
       // Literals carry no nested types to match.
       case TypeKind::StringLiteral:
+      case TypeKind::NumberLiteral:
         continue;
 
       case TypeKind::Union:
@@ -467,6 +471,7 @@ class FlowChecker::ExprVisitor {
       if (node->_computed) {
         Type *indexType = outer_.getNodeTypeOrAny(node->_property);
         if (!llvh::isa<NumberType>(indexType->info) &&
+            !llvh::isa<NumberLiteralType>(indexType->info) &&
             !llvh::isa<AnyType>(indexType->info)) {
           outer_.sm_.error(
               node->_property->getSourceRange(),
@@ -796,6 +801,7 @@ class FlowChecker::ExprVisitor {
     if (node->_computed) {
       Type *indexType = outer_.getNodeTypeOrAny(node->_property);
       if (!llvh::isa<NumberType>(indexType->info) &&
+          !llvh::isa<NumberLiteralType>(indexType->info) &&
           !llvh::isa<AnyType>(indexType->info)) {
         outer_.sm_.error(
             node->_property->getSourceRange(),
@@ -1461,7 +1467,13 @@ class FlowChecker::ExprVisitor {
       ESTree::NumericLiteralNode *node,
       ESTree::Node *parent,
       Type *constraint) {
-    outer_.setNodeType(node, outer_.flowContext_.getNumber());
+    // Type a numeric literal as its own NumberLiteralType. It flows into
+    // Number, so this is compatible with Number contexts; un-annotated
+    // let/var declarations widen it back to Number during inference.
+    outer_.setNodeType(
+        node,
+        outer_.flowContext_.createType(
+            outer_.flowContext_.createNumberLiteral(node->_value), node));
   }
   void visit(
       ESTree::RegExpLiteralNode *node,
@@ -1587,6 +1599,8 @@ class FlowChecker::ExprVisitor {
     auto normalize = [](TypeKind k) -> TypeKind {
       if (k == TypeKind::StringLiteral)
         return TypeKind::String;
+      if (k == TypeKind::NumberLiteral)
+        return TypeKind::Number;
       return k;
     };
     lk = normalize(lk);
@@ -1804,6 +1818,8 @@ class FlowChecker::ExprVisitor {
     // Literal types behave like their widened base types for operators.
     if (argKind == TypeKind::StringLiteral)
       argKind = TypeKind::String;
+    else if (argKind == TypeKind::NumberLiteral)
+      argKind = TypeKind::Number;
 
     struct UnTypes {
       UnopKind op;
@@ -2742,6 +2758,7 @@ class FlowChecker::ExprVisitor {
     }
     Type *countType = outer_.getNodeTypeOrAny(countArg);
     if (!llvh::isa<NumberType>(countType->info) &&
+        !llvh::isa<NumberLiteralType>(countType->info) &&
         !llvh::isa<AnyType>(countType->info)) {
       outer_.sm_.error(
           countArg->getSourceRange(),

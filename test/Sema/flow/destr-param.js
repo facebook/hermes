@@ -154,7 +154,7 @@ function qux({x}: {x: number} = {x: 0}): void {
 // CHECK-NEXT:                ObjectExpression : %object.9
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'x'
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 0
 // CHECK-NEXT:            BlockStatement
 // CHECK-NEXT:                VariableDeclaration
 // CHECK-NEXT:                    VariableDeclarator

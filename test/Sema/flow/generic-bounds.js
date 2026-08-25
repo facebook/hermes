@@ -224,7 +224,7 @@ let nested:
 // CHECK-NEXT:            ClassBody
 // CHECK-NEXT:                ClassProperty : number
 // CHECK-NEXT:                    Id 'x'
-// CHECK-NEXT:                    NumericLiteral : number
+// CHECK-NEXT:                    NumericLiteral : 1
 // CHECK-NEXT:        FunctionDeclaration : %function.11
 // CHECK-NEXT:            Id 'f' [D:E:%d.16 'f']
 // CHECK-NEXT:            Id 'x' [D:E:%d.33 'x']

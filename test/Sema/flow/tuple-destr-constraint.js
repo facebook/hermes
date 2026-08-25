@@ -42,7 +42,7 @@ let [p, {q}]: [number, {q: string}] = [1, {q: "a"}];
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                ArrayExpression : %tuple.2
-// CHECK-NEXT:                    NumericLiteral : number
+// CHECK-NEXT:                    NumericLiteral : 1
 // CHECK-NEXT:                    StringLiteral : "hello"
 // CHECK-NEXT:                ArrayPattern : %tuple.2
 // CHECK-NEXT:                    Id 'a' [D:E:%d.2 'a'] : number
@@ -50,7 +50,7 @@ let [p, {q}]: [number, {q: string}] = [1, {q: "a"}];
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                ArrayExpression : %tuple.4
-// CHECK-NEXT:                    NumericLiteral : number
+// CHECK-NEXT:                    NumericLiteral : 1
 // CHECK-NEXT:                    ObjectExpression : %object.3
 // CHECK-NEXT:                        Property
 // CHECK-NEXT:                            Id 'q'

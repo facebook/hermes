@@ -34,5 +34,5 @@ try {} catch (e) { let x: number = 1; }
 // CHECK-NEXT:                BlockStatement Scope %s.4
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
-// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                            NumericLiteral : 1
 // CHECK-NEXT:                            Id 'x' [D:E:%d.4 'x']

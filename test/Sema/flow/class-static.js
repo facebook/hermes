@@ -116,22 +116,22 @@ class C extends A {}
 // CHECK-NEXT:            ClassBody
 // CHECK-NEXT:                ClassProperty : number
 // CHECK-NEXT:                    Id 'x'
-// CHECK-NEXT:                    NumericLiteral : number
+// CHECK-NEXT:                    NumericLiteral : 0
 // CHECK-NEXT:                ClassProperty : number
 // CHECK-NEXT:                    Id 'y' [D:E:%d.6 'y']
-// CHECK-NEXT:                    NumericLiteral : number
+// CHECK-NEXT:                    NumericLiteral : 1
 // CHECK-NEXT:                MethodDefinition : %function.5
 // CHECK-NEXT:                    Id 'foo' [D:E:%d.7 'foo']
 // CHECK-NEXT:                    FunctionExpression : %function.5
 // CHECK-NEXT:                        BlockStatement
 // CHECK-NEXT:                            ReturnStatement
-// CHECK-NEXT:                                NumericLiteral : number
+// CHECK-NEXT:                                NumericLiteral : 1
 // CHECK-NEXT:                MethodDefinition : %function.6
 // CHECK-NEXT:                    Id 'bar'
 // CHECK-NEXT:                    FunctionExpression : %function.6
 // CHECK-NEXT:                        BlockStatement
 // CHECK-NEXT:                            ReturnStatement
-// CHECK-NEXT:                                NumericLiteral : number
+// CHECK-NEXT:                                NumericLiteral : 2
 // CHECK-NEXT:        ClassDeclaration Scope %s.3
 // CHECK-NEXT:            Id 'B' [D:E:%d.3 'B']
 // CHECK-NEXT:            Id 'A' [D:E:%d.2 'A'] : %class_constructor.2
@@ -144,7 +144,7 @@ class C extends A {}
 // CHECK-NEXT:                    FunctionExpression : %function.7
 // CHECK-NEXT:                        BlockStatement
 // CHECK-NEXT:                            ReturnStatement
-// CHECK-NEXT:                                NumericLiteral : number
+// CHECK-NEXT:                                NumericLiteral : 3
 // CHECK-NEXT:        ClassDeclaration Scope %s.4
 // CHECK-NEXT:            Id 'C' [D:E:%d.4 'C']
 // CHECK-NEXT:            Id 'A' [D:E:%d.2 'A'] : %class_constructor.2

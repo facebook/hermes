@@ -37,20 +37,20 @@ let l: number = x.length
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                ArrayExpression : %tuple.2
-// CHECK-NEXT:                    NumericLiteral : number
+// CHECK-NEXT:                    NumericLiteral : 1
 // CHECK-NEXT:                    BooleanLiteral : boolean
 // CHECK-NEXT:                Id 'x' [D:E:%d.2 'x']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                MemberExpression : number
 // CHECK-NEXT:                    Id 'x' [D:E:%d.2 'x'] : %tuple.2
-// CHECK-NEXT:                    NumericLiteral : number
+// CHECK-NEXT:                    NumericLiteral : 0
 // CHECK-NEXT:                Id 'y' [D:E:%d.3 'y']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                MemberExpression : boolean
 // CHECK-NEXT:                    Id 'x' [D:E:%d.2 'x'] : %tuple.2
-// CHECK-NEXT:                    NumericLiteral : number
+// CHECK-NEXT:                    NumericLiteral : 1
 // CHECK-NEXT:                Id 'z' [D:E:%d.4 'z']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator

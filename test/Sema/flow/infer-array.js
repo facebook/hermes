@@ -33,18 +33,18 @@ let a: number[][] = [[1, 2], [3, 4], [], ...[[10, 11], [12, 13]]];
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                ArrayExpression : %class.3
 // CHECK-NEXT:                    ArrayExpression : %class.2
-// CHECK-NEXT:                        NumericLiteral : number
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 1
+// CHECK-NEXT:                        NumericLiteral : 2
 // CHECK-NEXT:                    ArrayExpression : %class.2
-// CHECK-NEXT:                        NumericLiteral : number
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 3
+// CHECK-NEXT:                        NumericLiteral : 4
 // CHECK-NEXT:                    ArrayExpression : %class.2
 // CHECK-NEXT:                    SpreadElement
 // CHECK-NEXT:                        ArrayExpression : %class.3
 // CHECK-NEXT:                            ArrayExpression : %class.2
-// CHECK-NEXT:                                NumericLiteral : number
-// CHECK-NEXT:                                NumericLiteral : number
+// CHECK-NEXT:                                NumericLiteral : 10
+// CHECK-NEXT:                                NumericLiteral : 11
 // CHECK-NEXT:                            ArrayExpression : %class.2
-// CHECK-NEXT:                                NumericLiteral : number
-// CHECK-NEXT:                                NumericLiteral : number
+// CHECK-NEXT:                                NumericLiteral : 12
+// CHECK-NEXT:                                NumericLiteral : 13
 // CHECK-NEXT:                Id 'a' [D:E:%d.2 'a']

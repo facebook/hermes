@@ -73,7 +73,7 @@ let typedYNum: string = typedY;
 // CHECK-NEXT:                ObjectExpression : %object.2
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'x'
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 1
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'y'
 // CHECK-NEXT:                        StringLiteral : "hello"
@@ -106,7 +106,7 @@ let typedYNum: string = typedY;
 // CHECK-NEXT:                        ObjectExpression : %object.3
 // CHECK-NEXT:                            Property
 // CHECK-NEXT:                                Id 'inner'
-// CHECK-NEXT:                                NumericLiteral : number
+// CHECK-NEXT:                                NumericLiteral : 42
 // CHECK-NEXT:                Id 'nested' [D:E:%d.7 'nested']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator

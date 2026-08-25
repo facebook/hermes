@@ -658,6 +658,8 @@ class FlowChecker::ParseClassType {
       // property's initializer.
       outer_.visitedInits_.insert(value);
       outer_.visitExpression(value, prop, nullptr);
+      // A class field is mutable, so widen a fresh literal initializer type to
+      // its base type, mirroring let/var widening.
       fieldType = outer_.widenLiteralType(outer_.getNodeTypeOrAny(value));
     } else {
       // Unable to infer, just assume 'any'.
@@ -2755,6 +2757,12 @@ Type *FlowChecker::parseTypeAnnotation(ESTree::Node *node) {
           node);
     case ESTree::NodeKind::NumberTypeAnnotation:
       return flowContext_.getNumber();
+    case ESTree::NodeKind::NumberLiteralTypeAnnotation:
+      return flowContext_.createType(
+          flowContext_.createNumberLiteral(
+              llvh::cast<ESTree::NumberLiteralTypeAnnotationNode>(node)
+                  ->_value),
+          node);
     case ESTree::NodeKind::BigIntTypeAnnotation:
       return flowContext_.getBigInt();
     case ESTree::NodeKind::AnyTypeAnnotation:
@@ -3046,6 +3054,16 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     if (llvh::isa<StringType>(b))
       return {.canFlow = true};
     if (auto *litB = llvh::dyn_cast<StringLiteralType>(b))
+      return {.canFlow = litA->getValue() == litB->getValue()};
+    return {};
+  }
+
+  // Number literal flows into number, and into another number literal when
+  // the value is identical.
+  if (auto *litA = llvh::dyn_cast<NumberLiteralType>(a)) {
+    if (llvh::isa<NumberType>(b))
+      return {.canFlow = true};
+    if (auto *litB = llvh::dyn_cast<NumberLiteralType>(b))
       return {.canFlow = litA->getValue() == litB->getValue()};
     return {};
   }
@@ -3353,18 +3371,28 @@ Type *FlowChecker::getNonOptionalSingleType(Type *exprType) {
 }
 
 Type *FlowChecker::widenLiteralType(Type *type) {
-  if (llvh::isa<StringLiteralType>(type->info))
-    return flowContext_.getString();
+  // Widen a literal type to its base singleton, or return nullptr if \p t is
+  // not a literal type.
+  auto widenLiteral = [this](Type *t) -> Type * {
+    if (llvh::isa<StringLiteralType>(t->info))
+      return flowContext_.getString();
+    if (llvh::isa<NumberLiteralType>(t->info))
+      return flowContext_.getNumber();
+    return nullptr;
+  };
+
+  if (Type *widened = widenLiteral(type))
+    return widened;
 
   if (auto *unionType = llvh::dyn_cast<UnionType>(type->info)) {
-    // Widen any direct string-literal arms to String. Don't recurse into the
+    // Widen any direct literal arms to their base type. Don't recurse into the
     // arms: union arms are already flattened, and recursing could loop on
     // cyclic union arms.
     bool changed = false;
     llvh::SmallVector<Type *, 4> arms{};
     for (Type *arm : unionType->getTypes()) {
-      if (llvh::isa<StringLiteralType>(arm->info)) {
-        arms.push_back(flowContext_.getString());
+      if (Type *widened = widenLiteral(arm)) {
+        arms.push_back(widened);
         changed = true;
       } else {
         arms.push_back(arm);

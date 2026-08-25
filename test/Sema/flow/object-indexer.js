@@ -116,10 +116,10 @@ function delWO(o: WO): void {
 // CHECK-NEXT:                ObjectExpression : %object.8
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'a'
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 1
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'b'
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 2
 // CHECK-NEXT:                Id 'd' [D:E:%d.2 'd']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
@@ -128,11 +128,11 @@ function delWO(o: WO): void {
 // CHECK-NEXT:                    StringLiteral : "x"
 // CHECK-NEXT:                Id 'n' [D:E:%d.3 'n']
 // CHECK-NEXT:        ExpressionStatement
-// CHECK-NEXT:            AssignmentExpression : number
+// CHECK-NEXT:            AssignmentExpression : 3
 // CHECK-NEXT:                MemberExpression : number
 // CHECK-NEXT:                    Id 'd' [D:E:%d.2 'd'] : %object.2
 // CHECK-NEXT:                    StringLiteral : "y"
-// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:                NumericLiteral : 3
 // CHECK-NEXT:        TypeAlias
 // CHECK-NEXT:            Id 'NumDict'
 // CHECK-NEXT:            ObjectTypeAnnotation
@@ -147,13 +147,13 @@ function delWO(o: WO): void {
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                MemberExpression : string
 // CHECK-NEXT:                    Id 'nd' [D:E:%d.4 'nd'] : %object.3
-// CHECK-NEXT:                    NumericLiteral : number
+// CHECK-NEXT:                    NumericLiteral : 0
 // CHECK-NEXT:                Id 's' [D:E:%d.5 's']
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            AssignmentExpression : "x"
 // CHECK-NEXT:                MemberExpression : string
 // CHECK-NEXT:                    Id 'nd' [D:E:%d.4 'nd'] : %object.3
-// CHECK-NEXT:                    NumericLiteral : number
+// CHECK-NEXT:                    NumericLiteral : 1
 // CHECK-NEXT:                StringLiteral : "x"
 // CHECK-NEXT:        TypeAlias
 // CHECK-NEXT:            Id 'RO'
@@ -182,11 +182,11 @@ function delWO(o: WO): void {
 // CHECK-NEXT:            Id 'o' [D:E:%d.14 'o']
 // CHECK-NEXT:            BlockStatement
 // CHECK-NEXT:                ExpressionStatement
-// CHECK-NEXT:                    AssignmentExpression : number
+// CHECK-NEXT:                    AssignmentExpression : 1
 // CHECK-NEXT:                        MemberExpression : number
 // CHECK-NEXT:                            Id 'o' [D:E:%d.14 'o'] : %object.5
 // CHECK-NEXT:                            StringLiteral : "k"
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 1
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                ObjectExpression : %object.9
@@ -198,11 +198,11 @@ function delWO(o: WO): void {
 // CHECK-NEXT:                    Id 'x'
 // CHECK-NEXT:                Id 'dotRead' [D:E:%d.9 'dotRead']
 // CHECK-NEXT:        ExpressionStatement
-// CHECK-NEXT:            AssignmentExpression : number
+// CHECK-NEXT:            AssignmentExpression : 4
 // CHECK-NEXT:                MemberExpression : number
 // CHECK-NEXT:                    Id 'd' [D:E:%d.2 'd'] : %object.2
 // CHECK-NEXT:                    Id 'y'
-// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:                NumericLiteral : 4
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            UnaryExpression : boolean
 // CHECK-NEXT:                MemberExpression : number
@@ -217,7 +217,7 @@ function delWO(o: WO): void {
 // CHECK-NEXT:            UnaryExpression : boolean
 // CHECK-NEXT:                MemberExpression : string
 // CHECK-NEXT:                    Id 'nd' [D:E:%d.4 'nd'] : %object.3
-// CHECK-NEXT:                    NumericLiteral : number
+// CHECK-NEXT:                    NumericLiteral : 0
 // CHECK-NEXT:        FunctionDeclaration : %function.7
 // CHECK-NEXT:            Id 'delWO' [D:E:%d.10 'delWO']
 // CHECK-NEXT:            Id 'o' [D:E:%d.16 'o']

@@ -64,7 +64,7 @@ id<string>('a');
 // CHECK-NEXT:            BlockStatement
 // CHECK-NEXT:                VariableDeclaration
 // CHECK-NEXT:                    VariableDeclarator
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 3
 // CHECK-NEXT:                        Id 'y' [D:E:%d.10 'y']
 // CHECK-NEXT:                ReturnStatement
 // CHECK-NEXT:                    Id 'x' [D:E:%d.9 'x'] : number
@@ -76,7 +76,7 @@ id<string>('a');
 // CHECK-NEXT:            BlockStatement
 // CHECK-NEXT:                VariableDeclaration
 // CHECK-NEXT:                    VariableDeclarator
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 3
 // CHECK-NEXT:                        Id 'y' [D:E:%d.13 'y']
 // CHECK-NEXT:                ReturnStatement
 // CHECK-NEXT:                    Id 'x' [D:E:%d.12 'x'] : string
@@ -99,7 +99,7 @@ id<string>('a');
 // CHECK-NEXT:                Id 'id' [D:E:%d.4 'id'] : %function.2
 // CHECK-NEXT:                TypeParameterInstantiation
 // CHECK-NEXT:                    NumberTypeAnnotation
-// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:                NumericLiteral : 1
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            CallExpression : string
 // CHECK-NEXT:                Id 'id' [D:E:%d.5 'id'] : %function.3
