@@ -1408,6 +1408,47 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
     }
   }
 
+  // Reading a field common to every arm of an object-literal union.
+  // FlowChecker has verified the field exists in every exact-object arm and
+  // typed the member expression as the union of the per-arm field types.
+  // If the field is the same slot in every arm, use PrLoad, else use
+  // LoadProperty.
+  if (auto *unionType = llvh::dyn_cast<flow::UnionType>(
+          flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
+    if (!mem->_computed) {
+      auto propName = Identifier::getFromPointer(
+          llvh::cast<ESTree::IdentifierNode>(mem->_property)->_name);
+      Type resultTy = flowTypeToIRType(flowContext_.getNodeTypeOrAny(mem));
+      // Determine whether the field lives at the same slot in every arm.
+      OptValue<size_t> commonSlot = llvh::None;
+      bool sameSlot = true;
+      for (flow::Type *arm : unionType->getTypes()) {
+        auto *objType = llvh::cast<flow::ExactObjectType>(arm->info);
+        auto optIndex = objType->findField(propName);
+        assert(optIndex && "FlowChecker guarantees the field in every arm");
+        if (!commonSlot) {
+          commonSlot = *optIndex;
+        } else if (*commonSlot != *optIndex) {
+          sameSlot = false;
+          break;
+        }
+      }
+      if (sameSlot) {
+        return MemberExpressionResult{
+            Builder.createPrLoadInst(
+                baseValue,
+                *commonSlot,
+                Builder.getLiteralString(propName),
+                resultTy),
+            nullptr,
+            baseValue};
+      }
+      auto *loadProp = Builder.createLoadPropertyInst(baseValue, propValue);
+      loadProp->setType(resultTy);
+      return MemberExpressionResult{loadProp, nullptr, baseValue};
+    }
+  }
+
   // Check if we are loading a tuple element, and generate the typed IR.
   if (auto *tupleType = llvh::dyn_cast<flow::TupleType>(
           flowContext_.getNodeTypeOrAny(mem->_object)->info)) {

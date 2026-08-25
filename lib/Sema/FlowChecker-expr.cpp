@@ -828,6 +828,68 @@ class FlowChecker::ExprVisitor {
     return outer_.flowContext_.getAny();
   }
 
+  /// Read a field that is common to every arm of a union of object-literal
+  /// types. The field must exist in every arm; it need not sit at the same slot
+  /// in each (IRGen picks a slot-indexed load when the slots happen to match
+  /// and a by-name load otherwise). The result type is the union of the per-arm
+  /// field types. Only non-computed reads are supported.
+  Type *visitMemberUnion(
+      ESTree::MemberExpressionNode *node,
+      ESTree::Node *parent,
+      UnionType *unionType,
+      bool isWrite) {
+    if (node->_computed) {
+      outer_.sm_.error(
+          node->_property->getSourceRange(),
+          "ft: computed access to a union not supported");
+      return outer_.flowContext_.getAny();
+    }
+
+    // Only reads are supported for now.
+    if (classifyMemberAccess(node, parent, isWrite).write) {
+      outer_.sm_.error(
+          node->_property->getSourceRange(),
+          "ft: cannot write to a property of a union");
+      return outer_.flowContext_.getAny();
+    }
+
+    Identifier name = Identifier::getFromPointer(
+        llvh::cast<ESTree::IdentifierNode>(node->_property)->_name);
+
+    llvh::SmallVector<Type *, 4> fieldTypes{};
+    fieldTypes.reserve(unionType->getTypes().size());
+    for (Type *arm : unionType->getTypes()) {
+      auto *objType = llvh::dyn_cast<ExactObjectType>(arm->info);
+      if (!objType) {
+        outer_.sm_.error(
+            node->_property->getSourceRange(),
+            "ft: property '" + name.str() +
+                "' cannot be read on union with non-object arm " +
+                arm->messageString());
+        return outer_.flowContext_.getAny();
+      }
+      auto optFieldIdx = objType->findField(name);
+      if (!optFieldIdx) {
+        outer_.sm_.error(
+            node->_property->getSourceRange(),
+            "ft: property '" + name.str() +
+                "' is not present in all arms of the union");
+        return outer_.flowContext_.getAny();
+      }
+      const auto &field = objType->getFields()[*optFieldIdx];
+      if (field.variance == FieldVariance::WriteOnly) {
+        outer_.sm_.error(
+            node->_property->getSourceRange(),
+            "ft: cannot read writeonly property '" + name.str() + "'");
+        return outer_.flowContext_.getAny();
+      }
+      fieldTypes.push_back(field.type);
+    }
+
+    return outer_.flowContext_.createType(
+        outer_.flowContext_.maybeCreateUnion(fieldTypes));
+  }
+
   void visit(
       ESTree::MemberExpressionNode *node,
       ESTree::Node *parent,
@@ -911,6 +973,8 @@ class FlowChecker::ExprVisitor {
         llvh::isa<StringLiteralType>(objType->info)) {
       // A string literal type supports all the operations of String.
       resType = visitMemberString(node);
+    } else if (auto *unionType = llvh::dyn_cast<UnionType>(objType->info)) {
+      resType = visitMemberUnion(node, parent, unionType, isWrite);
     } else if (!llvh::isa<AnyType>(objType->info)) {
       if (node->_computed) {
         outer_.sm_.error(
