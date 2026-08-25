@@ -79,6 +79,8 @@ void FlowChecker::matchConstraintToType(
         constraint->info = flowContext_.getStringInfo();
       else if (llvh::isa<NumberLiteralType>(type->info))
         constraint->info = flowContext_.getNumberInfo();
+      else if (llvh::isa<BooleanLiteralType>(type->info))
+        constraint->info = flowContext_.getBooleanInfo();
       else
         constraint->info = type->info;
       continue;
@@ -155,6 +157,7 @@ void FlowChecker::matchConstraintToType(
       // Literals carry no nested types to match.
       case TypeKind::StringLiteral:
       case TypeKind::NumberLiteral:
+      case TypeKind::BooleanLiteral:
         continue;
 
       case TypeKind::Union:
@@ -1440,7 +1443,13 @@ class FlowChecker::ExprVisitor {
       ESTree::BooleanLiteralNode *node,
       ESTree::Node *parent,
       Type *constraint) {
-    outer_.setNodeType(node, outer_.flowContext_.getBoolean());
+    // Type a boolean literal as its own BooleanLiteralType. It flows into
+    // Boolean, so this is compatible with Boolean contexts; un-annotated
+    // let/var declarations widen it back to Boolean during inference.
+    outer_.setNodeType(
+        node,
+        outer_.flowContext_.createType(
+            outer_.flowContext_.createBooleanLiteral(node->_value), node));
   }
   void visit(
       ESTree::StringLiteralNode *node,
@@ -1601,6 +1610,8 @@ class FlowChecker::ExprVisitor {
         return TypeKind::String;
       if (k == TypeKind::NumberLiteral)
         return TypeKind::Number;
+      if (k == TypeKind::BooleanLiteral)
+        return TypeKind::Boolean;
       return k;
     };
     lk = normalize(lk);
@@ -1820,6 +1831,8 @@ class FlowChecker::ExprVisitor {
       argKind = TypeKind::String;
     else if (argKind == TypeKind::NumberLiteral)
       argKind = TypeKind::Number;
+    else if (argKind == TypeKind::BooleanLiteral)
+      argKind = TypeKind::Boolean;
 
     struct UnTypes {
       UnopKind op;

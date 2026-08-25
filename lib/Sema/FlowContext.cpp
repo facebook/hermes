@@ -180,6 +180,11 @@ static void messageStringImpl(const Type *type, llvh::raw_ostream &os) {
     return;
   }
 
+  if (auto *boolLitType = llvh::dyn_cast<BooleanLiteralType>(type->info)) {
+    os << (boolLitType->getValue() ? "true" : "false");
+    return;
+  }
+
   os << type->info->getKindName();
 }
 
@@ -206,6 +211,8 @@ llvh::StringRef TypeInfo::getKindName() const {
       return "string literal";
     case TypeKind::NumberLiteral:
       return "number literal";
+    case TypeKind::BooleanLiteral:
+      return "boolean literal";
     case TypeKind::CPtr:
       return "c_ptr";
     case TypeKind::Number:
@@ -635,6 +642,23 @@ unsigned NumberLiteralType::_hashImpl() const {
     bits = llvh::DoubleToBits(value_);
   }
   return (unsigned)llvh::hash_combine((uint64_t)TypeKind::NumberLiteral, bits);
+}
+
+int BooleanLiteralType::_compareImpl(
+    const BooleanLiteralType *other,
+    CompareState &state) const {
+  return (int)value_ - (int)other->value_;
+}
+
+bool BooleanLiteralType::_equalsImpl(
+    const BooleanLiteralType *other,
+    CompareState &state) const {
+  return value_ == other->value_;
+}
+
+unsigned BooleanLiteralType::_hashImpl() const {
+  return (unsigned)llvh::hash_combine(
+      (unsigned)TypeKind::BooleanLiteral, (unsigned)value_);
 }
 
 hermes::OptValue<size_t> ExactObjectType::findField(Identifier id) const {

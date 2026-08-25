@@ -155,9 +155,9 @@ let v5 = first(c);
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                ArrayExpression : %class.2
-// CHECK-NEXT:                    BooleanLiteral : boolean
-// CHECK-NEXT:                    BooleanLiteral : boolean
-// CHECK-NEXT:                    BooleanLiteral : boolean
+// CHECK-NEXT:                    BooleanLiteral : true
+// CHECK-NEXT:                    BooleanLiteral : true
+// CHECK-NEXT:                    BooleanLiteral : false
 // CHECK-NEXT:                Id 'b' [D:E:%d.5 'b']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
@@ -209,8 +209,8 @@ let v5 = first(c);
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                ArrayExpression : %tuple.3
-// CHECK-NEXT:                    BooleanLiteral : boolean
-// CHECK-NEXT:                    BooleanLiteral : boolean
+// CHECK-NEXT:                    BooleanLiteral : true
+// CHECK-NEXT:                    BooleanLiteral : true
 // CHECK-NEXT:                Id 'c' [D:E:%d.9 'c']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator

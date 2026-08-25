@@ -761,11 +761,12 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
       Type *targetType);
 
   /// Widen "fresh" literal types for the inferred type of an un-annotated
-  /// non-const variable: a StringLiteralType becomes String and a
-  /// NumberLiteralType becomes Number, and direct union arms that are literals
-  /// are widened (one level; union arms are already flattened, so e.g. a union
-  /// of string literals becomes String). This matches TS-style let/var
-  /// widening; const declarations keep the literal type.
+  /// non-const variable: a StringLiteralType becomes String, a
+  /// NumberLiteralType becomes Number and a BooleanLiteralType becomes Boolean,
+  /// and direct union arms that are literals are widened (one level; union arms
+  /// are already flattened, so e.g. a union of string literals becomes String).
+  /// This matches TS-style let/var widening; const declarations keep the
+  /// literal type.
   /// \return the widened type, or \p type unchanged if nothing was widened.
   Type *widenLiteralType(Type *type);
 

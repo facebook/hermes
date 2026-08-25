@@ -49,7 +49,8 @@ namespace flow {
   _HERMES_SEMA_FLOW_DEFKIND(ClassConstructor)          \
   _HERMES_SEMA_FLOW_DEFKIND(InferencePlaceholderArray) \
   _HERMES_SEMA_FLOW_DEFKIND(StringLiteral)             \
-  _HERMES_SEMA_FLOW_DEFKIND(NumberLiteral)
+  _HERMES_SEMA_FLOW_DEFKIND(NumberLiteral)             \
+  _HERMES_SEMA_FLOW_DEFKIND(BooleanLiteral)
 
 enum class TypeKind : uint8_t {
 #define _HERMES_SEMA_FLOW_DEFKIND(name) name,
@@ -65,7 +66,7 @@ enum class TypeKind : uint8_t {
   _FirstFunction = UntypedFunction,
   _LastFunction = NativeFunction,
   _FirstLiteral = StringLiteral,
-  _LastLiteral = NumberLiteral,
+  _LastLiteral = BooleanLiteral,
 };
 
 /// The backing storage for Types.
@@ -524,6 +525,31 @@ class NumberLiteralType : public TypeInfo {
 
   static bool classof(const TypeInfo *t) {
     return t->getKind() == TypeKind::NumberLiteral;
+  }
+};
+
+/// The type of a single boolean literal, i.e. the type true or the type false.
+/// Carries the literal value. A BooleanLiteralType flows into Boolean, and into
+/// another BooleanLiteralType only when the value is identical.
+class BooleanLiteralType : public TypeInfo {
+  /// The literal value.
+  bool value_;
+
+ public:
+  explicit BooleanLiteralType(bool value)
+      : TypeInfo(TypeKind::BooleanLiteral), value_(value) {}
+
+  /// \return the literal value.
+  bool getValue() const {
+    return value_;
+  }
+
+  int _compareImpl(const BooleanLiteralType *other, CompareState &state) const;
+  bool _equalsImpl(const BooleanLiteralType *other, CompareState &state) const;
+  unsigned _hashImpl() const;
+
+  static bool classof(const TypeInfo *t) {
+    return t->getKind() == TypeKind::BooleanLiteral;
   }
 };
 
@@ -1302,6 +1328,9 @@ class FlowContext {
   }
   NumberLiteralType *createNumberLiteral(double value) {
     return &allocNumberLiteral_.emplace_back(value);
+  }
+  BooleanLiteralType *createBooleanLiteral(bool value) {
+    return &allocBooleanLiteral_.emplace_back(value);
   }
   ExactObjectType *createExactObject(
       llvh::ArrayRef<ExactObjectType::Field> fields,

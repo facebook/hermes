@@ -2763,6 +2763,12 @@ Type *FlowChecker::parseTypeAnnotation(ESTree::Node *node) {
               llvh::cast<ESTree::NumberLiteralTypeAnnotationNode>(node)
                   ->_value),
           node);
+    case ESTree::NodeKind::BooleanLiteralTypeAnnotation:
+      return flowContext_.createType(
+          flowContext_.createBooleanLiteral(
+              llvh::cast<ESTree::BooleanLiteralTypeAnnotationNode>(node)
+                  ->_value),
+          node);
     case ESTree::NodeKind::BigIntTypeAnnotation:
       return flowContext_.getBigInt();
     case ESTree::NodeKind::AnyTypeAnnotation:
@@ -3064,6 +3070,16 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     if (llvh::isa<NumberType>(b))
       return {.canFlow = true};
     if (auto *litB = llvh::dyn_cast<NumberLiteralType>(b))
+      return {.canFlow = litA->getValue() == litB->getValue()};
+    return {};
+  }
+
+  // Boolean literal flows into boolean, and into another boolean literal when
+  // the value is identical.
+  if (auto *litA = llvh::dyn_cast<BooleanLiteralType>(a)) {
+    if (llvh::isa<BooleanType>(b))
+      return {.canFlow = true};
+    if (auto *litB = llvh::dyn_cast<BooleanLiteralType>(b))
       return {.canFlow = litA->getValue() == litB->getValue()};
     return {};
   }
@@ -3378,6 +3394,8 @@ Type *FlowChecker::widenLiteralType(Type *type) {
       return flowContext_.getString();
     if (llvh::isa<NumberLiteralType>(t->info))
       return flowContext_.getNumber();
+    if (llvh::isa<BooleanLiteralType>(t->info))
+      return flowContext_.getBoolean();
     return nullptr;
   };
 

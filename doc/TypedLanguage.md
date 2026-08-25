@@ -34,6 +34,7 @@ The TypeScript type syntax is partially supported (use `-parse-ts` to convert TS
 
 * String literal types: `"left"`, `"right"`
 * Number literal types: `1`, `-3`
+* Boolean literal types: `true`, `false`
 
 `"abc"` is typed as `"abc"`. Literal types flows into their general (widened) types, and into another literal only when the value is identical. Operators treat a literal as the widened type. This can be used for tagged unions and string enums.
 

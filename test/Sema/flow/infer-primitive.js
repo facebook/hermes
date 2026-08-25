@@ -58,7 +58,7 @@ let v7 = /1/;
 // CHECK-NEXT:                Id 'v4' [D:E:%d.5 'v4']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                BooleanLiteral : boolean
+// CHECK-NEXT:                BooleanLiteral : true
 // CHECK-NEXT:                Id 'v5' [D:E:%d.6 'v5']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
