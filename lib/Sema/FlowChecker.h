@@ -382,6 +382,14 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   void visit(ESTree::FunctionExpressionNode *node);
   void visit(ESTree::ArrowFunctionExpressionNode *node);
 
+  /// Typecheck an arrow function. Shared by the plain and the
+  /// contextually-typed (ExprVisitor) entry points.
+  /// \param constraint optional expected function type that drives inference of
+  ///   unannotated parameters and return type. nullptr for a plain arrow.
+  void visitArrowFunction(
+      ESTree::ArrowFunctionExpressionNode *node,
+      TypedFunctionType *constraint);
+
   /// Run typechecking on the body of a class that we already have the type for.
   /// \param classConsType the ClassConstructorType wrapping \p classType, used
   ///   as the new.target type inside the constructor.
@@ -572,13 +580,18 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// \param defaultReturnType optional return type if the return annotation
   ///     is missing. nullptr here is a shortcut for "any".
   /// \param defaultThisType optional this type if the annotation is missing.
+  /// \param constraint optional expected function type used to infer the types
+  ///     of unannotated parameters and return, and to match inference
+  ///     placeholders. Only set for arrow functions, which have no "this"
+  ///     parameter.
   Type *parseFunctionType(
       ESTree::NodeList &params,
       ESTree::Node *optReturnTypeAnnotation,
       bool isAsync,
       bool isGenerator,
       Type *defaultReturnType = nullptr,
-      Type *defaultThisType = nullptr);
+      Type *defaultThisType = nullptr,
+      TypedFunctionType *constraint = nullptr);
 
   /// Parse an optional type annotation. If it is nullptr, return any, otherwise
   /// parse the inner annotation (which cannot be null).
@@ -1266,16 +1279,22 @@ Type *FlowChecker::processFunctionTypeAnnotation(
   // Handle the rest parameter if present.
   if (node->_rest) {
     auto *restParam = llvh::cast<ESTree::FunctionTypeParamNode>(node->_rest);
-    if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(restParam->_name)) {
-      paramsList.push_back(
-          {Identifier::getFromPointer(id->_name),
-           restParam->_typeAnnotation ? cb(restParam->_typeAnnotation)
-                                      : nullptr,
-           /*optional=*/false,
-           /*rest=*/true});
-    } else {
-      sm_.error(restParam->getSourceRange(), "unsupported rest param");
+
+    UniqueString *name = nullptr;
+    if (!restParam->_name) {
+      name = kw_.identEmptyString;
+    } else if (
+        auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(restParam->_name)) {
+      name = id->_name;
     }
+    if (!name)
+      sm_.error(restParam->getSourceRange(), "unsupported rest param");
+
+    paramsList.push_back(
+        {Identifier::getFromPointer(name),
+         restParam->_typeAnnotation ? cb(restParam->_typeAnnotation) : nullptr,
+         /*optional=*/false,
+         /*rest=*/true});
   }
 
   return flowContext_.createType(

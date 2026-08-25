@@ -340,6 +340,12 @@ void FlowChecker::visit(ESTree::FunctionExpressionNode *node) {
 }
 
 void FlowChecker::visit(ESTree::ArrowFunctionExpressionNode *node) {
+  visitArrowFunction(node, /*constraint=*/nullptr);
+}
+
+void FlowChecker::visitArrowFunction(
+    ESTree::ArrowFunctionExpressionNode *node,
+    TypedFunctionType *constraint) {
   if (node->_typeParameters) {
     sm_.error(
         node->_typeParameters->getStartLoc(),
@@ -351,7 +357,10 @@ void FlowChecker::visit(ESTree::ArrowFunctionExpressionNode *node) {
       node->_params,
       node->_returnType,
       node->_async,
-      false /*node->_generator*/);
+      false /*node->_generator*/,
+      /*defaultReturnType=*/nullptr,
+      /*defaultThisType=*/nullptr,
+      constraint);
   setNodeType(node, ftype);
 
   FunctionContext functionContext(
@@ -2489,34 +2498,70 @@ Type *FlowChecker::parseFunctionType(
     bool isAsync,
     bool isGenerator,
     Type *defaultReturnType,
-    Type *defaultThisType) {
+    Type *defaultThisType,
+    TypedFunctionType *constraint) {
   llvh::SmallVector<TypedFunctionType::Param, 4> paramsList{};
 
   // If the default return type is expected, then we are parsing a typed
-  // function, even if it doesn't have any explicit type annotations.
-  bool isTyped = (defaultReturnType != nullptr);
+  // function, even if it doesn't have any explicit type annotations. A
+  // constraint likewise produces a typed function, so the parameter and return
+  // types inferred from it are preserved.
+  bool isTyped = (defaultReturnType != nullptr) || (constraint != nullptr);
 
   bool seenOptional = false;
 
+  /// Resolve a parameter's type, consulting the constraint to infer the type of
+  /// unannotated parameters and to match inference placeholders.
+  /// \p paramType is the parsed annotation type, may be nullptr.
+  /// \p paramConstraintType is the constraint type for the current parameter,
+  /// may be nullptr.
+  auto constrainParam =
+      [this](Type *paramType, Type *paramConstraintType) -> Type * {
+    if (paramType) {
+      if (paramConstraintType)
+        matchConstraintToType(paramConstraintType, paramType);
+      return paramType;
+    } else if (paramConstraintType) {
+      return paramConstraintType;
+    } else {
+      return flowContext_.getAny();
+    }
+  };
+
+  // Index of the current parameter.
+  size_t constraintIdx = 0;
   for (ESTree::Node &n : params) {
+    const TypedFunctionType::Param *paramConstraint =
+        (constraint && constraintIdx < constraint->getParams().size())
+        ? &constraint->getParams()[constraintIdx]
+        : nullptr;
+    Type *paramConstraintType =
+        paramConstraint ? paramConstraint->type : nullptr;
+
     if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(&n)) {
       if (id->_optional) {
         seenOptional = true;
       } else if (seenOptional) {
         sm_.error(id->getSourceRange(), "ft: optional params must be last");
       }
+      Type *annot = id->_typeAnnotation
+          ? parseOptionalTypeAnnotation(id->_typeAnnotation)
+          : nullptr;
       paramsList.push_back(
           {Identifier::getFromPointer(id->_name),
-           parseOptionalTypeAnnotation(id->_typeAnnotation),
+           constrainParam(annot, paramConstraintType),
            id->_optional});
       isTyped |= (id->_typeAnnotation != nullptr);
     } else if (
         auto *assign = llvh::dyn_cast<ESTree::AssignmentPatternNode>(&n)) {
       if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(assign->_left)) {
         seenOptional = true;
+        Type *annot = id->_typeAnnotation
+            ? parseOptionalTypeAnnotation(id->_typeAnnotation)
+            : nullptr;
         paramsList.push_back(
             {Identifier::getFromPointer(id->_name),
-             parseOptionalTypeAnnotation(id->_typeAnnotation),
+             constrainParam(annot, paramConstraintType),
              /*optional=*/true});
         isTyped |= (id->_typeAnnotation != nullptr);
       } else if (
@@ -2526,7 +2571,8 @@ Type *FlowChecker::parseFunctionType(
         isTyped = true;
         paramsList.push_back(
             {Identifier(),
-             parseOptionalTypeAnnotation(annot),
+             constrainParam(
+                 parseOptionalTypeAnnotation(annot), paramConstraintType),
              /*optional=*/true});
       } else if (
           llvh::isa<ESTree::ObjectPatternNode>(assign->_left) ||
@@ -2544,15 +2590,22 @@ Type *FlowChecker::parseFunctionType(
       }
     } else if (auto *rest = llvh::dyn_cast<ESTree::RestElementNode>(&n)) {
       if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(rest->_argument)) {
-        Type *annotType = parseOptionalTypeAnnotation(id->_typeAnnotation);
-        if (id->_typeAnnotation && !flowContext_.isArrayClassType(annotType)) {
+        Type *annot = id->_typeAnnotation
+            ? parseOptionalTypeAnnotation(id->_typeAnnotation)
+            : nullptr;
+        if (annot && !flowContext_.isArrayClassType(annot)) {
           sm_.error(
               id->_typeAnnotation->getSourceRange(),
               "ft: rest parameter type must be Array<T>");
         }
+        Type *restConstraintType =
+            (paramConstraintType &&
+             flowContext_.isArrayClassType(paramConstraintType))
+            ? paramConstraintType
+            : nullptr;
         paramsList.push_back(
             {Identifier::getFromPointer(id->_name),
-             annotType,
+             constrainParam(annot, restConstraintType),
              /*optional=*/false,
              /*rest=*/true});
         isTyped |= (id->_typeAnnotation != nullptr);
@@ -2568,7 +2621,10 @@ Type *FlowChecker::parseFunctionType(
       // Destructuring param without default value, with type annotation.
       isTyped = true;
       paramsList.push_back(
-          {Identifier(), parseOptionalTypeAnnotation(annot), false});
+          {Identifier(),
+           constrainParam(
+               parseOptionalTypeAnnotation(annot), paramConstraintType),
+           false});
     } else if (
         llvh::isa<ESTree::ObjectPatternNode>(&n) ||
         llvh::isa<ESTree::ArrayPatternNode>(&n)) {
@@ -2583,11 +2639,22 @@ Type *FlowChecker::parseFunctionType(
           "ft: typing of pattern parameters not implemented, :any assumed");
       paramsList.push_back({Identifier(), flowContext_.getAny(), false});
     }
+    ++constraintIdx;
   }
 
   Type *returnType =
       parseOptionalTypeAnnotation(optReturnTypeAnnotation, defaultReturnType);
   isTyped |= (optReturnTypeAnnotation != nullptr);
+  if (constraint) {
+    if (optReturnTypeAnnotation) {
+      // Explicit return annotation: fill inference placeholders from it.
+      matchConstraintToType(constraint->getReturnType(), returnType);
+    } else if (!defaultReturnType) {
+      // No annotation: borrow the constraint's return type, which may itself be
+      // an inference placeholder filled in when return statements are visited.
+      returnType = constraint->getReturnType();
+    }
+  }
 
   Type *thisParamType = defaultThisType;
   llvh::ArrayRef<TypedFunctionType::Param> paramsRef(paramsList);
