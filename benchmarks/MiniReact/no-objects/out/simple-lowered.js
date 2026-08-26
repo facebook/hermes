@@ -304,7 +304,16 @@
               if (propValue == null || typeof propValue === 'function') {
                 continue;
               }
-              str += ` ${propName}=${JSON.stringify(propValue) ?? 'undefined'}`;
+              // JSON.stringify only for object props; quote strings directly.
+              let valueStr;
+              if (typeof propValue === 'string') {
+                valueStr = '"' + M$sh_CHECKED_CAST$default(propValue) + '"';
+              } else if (typeof propValue === 'number' || typeof propValue === 'boolean') {
+                valueStr = String(propValue);
+              } else {
+                valueStr = JSON.stringify(propValue) ?? 'undefined';
+              }
+              str += ' ' + propName + '=' + valueStr;
             }
             if (fiber.child == null) {
               str += ' />';
