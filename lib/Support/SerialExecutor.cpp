@@ -31,15 +31,25 @@ SerialExecutor::~SerialExecutor() {
   assert(tasks_.empty() && "Thread should have drained all tasks.");
 }
 
-void SerialExecutor::add(std::function<void()> task) {
+void SerialExecutor::add(llvh::unique_function<void()> task) {
   std::unique_lock<std::mutex> lock(mutex_);
+  // Draining inside ~SerialExecutor destroys tasks, and a task's captured
+  // state may enqueue more work from its destructor. That is fine: the drain
+  // loop runs until the queue is empty, so it picks the new task up. Enqueuing
+  // from any other thread once teardown has begun is a lifetime bug, because
+  // the worker may already have passed the drain loop.
   assert(
-      threadState_ != ThreadState::Terminating &&
-      "Adding tasks during teardown.");
+      (threadState_ != ThreadState::Terminating ||
+       workerThreadId_ == std::this_thread::get_id()) &&
+      "Adding tasks during teardown from outside the worker thread.");
 
   // If the thread is exiting or has already exited, we need to create a new
-  // one.
-  if (threadState_ != ThreadState::Initialized) {
+  // one. Terminating is the exception: the worker is still draining and will
+  // pick this task up itself. Spawning another one there would overwrite tid_
+  // out from under the join in ~SerialExecutor and reset threadState_, so the
+  // drain loop would never see Terminating and both workers would park.
+  if (threadState_ != ThreadState::Initialized &&
+      threadState_ != ThreadState::Terminating) {
     assert(tasks_.empty() && "Exited thread should have drained tasks.");
 
 #if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
@@ -73,15 +83,23 @@ void SerialExecutor::add(std::function<void()> task) {
     threadState_ = ThreadState::Initialized;
   }
 
-  tasks_.push_back(task);
+  // Moving a unique_function always empties the source, so the queue is the
+  // sole owner of the task before we release the lock. Otherwise the caller
+  // could drop the last reference to the task's captured state -- for
+  // finalizers, the object being finalized -- after the worker has already
+  // run, destroying it on the calling thread instead of the worker.
+  tasks_.push_back(std::move(task));
   wakeUpSig_.notify_one();
 }
 
 void SerialExecutor::run() {
   std::unique_lock<std::mutex> lock(mutex_);
+  workerThreadId_ = std::this_thread::get_id();
   while (true) {
     while (!tasks_.empty()) {
-      std::function<void()> task = std::move(tasks_.front());
+      // The move empties the queue element, so pop_front() destroys an empty
+      // shell and cannot run the task's captured destructors under the lock.
+      llvh::unique_function<void()> task = std::move(tasks_.front());
       tasks_.pop_front();
       // Make sure we do *NOT* hold a lock to mutex_ as we execute the given
       // task. Otherwise, this can lead to a deadlock if the given task calls
@@ -89,9 +107,16 @@ void SerialExecutor::run() {
       // hold the lock anytime that we interact with the tasks queue.
       lock.unlock();
       task();
+      // Destroy the task before re-acquiring the lock. Its captured state
+      // belongs to the caller and destroying it runs caller code, which may
+      // call add() just as the task body may.
+      task = nullptr;
       lock.lock();
     }
     if (threadState_ == ThreadState::Terminating) {
+      // This thread is on its way out, so stop claiming to be the worker.
+      // Both exits do this while still holding the lock.
+      workerThreadId_ = std::thread::id{};
       return;
     }
 
@@ -103,6 +128,7 @@ void SerialExecutor::run() {
     // Timed out and there is nothing to do, exit.
     if (waitRes == std::cv_status::timeout && tasks_.empty()) {
       threadState_ = ThreadState::TimedOut;
+      workerThreadId_ = std::thread::id{};
       return;
     }
   }

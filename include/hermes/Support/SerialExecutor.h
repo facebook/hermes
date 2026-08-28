@@ -8,6 +8,8 @@
 #ifndef HERMES_SERIALEXECUTOR_SERIALEXECUTOR_H
 #define HERMES_SERIALEXECUTOR_SERIALEXECUTOR_H
 
+#include "llvh/ADT/FunctionExtras.h"
+
 #include <atomic>
 #include <cassert>
 #include <chrono>
@@ -16,10 +18,9 @@
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <thread>
 #if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
 #include <pthread.h>
-#else
-#include <thread>
 #endif
 
 namespace hermes {
@@ -63,8 +64,21 @@ class SerialExecutor {
   std::thread workerThread_;
 #endif
 
-  /// A list of functions to execute on the worker thread.
-  std::deque<std::function<void()>> tasks_;
+  /// Id of the worker thread currently executing run(), or a default
+  /// constructed id when none is. run() sets it on entry and clears it before
+  /// returning, both under mutex_, so it is never a thread that has exited:
+  /// note that a worker is spawned before it reaches run(), and that an id is
+  /// free to be reused once its thread is gone. This exists so that add() can
+  /// tell an enqueue coming from the running worker apart from one coming from
+  /// any other thread.
+  std::thread::id workerThreadId_;
+
+  /// A list of functions to execute on the worker thread. These are
+  /// llvh::unique_function rather than std::function because moving a
+  /// unique_function always empties the source, which lets the queue take sole
+  /// ownership of a task before the worker can dequeue it. std::function makes
+  /// no such guarantee: libc++ copies small inlined callables on move.
+  std::deque<llvh::unique_function<void()>> tasks_;
 
   /// Mutex guarding state shared with the worker thread.
   std::mutex mutex_;
@@ -125,7 +139,16 @@ class SerialExecutor {
 
   /// Push a task to the back of the queue, lazily creating the worker thread if
   /// it does not exist.
-  void add(std::function<void()> task);
+  ///
+  /// Ownership of \p task transfers to the queue before this returns, so the
+  /// task and everything it captures are destroyed on the worker thread after
+  /// the task has run, never on the calling thread.
+  ///
+  /// Destroying a task runs caller code, so a task's captured state may itself
+  /// call add(). Once ~SerialExecutor has begun draining, only the worker
+  /// thread may do so: the drain loop picks up whatever it enqueues, whereas a
+  /// task enqueued from another thread at that point may never run at all.
+  void add(llvh::unique_function<void()> task);
 };
 } // namespace hermes
 
