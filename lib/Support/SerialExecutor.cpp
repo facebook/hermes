@@ -32,6 +32,11 @@ SerialExecutor::~SerialExecutor() {
 }
 
 void SerialExecutor::add(std::function<void()> task) {
+#if defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_PTHREADS__)
+  task();
+  return;
+#endif
+
   std::unique_lock<std::mutex> lock(mutex_);
   assert(
       threadState_ != ThreadState::Terminating &&
