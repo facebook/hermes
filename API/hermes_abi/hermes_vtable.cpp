@@ -1213,8 +1213,8 @@ HermesABINativeState *get_native_state(
   vm::NativeState *ns = vm::vmcast<vm::NativeState>(
       vm::JSObject::getNamedSlotValueUnsafe(*h, runtime, desc)
           .getObject(runtime));
-  assert(ns->context() && "State cannot be null.");
-  return static_cast<HermesABINativeState *>(ns->context());
+  assert(ns->isShared() && "NativeState was not created by set_native_state");
+  return static_cast<HermesABINativeState *>(ns->getSharedContext().get());
 }
 
 HermesABIVoidOrError set_native_state(
@@ -1232,14 +1232,17 @@ HermesABIVoidOrError set_native_state(
   } lv;
   vm::LocalsRAII lraii(runtime, &lv);
 
-  auto finalize = [](vm::GC &, vm::NativeState *ns) {
-    auto *self = static_cast<HermesABINativeState *>(ns->context());
+  auto release = [](void *context) {
+    auto *self = static_cast<HermesABINativeState *>(context);
     self->vtable->release(self);
   };
   // Note that creating the vm::NativeState here takes ownership of abiState, so
   // if the below steps fail, abiState will simply be freed when the
-  // vm::NativeState is garbage collected.
-  lv.ns = vm::NativeState::create(runtime, abiState, finalize);
+  // vm::NativeState is garbage collected. The context is shared so that the
+  // structured clone algorithm can attach the same native state to a copy of
+  // this object.
+  lv.ns = vm::NativeState::createShared(
+      runtime, std::shared_ptr<void>(abiState, release));
 
   auto h = toHandle(obj);
   if (h->isProxyObject()) {

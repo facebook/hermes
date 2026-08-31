@@ -48,6 +48,16 @@ class SerializedValue {
   /// block.
   std::vector<std::pair<uint8_t *, std::shared_ptr<void>>> externalBuffers;
 
+  /// For JS objects carrying a shareable NativeState, store a strong reference
+  /// to the native data. Each serialized object record refers to an entry here
+  /// by index, and every deserialization attaches a NativeState sharing the
+  /// same entry. This keeps the native data alive for as long as this
+  /// SerializedValue, independently of the runtime it was serialized from.
+  /// Note that a NativeState that is not shareable, i.e. one created by
+  /// NativeState::create rather than NativeState::createShared, cannot be
+  /// copied into another runtime and is silently dropped.
+  std::vector<std::shared_ptr<void>> nativeStates;
+
   /// Describes the type of JS value for some serialized content. The special
   /// Reference type is used to point at a JS value serialized at some other
   /// location.

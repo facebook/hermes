@@ -307,9 +307,10 @@ class HermesRuntimeImpl final : public HermesRuntime,
         runtime_(*rt_),
         vmExperimentFlags_(runtimeConfig.getVMExperimentFlags()),
         finalizerExecutor_(
-            0,
-            std::chrono::milliseconds::max(),
-            finalizerThreadRunner(runtimeConfig)),
+            std::make_shared<::hermes::SerialExecutor>(
+                0,
+                std::chrono::milliseconds::max(),
+                finalizerThreadRunner(runtimeConfig))),
         mutatorScope{runtime_} {
 #ifdef HERMES_ENABLE_DEBUGGER
     compileFlags_.debug = true;
@@ -399,7 +400,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
     }
 
     // Release the VM runtime. This needs to happen before the
-    // finalizerExecutor_ is destroyed so that the VM runtime has a chance to
+    // finalizerExecutor_ is released so that the VM runtime has a chance to
     // queue all clean-up tasks.
     rt_.reset();
   }
@@ -973,7 +974,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
         : rt_(rt), ho_(ho) {}
 
     ~JsiProxy() {
-      rt_.finalizerExecutor_.add(
+      rt_.finalizerExecutor_->add(
           [ho = std::move(ho_)]() mutable { ho.reset(); });
     }
 
@@ -1137,28 +1138,37 @@ class HermesRuntimeImpl final : public HermesRuntime,
 
     static void finalize(void *context) {
       auto *hfc = reinterpret_cast<HFContext *>(context);
-      hfc->hermesRuntimeImpl.finalizerExecutor_.add([hfc]() { delete hfc; });
+      hfc->hermesRuntimeImpl.finalizerExecutor_->add([hfc]() { delete hfc; });
     }
 
     jsi::HostFunctionType hostFunction;
     HermesRuntimeImpl &hermesRuntimeImpl;
   };
 
-  /// Holds the jsi::NativeState shared pointer and the HermesRuntimeImpl.
-  /// This is passed in as the NativeState context to store the NativeState
-  /// object. The static finalize method will be passed in as function pointer
-  /// to the VM.
+  /// Holds the jsi::NativeState shared pointer. It is owned by a shared_ptr
+  /// that is in turn owned by the vm::NativeState cell, so that the structured
+  /// clone algorithm can hand the very same context to a vm::NativeState in
+  /// another runtime. See makeNativeStateContext for how it is released.
   struct NativeStateContext {
     std::shared_ptr<jsi::NativeState> state;
-    HermesRuntimeImpl &runtime;
-
-    /// Called when the VM tries to
-    /// finalize the NativeState object.
-    static void finalize(vm::GC &, vm::NativeState *ns) {
-      auto *context = reinterpret_cast<NativeStateContext *>(ns->context());
-      context->runtime.finalizerExecutor_.add([context]() { delete context; });
-    }
   };
+
+  /// \return a shared reference to a new NativeStateContext holding \p state.
+  /// The context is destroyed on this runtime's finalizer executor rather than
+  /// on the thread that drops the last reference, because destroying the
+  /// jsi::NativeState can run arbitrary user code. The deleter keeps the
+  /// executor alive, so the context stays destructible after this runtime is
+  /// gone.
+  std::shared_ptr<void> makeNativeStateContext(
+      std::shared_ptr<jsi::NativeState> state) {
+    return std::shared_ptr<void>(
+        new NativeStateContext{std::move(state)},
+        [executor = finalizerExecutor_](void *context) {
+          executor->add([context]() {
+            delete static_cast<NativeStateContext *>(context);
+          });
+        });
+  }
 
   // A ManagedChunkedList element that indicates whether it's occupied based on
   // a refcount.
@@ -1398,9 +1408,12 @@ class HermesRuntimeImpl final : public HermesRuntime,
   /// Executor used to finalize NativeState, HostFunction, and HostObjects on
   /// a background thread so that GC collection is not blocked by potentially
   /// expensive clean-up work. The destructor explicitly calls rt_.reset()
-  /// before this member is destroyed to ensure all clean-up tasks are queued
-  /// before the executor drains and joins.
-  ::hermes::SerialExecutor finalizerExecutor_;
+  /// before this member is released to ensure all clean-up tasks are queued
+  /// before the executor drains and joins. It is held by shared_ptr because a
+  /// NativeState copied into another runtime by the structured clone algorithm
+  /// keeps releasing its jsi::NativeState on this executor, and so may outlive
+  /// this runtime.
+  std::shared_ptr<::hermes::SerialExecutor> finalizerExecutor_;
 
   /// Provided by the integrator for the Runtime to schedule a task. This is
   /// called whenever the Hermes Runtime wants to run a task, but should not
@@ -2669,12 +2682,12 @@ void HermesRuntimeImpl::setNativeState(
   } else if (h->isHostObject()) {
     throw jsi::JSINativeException("native state unsupported on HostObject");
   }
-  // Allocate a NativeStateBox on the C++ heap and use it as context of
-  // NativeState. The box also carries a reference to the runtime so the
-  // Release callback can queue destruction to the finalizer thread.
-  auto *nativeStateCtx = new NativeStateContext{std::move(state), *this};
-  lv.ns = vm::NativeState::create(
-      runtime_, nativeStateCtx, NativeStateContext::finalize);
+  // Allocate a NativeStateContext on the C++ heap and use it as the shared
+  // context of the NativeState. Sharing it means the structured clone
+  // algorithm can attach the same jsi::NativeState to a copy of this object,
+  // in this or in another runtime.
+  lv.ns = vm::NativeState::createShared(
+      runtime_, makeNativeStateContext(std::move(state)));
   auto res = vm::JSObject::defineOwnProperty(
       h,
       runtime_,
@@ -2710,7 +2723,8 @@ std::shared_ptr<jsi::NativeState> HermesRuntimeImpl::getNativeState(
   vm::NativeState *ns = vm::vmcast<vm::NativeState>(
       vm::JSObject::getNamedSlotValueUnsafe(*h, runtime_, desc)
           .getObject(runtime_));
-  return reinterpret_cast<NativeStateContext *>(ns->context())->state;
+  assert(ns->isShared() && "NativeState was not created by setNativeState");
+  return static_cast<NativeStateContext *>(ns->getSharedContext().get())->state;
 }
 
 void HermesRuntimeImpl::setExternalMemoryPressure(

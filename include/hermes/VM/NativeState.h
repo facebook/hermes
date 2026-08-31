@@ -11,6 +11,8 @@
 #include "hermes/VM/GCCell.h"
 #include "hermes/VM/Metadata.h"
 
+#include <memory>
+
 namespace hermes {
 namespace vm {
 
@@ -43,6 +45,29 @@ class NativeState final : public GCCell {
   static NativeState *
   create(Runtime &runtime, void *context, FinalizeNativeStatePtr finalizePtr);
 
+  /// Create a new NativeState on the JS heap which shares ownership of \p
+  /// context with every other holder of that shared pointer. Unlike a
+  /// NativeState created by create(), such a NativeState can be duplicated
+  /// into another Runtime, because the duplicate shares ownership of the same
+  /// native data. This is used by the structured clone algorithm, see
+  /// SerializedValue.h.
+  static NativeState *createShared(
+      Runtime &runtime,
+      std::shared_ptr<void> context);
+
+  /// \return true if this NativeState was created by createShared, and its
+  /// context can therefore be shared with another NativeState.
+  bool isShared() const {
+    return finalizePtr_ == _finalizeSharedImpl;
+  }
+
+  /// \return the shared context owned by this NativeState.
+  /// \pre isShared() must be true.
+  const std::shared_ptr<void> &getSharedContext() const {
+    assert(isShared() && "NativeState does not own a shared context");
+    return *static_cast<const std::shared_ptr<void> *>(context_);
+  }
+
   void *context() {
     return context_;
   }
@@ -52,6 +77,10 @@ class NativeState final : public GCCell {
 
  private:
   static void _finalizeImpl(GCCell *cell, GC &gc);
+
+  /// Finalizer for a NativeState created by createShared. It doubles as the tag
+  /// that identifies such a NativeState, see isShared().
+  static void _finalizeSharedImpl(GC &gc, NativeState *ns);
 
   void *context_;
   FinalizeNativeStatePtr finalizePtr_;

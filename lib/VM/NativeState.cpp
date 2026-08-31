@@ -32,6 +32,18 @@ NativeState *NativeState::create(
       context, finalizePtr);
 }
 
+/* static */
+NativeState *NativeState::createShared(
+    Runtime &runtime,
+    std::shared_ptr<void> context) {
+  auto *box = new std::shared_ptr<void>(std::move(context));
+  return create(runtime, box, _finalizeSharedImpl);
+}
+
+void NativeState::_finalizeSharedImpl(GC &, NativeState *ns) {
+  delete static_cast<std::shared_ptr<void> *>(ns->context());
+}
+
 void NativeState::_finalizeImpl(GCCell *cell, GC &gc) {
   auto *self = vmcast<NativeState>(cell);
   self->finalizePtr_(gc, self);

@@ -1384,6 +1384,103 @@ CallResult<PseudoHandle<JSTypedArrayBase>> deserializeTypedArray(
   return createPseudoHandle(*lv.self);
 }
 
+/// Sentinel stored in place of an index into SerializedValue::nativeStates to
+/// mean that the serialized object carries no native state.
+constexpr uint32_t kNoNativeState = UINT32_MAX;
+
+/// \return a strong reference to the native data attached to \p selfObject, or
+/// nullptr if the object has no native state, or if its native state is not
+/// shareable and therefore cannot be copied into another Runtime.
+std::shared_ptr<void> getSharedNativeState(
+    Runtime &runtime,
+    Handle<JSObject> selfObject) {
+  // Proxy and HostObject cannot carry native state.
+  if (selfObject->isProxyObject() || selfObject->isHostObject()) {
+    return nullptr;
+  }
+  NamedPropertyDescriptor desc;
+  if (!JSObject::getOwnNamedDescriptor(
+          selfObject,
+          runtime,
+          Predefined::getSymbolID(Predefined::InternalPropertyNativeState),
+          desc)) {
+    return nullptr;
+  }
+  NoAllocScope noAlloc(runtime);
+  auto *ns = vmcast<NativeState>(
+      JSObject::getNamedSlotValueUnsafe(*selfObject, runtime, desc)
+          .getObject(runtime));
+  if (!ns->isShared()) {
+    return nullptr;
+  }
+  return ns->getSharedContext();
+}
+
+/// Serialize the native state attached to \p selfObject at the end of \p
+/// serialized with the format (has native state, index into
+/// SerializedValue::nativeStates). The index is only written when the object
+/// does carry a shareable native state.
+void serializeNativeState(
+    Runtime &runtime,
+    SerializedValue &serialized,
+    Handle<JSObject> selfObject) {
+  std::shared_ptr<void> nativeState = getSharedNativeState(runtime, selfObject);
+  if (!nativeState) {
+    serialized.content.push_back(0);
+    return;
+  }
+  serialized.content.push_back(1);
+  appendValueToBuffer<uint32_t>(
+      serialized.content, (uint32_t)serialized.nativeStates.size());
+  serialized.nativeStates.push_back(std::move(nativeState));
+}
+
+/// Deserialize the native state record pointed to by \p content and update
+/// \p content to point past it.
+/// \return the index into SerializedValue::nativeStates of the native state to
+/// attach, or kNoNativeState if the record carries none.
+uint32_t deserializeNativeStateIndex(const uint8_t *&content) {
+  if (!*content++) {
+    return kNoNativeState;
+  }
+  return deserializeUInt32(content);
+}
+
+/// Attach the native state at index \p idx of \p serialized to \p selfObject,
+/// sharing ownership of the native data with every other object deserialized
+/// from the same record. Does nothing if \p idx is kNoNativeState.
+ExecutionStatus attachNativeState(
+    Runtime &runtime,
+    const SerializedValue &serialized,
+    uint32_t idx,
+    Handle<JSObject> selfObject) {
+  if (idx == kNoNativeState) {
+    return ExecutionStatus::RETURNED;
+  }
+  assert(idx < serialized.nativeStates.size() && "Invalid native state index");
+
+  struct : Locals {
+    PinnedValue<NativeState> ns;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+  lv.ns = NativeState::createShared(runtime, serialized.nativeStates[idx]);
+
+  auto res = JSObject::defineOwnProperty(
+      selfObject,
+      runtime,
+      Predefined::getSymbolID(Predefined::InternalPropertyNativeState),
+      DefinePropertyFlags::getDefaultNewPropertyFlags(),
+      lv.ns,
+      PropOpFlags().plusInternalForce());
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (LLVM_UNLIKELY(!*res)) {
+    return runtime.raiseError("Failed to deserialize native state");
+  }
+  return ExecutionStatus::RETURNED;
+}
+
 /// If \p value has not been serialized before, append its serialized Record
 /// onto the content buffer of \p serialized, adding any information
 /// necessary in its string and offset buffer as well. Store an entry in \p
@@ -1463,7 +1560,7 @@ ExecutionStatus serializeImpl(
   }
 
   // All object types will be serialized with the following format:
-  // (type tag, object ID, content).
+  // (type tag, object ID, native state, content).
   // Find the offset that points to the start of the serialized object, where
   // the type tag will be serialized. Assign the object an ID, which other
   // records can use to reference this object.
@@ -1476,6 +1573,10 @@ ExecutionStatus serializeImpl(
 
   // Add an object ID -> typeTagOffset entry in the offset array.
   offsets.push_back(typeTagOffset);
+
+  // The native state field sits at a fixed position in every object record, so
+  // that deserialization can read it before dispatching on the type tag.
+  serializeNativeState(runtime, serialized, selfObjHandle);
 
   // 6. Let serialized be an uninitialized value.
   if (auto *jsBool = dyn_vmcast<JSBoolean>(*value)) {
@@ -1742,6 +1843,7 @@ CallResult<HermesValue> deserializeImpl(
   } lv;
   LocalsRAII lraii{runtime, &lv};
   uint32_t id = deserializeUInt32(curr);
+  uint32_t nativeStateIdx = deserializeNativeStateIndex(curr);
 
   if (typeTag == SerializedValue::Type::Boolean) {
     // 6. Otherwise, if serialized.[[Type]] is "Boolean", then set value to a
@@ -1889,6 +1991,18 @@ CallResult<HermesValue> deserializeImpl(
   // later.
   memoryMap[id] = &runtime.serializationValues_.add(
       *lv.self, getUInt32Hash(runtime.gcStableHashHermesValue(*lv.self)));
+
+  // Attach the native state, if the source object had one, before the
+  // properties are deserialized, so that it is in place for the whole graph.
+  if (LLVM_UNLIKELY(
+          attachNativeState(
+              runtime,
+              serialized,
+              nativeStateIdx,
+              Handle<JSObject>::vmcast(&lv.self)) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
 
   // 24. If deep is true, then:
   if (deep) {
@@ -2061,6 +2175,10 @@ ExecutionStatus serializeTransferList(
         : SerializedValue::Type::ArrayBufferInternal;
     serialized.content.push_back(getUInt8FromSerializedType(type));
     appendValueToBuffer<uint32_t>(serialized.content, id);
+    // Transfer records use the same (type tag, object ID, native state,
+    // content) layout as the object records written by serializeImpl.
+    serializeNativeState(
+        runtime, serialized, Handle<JSObject>::vmcast(&lv.arrayBuffer));
     //    2-3: Handled in the helper.
     serializeArrayBufferForTransfer(runtime, serialized, lv.arrayBuffer);
     //  3. Perform ? DetachArrayBuffer(transferable).
@@ -2079,12 +2197,16 @@ ExecutionStatus serializeTransferList(
 /// serialized. Returns a list of IDs of the objects that are successfully
 /// transferred.
 /// Implements Step 2, 3 of StructuredDeserializeWithTransfer
-std::vector<uint32_t> deserializeTransferList(
+CallResult<std::vector<uint32_t>> deserializeTransferList(
     Runtime &runtime,
     SerializedValue &serialized,
     DeserializationValueDenseMap &memoryMap) {
   // 2. Let transferredValues be a new empty List.
   std::vector<uint32_t> transferredIds;
+  struct : Locals {
+    PinnedValue<JSArrayBuffer> arrayBuffer;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
   // 3. For each transferDataHolder of
   // serializeWithTransferResult.[[TransferDataHolders]]:
   // Transferred values are assigned serialization id first, so they must start
@@ -2102,13 +2224,25 @@ std::vector<uint32_t> deserializeTransferList(
     assert(
         deserializedId == i &&
         "ID in serialized record does not match the record being deserialized.");
-    auto res = deserializeArrayBufferForTransfer(
+    uint32_t nativeStateIdx = deserializeNativeStateIndex(curr);
+    lv.arrayBuffer = deserializeArrayBufferForTransfer(
         runtime, serialized, curr, isInternalBuffer);
+
+    if (LLVM_UNLIKELY(
+            attachNativeState(
+                runtime,
+                serialized,
+                nativeStateIdx,
+                Handle<JSObject>::vmcast(&lv.arrayBuffer)) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
 
     // 3-4. Resizeable ArrayBuffer and Platform objects: Unsupported
     // 5. Set memory[transferDataHolder] to value.
     auto *valuePtr = &runtime.serializationValues_.add(
-        res.getHermesValue(), runtime.gcStableHashJSObject(res.get()));
+        lv.arrayBuffer.getHermesValue(),
+        runtime.gcStableHashJSObject(*lv.arrayBuffer));
     memoryMap[i] = valuePtr;
 
     // 6. Append value to transferredValues.
@@ -2227,8 +2361,12 @@ CallResult<PseudoHandle<JSArray>> deserializeWithTransfer(
     cleanUpAfterDeserializeWithTransfer(serialized, memoryMap);
   });
   // 2-3: Handled in the helper.
-  std::vector<uint32_t> transferredIds =
+  auto transferListRes =
       deserializeTransferList(runtime, serialized, memoryMap);
+  if (LLVM_UNLIKELY(transferListRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  std::vector<uint32_t> transferredIds = std::move(*transferListRes);
 
   // 4. Let deserialized be ?
   // StructuredDeserialize(serializeWithTransferResult.[[Serialized]],
