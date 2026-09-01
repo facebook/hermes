@@ -2235,18 +2235,21 @@ CallResult<PseudoHandle<JSArray>> deserializeWithTransfer(
   // targetRealm, memory).
   // Deserialize the main serialized value, which is located at the front of
   // serialized.content
+
+  // 5. Return { [[Deserialized]]: deserialized, [[TransferredValues]]:
+  // transferredValues }.
+  struct : Locals {
+    PinnedValue<> deserialized;
+    PinnedValue<JSArray> result;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   const uint8_t *start = serialized.content.data();
   auto valRes = deserializeImpl(runtime, serialized, start, memoryMap);
   if (LLVM_UNLIKELY(valRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-
-  // 5. Return { [[Deserialized]]: deserialized, [[TransferredValues]]:
-  // transferredValues }.
-  struct : Locals {
-    PinnedValue<JSArray> result;
-  } lv;
-  LocalsRAII lraii(runtime, &lv);
+  lv.deserialized = *valRes;
 
   auto transferLen = transferredIds.size();
   auto arrayLen = transferLen + 1;
@@ -2266,7 +2269,7 @@ CallResult<PseudoHandle<JSArray>> deserializeWithTransfer(
       *lv.result,
       runtime,
       0,
-      SmallHermesValue::encodeHermesValue(*valRes, runtime));
+      SmallHermesValue::encodeHermesValue(*lv.deserialized, runtime));
 
   // At this point, all objects are deserialized and the result Array is
   // allocated. No other allocation needs to happen.
