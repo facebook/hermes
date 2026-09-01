@@ -28,7 +28,10 @@ using Message = std::
 /// thread/event loop thread. Everything in this struct is guarded by the state
 /// mutex;
 struct WorkerState {
-  WorkerState(jsi::Runtime &parentRuntime) : parentRuntime(parentRuntime) {}
+  WorkerState(jsi::Runtime &parentRuntime, const jsi::Object &workerObject)
+      : weakWorker(
+            std::make_unique<jsi::WeakObject>(parentRuntime, workerObject)),
+        parentRuntime(parentRuntime) {}
   /// Mutex to guard all the resources in this WorkerState
   std::mutex stateMutex{};
   /// Used to put the Worker thread to sleep when there's nothing to do in the
@@ -38,6 +41,14 @@ struct WorkerState {
   bool terminated{false};
   /// Messages to Worker from the parent runtime.
   std::deque<Message> toWorkerQueue;
+  /// Messages from the Worker to the parent runtime.
+  std::deque<Message> fromWorkerQueue;
+  /// A WeakRef of the JS Worker Object. This is used by the event loop to
+  /// process messages from the Worker. We use a WeakRef here because a Worker
+  /// can be terminated but previous tasks may still be scheduled, which
+  /// shouldn't prevent clean up of the Worker if it is ready for GC. Upon
+  /// termination, this will be reset.
+  std::unique_ptr<jsi::WeakObject> weakWorker;
   /// Parent runtime that created this Worker. Used to register Workers
   /// for the event loop.
   jsi::Runtime &parentRuntime;
@@ -159,6 +170,9 @@ void setTerminationState(
   // Once terminated, no messages will be processed by the Worker. Discard
   // queue.
   workerState->toWorkerQueue.clear();
+  workerState->fromWorkerQueue.clear();
+
+  workerState->weakWorker.reset();
 
   auto *setEventLoopControlInterface =
       jsi::castInterface<ISetEventLoopControl>(&workerState->parentRuntime);
@@ -172,6 +186,148 @@ void setTerminationState(
   if (notifyWorker) {
     workerState->toWorkerCondition.notify_all();
   }
+}
+
+/// Scheduled as a task on the integrator's event loop to process a single
+/// message sent from the Worker via `postMessage`. Dequeues the message from
+/// the shared `fromWorkerQueue`, resolves the Worker's `onmessage` handler,
+/// and process the message using the handler.
+/// This may be called while the Worker is terminating itself in the Worker
+/// thread. In this case, there is no guarantee that the next message will be
+/// processed by this function call.
+void processMessageFromWorker(const std::shared_ptr<WorkerState> &workerState) {
+  std::unique_lock<std::mutex> stateLock(workerState->stateMutex);
+  if (workerState->terminated) {
+    // By the time this task is running, the Worker has been terminated, so
+    // no message should be processed.
+    return;
+  }
+  // There must be a message to be processed, otherwise this task wouldn't
+  // have been scheduled.
+  assert(
+      !workerState->fromWorkerQueue.empty() &&
+      "Processing non-existent message");
+  Message serialized = std::move(workerState->fromWorkerQueue.front());
+  workerState->fromWorkerQueue.pop_front();
+
+  // weakWorker is safe to dereference because it is only reset when the Worker
+  // is terminated. However, we currently hold the worker state lock and checked
+  // the worker is not terminated.
+  auto worker = workerState->weakWorker->lock(workerState->parentRuntime);
+  if (LLVM_UNLIKELY(worker.isUndefined())) {
+    /// The Worker object is not valid anymore, no message processing will be
+    /// done.
+    return;
+  }
+  auto workerObj = worker.asObject(workerState->parentRuntime);
+
+  // At this point, we've checked for termination and obtained the message.
+  // We don't care if the Worker is terminated from the Worker thread while
+  // the event is being processed. The actual event processing needs to
+  // happen outside the lock because it can run JS.
+  stateLock.unlock();
+
+  auto onMessageRes = getHandler(
+      workerState->parentRuntime,
+      workerObj,
+      jsi::PropNameID::forAscii(workerState->parentRuntime, "onmessage"));
+  if (LLVM_UNLIKELY(onMessageRes.isUndefined())) {
+    return;
+  }
+  auto onMessageHandler = onMessageRes.asObject(workerState->parentRuntime)
+                              .asFunction(workerState->parentRuntime);
+  processMessageWithHandler(
+      workerState->parentRuntime, std::move(serialized), onMessageHandler);
+}
+
+/// Install the 'postMessage` global function on the \p workerRuntime. The
+/// 'postMessage' function will serialize the provided message and transfer
+/// values, and queue the message in \p workerState.fromWorkerQueue. It will
+/// also schedule a task using the ISetEventLoop functionality of \p
+/// workerState.parentRuntime
+void installPostMessageFromWorker(
+    jsi::Runtime &workerRuntime,
+    const std::shared_ptr<WorkerState> &workerState) {
+  // Native Function that handles the `postMessage` calls from Worker to send
+  // message to the event loop.
+  auto postMessageFromWorker = [workerState = workerState](
+                                   jsi::Runtime &runtime,
+                                   const jsi::Value &,
+                                   const jsi::Value *args,
+                                   size_t count) {
+    if (LLVM_UNLIKELY(count == 0)) {
+      throwTypeError(runtime, "Must provide a message to postMessage");
+    }
+    auto *setEventLoopControlInterface =
+        jsi::castInterface<ISetEventLoopControl>(&workerState->parentRuntime);
+    assert(
+        setEventLoopControlInterface &&
+        "ISetEventLoopControl is not supported");
+    auto *eventLoopControl =
+        setEventLoopControlInterface->getEventLoopControl();
+
+    // No integrator-provided way for the Worker to schedule a task for message
+    // processing, so this message will get lost anyway. Just return.
+    if (LLVM_UNLIKELY(!eventLoopControl)) {
+      return jsi::Value::undefined();
+    }
+
+    {
+      std::lock_guard<std::mutex> lock(workerState->stateMutex);
+      if (workerState->terminated) {
+        // Worker is terminated, just return and don't try to serialize.
+        return jsi::Value::undefined();
+      }
+    }
+    // Serialization happens outside the lock because  serialization can run
+    // some JS and try to acquire the lock as a side effect.
+
+    auto serializationInterface =
+        jsi::castInterface<jsi::ISerialization>(&runtime);
+    assert(serializationInterface && "ISerialization is not supported");
+
+    Message serialized;
+    const jsi::Value &message = args[0];
+    if (count == 1) {
+      serialized = serializationInterface->serialize(message);
+    } else {
+      // Check the 'transfers' argument is an Array
+      const jsi::Value &transfers = args[1];
+      if (LLVM_UNLIKELY(
+              !transfers.isObject() ||
+              !transfers.asObject(runtime).isArray(runtime))) {
+        throwTypeError(
+            runtime, "Must provide an Array of transferable arguments");
+      }
+      serialized = serializationInterface->serializeWithTransfer(
+          message, transfers.asObject(runtime).asArray(runtime));
+    }
+
+    {
+      // Lock again to access the shared worker state.
+      std::lock_guard<std::mutex> lock(workerState->stateMutex);
+      // We need to perform the termination check again since there is a chance
+      // the Worker was terminated while serialization.
+      if (workerState->terminated) {
+        return jsi::Value::undefined();
+      }
+
+      workerState->fromWorkerQueue.push_back(std::move(serialized));
+    }
+
+    // Schedule a task for the event-loop to check the message we just queued
+    eventLoopControl->scheduleTask([workerState = workerState]() {
+      processMessageFromWorker(workerState);
+    });
+    return jsi::Value::undefined();
+  };
+
+  jsi::Function onMessage = jsi::Function::createFromHostFunction(
+      workerRuntime,
+      jsi::PropNameID::forAscii(workerRuntime, "postMessage"),
+      1,
+      postMessageFromWorker);
+  workerRuntime.global().setProperty(workerRuntime, "postMessage", onMessage);
 }
 
 WorkerNativeState::~WorkerNativeState() {
@@ -272,7 +428,11 @@ jsi::Value initializeWorker(
   auto self = args[0].asObject(rt);
   auto *api = jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
   auto workerRuntime = api->makeHermesRuntime(::hermes::vm::RuntimeConfig());
-  auto workerState = std::make_shared<WorkerState>(rt);
+  auto workerState = std::make_shared<WorkerState>(rt, self);
+
+  // Install the event-processing handlers onto the Worker runtime
+  installPostMessageFromWorker(*workerRuntime, workerState);
+
   auto workerNativeState = std::make_shared<WorkerNativeState>(
       workerState, std::move(workerRuntime));
   self.setNativeState(rt, workerNativeState);
