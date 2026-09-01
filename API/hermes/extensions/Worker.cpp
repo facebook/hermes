@@ -18,6 +18,8 @@
 #include <mutex>
 #include <thread>
 
+#include "hermes/Platform/Logging.h"
+
 namespace facebook {
 namespace hermes {
 namespace {
@@ -43,6 +45,8 @@ struct WorkerState {
   std::deque<Message> toWorkerQueue;
   /// Messages from the Worker to the parent runtime.
   std::deque<Message> fromWorkerQueue;
+  /// Errors encountered by the Worker thread
+  std::deque<Message> workerErrorQueue;
   /// A WeakRef of the JS Worker Object. This is used by the event loop to
   /// process messages from the Worker. We use a WeakRef here because a Worker
   /// can be terminated but previous tasks may still be scheduled, which
@@ -171,6 +175,7 @@ void setTerminationState(
   // queue.
   workerState->toWorkerQueue.clear();
   workerState->fromWorkerQueue.clear();
+  workerState->workerErrorQueue.clear();
 
   workerState->weakWorker.reset();
 
@@ -352,6 +357,88 @@ void installCloseFromWorker(
   workerRuntime.global().setProperty(workerRuntime, closePropId, close);
 }
 
+/// A helper function called from the Worker thread to post \p error encountered
+/// by the Worker runtime, and schedule an error processign task. This will
+/// acquire the \p workerState.mutex to add the message.
+void postError(
+    jsi::Runtime &runtime,
+    const jsi::Value &error,
+    const std::shared_ptr<WorkerState> &workerState) {
+  auto errorHandlingTask = [workerState = workerState]() {
+    std::unique_lock<std::mutex> stateLock(workerState->stateMutex);
+    if (workerState->terminated) {
+      // By the time this task is running, the Worker has been terminated, so
+      // error handling shouldn't matter
+      return;
+    }
+    // There must be an error to be processed, otherwise this task wouldn't
+    // have been scheduled.
+    assert(
+        !workerState->workerErrorQueue.empty() &&
+        "Processing non-existent error");
+    Message serialized = std::move(workerState->workerErrorQueue.front());
+    workerState->workerErrorQueue.pop_front();
+    auto worker = workerState->weakWorker->lock(workerState->parentRuntime);
+    if (LLVM_UNLIKELY(worker.isUndefined())) {
+      /// The Worker object is not valid anymore, no message processing will be
+      /// done.
+      return;
+    }
+    auto workerObj = worker.asObject(workerState->parentRuntime);
+    stateLock.unlock();
+
+    auto onErrorRes = getHandler(
+        workerState->parentRuntime,
+        workerObj,
+        jsi::PropNameID::forAscii(workerState->parentRuntime, "onerror"));
+    if (LLVM_UNLIKELY(onErrorRes.isUndefined())) {
+      return;
+    }
+    auto onErrorHandler = onErrorRes.asObject(workerState->parentRuntime)
+                              .asFunction(workerState->parentRuntime);
+    processMessageWithHandler(
+        workerState->parentRuntime, std::move(serialized), onErrorHandler);
+  };
+
+  auto *setEventLoopControlInterface =
+      jsi::castInterface<ISetEventLoopControl>(&workerState->parentRuntime);
+  assert(
+      setEventLoopControlInterface && "ISetEventLoopControl is not supported");
+  auto *eventLoopControl = setEventLoopControlInterface->getEventLoopControl();
+
+  // No integrator-provided way for the Worker to schedule a task to process the
+  // error, so this message will get lost anyway. Just return.
+  if (LLVM_UNLIKELY(!eventLoopControl)) {
+    return;
+  }
+
+  auto serializationInterface =
+      jsi::castInterface<jsi::ISerialization>(&runtime);
+  assert(serializationInterface && "ISerialization is not supported");
+  std::shared_ptr<jsi::Serialized> serialized;
+
+  try {
+    serialized = serializationInterface->serialize(error);
+  } catch (const jsi::JSError &error) {
+    /// If we encounter an error while serializing the original JSError, then
+    /// give up
+    ::hermes::hermesLog("HermesWorker", "Failed to serialize Worker error.");
+    return;
+  }
+
+  {
+    std::lock_guard<std::mutex> lock(workerState->stateMutex);
+    if (workerState->terminated) {
+      // Worker was terminated after the Error has been serialized, don't post
+      // the message.
+      return;
+    }
+    workerState->workerErrorQueue.push_back(std::move(serialized));
+  }
+
+  eventLoopControl->scheduleTask(errorHandlingTask);
+}
+
 WorkerNativeState::~WorkerNativeState() {
   setTerminationState(workerState, *workerRuntime, true);
   // If the Worker thread is still active, wait for it to finish.
@@ -370,57 +457,64 @@ void WorkerNativeState::startWorkerThread(std::string script) {
     try {
       workerRuntime->evaluateJavaScript(
           std::make_unique<jsi::StringBuffer>(std::move(scriptCopy)), "");
-      std::unique_lock<std::mutex> lock(workerState->stateMutex);
+    } catch (const jsi::JSError &scriptError) {
+      postError(*workerRuntime, scriptError.value(), workerState);
+    } catch (const jsi::JSINativeException &) {
+      /// evaluateJavaScript can also throw JSINativeException, which isn't
+      /// serializable. In this case, just terminate the Worker.
+      ::hermes::hermesLog(
+          "HermesWorker",
+          "Encountered JSINativeException while running Worker script.");
+      setTerminationState(workerState, *workerRuntime, false);
+      return;
+    }
 
-      // While the Worker isn't terminated, it is allowed to run the event loop.
-      while (!workerState->terminated) {
-        // 1. Worker thread went to sleep, and another thread has terminated
-        // the worker. Worker should wake up and terminate. The message queue is
-        // cleared when `terminate` is called. Thus, we also need to check the
-        // `terminated` flag to make sure the thread doesn't immediately go back
-        // to sleep.
-        // 2. Worker thread went to sleep, then another thread posted a message.
-        // Wake up to process the message.
-        workerState->toWorkerCondition.wait(lock, [workerState] {
-          return workerState->terminated || !workerState->toWorkerQueue.empty();
-        });
-        // If the Worker thread woke up because the Worker was terminated,
-        // then break out of the event loop.
-        if (workerState->terminated) {
-          break;
-        }
+    std::unique_lock<std::mutex> lock(workerState->stateMutex);
+    // While the Worker isn't terminated, it is allowed to run the event loop.
+    while (!workerState->terminated) {
+      // 1. Worker thread went to sleep, and another thread has terminated
+      // the worker. Worker should wake up and terminate. The message queue is
+      // cleared when `terminate` is called. Thus, we also need to check the
+      // `terminated` flag to make sure the thread doesn't immediately go back
+      // to sleep.
+      // 2. Worker thread went to sleep, then another thread posted a message.
+      // Wake up to process the message.
+      workerState->toWorkerCondition.wait(lock, [workerState] {
+        return workerState->terminated || !workerState->toWorkerQueue.empty();
+      });
+      // If the Worker thread woke up because the Worker was terminated,
+      // then break out of the event loop.
+      if (workerState->terminated) {
+        break;
+      }
 
-        // Otherwise, process the next message on the queue, which is guaranteed
-        // to exist.
-        Message message = std::move(workerState->toWorkerQueue.front());
-        workerState->toWorkerQueue.pop_front();
-        lock.unlock();
+      // Otherwise, process the next message on the queue, which is guaranteed
+      // to exist.
+      Message message = std::move(workerState->toWorkerQueue.front());
+      workerState->toWorkerQueue.pop_front();
+      lock.unlock();
 
-        // Everything from now on can be processed without the lock as it
-        // doesn't rely on any shared resources between threads.
-        auto workerGlobal = workerRuntime->global();
-        jsi::Value onMessage = getHandler(
-            *workerRuntime,
-            workerGlobal,
-            jsi::PropNameID::forAscii(*workerRuntime, "onmessage"));
-        if (LLVM_LIKELY(!onMessage.isUndefined())) {
+      // Everything from now on can be processed without the lock as it doesn't
+      // rely on any shared resources between threads.
+      auto workerGlobal = workerRuntime->global();
+      jsi::Value onMessage = getHandler(
+          *workerRuntime,
+          workerGlobal,
+          jsi::PropNameID::forAscii(*workerRuntime, "onmessage"));
+      if (LLVM_LIKELY(!onMessage.isUndefined())) {
+        try {
           auto onMessageFunc =
               onMessage.asObject(*workerRuntime).asFunction(*workerRuntime);
           processMessageWithHandler(
               *workerRuntime, std::move(message), onMessageFunc);
+        } catch (const jsi::JSError &error) {
+          // Error processing the message, post the error for the parent to
+          // handle.
+          postError(*workerRuntime, error.value(), workerState);
         }
-
-        // Lock again for the next tick.
-        lock.lock();
       }
-    } catch (const jsi::JSIException &) {
-      // Script failed. End worker thread.
-      // This is different from HTML behavior, where Worker report these
-      // error events, and an 'onerror' handler can be attached to the
-      // Worker to handle the event. However, that event handling is not
-      // implemented yet.
-      setTerminationState(workerState, *workerRuntime, false);
-      return;
+      // Lock again for the next tick.
+      lock.lock();
     }
   });
 }
