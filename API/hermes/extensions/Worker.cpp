@@ -28,6 +28,7 @@ using Message = std::
 /// thread/event loop thread. Everything in this struct is guarded by the state
 /// mutex;
 struct WorkerState {
+  WorkerState(jsi::Runtime &parentRuntime) : parentRuntime(parentRuntime) {}
   /// Mutex to guard all the resources in this WorkerState
   std::mutex stateMutex{};
   /// Used to put the Worker thread to sleep when there's nothing to do in the
@@ -37,6 +38,12 @@ struct WorkerState {
   bool terminated{false};
   /// Messages to Worker from the parent runtime.
   std::deque<Message> toWorkerQueue;
+  /// Parent runtime that created this Worker. Used to register Workers
+  /// for the event loop.
+  jsi::Runtime &parentRuntime;
+  /// The ID assigned when the Worker was registered with the integrator
+  /// event-loop.
+  uint64_t id;
 };
 
 /// Worker-specific Native state, used to mark an Object as a Worker instance.
@@ -153,6 +160,15 @@ void setTerminationState(
   // queue.
   workerState->toWorkerQueue.clear();
 
+  auto *setEventLoopControlInterface =
+      jsi::castInterface<ISetEventLoopControl>(&workerState->parentRuntime);
+  assert(
+      setEventLoopControlInterface && "ISetEventLoopControl is not supported");
+  auto *eventLoopControl = setEventLoopControlInterface->getEventLoopControl();
+  if (LLVM_LIKELY(eventLoopControl)) {
+    eventLoopControl->unregisterTaskQueueSource(workerState->id);
+  }
+
   if (notifyWorker) {
     workerState->toWorkerCondition.notify_all();
   }
@@ -256,10 +272,19 @@ jsi::Value initializeWorker(
   auto self = args[0].asObject(rt);
   auto *api = jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
   auto workerRuntime = api->makeHermesRuntime(::hermes::vm::RuntimeConfig());
-  auto workerState = std::make_shared<WorkerState>();
+  auto workerState = std::make_shared<WorkerState>(rt);
   auto workerNativeState = std::make_shared<WorkerNativeState>(
       workerState, std::move(workerRuntime));
   self.setNativeState(rt, workerNativeState);
+
+  auto *setEventLoopControlInterface =
+      jsi::castInterface<ISetEventLoopControl>(&workerState->parentRuntime);
+  assert(
+      setEventLoopControlInterface && "ISetEventLoopControl is not supported");
+  auto *eventLoopControl = setEventLoopControlInterface->getEventLoopControl();
+  if (LLVM_LIKELY(eventLoopControl)) {
+    workerState->id = eventLoopControl->registerTaskQueueSource();
+  }
 
   // Start the worker thread
   std::string script = args[1].asString(rt).utf8(rt);
