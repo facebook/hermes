@@ -13,6 +13,7 @@
 #include "llvh/Support/Compiler.h"
 
 #include <condition_variable>
+#include <deque>
 #include <mutex>
 #include <thread>
 
@@ -20,6 +21,7 @@ namespace facebook {
 namespace hermes {
 namespace {
 
+using Message = std::shared_ptr<jsi::Serialized>;
 /// Stores some resources shared between a specific Worker and the main
 /// thread/event loop thread. Everything in this struct is guarded by the state
 /// mutex;
@@ -31,6 +33,8 @@ struct WorkerState {
   std::condition_variable toWorkerCondition{};
   /// Once true, worker will be terminated at the earliest convenience.
   bool terminated{false};
+  /// Messages to Worker from the parent runtime.
+  std::deque<Message> toWorkerQueue;
 };
 
 /// Worker-specific Native state, used to mark an Object as a Worker instance.
@@ -74,6 +78,31 @@ inline bool isWorkerInstance(jsi::Runtime &rt, const jsi::Value &self) {
       self.asObject(rt).hasNativeState<WorkerNativeState>(rt);
 }
 
+/// Retrieves the \p handlerName property on \p object if it exists as a
+/// Callable. Otherwise, return undefined.
+jsi::Value getHandler(
+    jsi::Runtime &rt,
+    const jsi::Object &obj,
+    const jsi::PropNameID &handlerName) {
+  auto handlerRes = obj.getProperty(rt, handlerName);
+  if (!handlerRes.isObject() || !handlerRes.asObject(rt).isFunction(rt)) {
+    return jsi::Value::undefined();
+  }
+  return handlerRes;
+}
+
+/// Deserializes the serialized \p message into the provided \p runtime. Then,
+/// call the \p handler with the deserialized value as the argument.
+void processMessageWithHandler(
+    jsi::Runtime &rt,
+    Message &&message,
+    const jsi::Function &handler) {
+  auto serializationInterface = jsi::castInterface<jsi::ISerialization>(&rt);
+  assert(serializationInterface && "ISerialization is not supported");
+  jsi::Value deserialized = serializationInterface->deserialize(message);
+  handler.call(rt, deserialized);
+}
+
 /// Acquires the \p workerState.mutex and resources in \p workerState to
 /// indicate the Worker is terminated. Request the \p workerRuntime to stop
 /// execution. If \p notifyWorker is called, then also notifies the worker to
@@ -99,6 +128,11 @@ void setTerminationState(
   auto *hermesInterface = jsi::castInterface<IHermes>(&workerRuntime);
   assert(hermesInterface && "IHermes is not supported");
   hermesInterface->asyncTriggerTimeout();
+
+  // Once terminated, no messages will be processed by the Worker. Discard
+  // queue.
+  workerState->toWorkerQueue.clear();
+
   if (notifyWorker) {
     workerState->toWorkerCondition.notify_all();
   }
@@ -126,12 +160,44 @@ void WorkerNativeState::startWorkerThread(std::string script) {
 
       // While the Worker isn't terminated, it is allowed to run the event loop.
       while (!workerState->terminated) {
-        // Wait until it is time to wake up. The possible scenario:
         // 1. Worker thread went to sleep, and another thread has terminated
-        // the worker. Worker should wake up and terminate.
-        // 2. [to be implemented] Worker thread went to sleep, then another
-        // thread posted a message. Wake up to process the message.
-        workerState->toWorkerCondition.wait(lock);
+        // the worker. Worker should wake up and terminate. The message queue is
+        // cleared when `terminate` is called. Thus, we also need to check the
+        // `terminated` flag to make sure the thread doesn't immediately go back
+        // to sleep.
+        // 2. Worker thread went to sleep, then another thread posted a message.
+        // Wake up to process the message.
+        workerState->toWorkerCondition.wait(lock, [workerState] {
+          return workerState->terminated || !workerState->toWorkerQueue.empty();
+        });
+        // If the Worker thread woke up because the Worker was terminated,
+        // then break out of the event loop.
+        if (workerState->terminated) {
+          break;
+        }
+
+        // Otherwise, process the next message on the queue, which is guaranteed
+        // to exist.
+        Message message = std::move(workerState->toWorkerQueue.front());
+        workerState->toWorkerQueue.pop_front();
+        lock.unlock();
+
+        // Everything from now on can be processed without the lock as it
+        // doesn't rely on any shared resources between threads.
+        auto workerGlobal = workerRuntime->global();
+        jsi::Value onMessage = getHandler(
+            *workerRuntime,
+            workerGlobal,
+            jsi::PropNameID::forAscii(*workerRuntime, "onmessage"));
+        if (LLVM_LIKELY(!onMessage.isUndefined())) {
+          auto onMessageFunc =
+              onMessage.asObject(*workerRuntime).asFunction(*workerRuntime);
+          processMessageWithHandler(
+              *workerRuntime, std::move(message), onMessageFunc);
+        }
+
+        // Lock again for the next tick.
+        lock.lock();
       }
     } catch (const jsi::JSIException &) {
       // Script failed. End worker thread.
@@ -196,6 +262,56 @@ jsi::Value terminateWorker(
   return jsi::Value::undefined();
 }
 
+/// This implements the `postMessage` method of the Worker object that sends a
+/// message to the Worker. The arguments in \p args must be provided in the
+/// following order:
+/// 1. A serializable message
+/// 2. [not implemented yet] An optional array of transferable arguments
+jsi::Value postMessageToWorker(
+    jsi::Runtime &rt,
+    const jsi::Value &self,
+    const jsi::Value *args,
+    size_t count) {
+  if (LLVM_UNLIKELY(!isWorkerInstance(rt, self))) {
+    throwTypeError(rt, "'this' object should be a Worker.");
+  }
+  if (LLVM_UNLIKELY(count == 0)) {
+    throwTypeError(rt, "Must provide a message to post to Worker.");
+  }
+
+  // This is safe because the isWorkerInstance check above checks that a
+  // WorkerNativeState is attached.
+  auto workerNs = self.asObject(rt).getNativeState<WorkerNativeState>(rt);
+  auto workerState = workerNs->workerState;
+  {
+    std::lock_guard<std::mutex> lock(workerState->stateMutex);
+    if (workerState->terminated) {
+      // Worker is terminated, just return and don't try to serialize.
+      return jsi::Value::undefined();
+    }
+  }
+  // Serialize outside the lock because serialization can run some JS
+  // and try to acquire the lock as a side effect.
+  auto *serializationInterface = jsi::castInterface<jsi::ISerialization>(&rt);
+  assert(serializationInterface && "ISerialization not supported");
+  auto serialized = serializationInterface->serialize(args[0]);
+
+  {
+    // Accessing Worker's shared state. Acquire the lock.
+    std::lock_guard<std::mutex> lock(workerState->stateMutex);
+    // We need to perform the termination check again since there is a chance
+    // the Worker was terminated while serialization.
+    if (workerState->terminated) {
+      return jsi::Value::undefined();
+    }
+
+    workerState->toWorkerQueue.push_back(std::move(serialized));
+    // Notify the Worker to wake up and process this message.
+    workerState->toWorkerCondition.notify_all();
+  }
+  return jsi::Value::undefined();
+}
+
 } // namespace
 
 void installWorker(jsi::Runtime &rt, jsi::Object &extensions) {
@@ -208,7 +324,10 @@ void installWorker(jsi::Runtime &rt, jsi::Object &extensions) {
   jsi::Function terminateWorkerFunc = jsi::Function::createFromHostFunction(
       rt, jsi::PropNameID::forAscii(rt, "terminateWorker"), 0, terminateWorker);
 
-  setup.call(rt, initWorker, terminateWorkerFunc);
+  jsi::Function postMessageFunc = jsi::Function::createFromHostFunction(
+      rt, jsi::PropNameID::forAscii(rt, "postMessage"), 1, postMessageToWorker);
+
+  setup.call(rt, initWorker, terminateWorkerFunc, postMessageFunc);
 }
 
 } // namespace hermes

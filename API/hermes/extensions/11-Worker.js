@@ -7,13 +7,16 @@
 
 // Worker extension setup function.
 // Receives native helper functions and installs Worker globally.
-extensions.Worker = function(nativeInit, nativeTerminate) {
+extensions.Worker = function(nativeInit, nativeTerminate, nativePostMessage) {
     class Worker {
         constructor(script) {
             nativeInit(this, script);
         }
         terminate() {
             return nativeTerminate.call(this);
+        }
+        postMessage(...args) {
+            return nativePostMessage.call(this, ...args);
         }
     }
 

@@ -2893,6 +2893,27 @@ var worker = new Worker(`while(true) {}`); worker;
 
   // Terminate the worker
   terminate.callWithThis(*rt, worker);
+
+  code = R"(
+var worker = new Worker(`
+  onmessage = function(msg) {
+    print(msg);
+  }
+`);
+worker;
+)";
+  worker = eval(code).asObject(*rt);
+
+  auto postMessage = worker.getPropertyAsFunction(*rt, "postMessage");
+  // postMessage on non-Worker object
+  EXPECT_THROW(postMessage.callWithThis(*rt, nonWorkerObject, 1), JSError);
+  // postMessage with no message
+  EXPECT_THROW(postMessage.callWithThis(*rt, worker), JSError);
+
+  // Post a message, then terminate worker
+  postMessage.callWithThis(*rt, worker, "hello!");
+  terminate = worker.getPropertyAsFunction(*rt, "terminate");
+  terminate.callWithThis(*rt, worker);
 }
 
 INSTANTIATE_TEST_CASE_P(
