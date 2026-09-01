@@ -330,6 +330,28 @@ void installPostMessageFromWorker(
   workerRuntime.global().setProperty(workerRuntime, "postMessage", onMessage);
 }
 
+/// Install the 'close` global function on the \p workerRuntime. The close
+/// function will acquire the mutex \p workerState.stateMutex, set the
+/// termination flag, and clear all messages.
+void installCloseFromWorker(
+    jsi::Runtime &workerRuntime,
+    const std::shared_ptr<WorkerState> &workerState) {
+  // Native Function that handles the `close` calls from inside the Worker to
+  // terminate the Worker.
+  auto closeFromWorker = [workerState = workerState](
+                             jsi::Runtime &runtime,
+                             const jsi::Value &,
+                             const jsi::Value *args,
+                             size_t) {
+    setTerminationState(workerState, runtime, false);
+    return jsi::Value::undefined();
+  };
+  auto closePropId = jsi::PropNameID::forAscii(workerRuntime, "close");
+  jsi::Function close = jsi::Function::createFromHostFunction(
+      workerRuntime, closePropId, 0, closeFromWorker);
+  workerRuntime.global().setProperty(workerRuntime, closePropId, close);
+}
+
 WorkerNativeState::~WorkerNativeState() {
   setTerminationState(workerState, *workerRuntime, true);
   // If the Worker thread is still active, wait for it to finish.
@@ -432,6 +454,7 @@ jsi::Value initializeWorker(
 
   // Install the event-processing handlers onto the Worker runtime
   installPostMessageFromWorker(*workerRuntime, workerState);
+  installCloseFromWorker(*workerRuntime, workerState);
 
   auto workerNativeState = std::make_shared<WorkerNativeState>(
       workerState, std::move(workerRuntime));
