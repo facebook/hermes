@@ -2868,10 +2868,35 @@ TEST_P(HermesSerializationTest, SerializeWithTransferThrows) {
       serializationInterface->serializeWithTransfer(val, transferArr), JSError);
 }
 
+class HermesWorkerTest : public HermesRuntimeTest {
+ public:
+  HermesWorkerTest() : HermesRuntimeTest() {}
+};
+
+#if HERMES_ENABLE_CORE_EXTENSIONS
+TEST_P(HermesWorkerTest, WebWorkerBasic) {
+  auto workerGlobal = rt->global().getProperty(*rt, "Worker");
+  EXPECT_TRUE(!workerGlobal.isUndefined());
+
+  EXPECT_THROW(eval("new Worker(123);"), JSError);
+
+  auto code = R"(
+var worker = new Worker(`"foobar"`);
+)";
+  eval(code);
+}
+
+INSTANTIATE_TEST_CASE_P(
+    Runtimes,
+    HermesWorkerTest,
+    ::testing::ValuesIn(runtimeGenerators()));
+#endif
+
 INSTANTIATE_TEST_CASE_P(
     Runtimes,
     HermesSerializationTest,
     ::testing::ValuesIn(runtimeGenerators()));
+
 #endif
 
 INSTANTIATE_TEST_CASE_P(

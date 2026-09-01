@@ -3408,6 +3408,10 @@ std::unique_ptr<jsi::ThreadSafeRuntime> makeThreadSafeHermesRuntime(
   hermesRt.setDebugger(std::make_unique<debugger::Debugger>());
 #endif
 
+#if HERMES_ENABLE_CORE_EXTENSIONS
+  loadAndInstallExtensions(hermesRt);
+#endif
+
   return ret;
 }
 
