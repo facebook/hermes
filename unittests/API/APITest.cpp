@@ -2880,10 +2880,19 @@ TEST_P(HermesWorkerTest, WebWorkerBasic) {
 
   EXPECT_THROW(eval("new Worker(123);"), JSError);
 
+  // Create a simple worker that just loops forever
   auto code = R"(
-var worker = new Worker(`"foobar"`);
+var worker = new Worker(`while(true) {}`); worker;
 )";
-  eval(code);
+  auto worker = eval(code).asObject(*rt);
+
+  auto terminate = worker.getPropertyAsFunction(*rt, "terminate");
+  // Terminate on a non-Worker object should throw.
+  Object nonWorkerObject(*rt);
+  EXPECT_THROW(terminate.callWithThis(*rt, nonWorkerObject), JSError);
+
+  // Terminate the worker
+  terminate.callWithThis(*rt, worker);
 }
 
 INSTANTIATE_TEST_CASE_P(
