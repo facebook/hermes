@@ -11,6 +11,7 @@
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/hermes.h"
 #include "llvh/Support/Compiler.h"
+#include "llvh/Support/ErrorHandling.h"
 
 #include <condition_variable>
 #include <deque>
@@ -21,7 +22,8 @@ namespace facebook {
 namespace hermes {
 namespace {
 
-using Message = std::shared_ptr<jsi::Serialized>;
+using Message = std::
+    variant<std::shared_ptr<jsi::Serialized>, std::unique_ptr<jsi::Serialized>>;
 /// Stores some resources shared between a specific Worker and the main
 /// thread/event loop thread. Everything in this struct is guarded by the state
 /// mutex;
@@ -99,8 +101,26 @@ void processMessageWithHandler(
     const jsi::Function &handler) {
   auto serializationInterface = jsi::castInterface<jsi::ISerialization>(&rt);
   assert(serializationInterface && "ISerialization is not supported");
-  jsi::Value deserialized = serializationInterface->deserialize(message);
-  handler.call(rt, deserialized);
+  if (auto serializedNoTransfer =
+          std::get_if<std::shared_ptr<jsi::Serialized>>(&message)) {
+    jsi::Value deserialized =
+        serializationInterface->deserialize(*serializedNoTransfer);
+    handler.call(rt, deserialized);
+  } else if (
+      auto serializedWithTransfer =
+          std::get_if<std::unique_ptr<jsi::Serialized>>(&message)) {
+    jsi::Array deserialized = serializationInterface->deserializeWithTransfer(
+        *serializedWithTransfer);
+
+    // 'deserializeWithTransfer' must return the deserialized message at the
+    // index 0 of the return JS Array. Thus, the size must not be 0.
+    assert(
+        deserialized.size(rt) != 0 &&
+        "deserializeWithTransfer must contain the message in the array");
+    handler.call(rt, deserialized.getValueAtIndex(rt, 0));
+  } else {
+    llvm_unreachable("Unknown serialization type encountered");
+  }
 }
 
 /// Acquires the \p workerState.mutex and resources in \p workerState to
@@ -266,7 +286,7 @@ jsi::Value terminateWorker(
 /// message to the Worker. The arguments in \p args must be provided in the
 /// following order:
 /// 1. A serializable message
-/// 2. [not implemented yet] An optional array of transferable arguments
+/// 2. An optional array of transferable arguments
 jsi::Value postMessageToWorker(
     jsi::Runtime &rt,
     const jsi::Value &self,
@@ -294,7 +314,20 @@ jsi::Value postMessageToWorker(
   // and try to acquire the lock as a side effect.
   auto *serializationInterface = jsi::castInterface<jsi::ISerialization>(&rt);
   assert(serializationInterface && "ISerialization not supported");
-  auto serialized = serializationInterface->serialize(args[0]);
+  Message serialized;
+  const jsi::Value &message = args[0];
+  if (count == 1) {
+    serialized = serializationInterface->serialize(message);
+  } else {
+    // Check the 'transfers' argument is an Array
+    const jsi::Value &transfers = args[1];
+    if (LLVM_UNLIKELY(
+            !transfers.isObject() || !transfers.asObject(rt).isArray(rt))) {
+      throw jsi::JSError(rt, "Must provide an Array of transferable arguments");
+    }
+    serialized = serializationInterface->serializeWithTransfer(
+        message, transfers.asObject(rt).asArray(rt));
+  }
 
   {
     // Accessing Worker's shared state. Acquire the lock.

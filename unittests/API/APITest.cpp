@@ -2900,6 +2900,9 @@ var worker = new Worker(`
     print(msg);
   }
 `);
+var nontransferable= ["non-transferable"];
+var ab = new ArrayBuffer(8);
+var transfers = [ab];
 worker;
 )";
   worker = eval(code).asObject(*rt);
@@ -2912,6 +2915,30 @@ worker;
 
   // Post a message, then terminate worker
   postMessage.callWithThis(*rt, worker, "hello!");
+  // Post a message with transfer, but transfers is not an Array
+  EXPECT_THROW(
+      postMessage.callWithThis(*rt, worker, "hello!", "not an array"), JSError);
+
+  // Post a message with transfer, but don't the transfers array contains
+  // non-transferable arguments
+  auto nontransferable = rt->global().getProperty(*rt, "nontransferable");
+  EXPECT_THROW(
+      postMessage.callWithThis(*rt, worker, "hello!", nontransferable),
+      JSError);
+
+  // Send an ArrayBuffer as message without transfer
+  auto abVal = rt->global().getProperty(*rt, "ab");
+  postMessage.callWithThis(*rt, worker, abVal);
+  // Make sure the original array buffer is not detached
+  auto ab = abVal.asObject(*rt).getArrayBuffer(*rt);
+  EXPECT_FALSE(ab.getProperty(*rt, "detached").asBool());
+
+  // Post a message with transfer
+  auto transfers = rt->global().getProperty(*rt, "transfers");
+  postMessage.callWithThis(*rt, worker, "hello!", transfers);
+  // Make sure the original array buffer is detached.
+  EXPECT_TRUE(ab.getProperty(*rt, "detached").asBool());
+
   terminate = worker.getPropertyAsFunction(*rt, "terminate");
   terminate.callWithThis(*rt, worker);
 }
