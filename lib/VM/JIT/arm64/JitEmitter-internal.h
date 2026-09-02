@@ -16,14 +16,6 @@
 
 namespace hermes::vm::arm64 {
 
-// Disable warnings about missing designated initializers since they occur often
-// when we construct SlowPaths.
-#ifdef __clang__
-#if __has_warning("-Wmissing-designated-field-initializers")
-#pragma clang diagnostic ignored "-Wmissing-designated-field-initializers"
-#endif
-#endif
-
 // Ensure that HermesValue tags are handled correctly by updating this every
 // time the HERMESVALUE_VERSION changes, and going through the JIT and updating
 // any relevant code.

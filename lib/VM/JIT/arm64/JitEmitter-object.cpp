@@ -60,21 +60,19 @@ void Emitter::newObject(FR frRes) {
 
   a.bind(contLab);
 
-  slowPaths_.push_back(
-      {.slowPathLab = slowPathLab,
-       .contLab = contLab,
-       .frRes = frRes,
-       .hwRes = hwRes,
-       .emittingIP = emittingIP,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment("// Slow path: NewObject r%u", sl.frRes.index());
-         em.a.bind(sl.slowPathLab);
-         em.a.mov(a64::x0, xRuntime);
-         EMIT_RUNTIME_CALL(
-             em, SHLegacyValue (*)(SHRuntime *), _sh_ljs_new_object);
-         em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
-         em.a.b(sl.contLab);
-       }});
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      emittingIP,
+      [frRes, hwRes](Emitter &em, SlowPath &sp) {
+        em.comment("// Slow path: NewObject r%u", frRes.index());
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(a64::x0, xRuntime);
+        EMIT_RUNTIME_CALL(
+            em, SHLegacyValue (*)(SHRuntime *), _sh_ljs_new_object);
+        em.movHWFromHW<false>(hwRes, HWReg::gpX(0));
+        em.a.b(sp.contLab);
+      });
 }
 
 void Emitter::newObjectWithParent(FR frRes, FR frParent) {
@@ -150,29 +148,26 @@ void Emitter::newObjectWithParent(FR frRes, FR frParent) {
 
   a.bind(contLab);
 
-  slowPaths_.push_back(
-      {.slowPathLab = slowPathLab,
-       .contLab = contLab,
-       .frRes = frRes,
-       .frInput1 = frParent,
-       .hwRes = hwRes,
-       .emittingIP = emittingIP,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment(
-             "// Slow path: NewObjectWithParent r%u, r%u",
-             sl.frRes.index(),
-             sl.frInput1.index());
-         em.a.bind(sl.slowPathLab);
-         em.a.mov(a64::x0, xRuntime);
-         em.loadFrameAddr(a64::x1, sl.frInput1);
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      emittingIP,
+      [frRes, frParent, hwRes](Emitter &em, SlowPath &sp) {
+        em.comment(
+            "// Slow path: NewObjectWithParent r%u, r%u",
+            frRes.index(),
+            frParent.index());
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(a64::x0, xRuntime);
+        em.loadFrameAddr(a64::x1, frParent);
 
-         EMIT_RUNTIME_CALL(
-             em,
-             SHLegacyValue (*)(SHRuntime *, const SHLegacyValue *),
-             _sh_ljs_new_object_with_parent);
-         em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
-         em.a.b(sl.contLab);
-       }});
+        EMIT_RUNTIME_CALL(
+            em,
+            SHLegacyValue (*)(SHRuntime *, const SHLegacyValue *),
+            _sh_ljs_new_object_with_parent);
+        em.movHWFromHW<false>(hwRes, HWReg::gpX(0));
+        em.a.b(sp.contLab);
+      });
 }
 
 void Emitter::newObjectWithBuffer(
@@ -472,33 +467,31 @@ void Emitter::newObjectWithBuffer(
   // This slow path only allocates the new object.
   // Property population is always done in JIT-emitted code specialized for this
   // shape table entry.
-  slowPaths_.push_back(
-      {.slowPathLab = slowPathLab,
-       .contLab = contLab,
-       .frRes = frRes,
-       .hwRes = hwObj,
-       .sizeOrIdx = shapeTableIndex,
-       .emittingIP = emittingIP,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment(
-             "// Slow path: NewObjectWithBuffer r%u, %u, %u",
-             sl.frRes.index(),
-             sl.sizeOrIdx,
-             sl.sizeOrIdx2);
-         em.a.bind(sl.slowPathLab);
-         em.a.mov(a64::x0, xRuntime);
-         em.loadBits64InGp(a64::x1, (uint64_t)em.codeBlock_, "CodeBlock");
-         em.a.mov(a64::w2, sl.sizeOrIdx);
-         em.loadFrameAddr(a64::x3, sl.frRes);
-         EMIT_RUNTIME_CALL(
-             em,
-             JSObject *
-                 (*)(Runtime &, CodeBlock *, uint32_t, PinnedHermesValue *),
-             _jit_new_empty_object_for_buffer);
-         // Move into xObj.
-         em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
-         em.a.b(sl.contLab);
-       }});
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      emittingIP,
+      [frRes, hwObj, shapeTableIndex, valBufferOffset](
+          Emitter &em, SlowPath &sp) {
+        em.comment(
+            "// Slow path: NewObjectWithBuffer r%u, %u, %u",
+            frRes.index(),
+            shapeTableIndex,
+            valBufferOffset);
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(a64::x0, xRuntime);
+        em.loadBits64InGp(a64::x1, (uint64_t)em.codeBlock_, "CodeBlock");
+        em.a.mov(a64::w2, shapeTableIndex);
+        em.loadFrameAddr(a64::x3, frRes);
+        EMIT_RUNTIME_CALL(
+            em,
+            JSObject *
+                (*)(Runtime &, CodeBlock *, uint32_t, PinnedHermesValue *),
+            _jit_new_empty_object_for_buffer);
+        // Move into xObj.
+        em.movHWFromHW<false>(hwObj, HWReg::gpX(0));
+        em.a.b(sp.contLab);
+      });
 }
 
 void Emitter::newObjectWithBufferSlow(

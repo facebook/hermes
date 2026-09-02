@@ -25,6 +25,9 @@
 
 #include <cstdarg>
 #include <deque>
+#include <new>
+#include <type_traits>
+#include <utility>
 
 namespace hermes::vm::arm64 {
 
@@ -320,41 +323,79 @@ class Emitter {
   /// VecD temp registers.
   TempRegAlloc vecTemp_{kVecTemp1, kVecTemp2};
 
-  /// Keep enough information to generate a slow path at the end of the
-  /// function.
-  struct SlowPath {
+  /// A deferred slow path, emitted at the end of the function.
+  ///
+  /// Everything the slow path needs beyond the common fields below is held in
+  /// the lambda passed to the constructor, stored inline in \c storage_. This
+  /// keeps each slow path's state private to the one place that produces and
+  /// consumes it, instead of a shared set of fields that any slow path could
+  /// read whether or not its producer set them.
+  class SlowPath {
+   public:
     /// Label of the slow path.
     asmjit::Label slowPathLab;
     /// Label to jump to after the slow path.
     asmjit::Label contLab;
-    /// Target if this is a branch.
-    asmjit::Label target;
-
-    /// Name of the slow path.
-    const char *name;
-    /// Frame register indexes;
-    FR frRes, frInput1, frInput2;
-    /// Optional hardware register for the result.
-    HWReg hwRes;
-    /// Whether to invert a condition.
-    bool invert;
-    /// Whether to pass arguments by value to the slow path.
-    bool passArgsByVal;
-    /// Some number or index that needs to be passed to the slow path.
-    unsigned sizeOrIdx;
-    /// Another number or index that needs to be passed to the slow path.
-    unsigned sizeOrIdx2;
-
-    /// Pointer to the slow path function that must be called.
-    void *slowCall;
-    /// The name of the slow path function.
-    const char *slowCallName;
-
     /// Bytecode IP of the instruction that this is a slow path for.
     const inst::Inst *emittingIP;
 
-    /// Callback to actually emit.
-    void (*emit)(Emitter &em, SlowPath &sl);
+    /// \param l is invoked as l(Emitter &, SlowPath &) to emit the slow path.
+    /// Its captures are copied into \c storage_ and never destroyed, so they
+    /// must be trivially destructible and must fit.
+    template <typename L>
+    SlowPath(
+        asmjit::Label slowPathLab,
+        asmjit::Label contLab,
+        const inst::Inst *emittingIP,
+        L &&l)
+        : slowPathLab(slowPathLab),
+          contLab(contLab),
+          emittingIP(emittingIP),
+          emit_([](Emitter &em, SlowPath &sp) {
+            (*reinterpret_cast<std::decay_t<L> *>(sp.storage_))(em, sp);
+          }) {
+      using Lambda = std::decay_t<L>;
+      static_assert(
+          sizeof(Lambda) <= sizeof(storage_),
+          "slow path captures too much; enlarge storage_ or capture less");
+      static_assert(
+          alignof(Lambda) <= alignof(void *),
+          "slow path captures are over-aligned");
+      static_assert(
+          std::is_trivially_destructible_v<Lambda>,
+          "slow path captures must be trivially destructible");
+      ::new (storage_) Lambda(std::forward<L>(l));
+    }
+
+    /// Overload for slow paths that do not branch back to a continuation.
+    template <typename L>
+    SlowPath(asmjit::Label slowPathLab, const inst::Inst *emittingIP, L &&l)
+        : SlowPath(
+              slowPathLab,
+              asmjit::Label(),
+              emittingIP,
+              std::forward<L>(l)) {}
+
+    /// Non-copyable and non-movable: \c storage_ holds a type-erased lambda
+    /// that cannot be relocated by the implicit memberwise copy. std::deque
+    /// never relocates existing elements, so emplace_back and pop_front are
+    /// all that is needed.
+    SlowPath(const SlowPath &) = delete;
+    SlowPath &operator=(const SlowPath &) = delete;
+
+    /// Emit this slow path.
+    void emit(Emitter &em) {
+      emit_(em, *this);
+    }
+
+   private:
+    void (*emit_)(Emitter &em, SlowPath &sp);
+    /// Inline storage for the lambda's captures. Sized to the largest current
+    /// slow path, jCond, whose captures include an asmjit::Label (16 bytes, an
+    /// Operand) plus three pointers, two FRs and two bools. Raising this is
+    /// fine; the static_assert above is what keeps a too-large capture from
+    /// becoming a silent heap allocation.
+    alignas(void *) char storage_[56];
   };
   /// Queue of slow paths.
   std::deque<SlowPath> slowPaths_{};

@@ -108,28 +108,26 @@ void Emitter::loadThisNS(FR frRes) {
 
   a.bind(contLab);
 
-  slowPaths_.push_back(
-      {.slowPathLab = slowPathLab,
-       .contLab = contLab,
-       .frRes = frRes,
-       .hwRes = hwRes,
-       .emittingIP = emittingIP,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment("// Slow path: LoadThisNS r%u", sl.frRes.index());
-         em.a.bind(sl.slowPathLab);
-         em.a.mov(a64::x0, xRuntime);
-         em.a.ldur(
-             a64::x1,
-             a64::Mem(
-                 xFrame,
-                 StackFrameLayout::ThisArg * (int)sizeof(SHLegacyValue)));
-         EMIT_RUNTIME_CALL(
-             em,
-             SHLegacyValue (*)(SHRuntime *, SHLegacyValue),
-             _sh_ljs_coerce_this_ns);
-         em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
-         em.a.b(sl.contLab);
-       }});
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      emittingIP,
+      [frRes, hwRes](Emitter &em, SlowPath &sp) {
+        em.comment("// Slow path: LoadThisNS r%u", frRes.index());
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(a64::x0, xRuntime);
+        em.a.ldur(
+            a64::x1,
+            a64::Mem(
+                xFrame,
+                StackFrameLayout::ThisArg * (int)sizeof(SHLegacyValue)));
+        EMIT_RUNTIME_CALL(
+            em,
+            SHLegacyValue (*)(SHRuntime *, SHLegacyValue),
+            _sh_ljs_coerce_this_ns);
+        em.movHWFromHW<false>(hwRes, HWReg::gpX(0));
+        em.a.b(sp.contLab);
+      });
 }
 
 void Emitter::coerceThisNS(FR frRes, FR frThis) {
@@ -162,28 +160,23 @@ void Emitter::coerceThisNS(FR frRes, FR frThis) {
 
   a.bind(contLab);
 
-  slowPaths_.push_back(
-      {.slowPathLab = slowPathLab,
-       .contLab = contLab,
-       .frRes = frRes,
-       .frInput1 = frThis,
-       .hwRes = hwRes,
-       .emittingIP = emittingIP,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment(
-             "// Slow path: CoerceThis r%u, r%u",
-             sl.frRes.index(),
-             sl.frInput1.index());
-         em.a.bind(sl.slowPathLab);
-         em.a.mov(a64::x0, xRuntime);
-         em._loadFrame(HWReg(a64::x1), sl.frInput1);
-         EMIT_RUNTIME_CALL(
-             em,
-             SHLegacyValue (*)(SHRuntime *, SHLegacyValue),
-             _sh_ljs_coerce_this_ns);
-         em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
-         em.a.b(sl.contLab);
-       }});
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      emittingIP,
+      [frRes, frThis, hwRes](Emitter &em, SlowPath &sp) {
+        em.comment(
+            "// Slow path: CoerceThis r%u, r%u", frRes.index(), frThis.index());
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(a64::x0, xRuntime);
+        em._loadFrame(HWReg(a64::x1), frThis);
+        EMIT_RUNTIME_CALL(
+            em,
+            SHLegacyValue (*)(SHRuntime *, SHLegacyValue),
+            _sh_ljs_coerce_this_ns);
+        em.movHWFromHW<false>(hwRes, HWReg::gpX(0));
+        em.a.b(sp.contLab);
+      });
 }
 
 void Emitter::getNewTarget(FR frRes) {
@@ -267,18 +260,19 @@ void Emitter::callImpl(FR frRes, FR frCallee) {
   // If we have not already created a slow path for non-object calls, do so now.
   if (!nonObjCallLabel_.isValid()) {
     nonObjCallLabel_ = newSlowPathLabel();
-    slowPaths_.push_back(
-        {.slowPathLab = nonObjCallLabel_,
-         .emit = [](Emitter &em, SlowPath &sl) {
-           em.comment("// Throw on non-object call");
-           em.a.bind(sl.slowPathLab);
-           em.a.mov(a64::x0, xRuntime);
-           // The IP is already saved by the call setup, no need to save it
-           // again.
-           EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(
-               em, void (*)(SHRuntime *), _jit_throw_non_object_call);
-           // The call does not return.
-         }});
+    slowPaths_.emplace_back(
+        nonObjCallLabel_,
+        /* emittingIP */ nullptr,
+        [](Emitter &em, SlowPath &sp) {
+          em.comment("// Throw on non-object call");
+          em.a.bind(sp.slowPathLab);
+          em.a.mov(a64::x0, xRuntime);
+          // The IP is already saved by the call setup, no need to save it
+          // again.
+          EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(
+              em, void (*)(SHRuntime *), _jit_throw_non_object_call);
+          // The call does not return.
+        });
   }
 
   auto slowPathLab = newSlowPathLabel();
@@ -316,28 +310,25 @@ void Emitter::callImpl(FR frRes, FR frCallee) {
   a.blr(a64::x2);
   movHWFromHW<false>(hwRes, HWReg::gpX(0));
 
-  slowPaths_.push_back(
-      {.slowPathLab = slowPathLab,
-       .contLab = contLab,
-       .frRes = frRes,
-       .frInput1 = frCallee,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment(
-             "// Slow path: CallImpl r%u, r%u",
-             sl.frRes.index(),
-             sl.frInput1.index());
-         em.a.bind(sl.slowPathLab);
-         em.emitIncrementCounter(JitCounter::NumCallSlow);
-         em.loadBits64InGp(
-             a64::x2, (uint64_t)&VTable::jitCallArray, "VTable::jitCallArray");
-         // Load the jitCall function. x0 still contains the callee CellKind
-         // from the fast path.
-         em.a.ldr(
-             a64::x2,
-             a64::Mem(a64::x2, a64::x0, a64::Shift(a64::ShiftOp::kLSL, 3)));
-         // x1 already contains the Callable* from the fast path.
-         em.a.b(sl.contLab);
-       }});
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      /* emittingIP */ nullptr,
+      [frRes, frCallee](Emitter &em, SlowPath &sp) {
+        em.comment(
+            "// Slow path: CallImpl r%u, r%u", frRes.index(), frCallee.index());
+        em.a.bind(sp.slowPathLab);
+        em.emitIncrementCounter(JitCounter::NumCallSlow);
+        em.loadBits64InGp(
+            a64::x2, (uint64_t)&VTable::jitCallArray, "VTable::jitCallArray");
+        // Load the jitCall function. x0 still contains the callee CellKind
+        // from the fast path.
+        em.a.ldr(
+            a64::x2,
+            a64::Mem(a64::x2, a64::x0, a64::Shift(a64::ShiftOp::kLSL, 3)));
+        // x1 already contains the Callable* from the fast path.
+        em.a.b(sp.contLab);
+      });
 }
 
 void Emitter::call(FR frRes, FR frCallee, uint32_t argc) {

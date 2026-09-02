@@ -179,23 +179,20 @@ void Emitter::fastArrayLoad(FR frRes, FR frArr, FR frIdx) {
       a64::Mem(hwTmpStorage.a64GpX(), hwTmpIdxGpX.a64GpX(), a64::lsl(3)));
   frUpdatedWithHW(frRes, hwRes);
 
-  slowPaths_.push_back(
-      {.slowPathLab = slowPathLab,
-       .frRes = frRes,
-       .frInput1 = frArr,
-       .frInput2 = frIdx,
-       .emittingIP = emittingIP,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment(
-             "// Slow path: FastArrayLoad r%u, r%u, r%u",
-             sl.frRes.index(),
-             sl.frInput1.index(),
-             sl.frInput2.index());
-         em.a.bind(sl.slowPathLab);
-         em.a.mov(a64::x0, xRuntime);
-         EMIT_RUNTIME_CALL(em, void (*)(SHRuntime *), _sh_throw_array_oob);
-         // Call does not return.
-       }});
+  slowPaths_.emplace_back(
+      slowPathLab,
+      emittingIP,
+      [frRes, frArr, frIdx](Emitter &em, SlowPath &sp) {
+        em.comment(
+            "// Slow path: FastArrayLoad r%u, r%u, r%u",
+            frRes.index(),
+            frArr.index(),
+            frIdx.index());
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(a64::x0, xRuntime);
+        EMIT_RUNTIME_CALL(em, void (*)(SHRuntime *), _sh_throw_array_oob);
+        // Call does not return.
+      });
 #endif
 }
 
@@ -284,29 +281,26 @@ void Emitter::getArgumentsLength(FR frRes, FR frLazyReg) {
 
   a.bind(contLab);
 
-  slowPaths_.push_back(
-      {.slowPathLab = slowPathLab,
-       .contLab = contLab,
-       .frRes = frRes,
-       .frInput1 = frLazyReg,
-       .hwRes = hwRes,
-       .emittingIP = emittingIP,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment(
-             "// Slow path: GetArgumentsLength r%u, r%u",
-             sl.frRes.index(),
-             sl.frInput1.index());
-         em.a.bind(sl.slowPathLab);
-         em.a.mov(a64::x0, xRuntime);
-         em.a.mov(a64::x1, xFrame);
-         em.loadFrameAddr(a64::x2, sl.frInput1);
-         EMIT_RUNTIME_CALL(
-             em,
-             SHLegacyValue (*)(SHRuntime *, SHLegacyValue *, SHLegacyValue *),
-             _sh_ljs_get_arguments_length);
-         em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
-         em.a.b(sl.contLab);
-       }});
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      emittingIP,
+      [frRes, frLazyReg, hwRes](Emitter &em, SlowPath &sp) {
+        em.comment(
+            "// Slow path: GetArgumentsLength r%u, r%u",
+            frRes.index(),
+            frLazyReg.index());
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(a64::x0, xRuntime);
+        em.a.mov(a64::x1, xFrame);
+        em.loadFrameAddr(a64::x2, frLazyReg);
+        EMIT_RUNTIME_CALL(
+            em,
+            SHLegacyValue (*)(SHRuntime *, SHLegacyValue *, SHLegacyValue *),
+            _sh_ljs_get_arguments_length);
+        em.movHWFromHW<false>(hwRes, HWReg::gpX(0));
+        em.a.b(sp.contLab);
+      });
 }
 
 void Emitter::iteratorBegin(FR frRes, FR frSource) {
@@ -536,28 +530,22 @@ void Emitter::getArgumentsPropByValImpl(
 
   a.bind(contLab);
 
-  slowPaths_.push_back(
-      {.slowPathLab = slowPathLab,
-       .contLab = contLab,
-       .name = name,
-       .frRes = frRes,
-       .frInput1 = frIndex,
-       .frInput2 = frLazyReg,
-       .hwRes = hwRes,
-       .slowCall = (void *)shImpl,
-       .slowCallName = shImplName,
-       .emittingIP = emittingIP,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment("// Slow path: %s r%u", sl.name, sl.frInput1.index());
-         em.a.bind(sl.slowPathLab);
-         em.a.mov(a64::x0, xRuntime);
-         em.a.mov(a64::x1, xFrame);
-         em.loadFrameAddr(a64::x2, sl.frInput1);
-         em.loadFrameAddr(a64::x3, sl.frInput2);
-         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
-         em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
-         em.a.b(sl.contLab);
-       }});
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      emittingIP,
+      [name, frIndex, frLazyReg, hwRes, shImpl, shImplName](
+          Emitter &em, SlowPath &sp) {
+        em.comment("// Slow path: %s r%u", name, frIndex.index());
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(a64::x0, xRuntime);
+        em.a.mov(a64::x1, xFrame);
+        em.loadFrameAddr(a64::x2, frIndex);
+        em.loadFrameAddr(a64::x3, frLazyReg);
+        em.callThunkWithSavedIP((void *)shImpl, shImplName);
+        em.movHWFromHW<false>(hwRes, HWReg::gpX(0));
+        em.a.b(sp.contLab);
+      });
 }
 
 void Emitter::reifyArgumentsImpl(FR frLazyReg, bool strict, const char *name) {
@@ -581,32 +569,32 @@ void Emitter::reifyArgumentsImpl(FR frLazyReg, bool strict, const char *name) {
   // Fast path: do nothing.
   a.bind(contLab);
 
-  slowPaths_.push_back(
-      {.slowPathLab = slowPathLab,
-       .contLab = contLab,
-       .name = name,
-       .frInput1 = frLazyReg,
-       // Use hwRes field to pass the global reg for the in/out param.
-       .hwRes = frameRegs_[frLazyReg.index()].globalReg,
-       .slowCall = strict ? (void *)_sh_ljs_reify_arguments_strict
-                          : (void *)_sh_ljs_reify_arguments_loose,
-       .slowCallName = strict ? "_sh_ljs_reify_arguments_strict"
-                              : "_sh_ljs_reify_arguments_loose",
-       .emittingIP = emittingIP,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment("// Slow path: %s r%u", sl.name, sl.frInput1.index());
-         em.a.bind(sl.slowPathLab);
-         em.a.mov(a64::x0, xRuntime);
-         em.a.mov(a64::x1, xFrame);
-         em.loadFrameAddr(a64::x2, sl.frInput1);
-         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
-         // Slow path modifies the frame so we need to sync it if there's a
-         // global reg.
-         if (sl.hwRes.isValid()) {
-           em._loadFrame(sl.hwRes, sl.frInput1);
-         }
-         em.a.b(sl.contLab);
-       }});
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      emittingIP,
+      [name,
+       frLazyReg,
+       strict,
+       hwGlobalReg = frameRegs_[frLazyReg.index()].globalReg](
+          Emitter &em, SlowPath &sp) {
+        em.comment("// Slow path: %s r%u", name, frLazyReg.index());
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(a64::x0, xRuntime);
+        em.a.mov(a64::x1, xFrame);
+        em.loadFrameAddr(a64::x2, frLazyReg);
+        em.callThunkWithSavedIP(
+            strict ? (void *)_sh_ljs_reify_arguments_strict
+                   : (void *)_sh_ljs_reify_arguments_loose,
+            strict ? "_sh_ljs_reify_arguments_strict"
+                   : "_sh_ljs_reify_arguments_loose");
+        // Slow path modifies the frame so we need to sync it if there's a
+        // global reg.
+        if (hwGlobalReg.isValid()) {
+          em._loadFrame(hwGlobalReg, frLazyReg);
+        }
+        em.a.b(sp.contLab);
+      });
 }
 
 } // namespace hermes::vm::arm64

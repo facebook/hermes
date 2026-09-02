@@ -87,28 +87,25 @@ void Emitter::createFunctionEnvironment(FR frRes, uint32_t size) {
 
   a.bind(contLab);
 
-  slowPaths_.push_back(
-      {.slowPathLab = slowPathLab,
-       .contLab = contLab,
-       .frRes = frRes,
-       .hwRes = hwRes,
-       .sizeOrIdx = size,
-       .emittingIP = emittingIP,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment(
-             "// Slow path: CreateFunctionEnvironment r%u", sl.frRes.index());
-         em.a.bind(sl.slowPathLab);
-         em.a.mov(a64::x0, xRuntime);
-         em.a.mov(a64::x1, xFrame);
-         em.a.mov(a64::w2, sl.sizeOrIdx);
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      emittingIP,
+      [frRes, hwRes, size](Emitter &em, SlowPath &sp) {
+        em.comment(
+            "// Slow path: CreateFunctionEnvironment r%u", frRes.index());
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(a64::x0, xRuntime);
+        em.a.mov(a64::x1, xFrame);
+        em.a.mov(a64::w2, size);
 
-         EMIT_RUNTIME_CALL(
-             em,
-             SHLegacyValue (*)(SHRuntime *, SHLegacyValue *, uint32_t),
-             _sh_ljs_create_function_environment);
-         em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
-         em.a.b(sl.contLab);
-       }});
+        EMIT_RUNTIME_CALL(
+            em,
+            SHLegacyValue (*)(SHRuntime *, SHLegacyValue *, uint32_t),
+            _sh_ljs_create_function_environment);
+        em.movHWFromHW<false>(hwRes, HWReg::gpX(0));
+        em.a.b(sp.contLab);
+      });
 }
 
 void Emitter::createEnvironment(FR frRes, FR frParent, uint32_t size) {
@@ -164,33 +161,29 @@ void Emitter::createEnvironment(FR frRes, FR frParent, uint32_t size) {
 
   a.bind(contLab);
 
-  slowPaths_.push_back(
-      {.slowPathLab = slowPathLab,
-       .contLab = contLab,
-       .frRes = frRes,
-       .frInput1 = frParent,
-       .hwRes = hwRes,
-       .sizeOrIdx = size,
-       .emittingIP = emittingIP,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment(
-             "// Slow path: CreateEnvironment r%u, r%u",
-             sl.frRes.index(),
-             sl.frInput1.index());
-         em.a.bind(sl.slowPathLab);
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      emittingIP,
+      [frRes, frParent, hwRes, size](Emitter &em, SlowPath &sp) {
+        em.comment(
+            "// Slow path: CreateEnvironment r%u, r%u",
+            frRes.index(),
+            frParent.index());
+        em.a.bind(sp.slowPathLab);
 
-         em.a.mov(a64::x0, xRuntime);
-         em.loadFrameAddr(a64::x1, sl.frInput1);
-         em.a.mov(a64::w2, sl.sizeOrIdx);
+        em.a.mov(a64::x0, xRuntime);
+        em.loadFrameAddr(a64::x1, frParent);
+        em.a.mov(a64::w2, size);
 
-         EMIT_RUNTIME_CALL(
-             em,
-             SHLegacyValue (*)(SHRuntime *, const SHLegacyValue *, uint32_t),
-             _sh_ljs_create_environment);
+        EMIT_RUNTIME_CALL(
+            em,
+            SHLegacyValue (*)(SHRuntime *, const SHLegacyValue *, uint32_t),
+            _sh_ljs_create_environment);
 
-         em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
-         em.a.b(sl.contLab);
-       }});
+        em.movHWFromHW<false>(hwRes, HWReg::gpX(0));
+        em.a.b(sp.contLab);
+      });
 }
 
 void Emitter::getParentEnvironment(FR frRes, uint32_t level) {
