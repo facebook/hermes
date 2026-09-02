@@ -10,6 +10,8 @@
 #include "JitEmitter-internal.h"
 #include "JitEmitter.h"
 
+#include "llvh/ADT/STLExtras.h"
+
 namespace hermes::vm::arm64 {
 
 void Emitter::_storeHWToFrame(FR fr, HWReg src) {
@@ -52,6 +54,12 @@ void Emitter::movFRFromHW(FR dst, HWReg src, FRType type) {
     frUpdatedWithHW(dst, frState.globalReg, type);
   } else {
     // Otherwise store it directly to the frame.
+    // This branch is reached only when the FR has no global register, so
+    // the call can never record anything today. It is here for the
+    // globalType/globalReg equivalence assert, and so that the path stays
+    // covered if that ever changes.
+    if (LLVM_UNLIKELY(emitTypeAsserts_))
+      recordFRWriteForAssert(dst);
     _storeHWToFrame(dst, src);
     frUpdateType(dst, type);
     frState.frameUpToDate = true;
@@ -60,6 +68,9 @@ void Emitter::movFRFromHW(FR dst, HWReg src, FRType type) {
 
 void Emitter::syncFrameOutParam(FR fr, FRType type) {
   auto &frState = frameRegs_[fr.index()];
+
+  if (LLVM_UNLIKELY(emitTypeAsserts_))
+    recordFRWriteForAssert(fr);
 
   frState.frameUpToDate = true;
 
@@ -443,6 +454,9 @@ HWReg Emitter::getOrAllocFRInAnyReg(
 void Emitter::frUpdatedWithHW(FR fr, HWReg hwReg, FRType localType) {
   FRState &frState = frameRegs_[fr.index()];
 
+  if (LLVM_UNLIKELY(emitTypeAsserts_))
+    recordFRWriteForAssert(fr);
+
   frState.frameUpToDate = false;
 #ifndef NDEBUG
   frState.regIsDirty = false;
@@ -471,6 +485,22 @@ void Emitter::frUpdatedWithHW(FR fr, HWReg hwReg, FRType localType) {
 
 void Emitter::frUpdateType(FR fr, FRType type) {
   frameRegs_[fr.index()].localType = type;
+}
+
+void Emitter::recordFRWriteForAssert(FR fr) {
+  FRState &frState = frameRegs_[fr.index()];
+  // The two conditions coincide today only because enter()'s allocation
+  // loops set globalReg and globalType together and stop together. Pin it,
+  // because the check below relies on it.
+  assert(
+      (frState.globalType != FRType::UnknownPtr) ==
+          frState.globalReg.isValid() &&
+      "globalType and globalReg must agree");
+  if (frState.globalType == FRType::UnknownPtr)
+    return;
+  if (llvh::is_contained(typeAssertPendingWrites_, fr))
+    return;
+  typeAssertPendingWrites_.push_back(fr);
 }
 
 } // namespace hermes::vm::arm64

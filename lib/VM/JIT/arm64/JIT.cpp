@@ -156,6 +156,7 @@ class JITContext::Compiler {
       em_.emittingIP = ip;
       ip = dispatch(ip);
       em_.assertPostInstructionInvariants();
+      em_.emitPendingTypeAsserts();
     }
     em_.emittingIP = nullptr;
   }

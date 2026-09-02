@@ -22,6 +22,7 @@
 #include "hermes/VMLayouts/StackFrameLayout.h"
 
 #include "llvh/ADT/DenseMap.h"
+#include "llvh/ADT/SmallVector.h"
 
 #include <cstdarg>
 #include <deque>
@@ -447,6 +448,11 @@ class Emitter {
   std::vector<TypeAssertSite> *typeAssertSites_ = nullptr;
   /// The shared failure tail, bound only if there is at least one site.
   asmjit::Label typeAssertFailLab_{};
+
+  /// FRs written by the bytecode instruction currently being emitted whose
+  /// global register class requires a check. Drained at each instruction
+  /// boundary by emitPendingTypeAsserts().
+  llvh::SmallVector<FR, 4> typeAssertPendingWrites_{};
 
   /// Descriptor for a single RO data entry.
   struct DataDesc {
@@ -1029,6 +1035,25 @@ class Emitter {
   /// the ones the chosen code shape happens to rely on.
   void emitTypeAssert(FR fr, HWReg hwVal, TypePred pred);
 
+  /// Emit, at a bytecode instruction boundary, the global-register-class
+  /// checks for every FR recorded by recordFRWriteForAssert() since the
+  /// last call, then clear the recorded set. Called from compileBB as a
+  /// sibling of assertPostInstructionInvariants(), never from inside it:
+  /// that function's body is compiled out under NDEBUG, and emitting
+  /// checks from within it would silently disable Class C in
+  /// release-with-flag builds.
+  ///
+  /// This checks the value each FR holds at the boundary, not at the
+  /// instruction's write to it. An instruction that writes a
+  /// non-conforming value, calls the runtime (a GC safepoint), and then
+  /// overwrites it with a conforming one is not caught; only the value
+  /// that survives the instruction is.
+  void emitPendingTypeAsserts() {
+    if (LLVM_LIKELY(typeAssertPendingWrites_.empty()))
+      return;
+    emitPendingTypeAssertsSlow();
+  }
+
  private:
   /// \return the byte offset of \p fr's slot from xFrame.
   static constexpr inline uint32_t frByteOffset(FR fr) {
@@ -1338,9 +1363,19 @@ class Emitter {
   /// \pre \p fr is not dirty (regIsDirty).
   void readFRForAssert(FR fr);
 
+  /// The out-of-line body of \c emitPendingTypeAsserts.
+  /// \pre the pending set is not empty.
+  void emitPendingTypeAssertsSlow();
+
   /// Emit the shared out-of-line tail that all type assert failure stubs
   /// jump to, if any type assert was emitted for this function.
   void emitTypeAssertFailTail();
+
+  /// Record that \p fr was written, so that the instruction boundary can
+  /// check the value against its global register class. Records nothing
+  /// unless the FR owns a global register. Callers must check
+  /// emitTypeAsserts_ themselves; this does not.
+  void recordFRWriteForAssert(FR fr);
 
  private:
   /// Set up the call frame and perform the call. The caller should have already

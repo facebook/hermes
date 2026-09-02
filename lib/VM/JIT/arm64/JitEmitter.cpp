@@ -208,6 +208,9 @@ void Emitter::assertPostInstructionInvariants() {
 #endif
 
 void Emitter::newBasicBlock(const asmjit::Label &label) {
+  assert(
+      typeAssertPendingWrites_.empty() &&
+      "pending type asserts must be drained at each instruction");
   syncAllFRTempExcept({});
   freeAllFRTempExcept({});
 
@@ -1024,6 +1027,17 @@ void Emitter::emitTypeAssertFR(FR fr, TypePred pred) {
   comment("// type assert r%u is %s", fr.index(), typePredName(pred));
   readFRForAssert(fr);
   emitTypeAssertGpX(fr, xScratch, pred);
+}
+
+void Emitter::emitPendingTypeAssertsSlow() {
+  assert(!typeAssertPendingWrites_.empty() && "nothing to emit");
+  for (FR fr : typeAssertPendingWrites_) {
+    FRState &frState = frameRegs_[fr.index()];
+    TypePred pred = frState.globalType == FRType::Number ? TypePred::IsNumber
+                                                         : TypePred::NotPointer;
+    emitTypeAssertFR(fr, pred);
+  }
+  typeAssertPendingWrites_.clear();
 }
 
 void Emitter::emitTypeAssertGpX(FR fr, const a64::GpX &xVal, TypePred pred) {
