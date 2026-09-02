@@ -769,9 +769,10 @@ void Emitter::loadParam(FR frRes, uint32_t paramIndex) {
           xFrame,
           (int)StackFrameLayout::ArgCount * (int)sizeof(SHLegacyValue)));
 
-  EXPECT_ERROR(asmjit::kErrorInvalidImmediate, err = a.cmp(wTmp, paramIndex));
   // Does paramIndex fit in the 12-bit unsigned immediate?
-  if (err) {
+  if (a64::Utils::isAddSubImm(paramIndex)) {
+    a.cmp(wTmp, paramIndex);
+  } else {
     HWReg hwTmp2 = allocAndLogTempGpX();
     a64::GpW wTmp2(hwTmp2.indexInClass());
     loadBits64InGp(wTmp2, paramIndex, "paramIndex");
