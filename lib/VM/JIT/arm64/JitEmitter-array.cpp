@@ -542,7 +542,7 @@ void Emitter::getArgumentsPropByValImpl(
         em.a.mov(a64::x1, xFrame);
         em.loadFrameAddr(a64::x2, frIndex);
         em.loadFrameAddr(a64::x3, frLazyReg);
-        em.callThunkWithSavedIP((void *)shImpl, shImplName);
+        em.callRuntimeWithSavedIP((void *)shImpl, shImplName);
         em.movHWFromHW<false>(hwRes, HWReg::gpX(0));
         em.a.b(sp.contLab);
       });
@@ -583,7 +583,7 @@ void Emitter::reifyArgumentsImpl(FR frLazyReg, bool strict, const char *name) {
         em.a.mov(a64::x0, xRuntime);
         em.a.mov(a64::x1, xFrame);
         em.loadFrameAddr(a64::x2, frLazyReg);
-        em.callThunkWithSavedIP(
+        em.callRuntimeWithSavedIP(
             strict ? (void *)_sh_ljs_reify_arguments_strict
                    : (void *)_sh_ljs_reify_arguments_loose,
             strict ? "_sh_ljs_reify_arguments_strict"

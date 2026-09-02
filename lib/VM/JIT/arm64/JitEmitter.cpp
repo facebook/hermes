@@ -340,7 +340,7 @@ void Emitter::frameSetup(
         // Do not save the IP because we have not yet set up the stack frame
         // for this function. If this throws, the exception should appear in
         // the caller.
-        EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(
+        EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(
             em, void (*)(SHRuntime *), _sh_check_native_stack_overflow);
         em.a.b(sp.contLab);
       });
@@ -391,10 +391,9 @@ void Emitter::frameSetup(
           em.comment("// Slow path: %s", slowCallName);
           em.a.bind(sp.slowPathLab);
           em.a.mov(a64::x0, xRuntime);
-          // We don't register a thunk since there will only be a single call
-          // to this. Note that we also don't save the IP, because this is
-          // being thrown in the caller's context.
-          em.callWithoutThunk((void *)slowCall, slowCallName);
+          // We don't save the IP, because this is being thrown in the
+          // caller's context.
+          em.callRuntime((void *)slowCall, slowCallName);
           // Function does not return.
         });
   }
@@ -482,7 +481,7 @@ void Emitter::frameSetup(
         em.a.mov(a64::x0, xRuntime);
         // Do not save the IP because we have not yet set up the stack frame
         // for this function. The exception should appear in the caller.
-        EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(
+        EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(
             em, void (*)(SHRuntime *), _sh_throw_register_stack_overflow);
       });
 
@@ -499,9 +498,8 @@ void Emitter::frameSetup(
 
     // _setjmp(buf->buf);
     a.add(a64::x0, a64::sp, jmpBufOffset + offsetof(SHJmpBuf, buf));
-    // setjmp can't throw and it'll be called once, so don't use a thunk.
-    EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(
-        *this, int (*)(jmp_buf), _sh_setjmp);
+    // setjmp can't throw, so the IP does not need to be saved.
+    EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(*this, int (*)(jmp_buf), _sh_setjmp);
     // If this a catch, go to the catch table to jump to either a handler BB or
     // rethrow.
     a.cbnz(a64::x0, catchTableLabel_);
@@ -575,28 +573,16 @@ void Emitter::leave(llvh::ArrayRef<const asmjit::Label *> exceptionHandlers) {
 
   emitCatchTable(exceptionHandlers);
   emitSlowPaths();
-  emitThunks();
   emitROData();
 }
 
-void Emitter::callThunk(void *fn, const char *name) {
-  // Using thunks leads to 0.27% more branch mispredicts and 2.8% performance
-  // regression on an important React benchmark. So, disable them for now.
-  if constexpr (false) {
-    comment("// call %s", name);
-    a.bl(registerThunk(fn, name));
-  } else {
-    callWithoutThunk(fn, name);
-  }
-}
-
-void Emitter::callThunkWithSavedIP(void *fn, const char *name) {
+void Emitter::callRuntimeWithSavedIP(void *fn, const char *name) {
   // Save the current IP in the runtime.
   getBytecodeIP(xScratch);
   a.str(xScratch, a64::Mem(xRuntime, RuntimeOffsets::currentIP));
 
   // Call the passed function.
-  callThunk(fn, name);
+  callRuntime(fn, name);
 
   if (emitAsserts_) {
     // Invalidate the current IP to make sure it is set before the next call.
@@ -605,7 +591,7 @@ void Emitter::callThunkWithSavedIP(void *fn, const char *name) {
   }
 }
 
-void Emitter::callWithoutThunk(void *fn, const char *name) {
+void Emitter::callRuntime(void *fn, const char *name) {
   comment("// call %s", name);
   loadBits64InGp(xScratch, (uint64_t)fn, name);
   a.blr(xScratch);
@@ -948,20 +934,6 @@ int32_t Emitter::uint64Const(uint64_t bits, const char *comment) {
   return it->second;
 }
 
-asmjit::Label Emitter::registerThunk(void *fn, const char *name) {
-  auto [it, inserted] = thunkMap_.try_emplace(fn, 0);
-  // Is this a new thunk?
-  if (inserted) {
-    it->second = thunks_.size();
-    int32_t dataOfs =
-        reserveData(sizeof(fn), sizeof(fn), asmjit::TypeId::kUInt64, 1, name);
-    memcpy(roData_.data() + dataOfs, &fn, sizeof(fn));
-    thunks_.emplace_back(name ? a.newNamedLabel(name) : a.newLabel(), dataOfs);
-  }
-
-  return thunks_[it->second].first;
-}
-
 void Emitter::emitCatchTable(
     llvh::ArrayRef<const asmjit::Label *> exceptionHandlers) {
   // No trys in the function, nothing to do here.
@@ -979,7 +951,7 @@ void Emitter::emitCatchTable(
   a.add(a64::x3, a64::sp, getJmpBufOffset());
   a.ldr(a64::x4, a64::Mem(a64::sp, getSavedSHLocalsOffset()));
   a.adr(a64::x5, addressTableLab);
-  EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(
+  EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(
       *this,
       void *(*)(SHRuntime *,
                 SHCodeBlock *,
@@ -1007,15 +979,6 @@ void Emitter::emitSlowPaths() {
     slowPaths_.pop_front();
   }
   emittingIP = nullptr;
-}
-
-void Emitter::emitThunks() {
-  comment("// Thunks");
-  for (const auto &th : thunks_) {
-    a.bind(th.first);
-    a.ldr(xScratch, a64::Mem(roDataLabel_, th.second));
-    a.br(xScratch);
-  }
 }
 
 void Emitter::emitROData() {

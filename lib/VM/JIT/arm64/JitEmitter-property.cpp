@@ -50,7 +50,7 @@ void Emitter::putByValImpl(
   loadFrameAddr(a64::x1, frTarget);
   loadFrameAddr(a64::x2, frKey);
   loadFrameAddr(a64::x3, frValue);
-  callThunkWithSavedIP((void *)shImpl, shImplName);
+  callRuntimeWithSavedIP((void *)shImpl, shImplName);
 }
 
 void Emitter::putByValWithReceiver(
@@ -318,7 +318,7 @@ class HERMES_ATTRIBUTE_INTERNAL_LINKAGE Emitter::GetByIdImpl {
         emit_add_imm_u24(
             a, a64::x3, sizeof(SHReadPropertyCacheEntry) * cacheIdx);
     }
-    _.callThunkWithSavedIP((void *)shImpl, shImplName);
+    _.callRuntimeWithSavedIP((void *)shImpl, shImplName);
 
     _.movHWFromHW<false>(hwRes, HWReg::gpX(0));
     _.frUpdatedWithHW(frRes, hwRes);

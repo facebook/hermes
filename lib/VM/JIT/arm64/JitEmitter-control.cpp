@@ -831,7 +831,7 @@ void Emitter::jCond(
           em.loadFrameAddr(a64::x1, frLeft);
           em.loadFrameAddr(a64::x2, frRight);
         }
-        em.callThunkWithSavedIP(slowCall, slowCallName);
+        em.callRuntimeWithSavedIP(slowCall, slowCallName);
         if (!invert)
           em.a.cbnz(a64::w0, target);
         else
@@ -990,7 +990,7 @@ void Emitter::jStrictEqual(
         em.a.bind(sp.slowPathLab);
         em._loadFrame(HWReg::gpX(0), frLeft);
         em._loadFrame(HWReg::gpX(1), frRight);
-        em.callThunkWithSavedIP(
+        em.callRuntimeWithSavedIP(
             (void *)_sh_ljs_strict_equal, "_sh_ljs_strict_equal");
         if (!invert)
           em.a.cbnz(a64::w0, target);

@@ -201,7 +201,7 @@ static constexpr auto xRuntime = a64::x19;
 static constexpr auto xFrame = a64::x20;
 
 /// Scratch register. x16/x17 sit outside the register allocator and are used
-/// as scratch (thunk targets, IP materialization); nothing holds a value in
+/// as scratch (call targets, IP materialization); nothing holds a value in
 /// them across an emitter call.
 static constexpr auto xScratch = a64::x16;
 
@@ -414,10 +414,6 @@ class Emitter {
   std::vector<uint8_t> roData_{};
   asmjit::Label roDataLabel_{};
 
-  /// Each thunk contains the offset of the function pointer in roData.
-  std::vector<std::pair<asmjit::Label, int32_t>> thunks_{};
-  llvh::DenseMap<void *, size_t> thunkMap_{};
-
   /// Map from the bit pattern of a double value to offset in constant pool.
   llvh::DenseMap<hermes::DenseUInt64, int32_t> fp64ConstMap_{};
 
@@ -497,7 +493,7 @@ class Emitter {
   /// line so that vsnprintf is not duplicated into every caller.
   void commentV(const char *fmt, va_list args);
 
-  /// Emit the catch table, slow paths, thunks and RO data,
+  /// Emit the catch table, slow paths and RO data,
   /// then reset the stack, end any try, and return.
   /// \param exceptionHandlers the labels for the exception handler table.
   void leave(llvh::ArrayRef<const asmjit::Label *> exceptionHandlers);
@@ -1238,25 +1234,15 @@ class Emitter {
   /// Register a 64-bit constant in RO DATA and return its offset.
   int32_t uint64Const(uint64_t bits, const char *comment);
 
-  /// Register \p fn as a thunk and return its label.
-  /// \param name is an optional name for the thunk.
-  asmjit::Label registerThunk(void *fn, const char *name = nullptr);
+  /// Emit a call to \p fn, saving the bytecode IP to Runtime::currentIP
+  /// before making the call. This should be used for all calls that may
+  /// observe the IP, such as calls that may throw exceptions, or perform
+  /// allocations.
+  void callRuntimeWithSavedIP(void *fn, const char *name);
 
-  /// Register a call as a thunk and emit a call to it. Note that most calls
-  /// into runtime functions should use \c callThunkWithSavedIP below.
-  void callThunk(void *fn, const char *name);
-
-  /// Register a call as a thunk and emit a call to it, saving the bytecode IP
-  /// to Runtime::currentIP before making the call. This should be used for all
-  /// calls that may observe the IP, such as calls that may throw exceptions, or
-  /// perform allocations.
-  void callThunkWithSavedIP(void *fn, const char *name);
-
-  /// Call a function without registering it as a thunk. This should be used for
-  /// functions that will only have a single call site in the emitted function,
-  /// and therefore do not benefit from a thunk. Note that like \c callThunk,
-  /// this does not save the IP.
-  void callWithoutThunk(void *fn, const char *name);
+  /// Emit a call to \p fn without saving the IP. This should be used only
+  /// where saving the IP is unnecessary or incorrect.
+  void callRuntime(void *fn, const char *name);
 
   /// Emit the code that runs when this function is longjmped to.
   /// Performs the catch table lookup and jumps to the appropriate catch block,
@@ -1264,7 +1250,6 @@ class Emitter {
   /// exception.
   void emitCatchTable(llvh::ArrayRef<const asmjit::Label *> exceptionHandlers);
   void emitSlowPaths();
-  void emitThunks();
   void emitROData();
 
  private:
