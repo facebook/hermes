@@ -18,5 +18,6 @@ if(HERMES_ENABLE_LIBFUZZER)
     target_link_libraries(fuzzer-jsi-entry
       PRIVATE
         hermesapi
+        hermesvm_a
     )
 endif()
