@@ -461,8 +461,10 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   // Declare the array class.
   runtime.arrayClass = JSArray::createClass(runtime, runtime.arrayPrototype);
 
-  // TODO: Give FastArray its own prototype so methods like push will work.
-  runtime.fastArrayPrototype = *runtime.objectPrototype;
+  // FastArray needs its own prototype for methods that bridge typed arrays to
+  // dynamic JavaScript without adding those methods to Object.prototype.
+  runtime.fastArrayPrototype =
+      JSObject::create(runtime, runtime.objectPrototype);
 
   // Declare the fast array class.
   runtime.fastArrayClass =
@@ -595,6 +597,19 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   // Array constructor.
   runtime.arrayConstructor.castAndSetHermesValue<NativeConstructor>(
       createArrayConstructor(runtime));
+
+  // FastArray uses the standard generic array iterator when it crosses into
+  // dynamic JavaScript. FastArray instances are sealed, so the method lives on
+  // their shared prototype.
+  DefinePropertyFlags fastArrayIteratorDPF =
+      DefinePropertyFlags::getNewNonEnumerableFlags();
+  runtime.ignoreAllocationFailure(
+      JSObject::defineOwnProperty(
+          Handle<JSObject>::vmcast(&runtime.fastArrayPrototype),
+          runtime,
+          Predefined::getSymbolID(Predefined::SymbolIterator),
+          fastArrayIteratorDPF,
+          runtime.arrayPrototypeValues));
 
   // ArrayBuffer constructor.
   runtime.arrayBufferConstructor.castAndSetHermesValue<NativeConstructor>(
