@@ -6,12 +6,12 @@
  */
 
 #include "hermes/VM/JIT/Config.h"
-#if HERMESVM_JIT
+#if HERMESVM_JIT_ARM64
 #include "JitEmitter-internal.h"
 #include "JitEmitter.h"
 #include "JitImpl.h"
 
-#include "JitHandlers.h"
+#include "../JitHandlers.h"
 
 #include "../RuntimeOffsets.h"
 #include "hermes/Support/ErrorHandling.h"
@@ -26,6 +26,14 @@
 #endif
 
 namespace hermes::vm::arm64 {
+
+// Disable warnings about missing designated initializers, which the
+// roDataDesc_ entries below rely on.
+#ifdef __clang__
+#if __has_warning("-Wmissing-designated-field-initializers")
+#pragma clang diagnostic ignored "-Wmissing-designated-field-initializers"
+#endif
+#endif
 
 llvh::raw_ostream &operator<<(
     llvh::raw_ostream &os,
@@ -46,6 +54,7 @@ Emitter::Emitter(
     JITContext::Impl &jitImpl,
     unsigned dumpJitCode,
     bool emitAsserts,
+    bool emitTypeAsserts,
     bool emitCounters,
     PerfJitDump *perfJitDump,
     CodeBlock *codeBlock,
@@ -54,6 +63,7 @@ Emitter::Emitter(
       jitImpl_(jitImpl),
       dumpJitCode_(dumpJitCode),
       emitAsserts_(emitAsserts),
+      emitTypeAsserts_(emitTypeAsserts),
       emitCounters_(emitCounters),
       frameRegs_(codeBlock->getFrameSize()),
       codeBlock_(codeBlock) {
@@ -198,6 +208,9 @@ void Emitter::assertPostInstructionInvariants() {
 #endif
 
 void Emitter::newBasicBlock(const asmjit::Label &label) {
+  assert(
+      typeAssertPendingWrites_.empty() &&
+      "pending type asserts must be drained at each instruction");
   syncAllFRTempExcept({});
   freeAllFRTempExcept({});
 
@@ -321,20 +334,21 @@ void Emitter::frameSetup(
   // check if the bounds have changed.
   a.b_hi(nativeOverflowLab);
   a.bind(nativeOverflowContLab);
-  slowPaths_.push_back(
-      {.slowPathLab = nativeOverflowLab,
-       .contLab = nativeOverflowContLab,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment("// Slow path: _sh_check_native_stack_overflow");
-         em.a.bind(sl.slowPathLab);
-         em.a.mov(a64::x0, xRuntime);
-         // Do not save the IP because we have not yet set up the stack frame
-         // for this function. If this throws, the exception should appear in
-         // the caller.
-         EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(
-             em, void (*)(SHRuntime *), _sh_check_native_stack_overflow);
-         em.a.b(sl.contLab);
-       }});
+  slowPaths_.emplace_back(
+      nativeOverflowLab,
+      nativeOverflowContLab,
+      /* emittingIP */ nullptr,
+      [](Emitter &em, SlowPath &sp) {
+        em.comment("// Slow path: _sh_check_native_stack_overflow");
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(a64::x0, xRuntime);
+        // Do not save the IP because we have not yet set up the stack frame
+        // for this function. If this throws, the exception should appear in
+        // the caller.
+        EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(
+            em, void (*)(SHRuntime *), _sh_check_native_stack_overflow);
+        em.a.b(sp.contLab);
+      });
 
   comment("// xFrame");
   a.ldr(xFrame, a64::Mem(xRuntime, RuntimeOffsets::stackPointer));
@@ -375,20 +389,18 @@ void Emitter::frameSetup(
       slowCallName = "_sh_throw_invalid_construct";
     }
 
-    slowPaths_.push_back(
-        {.slowPathLab = throwInvalidInvokeLab,
-         .slowCall = (void *)slowCall,
-         .slowCallName = slowCallName,
-         .emit = [](Emitter &em, SlowPath &sl) {
-           em.comment("// Slow path: %s", sl.slowCallName);
-           em.a.bind(sl.slowPathLab);
-           em.a.mov(a64::x0, xRuntime);
-           // We don't register a thunk since there will only be a single call
-           // to this. Note that we also don't save the IP, because this is
-           // being thrown in the caller's context.
-           em.callWithoutThunk(sl.slowCall, sl.slowCallName);
-           // Function does not return.
-         }});
+    slowPaths_.emplace_back(
+        throwInvalidInvokeLab,
+        /* emittingIP */ nullptr,
+        [slowCall, slowCallName](Emitter &em, SlowPath &sp) {
+          em.comment("// Slow path: %s", slowCallName);
+          em.a.bind(sp.slowPathLab);
+          em.a.mov(a64::x0, xRuntime);
+          // We don't save the IP, because this is being thrown in the
+          // caller's context.
+          em.callRuntime((void *)slowCall, slowCallName);
+          // Function does not return.
+        });
   }
 
   // NOTE: Unlike _sh_enter, we do not push an SHLocals object.
@@ -465,17 +477,18 @@ void Emitter::frameSetup(
   }
 
   // Create the slow path for throwing a register stack overflow.
-  slowPaths_.push_back(
-      {.slowPathLab = registerOverflowLab,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment("// Slow path: _sh_throw_register_stack_overflow");
-         em.a.bind(sl.slowPathLab);
-         em.a.mov(a64::x0, xRuntime);
-         // Do not save the IP because we have not yet set up the stack frame
-         // for this function. The exception should appear in the caller.
-         EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(
-             em, void (*)(SHRuntime *), _sh_throw_register_stack_overflow);
-       }});
+  slowPaths_.emplace_back(
+      registerOverflowLab,
+      /* emittingIP */ nullptr,
+      [](Emitter &em, SlowPath &sp) {
+        em.comment("// Slow path: _sh_throw_register_stack_overflow");
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(a64::x0, xRuntime);
+        // Do not save the IP because we have not yet set up the stack frame
+        // for this function. The exception should appear in the caller.
+        EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(
+            em, void (*)(SHRuntime *), _sh_throw_register_stack_overflow);
+      });
 
   if (catchTableLabel_.isValid()) {
     comment("// _sh_try");
@@ -490,9 +503,8 @@ void Emitter::frameSetup(
 
     // _setjmp(buf->buf);
     a.add(a64::x0, a64::sp, jmpBufOffset + offsetof(SHJmpBuf, buf));
-    // setjmp can't throw and it'll be called once, so don't use a thunk.
-    EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(
-        *this, int (*)(jmp_buf), _sh_setjmp);
+    // setjmp can't throw, so the IP does not need to be saved.
+    EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(*this, int (*)(jmp_buf), _sh_setjmp);
     // If this a catch, go to the catch table to jump to either a handler BB or
     // rethrow.
     a.cbnz(a64::x0, catchTableLabel_);
@@ -566,28 +578,17 @@ void Emitter::leave(llvh::ArrayRef<const asmjit::Label *> exceptionHandlers) {
 
   emitCatchTable(exceptionHandlers);
   emitSlowPaths();
-  emitThunks();
+  emitTypeAssertFailTail();
   emitROData();
 }
 
-void Emitter::callThunk(void *fn, const char *name) {
-  // Using thunks leads to 0.27% more branch mispredicts and 2.8% performance
-  // regression on an important React benchmark. So, disable them for now.
-  if constexpr (false) {
-    comment("// call %s", name);
-    a.bl(registerThunk(fn, name));
-  } else {
-    callWithoutThunk(fn, name);
-  }
-}
-
-void Emitter::callThunkWithSavedIP(void *fn, const char *name) {
+void Emitter::callRuntimeWithSavedIP(void *fn, const char *name) {
   // Save the current IP in the runtime.
   getBytecodeIP(xScratch);
   a.str(xScratch, a64::Mem(xRuntime, RuntimeOffsets::currentIP));
 
   // Call the passed function.
-  callThunk(fn, name);
+  callRuntime(fn, name);
 
   if (emitAsserts_) {
     // Invalidate the current IP to make sure it is set before the next call.
@@ -596,7 +597,7 @@ void Emitter::callThunkWithSavedIP(void *fn, const char *name) {
   }
 }
 
-void Emitter::callWithoutThunk(void *fn, const char *name) {
+void Emitter::callRuntime(void *fn, const char *name) {
   comment("// call %s", name);
   loadBits64InGp(xScratch, (uint64_t)fn, name);
   a.blr(xScratch);
@@ -694,16 +695,21 @@ void Emitter::loadFrameAddr(a64::GpX dst, FR frameReg) {
 }
 
 void Emitter::getBytecodeIP(const a64::GpX &xOut) {
-  auto ofs = codeBlock_->getOffsetOf(emittingIP);
+  uint32_t ofs = codeBlock_->getOffsetOf(emittingIP);
+  // ADD's immediate is 12 bits, optionally shifted left by 12, so an offset
+  // of 16MB or above cannot be reached by adding to the base at all.
+  // Materialize the whole address instead. That costs a constant pool entry
+  // per call site rather than one shared for the function, which is why it is
+  // not the general case.
+  if (LLVM_UNLIKELY(ofs > 0xFFFFFF)) {
+    loadBits64InGp(xOut, (uint64_t)codeBlock_->begin() + ofs, "Bytecode IP");
+    return;
+  }
   loadBits64InGp(xOut, (uint64_t)codeBlock_->begin(), "Bytecode start");
-  // The add instruction takes a 12 bit immediate optionally shifted by 12 bits.
-  // So we do the add as up to two 12 bit steps. Note that this means that it
-  // will currently fail on any function that is larger than 16MB.
-  auto low12Bits = ofs & llvh::maskTrailingOnes<uint32_t>(12);
-  assert(a64::Utils::isAddSubImm(low12Bits) && "immediate should be 12 bits");
-  a.add(xOut, xOut, low12Bits);
-  if (auto restBits = ofs - low12Bits)
-    a.add(xOut, xOut, restBits);
+  // The first instruction of a function is at offset zero, which needs no
+  // add at all.
+  if (ofs)
+    emit_add_imm_u24(a, xOut, ofs);
 }
 
 void Emitter::unreachable() {
@@ -774,9 +780,10 @@ void Emitter::loadParam(FR frRes, uint32_t paramIndex) {
           xFrame,
           (int)StackFrameLayout::ArgCount * (int)sizeof(SHLegacyValue)));
 
-  EXPECT_ERROR(asmjit::kErrorInvalidImmediate, err = a.cmp(wTmp, paramIndex));
   // Does paramIndex fit in the 12-bit unsigned immediate?
-  if (err) {
+  if (a64::Utils::isAddSubImm(paramIndex)) {
+    a.cmp(wTmp, paramIndex);
+  } else {
     HWReg hwTmp2 = allocAndLogTempGpX();
     a64::GpW wTmp2(hwTmp2.indexInClass());
     loadBits64InGp(wTmp2, paramIndex, "paramIndex");
@@ -825,19 +832,16 @@ void Emitter::loadParam(FR frRes, uint32_t paramIndex) {
   a.bind(contLab);
   frUpdatedWithHW(frRes, hwRes);
 
-  slowPaths_.push_back(
-      {.slowPathLab = slowPathLab,
-       .contLab = contLab,
-       .frRes = frRes,
-       .hwRes = hwRes,
-       .emittingIP = emittingIP,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment("// Slow path: LoadParam r%u", sl.frRes.index());
-         em.a.bind(sl.slowPathLab);
-         em.loadBits64InGp(
-             sl.hwRes.a64GpX(), _sh_ljs_undefined().raw, "undefined");
-         em.a.b(sl.contLab);
-       }});
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      emittingIP,
+      [frRes, hwRes](Emitter &em, SlowPath &sp) {
+        em.comment("// Slow path: LoadParam r%u", frRes.index());
+        em.a.bind(sp.slowPathLab);
+        em.loadBits64InGp(hwRes.a64GpX(), _sh_ljs_undefined().raw, "undefined");
+        em.a.b(sp.contLab);
+      });
 }
 
 void Emitter::getGlobalObject(FR frRes) {
@@ -942,20 +946,6 @@ int32_t Emitter::uint64Const(uint64_t bits, const char *comment) {
   return it->second;
 }
 
-asmjit::Label Emitter::registerThunk(void *fn, const char *name) {
-  auto [it, inserted] = thunkMap_.try_emplace(fn, 0);
-  // Is this a new thunk?
-  if (inserted) {
-    it->second = thunks_.size();
-    int32_t dataOfs =
-        reserveData(sizeof(fn), sizeof(fn), asmjit::TypeId::kUInt64, 1, name);
-    memcpy(roData_.data() + dataOfs, &fn, sizeof(fn));
-    thunks_.emplace_back(name ? a.newNamedLabel(name) : a.newLabel(), dataOfs);
-  }
-
-  return thunks_[it->second].first;
-}
-
 void Emitter::emitCatchTable(
     llvh::ArrayRef<const asmjit::Label *> exceptionHandlers) {
   // No trys in the function, nothing to do here.
@@ -973,7 +963,7 @@ void Emitter::emitCatchTable(
   a.add(a64::x3, a64::sp, getJmpBufOffset());
   a.ldr(a64::x4, a64::Mem(a64::sp, getSavedSHLocalsOffset()));
   a.adr(a64::x5, addressTableLab);
-  EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(
+  EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(
       *this,
       void *(*)(SHRuntime *,
                 SHCodeBlock *,
@@ -997,19 +987,172 @@ void Emitter::emitSlowPaths() {
   while (!slowPaths_.empty()) {
     SlowPath &sp = slowPaths_.front();
     emittingIP = sp.emittingIP;
-    sp.emit(*this, sp);
+    sp.emit(*this);
     slowPaths_.pop_front();
   }
   emittingIP = nullptr;
 }
 
-void Emitter::emitThunks() {
-  comment("// Thunks");
-  for (const auto &th : thunks_) {
-    a.bind(th.first);
-    a.ldr(xScratch, a64::Mem(roDataLabel_, th.second));
-    a.br(xScratch);
+const char *typePredName(TypePred pred) {
+  switch (pred) {
+    case TypePred::IsNumber:
+      return "number";
+    case TypePred::IsBool:
+      return "bool";
+    case TypePred::NotPointer:
+      return "non-pointer";
+    case TypePred::BitComparable:
+      return "non-pointer non-number";
+    case TypePred::IsObject:
+      return "object";
   }
+  return "<invalid>";
+}
+
+void Emitter::emitTypeAssert(FR fr, HWReg hwVal, TypePred pred) {
+  if (LLVM_LIKELY(!emitTypeAsserts_))
+    return;
+  comment("// type assert r%u is %s", fr.index(), typePredName(pred));
+  if (hwVal.isVecD()) {
+    a.fmov(xScratch, hwVal.a64VecD());
+    emitTypeAssertGpX(fr, xScratch, pred);
+  } else {
+    emitTypeAssertGpX(fr, hwVal.a64GpX(), pred);
+  }
+}
+
+void Emitter::emitTypeAssertFR(FR fr, TypePred pred) {
+  if (LLVM_LIKELY(!emitTypeAsserts_))
+    return;
+  comment("// type assert r%u is %s", fr.index(), typePredName(pred));
+  readFRForAssert(fr);
+  emitTypeAssertGpX(fr, xScratch, pred);
+}
+
+void Emitter::emitPendingTypeAssertsSlow() {
+  assert(!typeAssertPendingWrites_.empty() && "nothing to emit");
+  for (FR fr : typeAssertPendingWrites_) {
+    FRState &frState = frameRegs_[fr.index()];
+    TypePred pred = frState.globalType == FRType::Number ? TypePred::IsNumber
+                                                         : TypePred::NotPointer;
+    emitTypeAssertFR(fr, pred);
+  }
+  typeAssertPendingWrites_.clear();
+}
+
+void Emitter::emitTypeAssertGpX(FR fr, const a64::GpX &xVal, TypePred pred) {
+  assert(emitTypeAsserts_ && "caller must check emitTypeAsserts_");
+  if (!typeAssertSites_) {
+    typeAssertSites_ = &jitImpl_.typeAssertSites.emplace_back();
+    typeAssertFailLab_ = newPrefLabel("TYPEASSERT_FAIL", 0);
+  }
+
+  uint32_t idx = (uint32_t)typeAssertSites_->size();
+  typeAssertSites_->push_back(
+      TypeAssertSite{
+          codeBlock_,
+          codeBlock_->getOffsetOf(emittingIP),
+          (uint16_t)fr.index(),
+          pred});
+
+  asmjit::Label failLab = newPrefLabel("TYPEASSERT_", idx);
+
+  // The helpers below tolerate xTemp == xVal; every such use is the last
+  // read of xVal in the sequence.
+  switch (pred) {
+    case TypePred::IsNumber:
+      emit_sh_ljs_is_double(a, xVal, xScratch2);
+      a.b_hs(failLab);
+      break;
+    case TypePred::IsBool:
+      emit_sh_ljs_is_bool(a, xScratch, xVal);
+      a.b_ne(failLab);
+      break;
+    case TypePred::NotPointer:
+      emit_sh_ljs_get_tag(a, xScratch, xVal);
+      emit_sh_ljs_tag_is_pointer(a, xScratch);
+      a.b_hs(failLab);
+      break;
+    case TypePred::BitComparable:
+      emit_sh_ljs_is_double(a, xVal, xScratch2);
+      a.b_lo(failLab);
+      emit_sh_ljs_get_tag(a, xScratch, xVal);
+      emit_sh_ljs_tag_is_pointer(a, xScratch);
+      a.b_hs(failLab);
+      break;
+    case TypePred::IsObject:
+      emit_sh_ljs_is_object(a, xScratch, xVal);
+      a.b_ne(failLab);
+      break;
+  }
+
+  slowPaths_.emplace_back(
+      failLab, emittingIP, [idx](Emitter &em, SlowPath &sp) {
+        em.comment("// Type assert failure %u", idx);
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(a64::w0, idx);
+        em.a.b(em.typeAssertFailLab_);
+      });
+}
+
+void Emitter::readFRForAssert(FR fr) {
+  assert(emitTypeAsserts_ && "caller must check emitTypeAsserts_");
+  FRState &frState = frameRegs_[fr.index()];
+  assert(!frState.regIsDirty && "reading an FR that is about to be written");
+
+  // Locals always hold the latest value; a global reg holds it only if
+  // globalRegUpToDate; otherwise the frame must be up to date.
+  if (frState.localGpX) {
+    a.mov(xScratch, frState.localGpX.a64GpX());
+  } else if (frState.localVecD) {
+    a.fmov(xScratch, frState.localVecD.a64VecD());
+  } else if (frState.globalReg && frState.globalRegUpToDate) {
+    if (frState.globalReg.isGpX())
+      a.mov(xScratch, frState.globalReg.a64GpX());
+    else
+      a.fmov(xScratch, frState.globalReg.a64VecD());
+  } else {
+    assert(frState.frameUpToDate && "FR has no up-to-date location");
+    // _loadFrame's large-offset encoding fallback also uses xScratch, but
+    // only as the address index in its mov/ldr pair, which is read before
+    // the ldr writes the loaded value into it, so passing xScratch as the
+    // destination here is safe.
+    _loadFrame(HWReg(xScratch), fr);
+  }
+}
+
+void Emitter::emitTypeAssertFailTail() {
+  if (!typeAssertSites_)
+    return;
+  comment("// Type assert failure tail");
+  a.bind(typeAssertFailLab_);
+  // w0 already holds the site index, set by the per-site stub.
+  a.ldr(
+      a64::x1,
+      a64::Mem(
+          roDataLabel_,
+          uint64Const((uint64_t)typeAssertSites_, "type assert site table")));
+  // Not EMIT_RUNTIME_CALL: that saves the current IP, and emitSlowPaths()
+  // has already cleared emittingIP by the time this runs. The handler does
+  // not need the IP anyway - the site record carries the bytecode offset.
+  EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(
+      *this,
+      void (*)(uint32_t, const std::vector<TypeAssertSite> *),
+      _jit_type_assert_failed);
+}
+
+void _jit_type_assert_failed(
+    uint32_t siteIdx,
+    const std::vector<TypeAssertSite> *sites) {
+  const TypeAssertSite &site = (*sites)[siteIdx];
+  std::string message;
+  llvh::raw_string_ostream os(message);
+  os << "JIT type assert failed: function " << site.codeBlock->getFunctionID()
+     << "(" << site.codeBlock->getNameString() << "), bytecode offset "
+     << site.bytecodeOfs << ", r" << site.frIndex << ", expected "
+     << typePredName(site.pred);
+  os.flush();
+  hermes_fatal(message);
 }
 
 void Emitter::emitROData() {
@@ -1028,4 +1171,4 @@ void Emitter::emitROData() {
 }
 
 } // namespace hermes::vm::arm64
-#endif // HERMESVM_JIT
+#endif // HERMESVM_JIT_ARM64

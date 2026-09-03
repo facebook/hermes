@@ -170,6 +170,9 @@ struct ExecuteOptions {
   /// Emit asserts in JIT'ed code
   bool jitEmitAsserts{false};
 
+  /// Verify FR type assumptions in JIT'ed code.
+  bool jitEmitTypeAsserts{false};
+
   /// Emit counters in JIT'ed code.
   bool jitEmitCounters{false};
 

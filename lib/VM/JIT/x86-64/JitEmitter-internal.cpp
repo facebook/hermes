@@ -1,0 +1,382 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+#include "hermes/VM/JIT/Config.h"
+#if HERMESVM_JIT_X86_64
+#include "JitEmitter-internal.h"
+
+#include "hermes/VM/JSObject-inline.h"
+
+#define DEBUG_TYPE "jit"
+
+namespace hermes::vm::x86_64 {
+
+void Emit_sh_shv_decode::emitFirstCase([[maybe_unused]] x86::Assembler &a) {
+#ifdef HERMESVM_BOXED_DOUBLES
+  static_assert(HERMESVALUE_VERSION == 2, "Constructing HermesValue from bits");
+  static_assert(HermesValue32::kVersion == 1, "Decoding HV32 bits");
+  constexpr uint64_t kHV32TagMask = (1 << HermesValue32::kNumTagBits) - 1;
+
+  // Start by testing the tag bits for 0, if so, this is a "compressed HV64".
+  static_assert((int)HermesValue32::Tag::CompressedHV64 == 0);
+  a.test(inOut, asmjit::Imm(kHV32TagMask));
+  // If the tag is non-zero, jump to the pointer check.
+  a.jnz(ptrLab);
+  // CompressedHV64, just shift the bits if needed. Note the case where
+  // HermesValue32 is actually 64 bits is only used for testing, so it is not
+  // worth optimising here.
+  if constexpr (sizeof(SmallHermesValue) < sizeof(HermesValue))
+    a.shl(inOut, 32);
+#endif
+}
+
+void Emit_sh_shv_decode::emitRestCases([[maybe_unused]] x86::Assembler &a) {
+#ifndef NDEBUG
+  assert(!restEmitted && "Rest cases already emitted");
+  restEmitted = true;
+#endif
+#ifdef HERMESVM_BOXED_DOUBLES
+  asmjit::Label symLab = a.newLabel();
+  asmjit::Label bdLab = a.newLabel();
+
+  static_assert(HERMESVALUE_VERSION == 2, "Constructing HermesValue from bits");
+  static_assert(HermesValue32::kVersion == 1, "Decoding HV32 bits");
+  constexpr uint64_t kHV32TagMask = (1 << HermesValue32::kNumTagBits) - 1;
+
+  a.bind(ptrLab);
+
+  // See the comments below for why the exact bits are important.
+  static_assert((int)HermesValue32::Tag::String == 0b01);
+  static_assert((int)HermesValue32::Tag::BigInt == 0b10);
+  static_assert((int)HermesValue32::Tag::Object == 0b11);
+  // We know that the tag is 3 bits, and we have already checked for 0, so we
+  // can check for the 3 interesting pointer tags (which are in the range 1-3,
+  // i.e., less than 2^2) just by testing the most significant bit of the tag.
+  //
+  // x86-64: arm64's tbnz is a test-and-branch in one instruction; here it is
+  // a `test` of that single bit followed by a jnz.
+  a.test(inOut, asmjit::Imm(0b100));
+  a.jnz(symLab);
+  // We can decompress the pointer right away, since the HV32 representation
+  // just makes it look like an unaligned compressed pointer.
+  emit_sh_cp_decode_non_null(a, inOut);
+  // Now we insert the new tag. First compute the "base" tag. The HV64 tag for
+  // a pointer can be computed by adding the HV32 tag to this base.
+  constexpr uint16_t baseTag =
+      (uint16_t)HermesValue::Tag::Str - (uint16_t)HermesValue32::Tag::String;
+  // We know that the base tag has zeroes in its low 2 bits, and the HV32 tag
+  // is known to be in the low 2 bits at this point, so the two simply or
+  // together.
+  static_assert((baseTag & 0b11) == 0);
+  //
+  // x86-64: arm64 builds the tag field in place with a movk followed by a bfi
+  // that copies the two HV32 tag bits up into it. x86 has neither, and the
+  // finished tag constant is far too wide for a sign-extended imm32, so the
+  // whole 16-bit field is computed in xScratch instead and or-ed in after the
+  // low tag bits have been cleared out of the pointer. See the note on the
+  // class: xScratch must be dead at every call site.
+  //
+  // The or-merge below is equivalent to arm64's movk, which *replaces* the
+  // top 16 bits, only because bits 63:48 of the decoded pointer are already
+  // zero. They are: this is a heap pointer on x86-64, where user-space
+  // virtual addresses are 47-bit (or 56-bit with LA57, still leaving 63:57
+  // clear and 56:48 set only in kernel space), and it was reconstructed by
+  // adding the runtime base to a 32-bit compressed pointer, so it cannot
+  // carry high bits either. If this decode is ever reached with a pointer
+  // that has anything in 63:48, the tag has to be cleared first -- which on
+  // x86 means the rol/mov-r16/ror sequence the symbol case below uses.
+  a.mov(xScratch, inOut);
+  a.and_(xScratch, asmjit::Imm(kHV32TagMask));
+  a.or_(xScratch, asmjit::Imm((uint32_t)baseTag));
+  a.shl(xScratch, kHV_NumDataBits);
+  // Clear the HV32 tag in the low bits.
+  a.and_(inOut, asmjit::Imm(~kHV32TagMask));
+  a.or_(inOut, xScratch);
+  a.jmp(doneLab);
+
+  a.bind(symLab);
+  // There are only two cases left, Symbol and BoxedDouble. We can distinguish
+  // them with a single bit.
+  static_assert((int)HermesValue32::Tag::BoxedDouble == 0b100);
+  static_assert((int)HermesValue32::Tag::Symbol == 0b101);
+  static_assert((int)HermesValue32::Tag::_Last == 0b110);
+  // Test the low bit, to distinguish Symbol and BoxedDouble.
+  a.test(inOut, asmjit::Imm(1));
+  a.jz(bdLab);
+  // SymbolID has a 17-bit tag in HV64, which means the tag cannot be inserted
+  // in a single instruction. However, we can exploit the fact that HV64 tags
+  // are particular double NaN's, with a sign bit of 1 and all-1 exponents, so
+  // they start with 0xfff. This means that the most significant bits of the
+  // tag are 1, and we can shift in those bits with an arithmetic shift right
+  // below as we shift out the HV32 tag. First, insert the low 14 bits of the
+  // symbol tag as a 16 bit immediate.
+  constexpr uint16_t symTag =
+      (uint16_t)((uint32_t)HVETag_Symbol << (HermesValue32::kNumTagBits - 1));
+  // Assert that the top bits are preserved with an arithmetic right shift.
+  static_assert(
+      ((int16_t)symTag) >> (HermesValue32::kNumTagBits - 1) == HVETag_Symbol);
+  //
+  // x86-64: this is arm64's movk of the top 16 bits. x86 can only write the
+  // *low* 16-bit subregister, so the value is rotated to bring the tag field
+  // down, overwritten there, and rotated back. Unlike the pointer case above
+  // this needs no scratch, because the field is replaced wholesale rather
+  // than combined with bits of the input.
+  constexpr unsigned kTagBits = 64 - kHV_NumDataBits;
+  static_assert(kTagBits == 16, "the tag must be exactly the top 16 bits");
+  a.rol(inOut, kTagBits);
+  a.mov(inOut.r16(), asmjit::Imm(symTag));
+  a.ror(inOut, kTagBits);
+  // Next, shift in the high 1's as we shift out the HV32 tag.
+  a.sar(inOut, HermesValue32::kNumTagBits);
+  a.jmp(doneLab);
+
+  a.bind(bdLab);
+  // It is a boxed double. As with pointers, we can decode it as a compressed
+  // pointer first.
+  emit_sh_cp_decode_non_null(a, inOut);
+  // Since the tag is still present, subtract it from the offset.
+  constexpr size_t bdOffs = RuntimeOffsets::boxedDoubleValue -
+      (size_t)HermesValue32::Tag::BoxedDouble;
+  static_assert(
+      bdOffs <= (size_t)INT32_MAX, "boxed double offset must fit a disp32");
+  a.mov(inOut, x86::qword_ptr(inOut, (int32_t)bdOffs));
+#endif
+}
+
+void emit_jsobject_init(
+    x86::Assembler &a,
+    const x86::Gp &obj,
+    const x86::Gp &parent,
+    const x86::Gp &tempOrPropStorageOpt,
+    bool hasPropStorage,
+    const x86::Gp &clazzOpt) {
+  // obj->flags = 0
+  // x86-64: a 32-bit store of an immediate needs no register, so arm64's
+  // wzr has no counterpart to give up here.
+  a.mov(x86::dword_ptr(obj, offsetof(SHJSObject, flags)), asmjit::Imm(0));
+
+  if (hasPropStorage) {
+    emit_sh_cp_encode_non_null(a, tempOrPropStorageOpt);
+    emit_store_cp(
+        a,
+        tempOrPropStorageOpt,
+        x86::ptr(obj, offsetof(SHJSObject, propStorage)));
+  }
+
+  // No longer need the propStorage pointer. Alias for clarity.
+  const x86::Gp &temp = tempOrPropStorageOpt;
+
+  if (!clazzOpt.isValid()) {
+    // Load the hidden class compressed pointer into clazz.
+    static_assert(
+        JSObject::numOverlapSlots<JSObject>() == 0,
+        "Cannot use 0 property root class.");
+    a.mov(temp, x86::qword_ptr(xRuntime, RuntimeOffsets::runtimeRootClazzes));
+    emit_sh_ljs_get_pointer(a, temp, temp);
+    emit_sh_cp_encode_non_null(a, temp);
+  }
+
+  const x86::Gp &clazz = clazzOpt.isValid() ? clazzOpt : temp;
+
+  // Store the parent and hidden class.
+  // obj->parent = parent
+  // obj->clazz = clazz (may be the same register as temp).
+  //
+  // x86-64: arm64 writes both with a single stp, which is why it asserts
+  // that the two fields are adjacent. x86 has no store-pair, so these are
+  // two independent stores and the layout constraint does not arise.
+  assert(clazz.isValid());
+  emit_store_cp(a, parent, x86::ptr(obj, offsetof(SHJSObject, parent)));
+  emit_store_cp(a, clazz, x86::ptr(obj, offsetof(SHJSObject, clazz)));
+
+  // If !hasPropStorage, obj->propStorage = nullptr.
+
+  // obj->directProps[N] = SmallHermesValue::encodeRawZeroValue()
+
+  // We want to zero the rest of the object. To simplify things, we align the
+  // size to the heap alignment of 8 bytes, which ensures that the end of the
+  // fill region is aligned to 8 bytes.
+  // Start the fill at propStorage if HasPropStorage is false,
+  // otherwise start after propStorage in the directProps.
+  size_t startZeroOffset = hasPropStorage
+      ? offsetof(SHJSObjectAndDirectProps, directProps)
+      : offsetof(SHJSObject, propStorage);
+  size_t bytesToZero = heapAlignSize(cellSize<JSObject>()) - startZeroOffset;
+  size_t zeroedBytes = 0;
+  assert(bytesToZero % 4 == 0 && "Must be a multiple of 4");
+
+  // x86-64: `mov mem, imm` needs no source register, so unlike arm64 there is
+  // nothing to gain from pairing the stores and the 16-byte step disappears.
+  // If there is some amount that is not a multiple of 8, store that first.
+  if (bytesToZero & 4) {
+    a.mov(x86::dword_ptr(obj, (int32_t)startZeroOffset), asmjit::Imm(0));
+    zeroedBytes += 4;
+  }
+
+  // The rest of the fill region is a multiple of 8 and, since the end of the
+  // region is 8-byte aligned, so is every store below.
+  for (; zeroedBytes < bytesToZero; zeroedBytes += 8) {
+    a.mov(
+        x86::qword_ptr(obj, (int32_t)(startZeroOffset + zeroedBytes)),
+        asmjit::Imm(0));
+  }
+  assert(zeroedBytes == bytesToZero && "Did not zero the whole object");
+}
+
+/// Emit code to initialize the fields of a newly created environment.
+/// \param newEnvPtr contains a pointer to the object to initialise.
+/// \param parentEnv contains a compressed pointer to the parent environment.
+/// \param temp is a temporary register for use by the emitted code.
+/// \param vTemp is a temporary vector register for use by the emitted code.
+/// \param size is the number of slots in the new environment.
+///
+/// No write barrier is emitted for the parent pointer, and none is needed:
+/// the cell was just bump-allocated in the young generation, so it cannot be
+/// an old-gen object pointing at a young one, and it is not yet reachable
+/// from anything the GC scans. The same reasoning covers the slots, which are
+/// filled with undefined. This mirrors arm64 exactly.
+void emit_environment_init(
+    x86::Assembler &a,
+    const x86::Gp &newEnvPtr,
+    const x86::Gp &parentEnv,
+    const x86::Gp &temp,
+    const x86::Xmm &vTemp,
+    uint32_t size) {
+  // Store the size and parent to the first two fields.
+  // x86-64: arm64 pairs the two narrow stores with stp, which forces the size
+  // into a register first. Here a store of an immediate is a single
+  // instruction in both compressed-pointer configurations, so the two cases
+  // collapse into one and differ only in the width of the parent store, which
+  // emit_store_cp() picks.
+  emit_store_cp(
+      a,
+      parentEnv,
+      x86::ptr(newEnvPtr, offsetof(SHEnvironment, parentEnvironment)));
+  a.mov(
+      x86::dword_ptr(newEnvPtr, offsetof(SHEnvironment, size)),
+      asmjit::Imm(size));
+
+  // Load undefined.
+  a.mov(temp, asmjit::Imm(_sh_ljs_undefined().raw));
+
+  // x86-64: every slot is reachable through the store's signed 32-bit
+  // displacement, so arm64's post-indexed walk over a slot pointer (and the
+  // register it consumes) is replaced by folded displacements. The vector
+  // stores are unaligned: a cell is only guaranteed 8-byte aligned, so the
+  // 16-byte stores below must not require more.
+  auto slotsToFill = size;
+  /// \return the displacement of the first unfilled slot, plus \p extra.
+  const auto slotOfs = [size](uint32_t remaining, uint32_t extra) {
+    size_t ofs = offsetof(SHEnvironment, slots) +
+        sizeof(SHLegacyValue) * (size_t)(size - remaining) + extra;
+    assert(ofs <= (size_t)INT32_MAX && "slot offset must fit a disp32");
+    return (int32_t)ofs;
+  };
+
+  // Before we fill 4 at a time, make sure any excess slots are filled.
+  if (slotsToFill % 2) {
+    a.mov(x86::qword_ptr(newEnvPtr, offsetof(SHEnvironment, slots)), temp);
+    --slotsToFill;
+  }
+  if (slotsToFill % 4) {
+    // x86-64: arm64's stp of the same register twice is a pair of stores.
+    a.mov(x86::qword_ptr(newEnvPtr, slotOfs(slotsToFill, 0)), temp);
+    a.mov(x86::qword_ptr(newEnvPtr, slotOfs(slotsToFill, 8)), temp);
+    slotsToFill -= 2;
+  }
+
+  // The remaining number of slots must be a multiple of 4, which we can fill 4
+  // at a time.
+  assert((slotsToFill % 4) == 0 && "Remaining slots must be multiple of 4");
+  if (slotsToFill) {
+    // Copy the value into a vector register, so we can fill faster. vmovq
+    // zeroes the upper half, which vpunpcklqdq then overwrites with a second
+    // copy of the low half -- arm64 does both in one `dup`.
+    a.vmovq(vTemp, temp);
+    a.vpunpcklqdq(vTemp, vTemp, vTemp);
+
+    // Fill the slots with undefined 4 at a time. Each 16-byte store covers
+    // two slots, where arm64's stp of two vector registers covers four.
+    for (; slotsToFill; slotsToFill -= 4) {
+      a.vmovups(x86::xmmword_ptr(newEnvPtr, slotOfs(slotsToFill, 0)), vTemp);
+      a.vmovups(x86::xmmword_ptr(newEnvPtr, slotOfs(slotsToFill, 16)), vTemp);
+    }
+  }
+  assert(slotsToFill == 0 && "All slots must be filled");
+}
+
+/// Helper function to load a pointer to the builtin closure with index
+/// \p builtinIndex and place it in \p res.
+void emit_load_builtin_closure(
+    x86::Assembler &a,
+    const x86::Gp &res,
+    uint32_t builtinIndex) {
+  static_assert(
+      std::is_same_v<
+          TransparentOwningPtr<Callable *, llvh::FreeDeleter>,
+          RuntimeOffsets::BuiltinsType>,
+      "builtins_ is a list of Callable *");
+  static_assert(
+      offsetof(TransparentOwningPtr<Callable *>, ptr) == 0,
+      "TransparentOwningPtr must be transparent");
+
+  a.mov(res, x86::qword_ptr(xRuntime, RuntimeOffsets::builtins));
+  a.mov(res, x86::qword_ptr(res, (int32_t)(builtinIndex * sizeof(Callable *))));
+}
+
+void OurErrorHandler::handleError(
+    asmjit::Error err,
+    const char *message,
+    asmjit::BaseEmitter *origin) {
+  if (err == expectedError_) {
+    LLVM_DEBUG(
+        llvh::outs() << "Expected AsmJit error: " << err << ": "
+                     << asmjit::DebugUtils::errorAsString(err) << ": "
+                     << message << "\n");
+    return;
+  }
+
+  std::string formattedMsg{};
+  {
+    // Ensure we run any destructors for the ostream before longjmp.
+    llvh::raw_string_ostream OS{formattedMsg};
+    OS << "AsmJit error: " << err << ": "
+       << asmjit::DebugUtils::errorAsString(err) << ": " << message;
+    OS.flush();
+  }
+
+  // IMPORTANT: From here on, we MUST ensure that no destructors need to run.
+  // One exception: formattedMsg will have its destructor skipped, but we're
+  // moving out of it so in practice the std::string won't have anything to
+  // free, avoiding leaks.
+  LLVM_DEBUG(llvh::dbgs() << formattedMsg << "\n");
+  longjmpError_(std::move(formattedMsg));
+}
+
+#ifndef ASMJIT_NO_LOGGING
+asmjit::Error OurLogger::_log(const char *data, size_t size) noexcept {
+  auto str =
+      (size == SIZE_MAX ? llvh::StringRef(data) : llvh::StringRef(data, size));
+  if (str.empty())
+    return asmjit::kErrorOk;
+  if (dumpJitCode_)
+    llvh::outs() << str;
+  if (!perfJitDump_)
+    return asmjit::kErrorOk;
+
+  // Comments by default do not have indentation, except some pseudocode
+  // comments, which start with ';' after indentation.
+  auto trimmed = str.ltrim();
+  if (str.front() != ' ' || (!trimmed.empty() && trimmed.front() == ';')) {
+    perfJitDump_->addCodeComment(str, a_.offset());
+  }
+  return asmjit::kErrorOk;
+}
+#endif
+
+} // namespace hermes::vm::x86_64
+#endif // HERMESVM_JIT_X86_64

@@ -12,16 +12,16 @@
 
 #if HERMESVM_JIT
 
-#if defined(__aarch64__) || defined(_M_ARM64)
+#if HERMESVM_JIT_ARM64
 #include "hermes/VM/JIT/arm64/JIT.h"
-#elif defined(__x86_64__) || defined(_M_X64)
+#elif HERMESVM_JIT_X86_64
 #include "hermes/VM/JIT/x86-64/JIT.h"
 #endif
 
 namespace hermes {
 namespace vm {
 
-#if defined(__aarch64__) || defined(_M_ARM64)
+#if HERMESVM_JIT_ARM64
 using arm64::JITContext;
 namespace arm64 {
 class Emitter;
@@ -29,9 +29,17 @@ class Emitter;
 #define FRIEND_JIT                \
   friend class arm64::JITContext; \
   friend class arm64::Emitter;
-#elif defined(__x86_64__) || defined(_M_X64)
+#elif HERMESVM_JIT_X86_64
 using x86_64::JITContext;
-#define FRIEND_JIT friend class x86_64::JITContext;
+namespace x86_64 {
+class Emitter;
+}
+#define FRIEND_JIT                 \
+  friend class x86_64::JITContext; \
+  friend class x86_64::Emitter;
+#else
+#error "JIT enabled but no backend selects this architecture \
+(HERMESVM_ALLOW_JIT=2 on an unsupported target?)"
 #endif
 
 } // namespace vm
@@ -126,6 +134,9 @@ class JITContext {
   /// Set the flag to emit asserts in the JIT'ed code.
   void setEmitAsserts(bool emitAsserts) {}
 
+  /// Set the flag to verify FR type assumptions in the JIT'ed code.
+  void setEmitTypeAsserts(bool emitTypeAsserts) {}
+
   /// Set whether we should emit counters in the JIT'ed code.
   void setEmitCounters(bool emitCounters) {}
 
@@ -134,6 +145,11 @@ class JITContext {
 
   /// \return true if we should emit asserts in the JIT'ed code.
   bool getEmitAsserts() {
+    return false;
+  }
+
+  /// \return true if we should verify FR type assumptions in JIT'ed code.
+  bool getEmitTypeAsserts() {
     return false;
   }
 
