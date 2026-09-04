@@ -284,9 +284,13 @@ public interface IPlatformNumberFormatter {
 
   String format(double n) throws JSRangeErrorException;
 
+  String format(String n) throws JSRangeErrorException;
+
   String fieldToString(AttributedCharacterIterator.Attribute attribute, double x);
 
   AttributedCharacterIterator formatToParts(double n) throws JSRangeErrorException;
+
+  AttributedCharacterIterator formatToParts(String n) throws JSRangeErrorException;
 
   String[] getAvailableLocales();
 }

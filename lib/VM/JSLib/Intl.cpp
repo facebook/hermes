@@ -11,7 +11,9 @@
 
 #ifdef HERMES_ENABLE_INTL
 
+#include "hermes/Support/BigIntSupport.h"
 #include "hermes/VM/ArrayLike.h"
+#include "hermes/VM/BigIntPrimitive.h"
 #include "hermes/VM/JSLib/DateUtil.h"
 #include "hermes/VM/PrimitiveBox.h"
 #include "hermes/VM/Runtime.h"
@@ -1354,14 +1356,21 @@ CallResult<HermesValue> intlNumberFormatFormat(void *, Runtime &runtime) {
           numberFormatHandle->getDecoration());
   assert(numberFormat && "Intl.NumberFormat platform part is nullptr");
 
-  // TODO(T150198421): This should be toNumeric as Hermes supports BigInt, but
-  // Hermes' Intl doesn't. Thus use toNumber.
-  CallResult<HermesValue> xRes = toNumber_RJS(runtime, args.getArgHandle(0));
+  // Use toNumeric to accept both Number and BigInt per ECMA-402 §15.5.4.
+  CallResult<HermesValue> xRes = toNumeric_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(xRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  return StringPrimitive::createEfficient(
-      runtime, numberFormat->format(xRes->getNumber()));
+  std::u16string result;
+  if (xRes->isBigInt()) {
+    auto *bigint = vmcast<BigIntPrimitive>(*xRes);
+    std::string str;
+    (void)bigint::toString(str, bigint->getRawDataCompact(), 10);
+    result = numberFormat->format(str);
+  } else {
+    result = numberFormat->format(xRes->getNumber());
+  }
+  return StringPrimitive::createEfficient(runtime, std::move(result));
 }
 
 CallResult<HermesValue> intlNumberFormatPrototypeFormatGetter(
@@ -1419,14 +1428,21 @@ CallResult<HermesValue> intlNumberFormatPrototypeFormatToParts(
     return ExecutionStatus::EXCEPTION;
   }
 
-  // TODO(T150198421): This should be toNumeric as Hermes supports BigInt, but
-  // Hermes' Intl doesn't. Thus use toNumber.
-  CallResult<HermesValue> xRes = toNumber_RJS(runtime, args.getArgHandle(0));
+  // Use toNumeric to accept both Number and BigInt per ECMA-402 §15.5.4.
+  CallResult<HermesValue> xRes = toNumeric_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(xRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  return partsToJS(
-      runtime, (*numberFormatRes)->formatToParts(xRes->getNumber()));
+  std::vector<platform_intl::Part> parts;
+  if (xRes->isBigInt()) {
+    auto *bigint = vmcast<BigIntPrimitive>(*xRes);
+    std::string str;
+    (void)bigint::toString(str, bigint->getRawDataCompact(), 10);
+    parts = (*numberFormatRes)->formatToParts(str);
+  } else {
+    parts = (*numberFormatRes)->formatToParts(xRes->getNumber());
+  }
+  return partsToJS(runtime, std::move(parts));
 }
 
 CallResult<HermesValue> intlNumberFormatPrototypeResolvedOptions(
