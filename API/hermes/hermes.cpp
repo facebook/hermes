@@ -64,6 +64,7 @@
 #include <limits>
 #include <list>
 #include <mutex>
+#include <stdexcept>
 #include <system_error>
 #include <unordered_map>
 
@@ -292,7 +293,8 @@ class HermesRuntimeImpl final : public HermesRuntime,
                                 private IHermesTestHelpers,
                                 private InstallHermesFatalErrorHandler,
                                 private jsi::Instrumentation,
-                                public ISetEventLoopControl
+                                public ISetEventLoopControl,
+                                public ISetWorkerSetup
 #ifdef JSI_UNSTABLE
     ,
                                 public jsi::ISerialization,
@@ -766,6 +768,9 @@ class HermesRuntimeImpl final : public HermesRuntime,
 
   void setEventLoopControl(IEventLoopControl *eventLoopControl) override;
   IEventLoopControl *getEventLoopControl() override;
+
+  void setWorkerSetup(jsi::ICast *provider) override;
+  jsi::ICast *getWorkerSetup() override;
 
   // Concrete declarations of jsi::Runtime pure virtual methods
   std::shared_ptr<const jsi::PreparedJavaScript> prepareJavaScript(
@@ -1409,6 +1414,22 @@ class HermesRuntimeImpl final : public HermesRuntime,
   /// thread to check a posted message.
   IEventLoopControl *eventLoopControl_{nullptr};
 
+  /// State machine guarding workerSetup_ and enforcing the
+  /// set-once-before-any-worker contract:
+  ///   kUnset   -- no provider set and no Worker created yet.
+  ///   kPending -- a set is in flight; only ever observable from another
+  ///               thread, which means a set is racing a Worker creation.
+  ///   kSet     -- the provider (possibly null) has been published.
+  /// The setter walks kUnset -> kPending -> kSet; a getter that finds no
+  /// provider walks kUnset -> kSet, publishing null. kSet is written exactly
+  /// once and only ever via a release store, so a getter that reads kSet with
+  /// acquire is guaranteed to see the published pointer.
+  enum : uint8_t { kUnset = 0, kPending = 1, kSet = 2 };
+  std::atomic<uint8_t> workerSetupState_{kUnset};
+  /// Integrator-provided worker setup (opaque jsi::ICast*), owned by
+  /// the integrator; may be null. Published via workerSetupState_.
+  jsi::ICast *workerSetup_{nullptr};
+
   /// Tracking status when the current execution enters/exits the mutator from
   /// JSI.
   struct MutatorScope {
@@ -1674,6 +1695,8 @@ jsi::ICast *HermesRuntimeImpl::castInterface(const jsi::UUID &interfaceUUID) {
 #endif
   else if (interfaceUUID == ISetEventLoopControl::uuid) {
     return static_cast<ISetEventLoopControl *>(this);
+  } else if (interfaceUUID == ISetWorkerSetup::uuid) {
+    return static_cast<ISetWorkerSetup *>(this);
   }
   return nullptr;
 }
@@ -1780,6 +1803,47 @@ void HermesRuntimeImpl::setEventLoopControl(
 
 IEventLoopControl *HermesRuntimeImpl::getEventLoopControl() {
   return eventLoopControl_;
+}
+
+void HermesRuntimeImpl::setWorkerSetup(jsi::ICast *provider) {
+  // Claim the slot: kUnset -> kPending. relaxed is sufficient -- this CAS only
+  // claims the slot and detects misuse; it reads no guarded data and throws on
+  // failure. Mutual exclusion and detection come from the RMW's atomicity, not
+  // from ordering (a relaxed RMW still observes the latest value). Publication
+  // is done by the release store below. A non-kUnset value means the provider
+  // was already set, or a Worker already locked it -- reject.
+  uint8_t expected = kUnset;
+  if (!workerSetupState_.compare_exchange_strong(
+          expected, kPending, std::memory_order_relaxed)) {
+    throw std::logic_error(
+        "worker setup must be set at most once, before any "
+        "Worker is created");
+  }
+  workerSetup_ = provider;
+  // Publish the pointer write to any thread that later observes kSet.
+  workerSetupState_.store(kSet, std::memory_order_release);
+}
+
+jsi::ICast *HermesRuntimeImpl::getWorkerSetup() {
+  // Reading happens at Worker creation. Reading an unset slot is equivalent to
+  // publishing a null provider: finalize it as kSet (release) so any later
+  // set() is rejected. acq_rel gives success=release and failure=acquire; the
+  // acquire on failure synchronizes with the setter's release store of kSet so
+  // the pointer is visible when we read it below.
+  uint8_t expected = kUnset;
+  if (workerSetupState_.compare_exchange_strong(
+          expected, kSet, std::memory_order_acq_rel)) {
+    return nullptr;
+  }
+  if (expected == kPending) {
+    // kPending is only observable from another thread, so a set() is racing
+    // this Worker creation -- a violation of the set-before-any-Worker
+    // contract.
+    throw std::logic_error(
+        "worker setup must be set before any Worker is created");
+  }
+  // kSet: the acquire above makes the published pointer visible.
+  return workerSetup_;
 }
 
 sampling_profiler::Profile HermesRuntimeImpl::dumpSampledTraceToProfile() {

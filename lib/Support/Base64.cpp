@@ -19,8 +19,25 @@ static constexpr unsigned char decMap[128] = {
     64, 64, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42,
     43, 44, 45, 46, 47, 48, 49, 50, 51, 64, 64, 64, 64, 64};
 
-llvh::Optional<std::string> base64Decode(llvh::StringRef input) {
+llvh::Optional<std::string> base64Decode(llvh::StringRef rawInput) {
+  // WHATWG forgiving-base64 decode: remove all ASCII whitespace first, so
+  // data: URLs (worker scripts, source maps) with embedded whitespace decode
+  // rather than being rejected.
+  std::string input;
+  input.reserve(rawInput.size());
+  for (char c : rawInput) {
+    if (c == '\t' || c == '\n' || c == '\f' || c == '\r' || c == ' ')
+      continue;
+    input.push_back(c);
+  }
+
   size_t inputLen = input.size();
+
+  // Empty input (including whitespace-only) decodes to empty output. This also
+  // guards the input[inputLen - 1] / input[inputLen - 2] indexing below against
+  // an empty string.
+  if (inputLen == 0)
+    return std::string();
 
   // Approximate output length.
   // Every four Ascii are converted back to 3 bytes.

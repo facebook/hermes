@@ -17,8 +17,14 @@
 #include <jsi/test/testlib.h>
 
 #include <atomic>
+#include <chrono>
+#include <condition_variable>
+#include <functional>
+#include <mutex>
+#include <stdexcept>
 #include <thread>
 #include <tuple>
+#include <vector>
 
 using namespace facebook::jsi;
 using namespace facebook::hermes;
@@ -3278,6 +3284,152 @@ TEST_P(HermesSerializationTest, SerializeWithTransferThrows) {
       serializationInterface->serializeWithTransfer(val, transferArr), JSError);
 }
 
+// Cross-thread signal: the worker thread reports back to the test thread.
+struct WorkerTestSignal {
+  std::mutex m;
+  std::condition_variable cv;
+  std::string tag;
+  bool fired{false};
+  void set(std::string t) {
+    std::lock_guard<std::mutex> l(m);
+    tag = std::move(t);
+    fired = true;
+    cv.notify_all();
+  }
+  // Returns true and sets \p out if signalled within \p timeoutMs.
+  bool wait(std::string &out, int timeoutMs) {
+    std::unique_lock<std::mutex> l(m);
+    if (!cv.wait_for(
+            l, std::chrono::milliseconds(timeoutMs), [&] { return fired; }))
+      return false;
+    out = tag;
+    return true;
+  }
+};
+
+// A Buffer that records its own destruction and can wrap arbitrary bytes,
+// standing in for a memory-mapped / externally owned buffer.
+class TrackedBuffer : public Buffer {
+ public:
+  TrackedBuffer(std::string bytes, std::shared_ptr<std::atomic<bool>> destroyed)
+      : bytes_(std::move(bytes)), destroyed_(std::move(destroyed)) {}
+  ~TrackedBuffer() override {
+    if (destroyed_)
+      destroyed_->store(true);
+  }
+  size_t size() const override {
+    return bytes_.size();
+  }
+  const uint8_t *data() const override {
+    return reinterpret_cast<const uint8_t *>(bytes_.data());
+  }
+
+ private:
+  std::string bytes_;
+  std::shared_ptr<std::atomic<bool>> destroyed_;
+};
+
+// Minimal event-loop control mock: queues tasks scheduled from the worker
+// thread; the test thread pumps them, giving a happens-before edge.
+class TestEventLoop : public IEventLoopControl {
+ public:
+  virtual ~TestEventLoop() = default;
+
+  void scheduleTask(const std::function<void()> &task) override {
+    std::lock_guard<std::mutex> l(m_);
+    tasks_.push_back(task);
+    cv_.notify_all();
+  }
+  uint64_t registerTaskQueueSource() override {
+    std::lock_guard<std::mutex> l(m_);
+    return nextId_++;
+  }
+  void unregisterTaskQueueSource(uint64_t) override {}
+
+  // Wait up to \p timeoutMs for at least one scheduled task, then run all
+  // queued tasks on the calling (test) thread. Returns true if any ran.
+  bool waitAndPump(int timeoutMs) {
+    std::vector<std::function<void()>> local;
+    {
+      std::unique_lock<std::mutex> l(m_);
+      if (!cv_.wait_for(l, std::chrono::milliseconds(timeoutMs), [&] {
+            return !tasks_.empty();
+          }))
+        return false;
+      local.swap(tasks_);
+    }
+    for (auto &t : local)
+      t();
+    return !local.empty();
+  }
+
+ private:
+  std::mutex m_;
+  std::condition_variable cv_;
+  std::vector<std::function<void()>> tasks_;
+  uint64_t nextId_{1};
+};
+
+// Configurable test provider.
+class TestWorkerSetup : public IWorkerSetup {
+ public:
+  virtual ~TestWorkerSetup() = default;
+
+  // Set by the test: maps a URL to bytes (or nullptr + error on failure).
+  std::function<
+      std::shared_ptr<const Buffer>(const std::string &url, std::string &error)>
+      onResolve;
+  std::shared_ptr<WorkerTestSignal> signal;
+  std::atomic<bool> configureCalled{false};
+  std::atomic<bool> initCalled{false};
+  std::atomic<bool> resolveCalled{false};
+  std::string lastUrl;
+
+  ICast *castInterface(const UUID &uuid) override {
+    if (uuid == IWorkerSetup::uuid)
+      return static_cast<IWorkerSetup *>(this);
+    return nullptr;
+  }
+
+  std::shared_ptr<const Buffer> resolveScript(
+      const std::string &url,
+      std::string &error) override {
+    resolveCalled = true;
+    lastUrl = url;
+    if (onResolve)
+      return onResolve(url, error);
+    error = "no resolver configured";
+    return nullptr;
+  }
+
+  void initWorkerRuntime(Runtime &rt) override {
+    initCalled = true;
+    // Install __workerRan(tag) so a worker script can signal the test thread.
+    auto sig = signal;
+    auto fn = Function::createFromHostFunction(
+        rt,
+        PropNameID::forAscii(rt, "__workerRan"),
+        1,
+        [sig](
+            Runtime &rt, const Value &, const Value *args, size_t n) -> Value {
+          if (sig && n > 0)
+            sig->set(args[0].asString(rt).utf8(rt));
+          return Value::undefined();
+        });
+    rt.global().setProperty(rt, "__workerRan", fn);
+  }
+
+  void configureWorkerRuntime(::hermes::vm::RuntimeConfig &) override {
+    configureCalled = true;
+  }
+};
+
+// Helper: wrap a std::string of bytes as a Buffer.
+[[maybe_unused]] inline std::shared_ptr<const Buffer> bufferFromString(
+    std::string s) {
+  return std::make_shared<StringBuffer>(std::move(s));
+}
+
 class HermesWorkerTest : public HermesRuntimeTest {
  public:
   HermesWorkerTest() : HermesRuntimeTest() {}
@@ -3388,8 +3540,6 @@ worker;
 }
 
 TEST_P(HermesWorkerTest, WorkerFromBinaryErrors) {
-  // Non-buffer, non-string argument.
-  EXPECT_THROW(eval("new Worker({});"), JSError);
   // Empty binary input.
   EXPECT_THROW(eval("new Worker(new ArrayBuffer(0));"), JSError);
   EXPECT_THROW(eval("new Worker(new Uint8Array(0));"), JSError);
@@ -3455,6 +3605,404 @@ TEST_P(HermesWorkerTest, WorkerFromBytecode) {
   // and evaluateJavaScript takes the bytecode path).
   auto worker = eval("var w = new Worker(__bc); w;").asObject(*rt);
   worker.getPropertyAsFunction(*rt, "terminate").callWithThis(*rt, worker);
+}
+
+TEST_P(HermesWorkerTest, WorkerFromUrlSource) {
+  auto signal = std::make_shared<WorkerTestSignal>();
+  TestWorkerSetup provider;
+  provider.signal = signal;
+  provider.onResolve = [](const std::string &url, std::string &) {
+    EXPECT_EQ(url, "worker://main");
+    return bufferFromString("__workerRan('source-ok');");
+  };
+  castInterface<ISetWorkerSetup>(rt.get())->setWorkerSetup(&provider);
+
+  auto worker = eval("var w = new Worker('worker://main'); w;").asObject(*rt);
+
+  std::string tag;
+  ASSERT_TRUE(signal->wait(tag, 5000));
+  EXPECT_EQ(tag, "source-ok");
+  EXPECT_TRUE(provider.initCalled.load());
+
+  worker.getPropertyAsFunction(*rt, "terminate").callWithThis(*rt, worker);
+}
+
+TEST_P(HermesWorkerTest, WorkerUrlUsedAsSourceUrl) {
+  auto signal = std::make_shared<WorkerTestSignal>();
+  TestWorkerSetup provider;
+  provider.signal = signal;
+  provider.onResolve = [](const std::string &, std::string &) {
+    // Report our own stack; the source URL must appear in it.
+    return bufferFromString("__workerRan(new Error().stack);");
+  };
+  castInterface<ISetWorkerSetup>(rt.get())->setWorkerSetup(&provider);
+
+  auto worker = eval("var w = new Worker('worker://main'); w;").asObject(*rt);
+  std::string tag;
+  ASSERT_TRUE(signal->wait(tag, 5000));
+  EXPECT_NE(tag.find("worker://main"), std::string::npos)
+      << "stack did not mention the source URL: " << tag;
+  worker.getPropertyAsFunction(*rt, "terminate").callWithThis(*rt, worker);
+}
+
+TEST_P(HermesWorkerTest, WorkerFromUrlBytecode) {
+  std::string bytecode;
+  ASSERT_TRUE(hermes::compileJS("__workerRan('bc-ok');", bytecode));
+
+  auto destroyed = std::make_shared<std::atomic<bool>>(false);
+  auto signal = std::make_shared<WorkerTestSignal>();
+  TestWorkerSetup provider;
+  provider.signal = signal;
+  provider.onResolve = [bytecode, destroyed](
+                           const std::string &, std::string &) {
+    return std::shared_ptr<const Buffer>(
+        new TrackedBuffer(bytecode, destroyed));
+  };
+  castInterface<ISetWorkerSetup>(rt.get())->setWorkerSetup(&provider);
+
+  auto worker = eval("var w = new Worker('worker://bc'); w;").asObject(*rt);
+
+  std::string tag;
+  ASSERT_TRUE(signal->wait(tag, 5000));
+  EXPECT_EQ(tag, "bc-ok");
+
+  // The buffer is retained for the worker runtime's life (referenced, not
+  // copied), so it is still alive right after the worker has run.
+  EXPECT_FALSE(destroyed->load());
+
+  // Drop all references to the worker and collect, so the worker runtime — and
+  // thus the resolver's buffer — is destroyed. Poll with GC because NativeState
+  // finalizers (which join the worker thread) may run asynchronously.
+  worker.getPropertyAsFunction(*rt, "terminate").callWithThis(*rt, worker);
+  worker = Object(*rt); // drop the local handle
+  eval("w = undefined;"); // drop the global reference
+  bool released = false;
+  for (int i = 0; i < 100 && !released; ++i) {
+    rt->instrumentation().collectGarbage("test");
+    released = destroyed->load();
+    if (!released)
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+  EXPECT_TRUE(released);
+}
+
+TEST_P(HermesWorkerTest, WorkerFromUrlResolverFailure) {
+  TestEventLoop loop;
+  castInterface<ISetEventLoopControl>(rt.get())->setEventLoopControl(&loop);
+  TestWorkerSetup provider;
+  provider.onResolve = [](const std::string &url, std::string &error) {
+    EXPECT_EQ(url, "worker://missing");
+    error = "not found";
+    return std::shared_ptr<const Buffer>(nullptr);
+  };
+  castInterface<ISetWorkerSetup>(rt.get())->setWorkerSetup(&provider);
+
+  eval(
+      "globalThis.__err = null;"
+      "globalThis.__w = new Worker('worker://missing');"
+      "__w.onerror = function(e) { globalThis.__err = e; };");
+
+  // The worker posts the load error to the parent event loop; pump it here.
+  ASSERT_TRUE(loop.waitAndPump(5000));
+  EXPECT_TRUE(provider.resolveCalled.load());
+
+  auto err = rt->global().getProperty(*rt, "__err");
+  ASSERT_TRUE(err.isObject());
+  auto errObj = err.asObject(*rt);
+  // A nullptr resolver result is a generic Error carrying the provider message.
+  EXPECT_EQ(errObj.getProperty(*rt, "name").asString(*rt).utf8(*rt), "Error");
+  EXPECT_EQ(
+      errObj.getProperty(*rt, "message").asString(*rt).utf8(*rt), "not found");
+
+  eval("__w.terminate();");
+}
+
+TEST_P(HermesWorkerTest, WorkerResolverEmptyBufferDeliversTypeError) {
+  TestEventLoop loop;
+  castInterface<ISetEventLoopControl>(rt.get())->setEventLoopControl(&loop);
+  TestWorkerSetup provider;
+  provider.onResolve = [](const std::string &, std::string &) {
+    // An empty (size 0) buffer is invalid input.
+    return bufferFromString("");
+  };
+  castInterface<ISetWorkerSetup>(rt.get())->setWorkerSetup(&provider);
+
+  eval(
+      "globalThis.__err2 = null;"
+      "globalThis.__w2 = new Worker('worker://empty');"
+      "__w2.onerror = function(e) { globalThis.__err2 = e; };");
+
+  ASSERT_TRUE(loop.waitAndPump(5000));
+  auto err = rt->global().getProperty(*rt, "__err2");
+  ASSERT_TRUE(err.isObject());
+  EXPECT_EQ(
+      err.asObject(*rt).getProperty(*rt, "name").asString(*rt).utf8(*rt),
+      "TypeError");
+
+  eval("__w2.terminate();");
+}
+
+TEST_P(HermesWorkerTest, WorkerResolverThrowsCppException) {
+  auto signal = std::make_shared<WorkerTestSignal>();
+  TestWorkerSetup provider;
+  provider.signal = signal;
+  provider.onResolve = [](const std::string &,
+                          std::string &) -> std::shared_ptr<const Buffer> {
+    throw std::runtime_error("resolver blew up");
+  };
+  castInterface<ISetWorkerSetup>(rt.get())->setWorkerSetup(&provider);
+
+  // Must not crash the process; the script must not run.
+  auto worker = eval("var w = new Worker('worker://boom'); w;").asObject(*rt);
+  std::string tag;
+  EXPECT_FALSE(signal->wait(tag, 500));
+  worker.getPropertyAsFunction(*rt, "terminate").callWithThis(*rt, worker);
+}
+
+TEST_P(HermesWorkerTest, WorkerInlineOptionForcesSource) {
+  auto signal = std::make_shared<WorkerTestSignal>();
+  TestWorkerSetup provider;
+  provider.signal = signal;
+  provider.onResolve = [](const std::string &, std::string &error) {
+    ADD_FAILURE() << "resolver must not be called for inline source";
+    error = "unexpected";
+    return std::shared_ptr<const Buffer>(nullptr);
+  };
+  castInterface<ISetWorkerSetup>(rt.get())->setWorkerSetup(&provider);
+
+  // With {inline:true} the string is source even though a provider is set.
+  auto worker =
+      eval(
+          "var w = new Worker('__workerRan(\"inline-ok\");', {inline: true}); w;")
+          .asObject(*rt);
+
+  // Wait for the worker to signal completion, ensuring the worker thread
+  // has finished before we terminate and destroy the provider.
+  std::string tag;
+  ASSERT_TRUE(signal->wait(tag, 5000));
+  EXPECT_EQ(tag, "inline-ok");
+
+  worker.getPropertyAsFunction(*rt, "terminate").callWithThis(*rt, worker);
+  EXPECT_TRUE(provider.lastUrl.empty());
+}
+
+TEST_P(HermesWorkerTest, WorkerConfigHookInvoked) {
+  auto signal = std::make_shared<WorkerTestSignal>();
+  TestWorkerSetup provider;
+  provider.signal = signal;
+  provider.onResolve = [](const std::string &, std::string &) {
+    return bufferFromString("__workerRan('ok');");
+  };
+  castInterface<ISetWorkerSetup>(rt.get())->setWorkerSetup(&provider);
+
+  auto worker = eval("var w = new Worker('worker://cfg'); w;").asObject(*rt);
+  // configureWorkerRuntime runs synchronously on the constructor thread, so it
+  // must already be recorded once construction returns.
+  EXPECT_TRUE(provider.configureCalled.load());
+
+  std::string tag;
+  ASSERT_TRUE(signal->wait(tag, 5000));
+  worker.getPropertyAsFunction(*rt, "terminate").callWithThis(*rt, worker);
+}
+
+TEST_P(HermesWorkerTest, WorkerFromUrlObjectCoercion) {
+  auto signal = std::make_shared<WorkerTestSignal>();
+  TestWorkerSetup provider;
+  provider.signal = signal;
+  provider.onResolve = [](const std::string &url, std::string &) {
+    EXPECT_EQ(url, "worker://obj");
+    return bufferFromString("__workerRan('obj-ok');");
+  };
+  castInterface<ISetWorkerSetup>(rt.get())->setWorkerSetup(&provider);
+
+  // A URL-like object stringifies to its href and is treated as a URL.
+  auto worker = eval(
+                    "var u = { toString() { return 'worker://obj'; } };"
+                    "var w = new Worker(u); w;")
+                    .asObject(*rt);
+
+  std::string tag;
+  ASSERT_TRUE(signal->wait(tag, 5000));
+  EXPECT_EQ(tag, "obj-ok");
+  worker.getPropertyAsFunction(*rt, "terminate").callWithThis(*rt, worker);
+
+  // Non-string, non-object primitives still throw.
+  EXPECT_THROW(eval("new Worker(123);"), JSError);
+  EXPECT_THROW(eval("new Worker(true);"), JSError);
+}
+
+// Test-only base64 encoder (standard alphabet) for building data: URLs.
+static std::string base64EncodeForTest(const std::string &in) {
+  static const char kTable[] =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  std::string out;
+  size_t i = 0;
+  for (; i + 3 <= in.size(); i += 3) {
+    uint32_t n =
+        (uint8_t(in[i]) << 16) | (uint8_t(in[i + 1]) << 8) | uint8_t(in[i + 2]);
+    out.push_back(kTable[(n >> 18) & 63]);
+    out.push_back(kTable[(n >> 12) & 63]);
+    out.push_back(kTable[(n >> 6) & 63]);
+    out.push_back(kTable[n & 63]);
+  }
+  if (i + 1 == in.size()) {
+    uint32_t n = uint8_t(in[i]) << 16;
+    out.push_back(kTable[(n >> 18) & 63]);
+    out.push_back(kTable[(n >> 12) & 63]);
+    out.push_back('=');
+    out.push_back('=');
+  } else if (i + 2 == in.size()) {
+    uint32_t n = (uint8_t(in[i]) << 16) | (uint8_t(in[i + 1]) << 8);
+    out.push_back(kTable[(n >> 18) & 63]);
+    out.push_back(kTable[(n >> 12) & 63]);
+    out.push_back(kTable[(n >> 6) & 63]);
+    out.push_back('=');
+  }
+  return out;
+}
+
+TEST_P(HermesWorkerTest, WorkerFromDataUrl) {
+  auto signal = std::make_shared<WorkerTestSignal>();
+  TestWorkerSetup provider;
+  provider.signal = signal;
+  provider.onResolve = [](const std::string &, std::string &error) {
+    ADD_FAILURE() << "resolver must not be called for allowData data: URL";
+    error = "unexpected";
+    return std::shared_ptr<const Buffer>(nullptr);
+  };
+  castInterface<ISetWorkerSetup>(rt.get())->setWorkerSetup(&provider);
+
+  // Percent-encoded (non-base64) data: URL, source.
+  auto worker = eval(
+                    "var w = new Worker("
+                    "'data:text/javascript,__workerRan(%22data-ok%22)%3B',"
+                    "{allowData: true}); w;")
+                    .asObject(*rt);
+  std::string tag;
+  ASSERT_TRUE(signal->wait(tag, 5000));
+  EXPECT_EQ(tag, "data-ok");
+  worker.getPropertyAsFunction(*rt, "terminate").callWithThis(*rt, worker);
+  EXPECT_TRUE(provider.lastUrl.empty());
+}
+
+TEST_P(HermesWorkerTest, WorkerDataUrlSchemeCaseInsensitive) {
+  auto signal = std::make_shared<WorkerTestSignal>();
+  TestWorkerSetup provider;
+  provider.signal = signal;
+  provider.onResolve = [](const std::string &, std::string &error) {
+    ADD_FAILURE() << "resolver must not be called for allowData data: URL";
+    error = "unexpected";
+    return std::shared_ptr<const Buffer>(nullptr);
+  };
+  castInterface<ISetWorkerSetup>(rt.get())->setWorkerSetup(&provider);
+
+  // The URL scheme is case-insensitive (RFC 3986); "DATA:" must be decoded.
+  auto worker = eval(
+                    "var w = new Worker("
+                    "'DATA:text/javascript,__workerRan(%22up-ok%22)%3B',"
+                    "{allowData: true}); w;")
+                    .asObject(*rt);
+  std::string tag;
+  ASSERT_TRUE(signal->wait(tag, 5000));
+  EXPECT_EQ(tag, "up-ok");
+  worker.getPropertyAsFunction(*rt, "terminate").callWithThis(*rt, worker);
+  EXPECT_TRUE(provider.lastUrl.empty());
+}
+
+TEST_P(HermesWorkerTest, WorkerDataUrlFragmentStripped) {
+  auto signal = std::make_shared<WorkerTestSignal>();
+  TestWorkerSetup provider;
+  provider.signal = signal;
+  castInterface<ISetWorkerSetup>(rt.get())->setWorkerSetup(&provider);
+
+  // '#ignored' is a URL fragment and must be excluded from the body; the
+  // percent-encoded %23 is a literal '#' and stays in the decoded source.
+  auto worker =
+      eval(
+          "var w = new Worker("
+          "'data:text/javascript,__workerRan(%22a%23b%22)%3B#ignored',"
+          "{allowData: true}); w;")
+          .asObject(*rt);
+  std::string tag;
+  ASSERT_TRUE(signal->wait(tag, 5000));
+  EXPECT_EQ(tag, "a#b");
+  worker.getPropertyAsFunction(*rt, "terminate").callWithThis(*rt, worker);
+}
+
+TEST_P(HermesWorkerTest, WorkerDataUrlRequiresAllowData) {
+  TestWorkerSetup provider;
+  provider.signal = std::make_shared<WorkerTestSignal>();
+  provider.onResolve = [](const std::string &url, std::string &) {
+    // Without allowData, a data: URL is just a URL handed to the resolver.
+    EXPECT_EQ(url.rfind("data:", 0), 0u);
+    return bufferFromString("__workerRan('via-resolver');");
+  };
+  castInterface<ISetWorkerSetup>(rt.get())->setWorkerSetup(&provider);
+
+  auto worker =
+      eval("var w = new Worker('data:text/javascript,1'); w;").asObject(*rt);
+  std::string tag;
+  ASSERT_TRUE(provider.signal->wait(tag, 5000));
+  EXPECT_EQ(tag, "via-resolver");
+  worker.getPropertyAsFunction(*rt, "terminate").callWithThis(*rt, worker);
+}
+
+TEST_P(HermesWorkerTest, WorkerDataUrlBase64Bytecode) {
+  // A base64 data: URL carrying bytecode still runs (magic-number path).
+  std::string bytecode;
+  ASSERT_TRUE(hermes::compileJS("__workerRan('data-bc');", bytecode));
+  std::string b64 = base64EncodeForTest(bytecode);
+  std::string url = "data:application/octet-stream;base64," + b64;
+
+  auto signal = std::make_shared<WorkerTestSignal>();
+  TestWorkerSetup provider;
+  provider.signal = signal;
+  castInterface<ISetWorkerSetup>(rt.get())->setWorkerSetup(&provider);
+
+  rt->global().setProperty(*rt, "__dataUrl", String::createFromUtf8(*rt, url));
+  auto worker =
+      eval("var w = new Worker(__dataUrl, {allowData:true}); w;").asObject(*rt);
+  std::string tag;
+  ASSERT_TRUE(signal->wait(tag, 5000));
+  EXPECT_EQ(tag, "data-bc");
+  worker.getPropertyAsFunction(*rt, "terminate").callWithThis(*rt, worker);
+}
+
+TEST_P(HermesWorkerTest, WorkerDataUrlBase64PercentEncoded) {
+  // Per WHATWG, a base64 data: URL body is percent-decoded before base64
+  // decoding, so percent-escaped '=' padding (%3D) must be accepted.
+  auto signal = std::make_shared<WorkerTestSignal>();
+  TestWorkerSetup provider;
+  provider.signal = signal;
+  castInterface<ISetWorkerSetup>(rt.get())->setWorkerSetup(&provider);
+
+  std::string src = "__workerRan('pct-b64');";
+  std::string b64 = base64EncodeForTest(src);
+  std::string escaped;
+  for (char c : b64)
+    escaped += (c == '=') ? std::string("%3D") : std::string(1, c);
+  std::string url = "data:text/javascript;base64," + escaped;
+
+  rt->global().setProperty(*rt, "__u", String::createFromUtf8(*rt, url));
+  auto worker =
+      eval("var w = new Worker(__u, {allowData: true}); w;").asObject(*rt);
+  std::string tag;
+  ASSERT_TRUE(signal->wait(tag, 5000));
+  EXPECT_EQ(tag, "pct-b64");
+  worker.getPropertyAsFunction(*rt, "terminate").callWithThis(*rt, worker);
+}
+
+TEST_P(HermesWorkerTest, WorkerMalformedDataUrlThrows) {
+  castInterface<ISetWorkerSetup>(rt.get())->setWorkerSetup(nullptr);
+  // Missing comma.
+  EXPECT_THROW(
+      eval("new Worker('data:text/javascript', {allowData:true});"), JSError);
+  // Bad base64.
+  EXPECT_THROW(
+      eval("new Worker('data:;base64,@@@@', {allowData:true});"), JSError);
+  // Empty base64 payload must throw (not abort): hermes::base64Decode must not
+  // be called with empty input.
+  EXPECT_THROW(eval("new Worker('data:;base64,', {allowData:true});"), JSError);
 }
 
 INSTANTIATE_TEST_CASE_P(
@@ -3604,6 +4152,52 @@ TEST_P(HermesRuntimeTest, CreateErrorTest) {
           caughtObj, rt->global().getPropertyAsFunction(*rt, "URIError")));
     }
   }
+}
+
+// Minimal IWorkerSetup used only to verify registration. The full
+// configurable harness lives with the tests that exercise it.
+class MinimalWorkerSetup : public IWorkerSetup {
+ public:
+  virtual ~MinimalWorkerSetup() = default;
+  ICast *castInterface(const UUID &uuid) override {
+    return uuid == IWorkerSetup::uuid ? static_cast<IWorkerSetup *>(this)
+                                      : nullptr;
+  }
+  std::shared_ptr<const Buffer> resolveScript(
+      const std::string &,
+      std::string &) override {
+    return nullptr;
+  }
+  void initWorkerRuntime(Runtime &) override {}
+  void configureWorkerRuntime(::hermes::vm::RuntimeConfig &) override {}
+};
+
+TEST_P(HermesRuntimeTest, WorkerSetupRegistration) {
+  auto *setter = castInterface<ISetWorkerSetup>(rt.get());
+  ASSERT_NE(setter, nullptr);
+
+  MinimalWorkerSetup provider;
+  setter->setWorkerSetup(&provider);
+  // The opaque ICast* casts back to the provider interface.
+  EXPECT_EQ(setter->getWorkerSetup(), static_cast<ICast *>(&provider));
+  EXPECT_EQ(
+      castInterface<IWorkerSetup>(setter->getWorkerSetup()),
+      static_cast<IWorkerSetup *>(&provider));
+
+  // The provider is set-once: registering again throws.
+  MinimalWorkerSetup provider2;
+  EXPECT_THROW(setter->setWorkerSetup(&provider2), std::logic_error);
+}
+
+TEST_P(HermesRuntimeTest, WorkerSetupSetAfterReadThrows) {
+  auto *setter = castInterface<ISetWorkerSetup>(rt.get());
+  ASSERT_NE(setter, nullptr);
+
+  // Reading the provider is what Worker creation does; it locks the provider
+  // even when none was registered, so a later registration is rejected.
+  (void)setter->getWorkerSetup();
+  MinimalWorkerSetup provider;
+  EXPECT_THROW(setter->setWorkerSetup(&provider), std::logic_error);
 }
 
 INSTANTIATE_TEST_CASE_P(

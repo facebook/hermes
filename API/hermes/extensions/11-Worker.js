@@ -9,8 +9,14 @@
 // Receives native helper functions and installs Worker globally.
 extensions.Worker = function(nativeInit, nativeTerminate, nativePostMessage) {
     class Worker {
-        constructor(script) {
-            nativeInit(this, script);
+        constructor(script, options) {
+            // Forward the raw `script` unchanged so native does all type
+            // detection; only the option booleans are read here.
+            nativeInit(
+                this,
+                script,
+                !!(options && options.inline),
+                !!(options && options.allowData));
         }
         terminate() {
             return nativeTerminate.call(this);
