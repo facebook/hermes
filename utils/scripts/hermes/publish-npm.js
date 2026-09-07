@@ -85,12 +85,14 @@ function getNpmPublishCommand(
   buildType /*: BuildType */,
   updateLatestV1 /*: boolean */,
 ) /*: string */ {
-  let tagFlag = '';
+  // The tag is always explicit. npm >= 11 refuses to apply `latest` implicitly
+  // when a higher version is already published, and the 260318099 train is
+  // higher than this one. `latest` is what npm 10 applied implicitly here, so
+  // this keeps the behaviour of previous releases from this branch.
+  let tagFlag = ` --tag ${updateLatestV1 ? 'latest-v1' : 'latest'}`;
 
   if (buildType === 'dry-run') {
-    tagFlag = ` --dry-run`;
-  } else if (buildType === 'release' && updateLatestV1) {
-    tagFlag = ` --tag latest-v1`;
+    tagFlag += ` --dry-run`;
   }
 
   return `npm publish${tagFlag}`;
