@@ -11,6 +11,11 @@ on:
           - release
           - dry-run
         default: 'dry-run'
+      update-latest-v1:
+        required: false
+        description: 'Update the latest-v1 npm tag'
+        type: boolean
+        default: false
   pull_request:
     branches:
       - static_h
@@ -75,8 +80,7 @@ jobs:
     with:
       release-type: ${{ needs.set_release_type.outputs.RELEASE_TYPE }}
   publish:
-    uses: ./.github/workflows/publish.yml
-    secrets: inherit
+    runs-on: 8-core-ubuntu
     needs:
       [
         set_release_type,
@@ -84,8 +88,114 @@ jobs:
         build_hermesc_linux,
         build_hermesc_windows,
       ]
-    with:
-      release-type: ${{ needs.set_release_type.outputs.RELEASE_TYPE }}
+    # `id-token: write` lets the npm CLI mint the OIDC token that npm Trusted
+    # Publishing exchanges for a short-lived publish token. Scoped to this job
+    # so the tag-pushing jobs keep their own permissions.
+    permissions:
+      contents: read
+      id-token: write
+    environment: npm-publish
+    container:
+      image: reactnativecommunity/react-native-android:latest
+      env:
+        TERM: "dumb"
+        GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+    env:
+      HERMES_WS_DIR: /tmp/hermes
+      ORG_GRADLE_PROJECT_SIGNING_PWD: ${{ secrets.ORG_GRADLE_PROJECT_SIGNING_PWD }}
+      ORG_GRADLE_PROJECT_SIGNING_KEY: ${{ secrets.ORG_GRADLE_PROJECT_SIGNING_KEY }}
+      ORG_GRADLE_PROJECT_SONATYPE_USERNAME: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPE_USERNAME }}
+      ORG_GRADLE_PROJECT_SONATYPE_PASSWORD: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPE_PASSWORD }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup git safe folders
+        shell: bash
+        run: git config --global --add safe.directory '*'
+      - name: Create /tmp/hermes/osx-bin directory
+        shell: bash
+        run: mkdir -p /tmp/hermes/osx-bin
+      - name: Download osx-bin release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: hermes-osx-bin-Release
+          path: /tmp/hermes/osx-bin/Release
+      - name: Download osx-bin debug artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: hermes-osx-bin-Debug
+          path: /tmp/hermes/osx-bin/Debug
+      - name: Download darwin-bin release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: hermes-darwin-bin-Release
+          path: /tmp/hermes/hermes-runtime-darwin
+      - name: Download darwin-bin debug artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: hermes-darwin-bin-Debug
+          path: /tmp/hermes/hermes-runtime-darwin
+      - name: Download hermes dSYM debug artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: hermes-dSYM-Debug
+          path: /tmp/hermes/dSYM/Debug
+      - name: Download hermes dSYM release vartifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: hermes-dSYM-Release
+          path: /tmp/hermes/dSYM/Release
+      - name: Download linux-bin artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: hermes-linux-bin
+          path: /tmp/hermes/linux64-bin
+      - name: Download windows-bin artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: hermes-win64-bin
+          path: /tmp/hermes/win64-bin
+      - name: Show /tmp/hermes directory
+        shell: bash
+        run: ls -lR /tmp/hermes
+      - name: Setup node.js
+        uses: ./.github/actions/setup-node
+      # npm Trusted Publishing needs npm >= 11.5.1 to mint the OIDC token.
+      # This branch's Node.js version ships an older npm, so upgrade npm only
+      # rather than changing the Node.js version used by the release scripts.
+      - name: Upgrade npm for trusted publishing
+        shell: bash
+        run: |
+          npm install -g npm@11
+          npm --version
+      - name: Install dependencies
+        uses: ./.github/actions/yarn-install
+      - name: Copy Hermes binaries
+        shell: bash
+        run: |
+          node ./utils/scripts/hermes/prepare-artifacts.js
+      - name: Print Artifacts Directory
+        shell: bash
+        run: ls -lR ./android/ios-artifacts/artifacts/
+      - name: Publish artifacts
+        shell: bash
+        run: |
+          node ./utils/scripts/hermes/publish-artifacts.js -t ${{ needs.set_release_type.outputs.RELEASE_TYPE }}
+      # npm matches the top-level workflow filename in the OIDC workflow_ref
+      # claim. Keep the publish command in rn-build-hermes.yml rather than a
+      # reusable workflow.
+      - name: Publish to npm
+        shell: bash
+        run: |
+          node ./utils/scripts/hermes/publish-npm.js \
+            -t ${{ needs.set_release_type.outputs.RELEASE_TYPE }} \
+            --update-latest-v1=${{ github.event_name == 'workflow_dispatch' && inputs.update-latest-v1 }}
+      - name: Upload npm logs
+        if: always()
+        uses: actions/upload-artifact@v4.3.4
+        with:
+          name: npm-logs
+          path: ~/.npm/_logs
   create-tag:
     uses: ./.github/workflows/create-tag.yml
     needs: set_release_type
