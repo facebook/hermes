@@ -203,8 +203,7 @@ bool deleteUnusedVariables(Module *M) {
       // but may still have users in dead functions, so just move them to the
       // parent and leave it to function DCE to eliminate their usage.
       it->removeFromScopeChain();
-      VariableScope *varScope = &*it++;
-      M->destroyVariableScope(varScope);
+      scopeList.erase(it++);
       continue;
     }
 
