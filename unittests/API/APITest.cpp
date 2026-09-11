@@ -2868,10 +2868,92 @@ TEST_P(HermesSerializationTest, SerializeWithTransferThrows) {
       serializationInterface->serializeWithTransfer(val, transferArr), JSError);
 }
 
+class HermesWorkerTest : public HermesRuntimeTest {
+ public:
+  HermesWorkerTest() : HermesRuntimeTest() {}
+};
+
+#if HERMES_ENABLE_CORE_EXTENSIONS
+TEST_P(HermesWorkerTest, WebWorkerBasic) {
+  auto workerGlobal = rt->global().getProperty(*rt, "Worker");
+  EXPECT_TRUE(!workerGlobal.isUndefined());
+
+  EXPECT_THROW(eval("new Worker(123);"), JSError);
+
+  // Create a simple worker that just loops forever
+  auto code = R"(
+var worker = new Worker(`while(true) {}`); worker;
+)";
+  auto worker = eval(code).asObject(*rt);
+
+  auto terminate = worker.getPropertyAsFunction(*rt, "terminate");
+  // Terminate on a non-Worker object should throw.
+  Object nonWorkerObject(*rt);
+  EXPECT_THROW(terminate.callWithThis(*rt, nonWorkerObject), JSError);
+
+  // Terminate the worker
+  terminate.callWithThis(*rt, worker);
+
+  code = R"(
+var worker = new Worker(`
+  onmessage = function(msg) {
+    print(msg);
+  }
+`);
+var nontransferable= ["non-transferable"];
+var ab = new ArrayBuffer(8);
+var transfers = [ab];
+worker;
+)";
+  worker = eval(code).asObject(*rt);
+
+  auto postMessage = worker.getPropertyAsFunction(*rt, "postMessage");
+  // postMessage on non-Worker object
+  EXPECT_THROW(postMessage.callWithThis(*rt, nonWorkerObject, 1), JSError);
+  // postMessage with no message
+  EXPECT_THROW(postMessage.callWithThis(*rt, worker), JSError);
+
+  // Post a message, then terminate worker
+  postMessage.callWithThis(*rt, worker, "hello!");
+  // Post a message with transfer, but transfers is not an Array
+  EXPECT_THROW(
+      postMessage.callWithThis(*rt, worker, "hello!", "not an array"), JSError);
+
+  // Post a message with transfer, but don't the transfers array contains
+  // non-transferable arguments
+  auto nontransferable = rt->global().getProperty(*rt, "nontransferable");
+  EXPECT_THROW(
+      postMessage.callWithThis(*rt, worker, "hello!", nontransferable),
+      JSError);
+
+  // Send an ArrayBuffer as message without transfer
+  auto abVal = rt->global().getProperty(*rt, "ab");
+  postMessage.callWithThis(*rt, worker, abVal);
+  // Make sure the original array buffer is not detached
+  auto ab = abVal.asObject(*rt).getArrayBuffer(*rt);
+  EXPECT_FALSE(ab.getProperty(*rt, "detached").asBool());
+
+  // Post a message with transfer
+  auto transfers = rt->global().getProperty(*rt, "transfers");
+  postMessage.callWithThis(*rt, worker, "hello!", transfers);
+  // Make sure the original array buffer is detached.
+  EXPECT_TRUE(ab.getProperty(*rt, "detached").asBool());
+
+  terminate = worker.getPropertyAsFunction(*rt, "terminate");
+  terminate.callWithThis(*rt, worker);
+}
+
+INSTANTIATE_TEST_CASE_P(
+    Runtimes,
+    HermesWorkerTest,
+    ::testing::ValuesIn(runtimeGenerators()));
+#endif
+
 INSTANTIATE_TEST_CASE_P(
     Runtimes,
     HermesSerializationTest,
     ::testing::ValuesIn(runtimeGenerators()));
+
 #endif
 
 INSTANTIATE_TEST_CASE_P(

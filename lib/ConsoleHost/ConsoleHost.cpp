@@ -28,6 +28,8 @@
 
 #include "jsi/jsi.h"
 
+#include <queue>
+
 namespace hermes {
 
 ConsoleHostContext::ConsoleHostContext(vm::Runtime &runtime) {
@@ -620,6 +622,76 @@ auto maybeCatchException(const F &f) -> decltype(f()) {
 #endif
 }
 
+#ifdef JSI_UNSTABLE
+// Simple EventLoopControl that just adds the tasks to a queue when
+// `scheduleTask` is called and tracks the number of sources. When the queue
+// is empty, users can also wait for new tasks to be added.
+class EventLoopControl final : public facebook::hermes::IEventLoopControl {
+  void scheduleTask(const std::function<void()> &callback) override {
+    std::lock_guard<std::mutex> lock(mutex_);
+    tasks_.push(callback);
+    cv_.notify_all();
+  }
+
+  uint64_t registerTaskQueueSource() override {
+    std::lock_guard<std::mutex> lock(mutex_);
+    sourceCount_++;
+    sources_.insert(sourceCount_);
+    return sourceCount_;
+  }
+
+  void unregisterTaskQueueSource(uint64_t sourceId) override {
+    std::lock_guard<std::mutex> lock(mutex_);
+    sources_.erase(sourceId);
+    if (sources_.empty()) {
+      cv_.notify_all();
+    }
+  }
+
+ public:
+  ~EventLoopControl() = default;
+  /// Drain all tasks from the queue, blocking until there are no more tasks
+  /// and no more active sources that could schedule new tasks.
+  void drainTasks() {
+    std::unique_lock<std::mutex> lock(mutex_);
+    while (true) {
+      if (!tasks_.empty()) {
+        // There are tasks to run. Grab the next one and run it.
+        auto task = tasks_.front();
+        tasks_.pop();
+        lock.unlock();
+        // Run the task outside the lock. Otherwise, the running task may
+        // also try to queue more tasks, causing a deadlock.
+        task();
+        lock.lock();
+      } else if (!sources_.empty()) {
+        // No tasks to run, but there are still active sources that may
+        // schedule tasks. Sleep until woken by `scheduleTask` or
+        // `decrementTaskQueueSource`
+        cv_.wait(lock);
+      } else {
+        // No tasks and no sources at this point, exit the event loop.
+        break;
+      }
+    }
+  }
+
+ private:
+  // Callbacks are added to the queue from the Worker thread and removed from
+  // the main thread. Guard with a mutex.
+  std::mutex mutex_{};
+  // Used to wake up the event-loop if it is waiting for a new task or if all
+  // task sources have disappeared.
+  std::condition_variable cv_;
+  // All schedules tasks.
+  std::queue<std::function<void()>> tasks_{};
+  // Counter of total number of sources. Incremented when register is called.
+  uint64_t sourceCount_{0};
+  // The set of active sources
+  llvh::DenseSet<uint64_t> sources_{};
+};
+#endif
+
 bool executeHBCBytecodeImpl(
     std::shared_ptr<hbc::BCProvider> &&bytecode,
     const ExecuteOptions &options,
@@ -631,6 +703,12 @@ bool executeHBCBytecodeImpl(
   }
 
   std::unique_ptr<vm::StatSamplingThread> statSampler;
+
+#ifdef JSI_UNSTABLE
+  // Declared before hermesRuntime so it outlives the runtime. The runtime's
+  // finalizerExecutor_ may call into the EventLoopControl during destruction.
+  EventLoopControl eventLoopControl{};
+#endif
 
   // Create HermesRuntime (JSI wrapper) - this installs JSI extensions like
   // TextEncoder. We then extract the underlying vm::Runtime for low-level
@@ -675,6 +753,13 @@ bool executeHBCBytecodeImpl(
                     "include memory instrumentation\n";
 #endif
   }
+
+#ifdef JSI_UNSTABLE
+  auto *setEventLoopInterface =
+      facebook::jsi::castInterface<facebook::hermes::ISetEventLoopControl>(
+          hermesRuntime.get());
+  setEventLoopInterface->setEventLoopControl(&eventLoopControl);
+#endif
 
   vm::GCScope scope(*runtime);
   ConsoleHostContext ctx{*runtime};
@@ -761,6 +846,11 @@ bool executeHBCBytecodeImpl(
       microtask::performCheckpoint(*runtime);
     }
   }
+
+#ifdef JSI_UNSTABLE
+  // Run all tasks queued in the event loop.
+  eventLoopControl.drainTasks();
+#endif
 
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   if (options.sampleProfiling != ExecuteOptions::SampleProfilingMode::None) {
