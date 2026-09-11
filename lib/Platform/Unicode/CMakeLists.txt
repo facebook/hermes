@@ -12,6 +12,14 @@ set(source_files
    CharacterProperties.cpp
 )
 
+# The self-contained normalizer, compiled only for the backends that call it.
+# Android and Apple have platform normalizers, so they must not pay for its
+# tables. HERMES_UNICODE_LITE wins over the platform check because the LITE
+# backend calls it on every platform.
+if(HERMES_UNICODE_LITE OR (NOT APPLE AND NOT HERMES_IS_ANDROID))
+  list(APPEND source_files UnicodeNormalization.cpp)
+endif()
+
 add_hermes_library(hermesPlatformUnicode ${source_files})
 
 if(HERMES_UNICODE_LITE)
