@@ -556,9 +556,13 @@ Function *ESTreeIRGen::genGeneratorFunction(
                       functionNode,
                       originalName,
                       capturedState = curFunction()->capturedState,
+                      legacyClassContext = curFunction()->legacyClassContext,
                       parentScope,
                       homeObject]() {
     FunctionContext outerFnContext{this, outerFn, functionNode->getSemInfo()};
+    // Propagate the enclosing class context so that the inner function, which
+    // holds the actual user code, can use super() and 'this'.
+    outerFnContext.legacyClassContext = legacyClassContext;
     Function::ScopedLexicalScopeChange lexScopeChange(
         curFunction()->function,
         curFunction()->getSemInfo()->getFunctionBodyScope());
@@ -689,8 +693,12 @@ Function *ESTreeIRGen::genAsyncFunction(
                       originalName,
                       parentScope,
                       capturedState,
+                      legacyClassContext = curFunction()->legacyClassContext,
                       isAsyncArrow]() {
     FunctionContext asyncFnContext{this, asyncFn, functionNode->getSemInfo()};
+    // Propagate the enclosing class context so that the inner generator, which
+    // holds the actual user code, can use super() and 'this'.
+    asyncFnContext.legacyClassContext = legacyClassContext;
     Function::ScopedLexicalScopeChange lexScopeChange(
         curFunction()->function,
         curFunction()->getSemInfo()->getFunctionBodyScope());
