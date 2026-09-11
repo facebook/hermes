@@ -17,12 +17,12 @@ SHERMES=$2
 cd "$SRCDIR"
 
 $SHERMES -typed -dump-ir --source-map=prog1.js.map prog1.js 2>&1 || true
-# CHECK:      prog1/mod1.js:9:5: [original] error: ft: return value incompatible with return type: cannot return number as string
-# CHECK-NEXT: prog1.js:15:3: [transpiled] error: ft: return value incompatible with return type: cannot return number as string
+# CHECK:      prog1/mod1.js:9:5: [original] error: ft: return value incompatible with return type: cannot return 10 as string
+# CHECK-NEXT: prog1.js:15:3: [transpiled] error: ft: return value incompatible with return type: cannot return 10 as string
 # CHECK-NEXT:   return 10;
 # CHECK-NEXT:   ^~~~~~~~~~
-# CHECK-NEXT: prog1/index.js:10:7: [original] error: ft: incompatible binary operation: + cannot be applied to string and number
-# CHECK-NEXT: prog1.js:18:7: [transpiled] error: ft: incompatible binary operation: + cannot be applied to string and number
+# CHECK-NEXT: prog1/index.js:10:7: [original] error: ft: incompatible binary operation: + cannot be applied to string and 1
+# CHECK-NEXT: prog1.js:18:7: [transpiled] error: ft: incompatible binary operation: + cannot be applied to string and 1
 # CHECK-NEXT: print(mod1$foo() + 1);
 # CHECK-NEXT:       ^~~~~~~~~~~~~~
 # CHECK-NEXT: Emitted 2 errors. exiting.

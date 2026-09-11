@@ -66,10 +66,10 @@ let copy: {x: number} = {...empty, x: 1};
 // CHECK-NEXT:                ObjectExpression : %object.2
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'x'
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 1
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'y'
-// CHECK-NEXT:                        StringLiteral : string
+// CHECK-NEXT:                        StringLiteral : "hi"
 // CHECK-NEXT:                Id 'src' [D:E:%d.2 'src']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
@@ -84,14 +84,14 @@ let copy: {x: number} = {...empty, x: 1};
 // CHECK-NEXT:                        Id 'src' [D:E:%d.2 'src'] : %object.2
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'x'
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 99
 // CHECK-NEXT:                Id 'over' [D:E:%d.4 'over']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                ObjectExpression : %object.2
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'x'
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 99
 // CHECK-NEXT:                    SpreadElement
 // CHECK-NEXT:                        Id 'src' [D:E:%d.2 'src'] : %object.2
 // CHECK-NEXT:                Id 'pre' [D:E:%d.5 'pre']
@@ -100,14 +100,14 @@ let copy: {x: number} = {...empty, x: 1};
 // CHECK-NEXT:                ObjectExpression : %object.3
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'x'
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 1
 // CHECK-NEXT:                Id 'a' [D:E:%d.6 'a']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                ObjectExpression : %object.4
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'y'
-// CHECK-NEXT:                        StringLiteral : string
+// CHECK-NEXT:                        StringLiteral : "hi"
 // CHECK-NEXT:                Id 'b' [D:E:%d.7 'b']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
@@ -128,5 +128,5 @@ let copy: {x: number} = {...empty, x: 1};
 // CHECK-NEXT:                        Id 'empty' [D:E:%d.9 'empty'] : %object.5
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'x'
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 1
 // CHECK-NEXT:                Id 'copy' [D:E:%d.10 'copy']

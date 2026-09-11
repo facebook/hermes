@@ -48,9 +48,21 @@ print(f());
 
 // CHECK:function ""(): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %" 1#"(): functionCode
-// CHECK-NEXT:  %1 = CallInst [njsf] (:undefined) %0: object, %" 1#"(): functionCode, true: boolean, empty: any, undefined: undefined, 0: number, 0: number
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %Symbol(): functionCode
+// CHECK-NEXT:  %1 = AllocTypedNonEnumObjectInst (:object) null: null
+// CHECK-NEXT:       StorePropertyStrictInst %1: object, %0: object, "prototype": string
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) empty: any, empty: any, %" 1#"(): functionCode
+// CHECK-NEXT:  %4 = CallInst [njsf] (:undefined) %3: object, %" 1#"(): functionCode, true: boolean, empty: any, undefined: undefined, 0: number, 0: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:base constructor Symbol(): any [typed,noReturn]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "TypeError": string
+// CHECK-NEXT:  %1 = CreateThisInst (:undefined|object) %0: any, %0: any, empty: any
+// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, %0: any, %1: undefined|object, "Symbol is not a constructor": string
+// CHECK-NEXT:  %3 = GetConstructedObjectInst (:object) %1: undefined|object, %2: any
+// CHECK-NEXT:       ThrowInst %3: object
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS0 [O: object, Foo: undefined|object, ?O.prototype: object, ?Foo.prototype: object]

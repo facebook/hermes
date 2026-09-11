@@ -101,7 +101,7 @@ let v5 = first(c);
 // CHECK-NEXT:                ReturnStatement
 // CHECK-NEXT:                    MemberExpression : number
 // CHECK-NEXT:                        Id 'x' [D:E:%d.21 'x'] : %class.4
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 0
 // CHECK-NEXT:            TypeParameterDeclaration
 // CHECK-NEXT:                TypeParameter
 // CHECK-NEXT:        FunctionDeclaration : %function.7
@@ -111,7 +111,7 @@ let v5 = first(c);
 // CHECK-NEXT:                ReturnStatement
 // CHECK-NEXT:                    MemberExpression : string
 // CHECK-NEXT:                        Id 'x' [D:E:%d.23 'x'] : %class.6
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 0
 // CHECK-NEXT:            TypeParameterDeclaration
 // CHECK-NEXT:                TypeParameter
 // CHECK-NEXT:        FunctionDeclaration : %function.8
@@ -121,7 +121,7 @@ let v5 = first(c);
 // CHECK-NEXT:                ReturnStatement
 // CHECK-NEXT:                    MemberExpression : boolean
 // CHECK-NEXT:                        Id 'x' [D:E:%d.25 'x'] : %class.2
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 0
 // CHECK-NEXT:            TypeParameterDeclaration
 // CHECK-NEXT:                TypeParameter
 // CHECK-NEXT:        FunctionDeclaration
@@ -139,25 +139,25 @@ let v5 = first(c);
 // CHECK-NEXT:                CallExpression : number
 // CHECK-NEXT:                    Id 'head' [D:E:%d.12 'head'] : %function.5
 // CHECK-NEXT:                    ArrayExpression : %class.4
-// CHECK-NEXT:                        NumericLiteral : number
-// CHECK-NEXT:                        NumericLiteral : number
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 1
+// CHECK-NEXT:                        NumericLiteral : 2
+// CHECK-NEXT:                        NumericLiteral : 3
 // CHECK-NEXT:                Id 'v1' [D:E:%d.3 'v1']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                CallExpression : string
 // CHECK-NEXT:                    Id 'head' [D:E:%d.13 'head'] : %function.7
 // CHECK-NEXT:                    ArrayExpression : %class.6
-// CHECK-NEXT:                        StringLiteral : string
-// CHECK-NEXT:                        StringLiteral : string
-// CHECK-NEXT:                        StringLiteral : string
+// CHECK-NEXT:                        StringLiteral : "a"
+// CHECK-NEXT:                        StringLiteral : "b"
+// CHECK-NEXT:                        StringLiteral : "c"
 // CHECK-NEXT:                Id 'v2' [D:E:%d.4 'v2']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                ArrayExpression : %class.2
-// CHECK-NEXT:                    BooleanLiteral : boolean
-// CHECK-NEXT:                    BooleanLiteral : boolean
-// CHECK-NEXT:                    BooleanLiteral : boolean
+// CHECK-NEXT:                    BooleanLiteral : true
+// CHECK-NEXT:                    BooleanLiteral : true
+// CHECK-NEXT:                    BooleanLiteral : false
 // CHECK-NEXT:                Id 'b' [D:E:%d.5 'b']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
@@ -172,7 +172,7 @@ let v5 = first(c);
 // CHECK-NEXT:                ReturnStatement
 // CHECK-NEXT:                    MemberExpression : number
 // CHECK-NEXT:                        Id 'x' [D:E:%d.27 'x'] : %tuple.9
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 0
 // CHECK-NEXT:            TypeParameterDeclaration
 // CHECK-NEXT:                TypeParameter
 // CHECK-NEXT:                TypeParameter
@@ -183,7 +183,7 @@ let v5 = first(c);
 // CHECK-NEXT:                ReturnStatement
 // CHECK-NEXT:                    MemberExpression : boolean
 // CHECK-NEXT:                        Id 'x' [D:E:%d.29 'x'] : %tuple.3
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 0
 // CHECK-NEXT:            TypeParameterDeclaration
 // CHECK-NEXT:                TypeParameter
 // CHECK-NEXT:                TypeParameter
@@ -203,14 +203,14 @@ let v5 = first(c);
 // CHECK-NEXT:                CallExpression : number
 // CHECK-NEXT:                    Id 'first' [D:E:%d.15 'first'] : %function.10
 // CHECK-NEXT:                    ArrayExpression : %tuple.9
-// CHECK-NEXT:                        NumericLiteral : number
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 1
+// CHECK-NEXT:                        NumericLiteral : 2
 // CHECK-NEXT:                Id 'v4' [D:E:%d.8 'v4']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                ArrayExpression : %tuple.3
-// CHECK-NEXT:                    BooleanLiteral : boolean
-// CHECK-NEXT:                    BooleanLiteral : boolean
+// CHECK-NEXT:                    BooleanLiteral : true
+// CHECK-NEXT:                    BooleanLiteral : true
 // CHECK-NEXT:                Id 'c' [D:E:%d.9 'c']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator

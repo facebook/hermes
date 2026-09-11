@@ -87,15 +87,15 @@ var strArr: (number | string)[] = ["a", "b", "c", ...numArr];
 // CHECK-NEXT:                        VariableDeclaration
 // CHECK-NEXT:                            VariableDeclarator
 // CHECK-NEXT:                                ArrayExpression : %class.7
-// CHECK-NEXT:                                    NumericLiteral : number
-// CHECK-NEXT:                                    StringLiteral : string
+// CHECK-NEXT:                                    NumericLiteral : 1
+// CHECK-NEXT:                                    StringLiteral : ""
 // CHECK-NEXT:                                    Id 'undefined' [D:E:%d.12 'undefined'] : void
 // CHECK-NEXT:                                Id 'unionArr' [D:E:%d.3 'unionArr']
 // CHECK-NEXT:                        VariableDeclaration
 // CHECK-NEXT:                            VariableDeclarator
 // CHECK-NEXT:                                ArrayExpression : %class.7
-// CHECK-NEXT:                                    NumericLiteral : number
-// CHECK-NEXT:                                    StringLiteral : string
+// CHECK-NEXT:                                    NumericLiteral : 1
+// CHECK-NEXT:                                    StringLiteral : ""
 // CHECK-NEXT:                                Id 'annotatedArr' [D:E:%d.4 'annotatedArr']
 // CHECK-NEXT:                        ExpressionStatement
 // CHECK-NEXT:                            AssignmentExpression : %class.7
@@ -126,16 +126,16 @@ var strArr: (number | string)[] = ["a", "b", "c", ...numArr];
 // CHECK-NEXT:                        VariableDeclaration
 // CHECK-NEXT:                            VariableDeclarator
 // CHECK-NEXT:                                ArrayExpression : %class.9
-// CHECK-NEXT:                                    NumericLiteral : number
-// CHECK-NEXT:                                    NumericLiteral : number
-// CHECK-NEXT:                                    NumericLiteral : number
+// CHECK-NEXT:                                    NumericLiteral : 1
+// CHECK-NEXT:                                    NumericLiteral : 2
+// CHECK-NEXT:                                    NumericLiteral : 3
 // CHECK-NEXT:                                Id 'numArr' [D:E:%d.8 'numArr']
 // CHECK-NEXT:                        VariableDeclaration
 // CHECK-NEXT:                            VariableDeclarator
 // CHECK-NEXT:                                ArrayExpression : %class.10
-// CHECK-NEXT:                                    StringLiteral : string
-// CHECK-NEXT:                                    StringLiteral : string
-// CHECK-NEXT:                                    StringLiteral : string
+// CHECK-NEXT:                                    StringLiteral : "a"
+// CHECK-NEXT:                                    StringLiteral : "b"
+// CHECK-NEXT:                                    StringLiteral : "c"
 // CHECK-NEXT:                                    SpreadElement
 // CHECK-NEXT:                                        Id 'numArr' [D:E:%d.8 'numArr'] : %class.9
 // CHECK-NEXT:                                Id 'strArr' [D:E:%d.9 'strArr']

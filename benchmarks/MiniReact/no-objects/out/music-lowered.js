@@ -88,7 +88,7 @@
    * The type of the key that React uses to determine where items in a new list
    * have moved.
    */
-  const M$react_index$INTERNAL$REACT_FRAGMENT_TYPE = 1 /* Symbol.for('react.fragment') */;
+  const M$react_index$INTERNAL$REACT_FRAGMENT_TYPE = Symbol.for('react.fragment');
   /* eslint-disable lint/strictly-null, lint/react-state-props-mutation, lint/flow-react-element */
 
   /**
@@ -125,8 +125,8 @@
    */
   initial) {
     M$react_invariant$default(M$react_index$INTERNAL$workInProgressFiber !== null && M$react_index$INTERNAL$workInProgressRoot !== null, 'useState() called outside of render');
-    const root = M$sh_CHECKED_CAST$default(M$react_index$INTERNAL$workInProgressRoot);
-    const fiber = M$sh_CHECKED_CAST$default(M$react_index$INTERNAL$workInProgressFiber);
+    const root = M$react_index$INTERNAL$workInProgressRoot;
+    const fiber = M$react_index$INTERNAL$workInProgressFiber;
     let state;
     const _workInProgressState = M$react_index$INTERNAL$workInProgressState;
     if (_workInProgressState === null) {
@@ -140,10 +140,10 @@
       // can't statically prove this
       state = M$sh_CHECKED_CAST$default(nextState);
     } else {
-      let nextState = M$sh_CHECKED_CAST$default(_workInProgressState).next;
+      let nextState = _workInProgressState.next;
       if (nextState === null) {
         nextState = new M$react_index$INTERNAL$State(initial);
-        M$sh_CHECKED_CAST$default(_workInProgressState).next = nextState;
+        _workInProgressState.next = nextState;
       }
       // NOTE: in case of a re-render we assume that the hook types match but
       // can't statically prove this
@@ -221,9 +221,6 @@
     "use strict";
 
     function M$react_index$INTERNAL$Root() {
-      this.root = void 0;
-      this.element = void 0;
-      this.updateQueue = void 0;
       this.root = null;
       this.element = null;
       this.updateQueue = [];
@@ -235,7 +232,7 @@
         M$sh_microtask$queueMicrotask(() => {
           const element = this.element;
           M$react_invariant$default(element !== null, 'Expected an element to be set after rendering');
-          this.doWork(M$sh_CHECKED_CAST$default(element));
+          this.doWork(element);
         });
       }
     };
@@ -249,7 +246,7 @@
     };
     _proto2.toString = function toString() {
       M$react_invariant$default(this.root !== null, 'Expected root to be rendered');
-      const root = M$sh_CHECKED_CAST$default(this.root);
+      const root = this.root;
       const output = [];
       this.printFiber(root, output, 0);
       return output.join('\n');
@@ -278,20 +275,19 @@
       }
       while (fiber !== null) {
         // Render the fiber, which creates child/sibling nodes
-        let fiber2 = M$sh_CHECKED_CAST$default(fiber);
-        this.renderFiber(fiber2);
+        this.renderFiber(fiber);
         // advance to the next fiber
-        if (fiber2.child !== null) {
-          fiber = fiber2.child;
-        } else if (fiber2.sibling !== null) {
-          fiber = fiber2.sibling;
+        if (fiber.child !== null) {
+          fiber = fiber.child;
+        } else if (fiber.sibling !== null) {
+          fiber = fiber.sibling;
         } else {
-          fiber = fiber2.parent;
-          while (fiber !== null && M$sh_CHECKED_CAST$default(fiber).sibling === null) {
-            fiber = M$sh_CHECKED_CAST$default(fiber).parent;
+          fiber = fiber.parent;
+          while (fiber !== null && fiber.sibling === null) {
+            fiber = fiber.parent;
           }
           if (fiber !== null) {
-            fiber = M$sh_CHECKED_CAST$default(fiber).sibling;
+            fiber = fiber.sibling;
           }
         }
       }
@@ -308,7 +304,16 @@
               if (propValue == null || typeof propValue === 'function') {
                 continue;
               }
-              str += ` ${propName}=${JSON.stringify(propValue) ?? 'undefined'}`;
+              // JSON.stringify only for object props; quote strings directly.
+              let valueStr;
+              if (typeof propValue === 'string') {
+                valueStr = '"' + M$sh_CHECKED_CAST$default(propValue) + '"';
+              } else if (typeof propValue === 'number' || typeof propValue === 'boolean') {
+                valueStr = String(propValue);
+              } else {
+                valueStr = JSON.stringify(propValue) ?? 'undefined';
+              }
+              str += ' ' + propName + '=' + valueStr;
             }
             if (fiber.child == null) {
               str += ' />';
@@ -340,8 +345,8 @@
     _proto2.printChildren = function printChildren(fiber, out, level) {
       let current = fiber.child;
       while (current !== null) {
-        this.printFiber(M$sh_CHECKED_CAST$default(current), out, level);
-        current = M$sh_CHECKED_CAST$default(current).sibling;
+        this.printFiber(current, out, level);
+        current = current.sibling;
       }
     };
     _proto2.renderFiber = function renderFiber(fiber) {
@@ -416,12 +421,10 @@
           M$react_invariant$default(typeof element.type === 'string', 'Expected a host component name such as "div" or "span", got ' + typeof element.type);
           const type = new M$react_index$INTERNAL$FiberTypeHost(M$sh_CHECKED_CAST$default(element.type));
           M$react_invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
-          // const {children, ...props} = element.props;
-          const children = element.props.children;
-          const props = {
-            ...element.props
-          };
-          delete props.children;
+          const {
+            children,
+            ...props
+          } = element.props;
           fiber = new M$react_index$INTERNAL$Fiber(type, props, element.key);
           this.mountChildren(M$sh_CHECKED_CAST$default(children), fiber);
         } else {
@@ -457,7 +460,7 @@
           }
           const child = this.mountFiber(M$sh_CHECKED_CAST$default(childElement), parentFiber);
           if (prev !== null) {
-            M$sh_CHECKED_CAST$default(prev).sibling = child;
+            prev.sibling = child;
           } else {
             // set parent to point to first child
             parentFiber.child = child;
@@ -470,8 +473,7 @@
       }
     };
     _proto2.reconcileFiber = function reconcileFiber(parent, prevChild, element) {
-      if (prevChild !== null && M$sh_CHECKED_CAST$default(prevChild).type === element.type) {
-        let prevChild = M$sh_CHECKED_CAST$default(prevChild);
+      if (prevChild !== null && prevChild.type === element.type) {
         // Only host and fragment nodes have to be reconciled: otherwise this is a
         // function component and its children will be reconciled when they are later
         // emitted in a host position (ie as a direct result of render)
@@ -479,12 +481,10 @@
           case 'host':
             {
               M$react_invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
-              // const {children, ...props} = element.props;
-              const children = element.props.children;
-              const props = {
-                ...element.props
-              };
-              delete props.children;
+              const {
+                children,
+                ...props
+              } = element.props;
               prevChild.props = props;
               this.reconcileChildren(prevChild, children);
               break;
@@ -522,25 +522,25 @@
           parent.child = null;
         } else if (childrenArray.length === 1) {
           parent.child = this.reconcileFiber(parent, prevChild, childrenArray[0]);
-          M$sh_CHECKED_CAST$default(parent.child).sibling = null;
+          parent.child.sibling = null;
         } else {
           this.reconcileMultipleChildren(parent, childrenArray);
         }
       } else if (typeof children === 'string') {
-        if (prevChild === null || M$sh_CHECKED_CAST$default(prevChild).type.kind !== 'text') {
+        if (prevChild === null || prevChild.type.kind !== 'text') {
           const type = new M$react_index$INTERNAL$FiberTypeText(M$sh_CHECKED_CAST$default(children));
           const child = new M$react_index$INTERNAL$Fiber(type, {}, null);
           parent.child = child;
         } else {
-          M$sh_CHECKED_CAST$default(M$sh_CHECKED_CAST$default(prevChild).type).text = M$sh_CHECKED_CAST$default(children);
+          M$sh_CHECKED_CAST$default(prevChild.type).text = M$sh_CHECKED_CAST$default(children);
         }
       } else if (children != null) {
         parent.child = this.reconcileFiber(parent, prevChild, M$sh_CHECKED_CAST$default(children));
-        M$sh_CHECKED_CAST$default(parent.child).sibling = null;
+        parent.child.sibling = null;
       } else {
         parent.child = null;
         if (prevChild !== null) {
-          M$sh_CHECKED_CAST$default(prevChild).parent = null;
+          prevChild.parent = null;
         }
       }
     };
@@ -550,10 +550,10 @@
       const keyedChildren = new Map();
       let current = parent.child;
       while (current !== null) {
-        if (M$sh_CHECKED_CAST$default(current).key !== null) {
-          keyedChildren.set(M$sh_CHECKED_CAST$default(current).key, current);
+        if (current.key !== null) {
+          keyedChildren.set(current.key, current);
         }
-        current = M$sh_CHECKED_CAST$default(current).sibling;
+        current = current.sibling;
       }
       let prev = null; // previous fiber at this key/index
       let prevByIndex = parent.child; // keep track of prev fiber at this index
@@ -566,13 +566,13 @@
           child = this.mountFiber(childElement, parent);
         }
         if (prev !== null) {
-          M$sh_CHECKED_CAST$default(prev).sibling = child;
+          prev.sibling = child;
         } else {
           // set parent to point to first child
           parent.child = child;
         }
         prev = child;
-        prevByIndex = prevByIndex !== null ? M$sh_CHECKED_CAST$default(prevByIndex).sibling : null;
+        prevByIndex = prevByIndex !== null ? prevByIndex.sibling : null;
       }
     };
     return _createClass(M$react_index$INTERNAL$Root);
@@ -662,11 +662,9 @@
     "use strict";
 
     this.value = void 0;
-    this.next = void 0;
-    this.prev = void 0;
-    this.value = value;
     this.next = null;
     this.prev = null;
+    this.value = value;
   });
   /**
    * Represents a node in the UI tree, and may correspond to a user-defined function component,
@@ -677,18 +675,14 @@
 
     this.type = void 0;
     this.props = void 0;
-    this.parent = void 0;
-    this.child = void 0;
-    this.sibling = void 0;
-    this.state = void 0;
-    this.key = void 0;
-    this.type = type;
-    this.props = props;
-    this.key = key;
     this.parent = null;
     this.child = null;
     this.sibling = null;
     this.state = null;
+    this.key = void 0;
+    this.type = type;
+    this.props = props;
+    this.key = key;
   });
   function M$react_index$jsx(type, props, key) {
     'inline';
@@ -704,13 +698,6 @@
     return props => comp(props, null);
   }
   /* file: app/music/data/albums.js */
-  // TODO: Need Object support
-  // export type Album = {
-  //   name: string
-  //   artist: string
-  //   cover: string
-  // };
-
   const M$albums$listenNowAlbums = [{
     name: 'React Rendezvous',
     artist: 'Ethan Byte',
@@ -786,7 +773,6 @@
     return opts => baseString;
   }
   /* file: lib/utils.js */
-  // TODO switch from legacy function when SH supports rest args.
   function M$utils$cn(...rest) {
     return rest.join(' ');
   }
@@ -859,13 +845,30 @@
    * Primitive
    * -----------------------------------------------------------------------------------------------*/
 
+  // Port of '@radix-ui/react-slot' (SlotClone) for MiniReact: clone the single
+  // child element, merging the slot's props onto the child's own props (child
+  // wins, matching Radix's default) and forwarding the ref. MiniReact has no
+  // cloneElement, so the element is rebuilt via React.jsx(type, props, key). The
+  // handler-chaining/className-merging that Radix's mergeProps does is omitted.
+  const M$radix_ui_react_primitive_index$INTERNAL$Slot = M$react_index$forwardRef((props, forwardedRef) => {
+    const {
+      children,
+      ...slotProps
+    } = props;
+    const child = children;
+    return M$react_index$jsx(child.type, {
+      ...slotProps,
+      ...child.props,
+      ref: forwardedRef
+    }, child.key);
+  });
   const M$radix_ui_react_primitive_index$Primitive = M$radix_ui_react_primitive_index$INTERNAL$NODES.reduce((primitive, node, _i) => {
     const Node = M$react_index$forwardRef((props /* PrimitivePropsWithRef<typeof node> */, forwardedRef) => {
       const {
         asChild,
         ...primitiveProps
       } = props;
-      const Comp = asChild ? Slot : node;
+      const Comp = asChild ? M$radix_ui_react_primitive_index$INTERNAL$Slot : node;
       // TODO?
       // React.useEffect(() => {
       //   (window as any)[Symbol.for('radix-ui')] = true;
@@ -962,7 +965,7 @@
       orientation: orientationProp = M$radix_ui_react_separator_index$INTERNAL$DEFAULT_ORIENTATION,
       ...domProps
     } = props;
-    const orientation = M$radix_ui_react_separator_index$INTERNAL$isValidOrientation(orientationProp) ? orientationProp : M$radix_ui_react_separator_index$INTERNAL$DEFAULT_ORIENTATION;
+    const orientation = M$radix_ui_react_separator_index$INTERNAL$isValidOrientation(M$sh_CHECKED_CAST$default(orientationProp)) ? orientationProp : M$radix_ui_react_separator_index$INTERNAL$DEFAULT_ORIENTATION;
     // `aria-orientation` defaults to `horizontal` so we only need it if `orientation` is vertical
     const ariaOrientation = orientation === 'vertical' ? orientation : undefined;
     const semanticProps = decorative ? {
@@ -1090,14 +1093,15 @@
     className,
     ...props
   }) {
+    const albumData = M$sh_CHECKED_CAST$default(album);
     return M$react_index$jsx('div', {
       className: M$utils$cn('space-y-3', className),
       ...props,
       children: [null, M$react_index$jsx('div', {
         className: "overflow-hidden rounded-md",
         children: M$react_index$jsx(M$next_image$default, {
-          src: album.cover,
-          alt: album.name,
+          src: albumData.cover,
+          alt: albumData.name,
           width: width,
           height: height,
           className: M$utils$cn('h-auto w-auto object-cover transition-all hover:scale-105', aspectRatio === 'portrait' ? 'aspect-[3/4]' : 'aspect-square')
@@ -1106,10 +1110,10 @@
         className: "space-y-1 text-sm",
         children: [M$react_index$jsx('h3', {
           className: "font-medium leading-none",
-          children: album.name
+          children: albumData.name
         }, null), M$react_index$jsx('p', {
           className: "text-xs text-muted-foreground",
-          children: album.artist
+          children: albumData.artist
         }, null)]
       }, null)]
     }, null);

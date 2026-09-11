@@ -37,12 +37,10 @@ struct TypeArrayDenseMapInfo
   static bool isEqual(
       llvh::ArrayRef<TypeInfo *> LHS,
       llvh::ArrayRef<TypeInfo *> RHS) {
-    if (LHS == RHS)
-      return true;
-    auto const EMPTY = getEmptyKey();
-    auto const TOMB = getTombstoneKey();
-    if (LHS == EMPTY || LHS == TOMB || RHS == EMPTY || RHS == TOMB)
-      return false;
+    if (RHS.data() == getEmptyKey().data())
+      return LHS.data() == getEmptyKey().data();
+    if (RHS.data() == getTombstoneKey().data())
+      return LHS.data() == getTombstoneKey().data();
     if (LHS.size() != RHS.size())
       return false;
     for (size_t i = 0, e = LHS.size(); i < e; ++i)
@@ -169,6 +167,10 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
     /// Null for non-method generics.
     flow::ClassType *containingClassType = nullptr;
 
+    /// The number of type parameters declared on the generic.
+    /// Cached to avoid re-computing it from the AST.
+    size_t numTypeParams;
+
     /// Map from the list of type arguments to the specialization.
     llvh::DenseMap<TypeArgsRef, Spec *, TypeArrayDenseMapInfo>
         specializations{};
@@ -182,7 +184,8 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
         const TypeBindingTableScopePtrTy &bindingTableScope)
         : originalNode(originalNode),
           parent(parent),
-          bindingTableScope(bindingTableScope) {
+          bindingTableScope(bindingTableScope),
+          numTypeParams(computeNumTypeParams(originalNode)) {
       // We need to insert into the parent.
       assert(
           (llvh::isa<ESTree::ProgramNode>(parent) ||
@@ -213,6 +216,32 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
           TypeArgsRef{outer.typeArgStorage_.back()}, specialization);
       assert(inserted && "double specialization not allowed");
       return it->first;
+    }
+
+   private:
+    /// \return the number of type parameters declared on \p originalNode, based
+    ///   on its node kind (generic function, class, method, or type alias).
+    static size_t computeNumTypeParams(ESTree::Node *originalNode) {
+      ESTree::Node *typeParams = nullptr;
+      if (auto *func = llvh::dyn_cast<ESTree::FunctionLikeNode>(originalNode)) {
+        typeParams = ESTree::getTypeParameters(func);
+      } else if (
+          auto *classDecl =
+              llvh::dyn_cast<ESTree::ClassDeclarationNode>(originalNode)) {
+        typeParams = classDecl->_typeParameters;
+      } else if (
+          auto *method =
+              llvh::dyn_cast<ESTree::MethodDefinitionNode>(originalNode)) {
+        typeParams = llvh::cast<ESTree::FunctionExpressionNode>(method->_value)
+                         ->_typeParameters;
+      } else if (
+          auto *alias = llvh::dyn_cast<ESTree::TypeAliasNode>(originalNode)) {
+        typeParams = alias->_typeParameters;
+      }
+      return typeParams
+          ? llvh::cast<ESTree::TypeParameterDeclarationNode>(typeParams)
+                ->_params.size()
+          : 0;
     }
   };
 
@@ -293,9 +322,25 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
           classScope(classScope) {}
   };
 
+  /// A resolved generic bound comparison to perform after type resolution.
+  struct GenericBoundCheck {
+    /// The concrete type argument.
+    Type *argument;
+    /// The resolved bound.
+    Type *bound;
+    /// The generic parameter name.
+    UniqueString *parameterName;
+    /// The source range used for diagnostics.
+    SMRange errorRange;
+  };
+
   /// List of generics that we haven't parsed yet because they might
   /// refer to other generics that haven't been parsed yet.
   std::vector<DeferredGenericClass> *deferredParseGenerics_ = nullptr;
+
+  /// Bound checks deferred until the active scope resolver completes types.
+  llvh::SmallVectorImpl<GenericBoundCheck> *deferredGenericBoundChecks_ =
+      nullptr;
 
   /// Queue of the generics that we haven't finished typechecking yet,
   /// which need their bodies typechecked.
@@ -367,6 +412,14 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   void visit(ESTree::FunctionDeclarationNode *node);
   void visit(ESTree::FunctionExpressionNode *node);
   void visit(ESTree::ArrowFunctionExpressionNode *node);
+
+  /// Typecheck an arrow function. Shared by the plain and the
+  /// contextually-typed (ExprVisitor) entry points.
+  /// \param constraint optional expected function type that drives inference of
+  ///   unannotated parameters and return type. nullptr for a plain arrow.
+  void visitArrowFunction(
+      ESTree::ArrowFunctionExpressionNode *node,
+      TypedFunctionType *constraint);
 
   /// Run typechecking on the body of a class that we already have the type for.
   /// \param classConsType the ClassConstructorType wrapping \p classType, used
@@ -558,13 +611,18 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// \param defaultReturnType optional return type if the return annotation
   ///     is missing. nullptr here is a shortcut for "any".
   /// \param defaultThisType optional this type if the annotation is missing.
+  /// \param constraint optional expected function type used to infer the types
+  ///     of unannotated parameters and return, and to match inference
+  ///     placeholders. Only set for arrow functions, which have no "this"
+  ///     parameter.
   Type *parseFunctionType(
       ESTree::NodeList &params,
       ESTree::Node *optReturnTypeAnnotation,
       bool isAsync,
       bool isGenerator,
       Type *defaultReturnType = nullptr,
-      Type *defaultThisType = nullptr);
+      Type *defaultThisType = nullptr,
+      TypedFunctionType *constraint = nullptr);
 
   /// Parse an optional type annotation. If it is nullptr, return any, otherwise
   /// parse the inner annotation (which cannot be null).
@@ -647,17 +705,6 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
     }
   };
 
-  /// Return true if type \p a can "flow" into type \p b.
-  /// TODO: generate message explaining why not.
-  CanFlowResult canAFlowIntoB(Type *a, Type *b) {
-    assert(a->info && b->info && "types haven't been populated yet");
-    return canAFlowIntoB(a->info, b->info);
-  }
-  CanFlowResult canAFlowIntoB(TypeInfo *a, TypeInfo *b);
-  CanFlowResult canAFlowIntoB(ClassType *a, ClassType *b);
-  CanFlowResult canAFlowIntoB(TupleType *a, TupleType *b);
-  CanFlowResult canAFlowIntoB(ExactObjectType *a, ExactObjectType *b);
-
   /// How to handle 'this' parameters when checking if function types can flow.
   enum class ThisFlowDirection {
     /// Supertype this parameters flow into subtype this parameters.
@@ -666,11 +713,48 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
     MethodOverride,
   };
 
+  /// An ordered pair of (a, b).
+  using CanFlowKey = std::pair<TypeInfo *, TypeInfo *>;
+
+  /// State shared by all recursive checks in one flow query.
+  class CanFlowState {
+   public:
+    /// Ordinary flow relations currently being evaluated.
+    llvh::SetVector<CanFlowKey> defaultFlow{};
+    /// Method override flow relations currently being evaluated.
+    llvh::SetVector<CanFlowKey> methodOverrideFlow{};
+  };
+
+  /// Return true if type \p a can "flow" into type \p b.
+  /// TODO: generate message explaining why not.
+  CanFlowResult canAFlowIntoB(Type *a, Type *b) {
+    assert(a->info && b->info && "types haven't been populated yet");
+    return canAFlowIntoB(a->info, b->info);
+  }
+  CanFlowResult canAFlowIntoB(Type *a, Type *b, CanFlowState &state) {
+    assert(a->info && b->info && "types haven't been populated yet");
+    return canAFlowIntoB(a->info, b->info, state);
+  }
+  CanFlowResult canAFlowIntoB(TypeInfo *a, TypeInfo *b) {
+    CanFlowState state{};
+    return canAFlowIntoB(a, b, state);
+  }
+  CanFlowResult canAFlowIntoB(
+      TypeInfo *a,
+      TypeInfo *b,
+      CanFlowState &state,
+      ThisFlowDirection thisFlow = ThisFlowDirection::Default);
+  CanFlowResult canAFlowIntoB(ClassType *a, ClassType *b, CanFlowState &state);
+  CanFlowResult canAFlowIntoB(TupleType *a, TupleType *b, CanFlowState &state);
+  CanFlowResult
+  canAFlowIntoB(ExactObjectType *a, ExactObjectType *b, CanFlowState &state);
+
   /// \param thisFlow how to handle 'this' parameter.
   CanFlowResult canAFlowIntoB(
       BaseFunctionType *a,
       BaseFunctionType *b,
-      ThisFlowDirection thisFlow = ThisFlowDirection::Default);
+      ThisFlowDirection thisFlow,
+      CanFlowState &state);
 
   /// Different from regular function type flowing, because 'this' parameters
   /// must be handled specially in the method override scenario.
@@ -679,7 +763,9 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// would fail to typecheck.
   /// \return whether \p a can be a method override for \p b.
   bool canAOverrideB(BaseFunctionType *a, BaseFunctionType *b) {
-    return canAFlowIntoB(a, b, ThisFlowDirection::MethodOverride).canFlow;
+    CanFlowState state;
+    return canAFlowIntoB(a, b, state, ThisFlowDirection::MethodOverride)
+        .canFlow;
   }
 
   /// Try to narrow a union with a single non-optional arm to the non-optional
@@ -705,6 +791,16 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
       Type *exprType,
       Type *targetType);
 
+  /// Widen "fresh" literal types for the inferred type of an un-annotated
+  /// non-const variable: a StringLiteralType becomes String, a
+  /// NumberLiteralType becomes Number and a BooleanLiteralType becomes Boolean,
+  /// and direct union arms that are literals are widened (one level; union arms
+  /// are already flattened, so e.g. a union of string literals becomes String).
+  /// This matches TS-style let/var widening; const declarations keep the
+  /// literal type.
+  /// \return the widened type, or \p type unchanged if nothing was widened.
+  Type *widenLiteralType(Type *type);
+
   /// If \c canFlow.needCheckedCast is set and \c compile_ is set, allocate an
   /// implicit checked cast node from the specified \p argument to
   /// the specified type \p toType and return it. Otherwise return the argument.
@@ -718,23 +814,35 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
     return semContext_.getExpressionDecl(id);
   }
 
+  /// Validate that a resolved type argument satisfies its bound.
+  void validateGenericBound(const GenericBoundCheck &check);
+
   /// Add the \p typeArgTypes to the binding table based on the names provided
-  /// in \p node.
+  /// in \p params, checking that each type argument satisfies its type
+  /// parameter's bound (if any). Each bound check is performed as the parameter
+  /// is bound; when a scope resolver is active the check is deferred to
+  /// validateTypes() rather than run eagerly.
   /// Ensure that there are the correct number of type arguments and that they
   /// are valid to pass.
   /// \param params the type parameter declaration.
   /// \param errorRange used for reporting errors when binding fails.
   /// \param typeArgTypes the actual Types to instantiate the arguments with.
   /// \param scope the lexical scope to associate with each TypeDecl.
+  /// \param resolveBound a callable \c Type*(ESTree::Node*) resolving a bound
+  ///   annotation in the current scope. It differs by call site
+  ///   (parseTypeAnnotation vs the DeclareScopeTypes resolver), and is resolved
+  ///   per instantiation since a bound may reference earlier type parameters.
   /// \pre the binding table's scope is set to the new scope in which to place
   ///   the bindings (i.e. a direct child of the binding table scope the generic
   ///   was declared with).
   /// \return true on success, false on failure and report an error.
+  template <typename ResolveBoundFn>
   LLVM_NODISCARD bool validateAndBindTypeParameters(
       ESTree::TypeParameterDeclarationNode *params,
       SMRange errorRange,
       llvh::ArrayRef<Type *> typeArgTypes,
-      sema::LexicalScope *scope);
+      sema::LexicalScope *scope,
+      ResolveBoundFn resolveBound);
 
   /// Match a constraint type (containing placeholders) against a concrete type.
   /// Fills in InferencePlaceholder types by mutating their info pointers.
@@ -846,7 +954,8 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// Try to visit the arguments to the call expression and typecheck them.
   /// Infer a possible set of type arguments to use for the call
   /// using an eager type assignment mechanism based on the types of the
-  /// arguments.
+  /// arguments. Any type arguments explicitly provided on \p node (a partial
+  /// leading list) are used as-is; only the trailing ones are inferred.
   /// NOTE: the inferred type arguments may not be compatible with
   /// every argument, so they must be typechecked by the caller after creating a
   /// generic specialization.
@@ -971,6 +1080,8 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
       ESTree::MethodDefinitionNode *method);
 
   /// Try to infer type arguments for a generic method call.
+  /// Any type arguments explicitly provided on \p node (a partial leading list)
+  /// are used as-is; only the trailing ones are inferred.
   /// \param node the call expression.
   /// \param callee the member expression for the method call.
   /// \param method the MethodDefinitionNode for the generic method.
@@ -1212,16 +1323,22 @@ Type *FlowChecker::processFunctionTypeAnnotation(
   // Handle the rest parameter if present.
   if (node->_rest) {
     auto *restParam = llvh::cast<ESTree::FunctionTypeParamNode>(node->_rest);
-    if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(restParam->_name)) {
-      paramsList.push_back(
-          {Identifier::getFromPointer(id->_name),
-           restParam->_typeAnnotation ? cb(restParam->_typeAnnotation)
-                                      : nullptr,
-           /*optional=*/false,
-           /*rest=*/true});
-    } else {
-      sm_.error(restParam->getSourceRange(), "unsupported rest param");
+
+    UniqueString *name = nullptr;
+    if (!restParam->_name) {
+      name = kw_.identEmptyString;
+    } else if (
+        auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(restParam->_name)) {
+      name = id->_name;
     }
+    if (!name)
+      sm_.error(restParam->getSourceRange(), "unsupported rest param");
+
+    paramsList.push_back(
+        {Identifier::getFromPointer(name),
+         restParam->_typeAnnotation ? cb(restParam->_typeAnnotation) : nullptr,
+         /*optional=*/false,
+         /*rest=*/true});
   }
 
   return flowContext_.createType(
@@ -1364,6 +1481,73 @@ Type *FlowChecker::processObjectTypeAnnotation(
   // with an empty object type because we're going to fail anyway.
   return flowContext_.createType(
       flowContext_.createExactObject(fields, indexer), node);
+}
+
+template <typename ResolveBoundFn>
+bool FlowChecker::validateAndBindTypeParameters(
+    ESTree::TypeParameterDeclarationNode *params,
+    SMRange errorRange,
+    llvh::ArrayRef<Type *> typeArgTypes,
+    sema::LexicalScope *scope,
+    ResolveBoundFn resolveBound) {
+  size_t i = 0;
+  // Whether we had to stop early due to not enough generic type arguments.
+  bool tooFewTypeArgs = false;
+  for (ESTree::Node &tparam : params->_params) {
+    if (i >= typeArgTypes.size()) {
+      // Not enough type arguments provided, break and error.
+      tooFewTypeArgs = true;
+      break;
+    }
+    if (auto *paramName = llvh::dyn_cast<ESTree::TypeParameterNode>(&tparam)) {
+      if (paramName->_bound) {
+        // Earlier type parameters are already bound, so a bound referring to
+        // one (e.g. <T, U: T>) resolves to its concrete argument.
+        auto *boundAnnotation =
+            llvh::cast<ESTree::TypeAnnotationNode>(paramName->_bound)
+                ->_typeAnnotation;
+        Type *bound = resolveBound(boundAnnotation);
+        if (bound) {
+          GenericBoundCheck check{
+              typeArgTypes[i], bound, paramName->_name, errorRange};
+          if (deferredGenericBoundChecks_) {
+            deferredGenericBoundChecks_->push_back(check);
+          } else {
+            validateGenericBound(check);
+          }
+        } else {
+          sm_.error(
+              errorRange,
+              llvh::Twine("ft: unable to resolve type parameter bound ") +
+                  paramName->_name->str());
+        }
+      }
+      if (paramName->_variance) {
+        sm_.warning(
+            paramName->_variance->getSourceRange(),
+            "type parameter variance not yet supported");
+      }
+      bindingTable_.try_emplace(
+          paramName->_name, TypeDecl{typeArgTypes[i], scope, &tparam});
+    } else {
+      sm_.error(
+          tparam.getSourceRange(),
+          "only named type parameters supported in generics");
+    }
+    ++i;
+  }
+
+  // Check that there aren't too many (or too few) type arguments provided.
+  if (tooFewTypeArgs || i != typeArgTypes.size()) {
+    sm_.error(
+        errorRange,
+        llvh::Twine("type argument mismatch, expected ") +
+            llvh::Twine(params->_params.size()) + ", found " +
+            llvh::Twine(typeArgTypes.size()));
+    return false;
+  }
+
+  return true;
 }
 
 } // namespace flow

@@ -46,13 +46,13 @@ let t1: T = {x: null};
 // CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:    BlockStatement
 // CHECK-NEXT:        ExpressionStatement
-// CHECK-NEXT:            StringLiteral : string
+// CHECK-NEXT:            StringLiteral : "use strict"
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                ObjectExpression : %object.3
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'p'
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 10
 // CHECK-NEXT:                Id 'a' [D:E:%d.2 'a']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
@@ -62,7 +62,7 @@ let t1: T = {x: null};
 // CHECK-NEXT:                        ObjectExpression : %object.5
 // CHECK-NEXT:                            Property
 // CHECK-NEXT:                                Id 'q'
-// CHECK-NEXT:                                NumericLiteral : number
+// CHECK-NEXT:                                NumericLiteral : 10
 // CHECK-NEXT:                Id 'b' [D:E:%d.3 'b']
 // CHECK-NEXT:        TypeAlias
 // CHECK-NEXT:            Id 'T'

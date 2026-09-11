@@ -7,9 +7,15 @@
 
 #include "hermes/Sema/FlowContext.h"
 
+#include "hermes/Support/Conversions.h"
+
 #include "llvh/ADT/Hashing.h"
 #include "llvh/ADT/STLExtras.h"
 #include "llvh/ADT/ScopeExit.h"
+#include "llvh/Support/MathExtras.h"
+
+#include <cmath>
+#include <limits>
 
 namespace hermes {
 namespace flow {
@@ -162,6 +168,23 @@ static void messageStringImpl(const Type *type, llvh::raw_ostream &os) {
     return;
   }
 
+  if (auto *strLitType = llvh::dyn_cast<StringLiteralType>(type->info)) {
+    os << '"' << strLitType->getValue()->str() << '"';
+    return;
+  }
+
+  if (auto *numLitType = llvh::dyn_cast<NumberLiteralType>(type->info)) {
+    char buf[NUMBER_TO_STRING_BUF_SIZE];
+    auto len = numberToString(numLitType->getValue(), buf, sizeof(buf));
+    os << llvh::StringRef{buf, len};
+    return;
+  }
+
+  if (auto *boolLitType = llvh::dyn_cast<BooleanLiteralType>(type->info)) {
+    os << (boolLitType->getValue() ? "true" : "false");
+    return;
+  }
+
   os << type->info->getKindName();
 }
 
@@ -184,10 +207,18 @@ llvh::StringRef TypeInfo::getKindName() const {
       return "boolean";
     case TypeKind::String:
       return "string";
+    case TypeKind::StringLiteral:
+      return "string literal";
+    case TypeKind::NumberLiteral:
+      return "number literal";
+    case TypeKind::BooleanLiteral:
+      return "boolean literal";
     case TypeKind::CPtr:
       return "c_ptr";
     case TypeKind::Number:
       return "number";
+    case TypeKind::Symbol:
+      return "symbol";
     case TypeKind::BigInt:
       return "bigint";
     case TypeKind::Any:
@@ -565,6 +596,73 @@ unsigned TupleType::_hashImpl() const {
   return (unsigned)llvh::hash_combine((unsigned)TypeKind::Tuple, types_.size());
 }
 
+int StringLiteralType::_compareImpl(
+    const StringLiteralType *other,
+    CompareState &state) const {
+  return value_->str().compare(other->value_->str());
+}
+
+bool StringLiteralType::_equalsImpl(
+    const StringLiteralType *other,
+    CompareState &state) const {
+  return value_ == other->value_;
+}
+
+unsigned StringLiteralType::_hashImpl() const {
+  return (unsigned)llvh::hash_combine(
+      (unsigned)TypeKind::StringLiteral, (uintptr_t)value_);
+}
+
+int NumberLiteralType::_compareImpl(
+    const NumberLiteralType *other,
+    CompareState &state) const {
+  // Must be a total order. A numeric literal can't be NaN, but the naive
+  // comparison returns 0 when either side is NaN (both '<' and '>' are
+  // false), so handle NaN explicitly to keep the order total.
+  double a = value_, b = other->value_;
+  bool aNaN = std::isnan(a), bNaN = std::isnan(b);
+  if (aNaN || bNaN)
+    return (int)bNaN - (int)aNaN; // NaN sorts first; NaN vs NaN -> 0.
+  return a < b ? -1 : a > b ? 1 : 0; // +0/-0 -> 0, matching equals.
+}
+
+bool NumberLiteralType::_equalsImpl(
+    const NumberLiteralType *other,
+    CompareState &state) const {
+  if (std::isnan(value_) && std::isnan(other->value_))
+    return true;
+  return value_ == other->value_;
+}
+
+unsigned NumberLiteralType::_hashImpl() const {
+  uint64_t bits;
+  if (std::isnan(value_)) {
+    bits = llvh::DoubleToBits(std::numeric_limits<double>::quiet_NaN());
+  } else if (value_ == 0) {
+    bits = 0;
+  } else {
+    bits = llvh::DoubleToBits(value_);
+  }
+  return (unsigned)llvh::hash_combine((uint64_t)TypeKind::NumberLiteral, bits);
+}
+
+int BooleanLiteralType::_compareImpl(
+    const BooleanLiteralType *other,
+    CompareState &state) const {
+  return (int)value_ - (int)other->value_;
+}
+
+bool BooleanLiteralType::_equalsImpl(
+    const BooleanLiteralType *other,
+    CompareState &state) const {
+  return value_ == other->value_;
+}
+
+unsigned BooleanLiteralType::_hashImpl() const {
+  return (unsigned)llvh::hash_combine(
+      (unsigned)TypeKind::BooleanLiteral, (unsigned)value_);
+}
+
 hermes::OptValue<size_t> ExactObjectType::findField(Identifier id) const {
   auto it = fieldNameMap_.find(id);
   if (it == fieldNameMap_.end())
@@ -689,7 +787,7 @@ bool TypedFunctionType::_equalsImpl(
     if (!params_[i].type->info->equals(other->params_[i].type->info, state))
       return false;
   }
-  if (!return_->info->equals(other->return_->info))
+  if (!return_->info->equals(other->return_->info, state))
     return false;
   return true;
 }

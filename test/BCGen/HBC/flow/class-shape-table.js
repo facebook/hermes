@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermesc -typed -dump-bytecode %s | %FileCheckOrRegen --match-full-lines %s
+// RUN: %hermesc -typed -dump-bytecode -fno-std-globals %s | %FileCheckOrRegen --match-full-lines %s
 
 class A {
   x: number;

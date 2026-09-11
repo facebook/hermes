@@ -45,7 +45,7 @@ return function foo(x: any): string {
 // CHECK-NEXT:                BlockStatement
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
-// CHECK-NEXT:                            StringLiteral : string
+// CHECK-NEXT:                            StringLiteral : ""
 // CHECK-NEXT:                            Id 'res' [D:E:%d.5 'res']
 // CHECK-NEXT:                    ExpressionStatement
 // CHECK-NEXT:                        AssignmentExpression : string

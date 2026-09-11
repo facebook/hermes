@@ -84,7 +84,7 @@ function test(): void {
 // CHECK-NEXT:            ClassBody
 // CHECK-NEXT:                ClassProperty : number
 // CHECK-NEXT:                    Id 'x'
-// CHECK-NEXT:                    NumericLiteral : number
+// CHECK-NEXT:                    NumericLiteral : 0
 // CHECK-NEXT:        FunctionDeclaration : %function.4
 // CHECK-NEXT:            Id 'withThis' [D:E:%d.3 'withThis']
 // CHECK-NEXT:            Id 'this' [D:E:%d.8 'this']
@@ -123,7 +123,7 @@ function test(): void {
 // CHECK-NEXT:                                Id 'withThis' [D:E:%d.3 'withThis'] : %function.4
 // CHECK-NEXT:                                Id 'call'
 // CHECK-NEXT:                            Id 'c' [D:E:%d.14 'c'] : %class.2
-// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                            NumericLiteral : 5
 // CHECK-NEXT:                        Id 'r1' [D:E:%d.15 'r1']
 // CHECK-NEXT:                VariableDeclaration
 // CHECK-NEXT:                    VariableDeclarator
@@ -132,6 +132,6 @@ function test(): void {
 // CHECK-NEXT:                                Id 'noThis' [D:E:%d.4 'noThis'] : %function.5
 // CHECK-NEXT:                                Id 'call'
 // CHECK-NEXT:                            Id 'undefined' [D:E:%d.18 'undefined'] : void
-// CHECK-NEXT:                            NumericLiteral : number
-// CHECK-NEXT:                            StringLiteral : string
+// CHECK-NEXT:                            NumericLiteral : 1
+// CHECK-NEXT:                            StringLiteral : "hi"
 // CHECK-NEXT:                        Id 'r2' [D:E:%d.16 'r2']

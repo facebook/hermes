@@ -82,7 +82,7 @@ var xyz: [number, string, number] = a.foo<string>(123, 'str');
 // CHECK-NEXT:                        BlockStatement
 // CHECK-NEXT:                            VariableDeclaration
 // CHECK-NEXT:                                VariableDeclarator
-// CHECK-NEXT:                                    NumericLiteral : number
+// CHECK-NEXT:                                    NumericLiteral : 123
 // CHECK-NEXT:                                    Id 'z' [D:E:%d.18 'z']
 // CHECK-NEXT:                            ReturnStatement
 // CHECK-NEXT:                                ArrayExpression : %tuple.4
@@ -157,6 +157,6 @@ var xyz: [number, string, number] = a.foo<string>(123, 'str');
 // CHECK-NEXT:                        Id 'foo' [D:E:%d.7 'foo']
 // CHECK-NEXT:                    TypeParameterInstantiation
 // CHECK-NEXT:                        StringTypeAnnotation
-// CHECK-NEXT:                    NumericLiteral : number
-// CHECK-NEXT:                    StringLiteral : string
+// CHECK-NEXT:                    NumericLiteral : 123
+// CHECK-NEXT:                    StringLiteral : "str"
 // CHECK-NEXT:                Id 'xyz' [D:E:%d.4 'xyz']

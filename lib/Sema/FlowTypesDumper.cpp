@@ -8,6 +8,7 @@
 #include "FlowTypesDumper.h"
 
 #include "hermes/AST/RecursiveVisitor.h"
+#include "hermes/Support/Conversions.h"
 
 namespace hermes {
 namespace flow {
@@ -40,7 +41,7 @@ static llvh::StringRef getTypeAsVarName(const TypeInfo *type) {
 }
 
 size_t FlowTypesDumper::getNumber(const TypeInfo *type) {
-  if (type->isSingleton())
+  if (type->isSingleton() || type->isLiteral())
     return 0;
 
   auto [it, inserted] = typeNumber_.try_emplace(type, types_.size());
@@ -52,7 +53,15 @@ size_t FlowTypesDumper::getNumber(const TypeInfo *type) {
 void FlowTypesDumper::printTypeRef(
     llvh::raw_ostream &os,
     const TypeInfo *type) {
-  if (!type->isSingleton())
+  if (auto *strLit = llvh::dyn_cast<StringLiteralType>(type)) {
+    os << '"' << strLit->getValue()->str() << '"';
+  } else if (auto *numLit = llvh::dyn_cast<NumberLiteralType>(type)) {
+    char buf[NUMBER_TO_STRING_BUF_SIZE];
+    auto len = numberToString(numLit->getValue(), buf, sizeof(buf));
+    os << llvh::StringRef{buf, len};
+  } else if (auto *boolLit = llvh::dyn_cast<BooleanLiteralType>(type)) {
+    os << (boolLit->getValue() ? "true" : "false");
+  } else if (!type->isSingleton())
     os << "%" << getTypeAsVarName(type) << "." << getNumber(type);
   else
     os << getTypeAsVarName(type);
@@ -76,6 +85,7 @@ void FlowTypesDumper::printTypeDescription(
     case TypeKind::Generic:
     case TypeKind::InferencePlaceholder:
     case TypeKind::Number:
+    case TypeKind::Symbol:
     case TypeKind::BigInt:
     case TypeKind::Any:
     case TypeKind::Empty:
@@ -243,6 +253,25 @@ void FlowTypesDumper::printTypeDescription(
         printTypeRef(os, t);
       }
       os << ')';
+      break;
+    }
+
+    case TypeKind::StringLiteral:
+      os << '"' << llvh::cast<StringLiteralType>(type)->getValue()->str()
+         << '"';
+      break;
+
+    case TypeKind::NumberLiteral: {
+      char buf[NUMBER_TO_STRING_BUF_SIZE];
+      auto len = numberToString(
+          llvh::cast<NumberLiteralType>(type)->getValue(), buf, sizeof(buf));
+      os << llvh::StringRef{buf, len};
+      break;
+    }
+
+    case TypeKind::BooleanLiteral: {
+      bool value = llvh::cast<BooleanLiteralType>(type)->getValue();
+      os << (value ? "true" : "false");
       break;
     }
 

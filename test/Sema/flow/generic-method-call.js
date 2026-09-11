@@ -111,11 +111,11 @@ let e: number = box.pair<number, string>(10, "test");
 // CHECK-NEXT:                    FunctionExpression : %function.4
 // CHECK-NEXT:                        BlockStatement
 // CHECK-NEXT:                            ExpressionStatement
-// CHECK-NEXT:                                AssignmentExpression : number
+// CHECK-NEXT:                                AssignmentExpression : 0
 // CHECK-NEXT:                                    MemberExpression : number
 // CHECK-NEXT:                                        ThisExpression : %class.2
 // CHECK-NEXT:                                        Id 'value'
-// CHECK-NEXT:                                    NumericLiteral : number
+// CHECK-NEXT:                                    NumericLiteral : 0
 // CHECK-NEXT:                MethodDefinition : %function.5
 // CHECK-NEXT:                    Id 'identity'
 // CHECK-NEXT:                    FunctionExpression : %function.5
@@ -198,7 +198,7 @@ let e: number = box.pair<number, string>(10, "test");
 // CHECK-NEXT:                        Id 'identity' [D:E:%d.10 'identity']
 // CHECK-NEXT:                    TypeParameterInstantiation
 // CHECK-NEXT:                        NumberTypeAnnotation
-// CHECK-NEXT:                    NumericLiteral : number
+// CHECK-NEXT:                    NumericLiteral : 42
 // CHECK-NEXT:                Id 'a' [D:E:%d.4 'a']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
@@ -208,7 +208,7 @@ let e: number = box.pair<number, string>(10, "test");
 // CHECK-NEXT:                        Id 'identity' [D:E:%d.11 'identity']
 // CHECK-NEXT:                    TypeParameterInstantiation
 // CHECK-NEXT:                        StringTypeAnnotation
-// CHECK-NEXT:                    StringLiteral : string
+// CHECK-NEXT:                    StringLiteral : "hello"
 // CHECK-NEXT:                Id 'b' [D:E:%d.5 'b']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
@@ -216,7 +216,7 @@ let e: number = box.pair<number, string>(10, "test");
 // CHECK-NEXT:                    MemberExpression : %function.5
 // CHECK-NEXT:                        Id 'box' [D:E:%d.3 'box'] : %class.2
 // CHECK-NEXT:                        Id 'identity' [D:E:%d.10 'identity']
-// CHECK-NEXT:                    NumericLiteral : number
+// CHECK-NEXT:                    NumericLiteral : 42
 // CHECK-NEXT:                Id 'c' [D:E:%d.6 'c']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
@@ -224,7 +224,7 @@ let e: number = box.pair<number, string>(10, "test");
 // CHECK-NEXT:                    MemberExpression : %function.6
 // CHECK-NEXT:                        Id 'box' [D:E:%d.3 'box'] : %class.2
 // CHECK-NEXT:                        Id 'identity' [D:E:%d.11 'identity']
-// CHECK-NEXT:                    StringLiteral : string
+// CHECK-NEXT:                    StringLiteral : "hello"
 // CHECK-NEXT:                Id 'd' [D:E:%d.7 'd']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
@@ -235,6 +235,6 @@ let e: number = box.pair<number, string>(10, "test");
 // CHECK-NEXT:                    TypeParameterInstantiation
 // CHECK-NEXT:                        NumberTypeAnnotation
 // CHECK-NEXT:                        StringTypeAnnotation
-// CHECK-NEXT:                    NumericLiteral : number
-// CHECK-NEXT:                    StringLiteral : string
+// CHECK-NEXT:                    NumericLiteral : 10
+// CHECK-NEXT:                    StringLiteral : "test"
 // CHECK-NEXT:                Id 'e' [D:E:%d.8 'e']

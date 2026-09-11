@@ -83,7 +83,7 @@
 // CHECK-NEXT:                            MemberExpression : any
 // CHECK-NEXT:                                SHBuiltin
 // CHECK-NEXT:                                Id 'moduleFactory'
-// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                            NumericLiteral : 0
 // CHECK-NEXT:                            FunctionExpression : %function.2
 // CHECK-NEXT:                                Id 'global' [D:E:%d.4 'global']
 // CHECK-NEXT:                                Id 'require' [D:E:%d.5 'require']
@@ -92,7 +92,7 @@
 // CHECK-NEXT:                                    ReturnStatement
 // CHECK-NEXT:                                        ImplicitCheckedCast : number
 // CHECK-NEXT:                                            BinaryExpression : any
-// CHECK-NEXT:                                                NumericLiteral : number
+// CHECK-NEXT:                                                NumericLiteral : 7
 // CHECK-NEXT:                                                BinOp +
 // CHECK-NEXT:                                                MemberExpression : any
 // CHECK-NEXT:                                                    AsExpression : any
@@ -104,30 +104,30 @@
 // CHECK-NEXT:                            MemberExpression : any
 // CHECK-NEXT:                                SHBuiltin
 // CHECK-NEXT:                                Id 'moduleFactory'
-// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                            NumericLiteral : 1
 // CHECK-NEXT:                            FunctionExpression : %function.3
 // CHECK-NEXT:                                Id 'global' [D:E:%d.8 'global']
 // CHECK-NEXT:                                Id 'require' [D:E:%d.9 'require']
 // CHECK-NEXT:                                BlockStatement
 // CHECK-NEXT:                                    VariableDeclaration
 // CHECK-NEXT:                                        VariableDeclarator
-// CHECK-NEXT:                                            NumericLiteral : number
+// CHECK-NEXT:                                            NumericLiteral : 100
 // CHECK-NEXT:                                            Id 'n' [D:E:%d.10 'n']
 // CHECK-NEXT:                                    ExpressionStatement
 // CHECK-NEXT:                                        CallExpression : void
 // CHECK-NEXT:                                            MemberExpression : any
 // CHECK-NEXT:                                                SHBuiltin
 // CHECK-NEXT:                                                Id 'export'
-// CHECK-NEXT:                                            StringLiteral : string
+// CHECK-NEXT:                                            StringLiteral : "n"
 // CHECK-NEXT:                                            Id 'n' [D:E:%d.10 'n'] : number
 // CHECK-NEXT:                                    ReturnStatement
-// CHECK-NEXT:                                        NumericLiteral : number
+// CHECK-NEXT:                                        NumericLiteral : 0
 // CHECK-NEXT:                    ExpressionStatement
 // CHECK-NEXT:                        CallExpression : %function.3
 // CHECK-NEXT:                            MemberExpression : any
 // CHECK-NEXT:                                SHBuiltin
 // CHECK-NEXT:                                Id 'moduleFactory'
-// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                            NumericLiteral : 2
 // CHECK-NEXT:                            FunctionExpression : %function.3
 // CHECK-NEXT:                                Id 'global' [D:E:%d.12 'global']
 // CHECK-NEXT:                                Id 'require' [D:E:%d.13 'require']
@@ -138,17 +138,17 @@
 // CHECK-NEXT:                                                BinaryExpression : any
 // CHECK-NEXT:                                                    MemberExpression : any
 // CHECK-NEXT:                                                        AsExpression : any
-// CHECK-NEXT:                                                            CallExpression : string
+// CHECK-NEXT:                                                            CallExpression : "abc"
 // CHECK-NEXT:                                                                MemberExpression : any
 // CHECK-NEXT:                                                                    SHBuiltin
 // CHECK-NEXT:                                                                    Id 'import'
-// CHECK-NEXT:                                                                NumericLiteral : number
-// CHECK-NEXT:                                                                StringLiteral : string
-// CHECK-NEXT:                                                                StringLiteral : string
+// CHECK-NEXT:                                                                NumericLiteral : 1
+// CHECK-NEXT:                                                                StringLiteral : "n"
+// CHECK-NEXT:                                                                StringLiteral : "abc"
 // CHECK-NEXT:                                                            AnyTypeAnnotation
 // CHECK-NEXT:                                                        Id 'length'
 // CHECK-NEXT:                                                    BinOp +
-// CHECK-NEXT:                                                    NumericLiteral : number
+// CHECK-NEXT:                                                    NumericLiteral : 2
 // CHECK-NEXT:                                            Id 'n2' [D:E:%d.14 'n2']
 // CHECK-NEXT:                                    ReturnStatement
-// CHECK-NEXT:                                        NumericLiteral : number
+// CHECK-NEXT:                                        NumericLiteral : 0

@@ -137,4 +137,4 @@ class C extends B {
 // CHECK-NEXT:                    FunctionExpression : %function.8
 // CHECK-NEXT:                        BlockStatement
 // CHECK-NEXT:                            ReturnStatement
-// CHECK-NEXT:                                NumericLiteral : number
+// CHECK-NEXT:                                NumericLiteral : 1
