@@ -8,6 +8,7 @@
 #ifndef HERMES_PLATFORMUNICODE_PLATFORMUNICODE_H
 #define HERMES_PLATFORMUNICODE_PLATFORMUNICODE_H
 
+#include "hermes/Platform/Unicode/UnicodeCaseConversion.h"
 #include "hermes/Platform/Unicode/UnicodeNormalization.h"
 #include "llvh/ADT/ArrayRef.h"
 #include "llvh/ADT/SmallVector.h"
@@ -53,8 +54,9 @@ void dateFormat(
     bool formatTime,
     llvh::SmallVectorImpl<char16_t> &buf);
 
-/// Options for case conversions: to uppercase or to lowercase.
-enum class CaseConversion { ToUpper, ToLower };
+/// Options for case conversions. Defined in UnicodeCaseConversion.h so that
+/// the table-driven implementation does not depend on backend selection.
+using CaseConversion = unicode::CaseConversion;
 
 /// Convert the string \p cs to the given \p targetCase, returning it in-place.
 /// If \p useCurrentLocale is true, do this using the user's locale; otherwise
