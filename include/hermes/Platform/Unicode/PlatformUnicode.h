@@ -38,9 +38,24 @@
 namespace hermes {
 namespace platform_unicode {
 
-/// Compare the strings \p left and \p right according to the user's preferred
-/// locale. \return -1, 0, or 1 corresponding to whether \p left compares less
-/// than, equal to, or greater than \p right.
+/// Compare the strings \p left and \p right. \return -1, 0, or 1
+/// corresponding to whether \p left compares less than, equal to, or greater
+/// than \p right.
+///
+/// The ordering is backend-specific, and only some backends use the host
+/// locale at all. The Hermes and LITE backends apply the DUCET root
+/// collation of UTS #10 from a generated table, with non-ignorable variable
+/// weighting and no identical level; they consult no locale, so a Swedish or
+/// a Turkish host sorts exactly as any other. The CoreFoundation, Java and
+/// ICU backends hand the strings to the platform collator under the host's
+/// current locale, which is CLDR-tailored rather than plain DUCET. The
+/// Emscripten backend calls the JavaScript engine's own
+/// String.prototype.localeCompare, so it inherits whatever the host browser
+/// or runtime does.
+///
+/// Every backend is a consistent comparison function, which is all ECMA-262
+/// requires of String.prototype.localeCompare; none of them is a
+/// locale-sensitive ordering callers may depend on.
 int localeCompare(
     llvh::ArrayRef<char16_t> left,
     llvh::ArrayRef<char16_t> right);

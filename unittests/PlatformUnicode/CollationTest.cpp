@@ -136,10 +136,10 @@ TEST(Collation, AppliesDiscontiguousContractions) {
   const char16_t i406[] = {0x0406};
   EXPECT_GT(cmp(seq, 3, i406, 1), 0);
 
-  // The absorbed breve must not also be counted in its original position.
-  // U+0F71 U+0F71 U+0F72 (Tibetan vowel signs) exercises this directly,
-  // unlike the pair above: 0F71 and 0F72 do not decompose and their ccc
-  // values (129, 130) are already in canonical order, so NFD is a no-op and
+  // An absorbed character must not also be counted in its original
+  // position. U+0F71 U+0F71 U+0F72 (Tibetan vowel signs) exercises that
+  // directly, unlike the pair above: 0F71 and 0F72 do not decompose and
+  // their ccc values (129, 130) are in canonical order, so NFD is a no-op and
   // the two sides below do not share an NFD form. ccc(0F71) = 129,
   // ccc(0F72) = 130, so the first 0F71 is unblocked from the second and the
   // contraction U+0F71 U+0F72 (primary 14415) applies discontiguously,

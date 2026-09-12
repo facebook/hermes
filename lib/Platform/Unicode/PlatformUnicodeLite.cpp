@@ -19,6 +19,8 @@ namespace platform_unicode {
 int localeCompare(
     llvh::ArrayRef<char16_t> left,
     llvh::ArrayRef<char16_t> right) {
+  // The DUCET root collation is deliberate: LITE must not depend on system
+  // state, so the ordering ignores the host locale.
   return unicode::compareUTF16(left, right);
 }
 
