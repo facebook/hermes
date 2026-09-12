@@ -229,6 +229,32 @@ TEST(Collation, IsSymmetricAndReflexive) {
   }
 }
 
+TEST(Collation, AsciiFastPathMatchesGeneralPath) {
+  // Every pair below is pure ASCII and so takes the fast path. The expected
+  // values are the ones the general path produces, asserted explicitly so
+  // that disabling the fast path cannot change any of them.
+  EXPECT_LT(cmp(u"a", u"A"), 0);
+  EXPECT_LT(cmp(u"A", u"b"), 0);
+  EXPECT_LT(cmp(u"abc", u"abd"), 0);
+  EXPECT_LT(cmp(u"ab", u"abc"), 0);
+  EXPECT_EQ(cmp(u"", u""), 0);
+  EXPECT_LT(cmp(u"", u"a"), 0);
+  EXPECT_EQ(cmp(u"Hello", u"Hello"), 0);
+  EXPECT_LT(cmp(u"Hello", u"World"), 0);
+  // Digits sort before letters at the primary level.
+  EXPECT_LT(cmp(u"1", u"a"), 0);
+  // A mixed-case pair that differs at the primary level, so the tertiary
+  // difference must not win.
+  EXPECT_LT(cmp(u"aZ", u"bA"), 0);
+
+  // A string with one non-ASCII character must not take the fast path.
+  const char16_t aAcute[] = {0x0061, 0x0301};
+  EXPECT_LT(cmp(u"a", 1, aAcute, 2), 0);
+  const char16_t hi[] = {0x0041, 0x00E9};
+  const char16_t lo[] = {0x0041, 0x0065};
+  EXPECT_GT(cmp(hi, 2, lo, 2), 0);
+}
+
 } // namespace
 
 #endif // not JAVA and not CF
