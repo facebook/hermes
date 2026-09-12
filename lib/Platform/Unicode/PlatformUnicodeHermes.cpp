@@ -10,6 +10,7 @@
 #if HERMES_PLATFORM_UNICODE == HERMES_PLATFORM_UNICODE_HERMES
 
 #include "hermes/Platform/Unicode/PlatformUnicodeICUImpl.h"
+#include "hermes/Platform/Unicode/UnicodeCollation.h"
 #include "hermes/Platform/Unicode/UnicodeNormalization.h"
 
 #include <cctype>
@@ -61,11 +62,10 @@ unicode::CaseLocale hostCaseLocale() {
 
 } // namespace
 
-// TODO(icu-removal): implement natively and drop the ICU forwarding.
 int localeCompare(
     llvh::ArrayRef<char16_t> left,
     llvh::ArrayRef<char16_t> right) {
-  return icu_impl::localeCompare(left, right);
+  return unicode::compareUTF16(left, right);
 }
 
 // TODO(icu-removal): implement natively and drop the ICU forwarding.
