@@ -10,6 +10,9 @@
 
 #include "llvh/ADT/ArrayRef.h"
 
+#include <cstdint>
+#include <utility>
+
 namespace hermes {
 namespace unicode {
 
@@ -30,6 +33,16 @@ namespace unicode {
 /// weights rather than being replaced or dropped, and U+0000 is an ordinary
 /// character rather than a terminator.
 int compareUTF16(llvh::ArrayRef<char16_t> left, llvh::ArrayRef<char16_t> right);
+
+/// \return the pair of primary weights UTS #10 section 10.1.3 assigns to
+/// \p cp, which is assumed to have no entry in the collation table.
+///
+/// Exposed only so a unit test can check the formula directly. The
+/// @implicitweights bases are unobservable through compareUTF16 with the
+/// current DUCET data: no reachable code point has an explicit primary
+/// anywhere in 0xFAFA..0xFB3F, so every wrong-but-monotonic assignment of
+/// those bases orders identically and even the UCA conformance suite passes.
+std::pair<uint16_t, uint16_t> implicitPrimariesForTesting(uint32_t cp);
 
 } // namespace unicode
 } // namespace hermes
