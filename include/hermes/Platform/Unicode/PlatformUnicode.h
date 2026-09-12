@@ -16,7 +16,6 @@
 /// Decide on which Unicode implementation to use.
 #define HERMES_PLATFORM_UNICODE_JAVA 1
 #define HERMES_PLATFORM_UNICODE_CF 2
-#define HERMES_PLATFORM_UNICODE_ICU 3
 #define HERMES_PLATFORM_UNICODE_EMSCRIPTEN 4
 #define HERMES_PLATFORM_UNICODE_LITE 5
 /// Self-contained implementation using Hermes' own generated Unicode tables,
@@ -46,8 +45,8 @@ namespace platform_unicode {
 /// locale at all. The Hermes and LITE backends apply the DUCET root
 /// collation of UTS #10 from a generated table, with non-ignorable variable
 /// weighting and no identical level; they consult no locale, so a Swedish or
-/// a Turkish host sorts exactly as any other. The CoreFoundation, Java and
-/// ICU backends hand the strings to the platform collator under the host's
+/// a Turkish host sorts exactly as any other. The CoreFoundation and Java
+/// backends hand the strings to the platform collator under the host's
 /// current locale, which is CLDR-tailored rather than plain DUCET. The
 /// Emscripten backend calls the JavaScript engine's own
 /// String.prototype.localeCompare, so it inherits whatever the host browser
@@ -85,7 +84,7 @@ void convertToCase(
 /// conversion (e.g. a Turkish, Azerbaijani, or Lithuanian locale). The
 /// Hermes backend computes this once per process and caches the result; the
 /// CoreFoundation backend caches only the underlying locale object and
-/// recomputes the result on every call; the ICU and Java backends query the
+/// recomputes the result on every call; the Java backend queries the
 /// current locale afresh on every call; the Emscripten and LITE backends
 /// have no host locale source and always return a hardcoded false.
 bool localeAffectsCasing();
