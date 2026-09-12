@@ -1604,6 +1604,20 @@ def print_normalization_tables(norm):
     print("")
 
 
+# Emitted above any table whose rows are string literals. Such a table must be
+# const, not constexpr: MSVC folds certain pairs of distinct string literals in
+# a constexpr initializer into a single literal, so a few rows silently hold
+# another row's text. It reproduces on every MSVC version tested, not just the
+# current one. Minimal reproduction:
+#   constexpr const char *A = "0F19 003F";
+#   constexpr const char *B = "296F 0021";
+#   // strcmp(A, B) == 0
+MSVC_CONSTEXPR_LITERAL_NOTE = """\
+// const, not constexpr: MSVC folds distinct string literals in a constexpr
+// initializer (e.g. "0F19 003F" and "296F 0021") into one, silently giving a
+// few rows another row's text. A const table is unaffected."""
+
+
 def print_normalization_test_data():
     """Emit NormalizationTestData.inc from NormalizationTest.txt.
 
@@ -1644,7 +1658,8 @@ struct NormTestRow { const char *columns; uint8_t part; };
     # file size and stops the rows from matching the upstream file when
     # grepped. The rows below are already one per line.
     print("// clang-format off")
-    print("static constexpr NormTestRow NORM_TEST_ROWS[] = {")
+    print(MSVC_CONSTEXPR_LITERAL_NOTE)
+    print("static const NormTestRow NORM_TEST_ROWS[] = {")
     for row, part in rows:
         print(f'  {{"{row}", {part}}},')
     print("};")
