@@ -49,6 +49,7 @@ class UnicodeDataFiles:
         "emoji-data.txt": f"http://unicode.org/Public/{VERSION}/ucd/emoji/emoji-data.txt",
         "NormalizationTest.txt": f"http://unicode.org/Public/{VERSION}/ucd/NormalizationTest.txt",
         "allkeys.txt": f"http://unicode.org/Public/UCA/{VERSION}/allkeys.txt",
+        "CollationTest_NON_IGNORABLE_SHORT.txt": f"http://unicode.org/Public/UCA/{VERSION}/CollationTest/CollationTest_NON_IGNORABLE_SHORT.txt",
     }
     # Set to True to keep the downloaded files in the local directory.
     KEEP_LOCAL_CACHE = False
@@ -106,7 +107,12 @@ class UnicodeDataFiles:
 PROPERTIES_FILES = [
     f
     for f in UnicodeDataFiles.URLS
-    if f not in ("NormalizationTest.txt", "allkeys.txt")
+    if f
+    not in (
+        "NormalizationTest.txt",
+        "allkeys.txt",
+        "CollationTest_NON_IGNORABLE_SHORT.txt",
+    )
 ]
 NORMALIZATION_FILES = ["UnicodeData.txt", "DerivedNormalizationProps.txt"]
 NORMTEST_FILES = ["NormalizationTest.txt"]
@@ -118,6 +124,11 @@ CASING_FILES = [
 ]
 CASETEST_FILES = ["UnicodeData.txt", "SpecialCasing.txt"]
 COLLATION_FILES = ["allkeys.txt", "UnicodeData.txt", "PropList.txt"]
+COLLATIONTEST_FILES = [
+    "CollationTest_NON_IGNORABLE_SHORT.txt",
+    "allkeys.txt",
+    "UnicodeData.txt",
+]
 
 
 # Unicode data field indexes. See UnicodeData.txt.
@@ -826,6 +837,66 @@ static constexpr CollRange COLL_HAN_CORE_BLOCKS[] = {
 };
 """
     )
+
+
+def print_collation_test_data(single, decomposable):
+    """Emit CollationTestData.inc.
+
+    Rows are emitted as string literals in the upstream file's own format
+    rather than as pre-parsed arrays, matching what the normalization
+    conformance data does: it is far smaller, compiles faster, stays greppable
+    against the upstream file, and lets a failure print the row verbatim.
+
+    The table is const rather than constexpr; see MSVC_CONSTEXPR_LITERAL_NOTE."""
+    rows = []
+    for line in UnicodeDataFiles.get_lines("CollationTest_NON_IGNORABLE_SHORT.txt"):
+        text = line.split("#")[0].strip()
+        if not text or text.startswith("@"):
+            continue
+        rows.append(" ".join(text.split()))
+    assert len(rows) > 200000, f"only {len(rows)} conformance rows parsed"
+
+    print_template(
+        """
+/// One row of CollationTest_NON_IGNORABLE.txt: a space-separated list of hex
+/// code points. Each row must sort at or after the row before it.
+struct CollTestRow { const char *codePoints; };
+"""
+    )
+
+    # clang-format splits long string literals across lines, which stops the
+    # rows from matching the upstream file when grepped.
+    print("// clang-format off")
+    print(MSVC_CONSTEXPR_LITERAL_NOTE)
+    print("static const CollTestRow COLL_TEST_ROWS[] = {")
+    for row in rows:
+        print(f'  {{"{row}"}},')
+    print("};")
+    print("// clang-format on")
+    print("")
+
+    # An independent check on the compression: the expected weights are read
+    # straight out of allkeys.txt here, so a bug in the run encoder shows up
+    # as a mismatch rather than being reproduced identically on both sides.
+    print_template(
+        """
+/// A code point and the single collation element allkeys.txt gives it, read
+/// directly from the file rather than through the compressed table, so this
+/// array is an independent check on the run encoding.
+struct CollWeightCheck {
+  uint32_t cp;
+  uint16_t primary;
+  uint16_t secondary;
+  uint8_t tertiary;
+};
+"""
+    )
+    checks = [(cp, v) for cp, v in sorted(single.items()) if cp not in decomposable]
+    print("static constexpr CollWeightCheck COLL_WEIGHT_CHECKS[] = {")
+    for cp, (_var, prim, sec, ter) in checks:
+        print(f"    {{0x{cp:04X}, 0x{prim:04X}, 0x{sec:04X}, 0x{ter:02X}}},")
+    print("};")
+    print("")
 
 
 def parse_property_aliases(
@@ -2238,6 +2309,7 @@ if __name__ == "__main__":
             "casing",
             "casetest",
             "collation",
+            "collationtest",
         ),
         default="properties",
         help="which generated file to emit (default: properties)",
@@ -2295,5 +2367,12 @@ if __name__ == "__main__":
     elif args.table == "normtest":
         print_header(NORMTEST_FILES, structs=False)
         print_normalization_test_data()
+    elif args.table == "collationtest":
+        print_header(COLLATIONTEST_FILES, structs=False)
+        single, _, _, _ = parse_allkeys(UnicodeDataFiles.get_lines("allkeys.txt"))
+        print_collation_test_data(
+            single,
+            canonically_decomposable(UnicodeDataFiles.get_lines("UnicodeData.txt")),
+        )
     else:
         raise AssertionError(f"unhandled --table {args.table}")
