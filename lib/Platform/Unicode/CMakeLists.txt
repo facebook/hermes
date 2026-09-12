@@ -20,7 +20,7 @@ set(source_files
 # calls them on every platform.
 if(HERMES_UNICODE_LITE OR (NOT APPLE AND NOT HERMES_IS_ANDROID))
   list(APPEND source_files UnicodeNormalization.cpp UnicodeCaseConversion.cpp
-       UnicodeCollation.cpp)
+       UnicodeCollation.cpp PlatformDateFormat.cpp)
 endif()
 
 add_hermes_library(hermesPlatformUnicode ${source_files})
