@@ -9,6 +9,7 @@
 
 #if HERMES_PLATFORM_UNICODE == HERMES_PLATFORM_UNICODE_LITE
 
+#include "hermes/Platform/Unicode/PlatformDateFormat.h"
 #include "hermes/Platform/Unicode/UnicodeCaseConversion.h"
 #include "hermes/Platform/Unicode/UnicodeCollation.h"
 #include "hermes/Platform/Unicode/UnicodeNormalization.h"
@@ -29,9 +30,9 @@ void dateFormat(
     bool formatDate,
     bool formatTime,
     llvh::SmallVectorImpl<char16_t> &buf) {
-  // FIXME: implement this.
-  llvh::ArrayRef<char> str{"dateFormat not implemented"};
-  buf.assign(str.begin(), str.end());
+  // The fixed formatter takes no locale and reads no system state beyond the
+  // timezone, so it satisfies this backend's no-dependency contract.
+  formatDateTimeFixed(unixtimeMs, formatDate, formatTime, buf);
 }
 
 void convertToCase(
