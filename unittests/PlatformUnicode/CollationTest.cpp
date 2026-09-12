@@ -162,6 +162,26 @@ TEST(Collation, RespectsBlockingInDiscontiguousMatching) {
   EXPECT_LT(cmp(blocked, 3, i406, 1), 0);
 }
 
+TEST(Collation, LongCombiningRunIsNotQuadratic) {
+  // The S2.1.1 discontiguous scan used to run at every position, walking to
+  // the end of the surrounding combining run each time, so a run of N
+  // non-starters cost Theta(N^2) with a combining-class binary search in the
+  // inner loop. U+0301 begins no contraction, so the early exit in
+  // matchContraction reduces this to one binary search per position.
+  //
+  // What is asserted is ordinary correctness -- the longer run wins at the
+  // secondary level, since U+0301 is ignorable at the primary level. The
+  // point of the test is that it finishes: at this length the scan without
+  // the early exit took 44 seconds, against 13 milliseconds with it.
+  const size_t kLength = 40000;
+  std::u16string longRun(kLength, u'\u0301');
+  std::u16string shortRun(kLength - 1, u'\u0301');
+  EXPECT_GT(
+      cmp(longRun.data(), longRun.size(), shortRun.data(), shortRun.size()), 0);
+  EXPECT_EQ(
+      cmp(longRun.data(), longRun.size(), longRun.data(), longRun.size()), 0);
+}
+
 TEST(Collation, EmbeddedNulAfterContractionDoesNotSkipFollowingCharacter) {
   // matchContraction probes a three-code-point key (cp0, cp1, cp2), and the
   // table stores two-code-point contractions with cp2 == 0. An embedded

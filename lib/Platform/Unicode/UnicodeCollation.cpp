@@ -126,6 +126,18 @@ const CollContraction *findContraction(uint32_t a, uint32_t b, uint32_t c) {
   return it;
 }
 
+/// \return true if \p cp is the first code point of some contraction.
+/// COLL_CONTRACTIONS is sorted lexicographically by (cp0, cp1, cp2), so the
+/// rows sharing a cp0 are adjacent and one binary search settles it.
+bool beginsContraction(uint32_t cp) {
+  auto *it = std::lower_bound(
+      std::begin(COLL_CONTRACTIONS),
+      std::end(COLL_CONTRACTIONS),
+      cp,
+      [](const CollContraction &e, uint32_t v) { return e.cp0 < v; });
+  return it != std::end(COLL_CONTRACTIONS) && it->cp0 == cp;
+}
+
 /// Append the elements of \p contraction to \p out.
 void appendContraction(
     const CollContraction &contraction,
@@ -166,6 +178,21 @@ size_t matchContraction(
     size_t i,
     llvh::SmallVectorImpl<bool> &absorbed,
     llvh::SmallVectorImpl<Weights> &out) {
+  // Neither the contiguous probe nor the S2.1.1 scan below can match unless
+  // cps[i] begins some contraction, so settle that first. Without this the
+  // scan runs at every position and walks to the end of the surrounding
+  // combining run, costing Theta(N^2) with a combining-class binary search
+  // inside: 100,000 copies of U+0301 hang, and that is one line of
+  // JavaScript away. U+0301 is not a contraction lead, so the check retires
+  // that input, and it also short-circuits the common case, since most
+  // characters begin no contraction at all.
+  //
+  // It does not make the scan linear in general. A code point that *is* a
+  // contraction lead still pays the full scan at every position, so a long
+  // run of U+0F71 stays quadratic.
+  if (!beginsContraction(cps[i]))
+    return 0;
+
   // S2.1: the longest contiguous match. The key is padded with zeros, which
   // is unambiguous because 0 is never a contraction member. The 3-code-point
   // probe below degenerates into a 2-code-point key when cps[i + 2] is 0
