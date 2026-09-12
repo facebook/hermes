@@ -631,8 +631,11 @@ endif()
 # to analyze the source code of the project.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Don't need ICU on Apple, Emscripten, and Android.
-if (APPLE OR EMSCRIPTEN OR HERMES_IS_ANDROID OR HERMES_UNICODE_LITE)
+# ICU is needed only by the impl_icu Intl backend (HERMES_ENABLE_INTL), and
+# only where that backend is actually used: Apple and Android have their own
+# native Intl implementations and never need it. The platform_unicode layer
+# is self-contained and never needs ICU.
+if (NOT HERMES_ENABLE_INTL OR APPLE OR EMSCRIPTEN OR HERMES_IS_ANDROID)
   set(ICU_FOUND 1)
 endif()
 
@@ -643,16 +646,11 @@ if (NOT ICU_FOUND)
     set(CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_STATIC_LIBRARY_SUFFIX}")
   endif()
 
-  if (HERMES_ENABLE_INTL)
-    # Attempt to locate a system-installed ICU. A minimum version of 65 is
-    # required because our ICU-based Intl implementation relies on APIs introduced
-    # in version 65.
-    # Include 'uc' twice for static libraries that depend on each other.
-    find_global_package(ICU 65 COMPONENTS uc i18n data uc)
-  else()
-    # Include 'uc' twice for static libraries that depend on each other.
-    find_global_package(ICU 52 COMPONENTS uc i18n data uc)
-  endif()
+  # Attempt to locate a system-installed ICU. A minimum version of 65 is
+  # required because our ICU-based Intl implementation relies on APIs introduced
+  # in version 65.
+  # Include 'uc' twice for static libraries that depend on each other.
+  find_global_package(ICU 65 COMPONENTS uc i18n data uc)
 
   set(CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_FIND_LIBRARY_SUFFIXES_OLD}")
 

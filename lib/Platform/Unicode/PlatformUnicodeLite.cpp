@@ -9,23 +9,20 @@
 
 #if HERMES_PLATFORM_UNICODE == HERMES_PLATFORM_UNICODE_LITE
 
+#include "hermes/Platform/Unicode/PlatformDateFormat.h"
+#include "hermes/Platform/Unicode/UnicodeCaseConversion.h"
+#include "hermes/Platform/Unicode/UnicodeCollation.h"
+#include "hermes/Platform/Unicode/UnicodeNormalization.h"
+
 namespace hermes {
 namespace platform_unicode {
 
 int localeCompare(
     llvh::ArrayRef<char16_t> left,
     llvh::ArrayRef<char16_t> right) {
-  for (size_t i = 0; i < left.size(); i++) {
-    if (i >= right.size()) {
-      return 1;
-    }
-    if (left[i] > right[i]) {
-      return 1;
-    } else if (left[i] < right[i]) {
-      return -1;
-    }
-  }
-  return left.size() < right.size() ? -1 : 0;
+  // The DUCET root collation is deliberate: LITE must not depend on system
+  // state, so the ordering ignores the host locale.
+  return unicode::compareUTF16(left, right);
 }
 
 void dateFormat(
@@ -33,20 +30,26 @@ void dateFormat(
     bool formatDate,
     bool formatTime,
     llvh::SmallVectorImpl<char16_t> &buf) {
-  // FIXME: implement this.
-  llvh::ArrayRef<char> str{"dateFormat not implemented"};
-  buf.assign(str.begin(), str.end());
+  // The fixed formatter takes no locale and reads no system state beyond the
+  // timezone, so it satisfies this backend's no-dependency contract.
+  formatDateTimeFixed(unixtimeMs, formatDate, formatTime, buf);
 }
 
 void convertToCase(
     llvh::SmallVectorImpl<char16_t> &buf,
     CaseConversion targetCase,
     bool useCurrentLocale) {
-  // FIXME: implement this.
+  // Root is deliberate: LITE must not depend on system state.
+  unicode::convertCaseUTF16(buf, targetCase, unicode::CaseLocale::Root);
+}
+
+bool localeAffectsCasing() {
+  // LITE never uses the host locale for casing.
+  return false;
 }
 
 void normalize(llvh::SmallVectorImpl<char16_t> &buf, NormalizationForm form) {
-  // FIXME: implement this.
+  unicode::normalizeUTF16(buf, form);
 }
 
 } // namespace platform_unicode

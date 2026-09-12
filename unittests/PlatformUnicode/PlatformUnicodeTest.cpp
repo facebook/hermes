@@ -27,7 +27,11 @@ TEST(PlatformUnicode, CaseTest) {
 }
 
 TEST(PlatformUnicode, VersionCheck) {
-  // Make sure we have an up-to-date version of ICU.
+  // Pin two easy-to-regress cases: U+180E (Mongolian Vowel Separator) is
+  // uncased and must pass through unchanged, and a capital Sigma at the end
+  // of the string must lower-case to the final form U+03C2 (\u03c2), per the
+  // Unicode SpecialCasing final-sigma rule, not the medial form U+03C3
+  // (\u03c3).
   llvh::SmallVector<char16_t, 16> str = {u'A', u'\u180e', u'\u03a3'};
   convertToCase(str, CaseConversion::ToLower, false /* useCurrentLocale */);
   ASSERT_EQ(3, str.size());

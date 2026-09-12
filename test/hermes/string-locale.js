@@ -19,8 +19,6 @@ RUN:            | %FileCheck --match-full-lines -check-prefix TR %s
 RUN: LC_ALL=UTF-8 %shermes -exec %s \
 RUN:            | %FileCheck --match-full-lines -check-prefix NO %s
 // UNSUPPORTED: unicode_lite
-TODO(T53144040) Fix LIT tests on Windows
-XFAIL: windows
 */
 "use strict";
 
