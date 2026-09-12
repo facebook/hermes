@@ -49,6 +49,11 @@ void convertToCase(
   unicode::convertCaseUTF16(buf, targetCase, unicode::CaseLocale::Root);
 }
 
+bool localeAffectsCasing() {
+  // LITE never uses the host locale for casing.
+  return false;
+}
+
 void normalize(llvh::SmallVectorImpl<char16_t> &buf, NormalizationForm form) {
   unicode::normalizeUTF16(buf, form);
 }

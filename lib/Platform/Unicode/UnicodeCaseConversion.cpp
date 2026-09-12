@@ -20,8 +20,14 @@ namespace unicode {
 
 namespace {
 
+/// U+0307 COMBINING DOT ABOVE, the dot that Table 3-17's Lithuanian and
+/// Turkish/Azeri rules insert, delete, or test for.
 constexpr uint32_t kCombiningDotAbove = 0x0307;
+/// U+0049 LATIN CAPITAL LETTER I.
 constexpr uint32_t kCapitalI = 0x0049;
+/// The Canonical_Combining_Class value "Above" (ccc=230), used by several
+/// Table 3-17 conditions to find the nearest preceding/following character
+/// that is neither a base (ccc=0) nor another "Above" mark.
 constexpr uint8_t kCccAbove = 230;
 
 /// Code points driving the 16 conditional entries of SpecialCasing.txt,
@@ -41,6 +47,8 @@ constexpr uint32_t kCombiningGraveAbove = 0x0300;
 constexpr uint32_t kCombiningAcuteAbove = 0x0301;
 constexpr uint32_t kCombiningTildeAbove = 0x0303;
 
+/// \return true if \p cp falls in one of the sorted, non-overlapping
+/// [first, last] ranges of \p table.
 bool inRanges(llvh::ArrayRef<CaseRange> table, uint32_t cp) {
   auto *it = std::lower_bound(
       table.begin(), table.end(), cp, [](const CaseRange &r, uint32_t cp) {
@@ -49,12 +57,18 @@ bool inRanges(llvh::ArrayRef<CaseRange> table, uint32_t cp) {
   return it != table.end() && cp >= it->first;
 }
 
+/// \return true if \p cp has the Unicode Cased property (Table 3-17's
+/// building block for Final_Sigma).
 bool isCased(uint32_t cp) {
   return inRanges(CASED_RANGES, cp);
 }
+/// \return true if \p cp has the Unicode Case_Ignorable property (Table
+/// 3-17's building block for Final_Sigma).
 bool isCaseIgnorable(uint32_t cp) {
   return inRanges(CASE_IGNORABLE_RANGES, cp);
 }
+/// \return true if \p cp has the Unicode Soft_Dotted property (Table 3-17's
+/// building block for After_Soft_Dotted).
 bool isSoftDotted(uint32_t cp) {
   return inRanges(SOFT_DOTTED_RANGES, cp);
 }
@@ -73,6 +87,8 @@ uint32_t applyDelta(llvh::ArrayRef<CaseDelta> table, uint32_t cp) {
   return (uint32_t)((int32_t)cp + it->delta);
 }
 
+/// \return the entry for \p cp in the sorted-by-codepoint table \p t, or
+/// nullptr if \p cp has no full (possibly multi-character) case mapping.
 const FullCaseEntry *findFull(llvh::ArrayRef<FullCaseEntry> t, uint32_t cp) {
   auto *it = std::lower_bound(
       t.begin(), t.end(), cp, [](const FullCaseEntry &e, uint32_t cp) {
@@ -84,6 +100,11 @@ const FullCaseEntry *findFull(llvh::ArrayRef<FullCaseEntry> t, uint32_t cp) {
 /// Table 3-17 Final_Sigma: preceded by a cased letter then zero or more
 /// case-ignorable characters, and not followed by zero or more
 /// case-ignorable characters then a cased letter.
+/// NOTE: this checks Case_Ignorable before Cased at each scanned character,
+/// so for the ~200 code points that are both Cased and Case_Ignorable, they
+/// are treated as ignorable rather than cased. This is a deliberate,
+/// intentional departure from a literal reading of the definition above; it
+/// is what ICU does, and matching ICU exactly is the goal. Do not "fix" it.
 bool isFinalSigma(llvh::ArrayRef<char32_t> s, size_t i) {
   size_t j = i;
   bool precededByCased = false;

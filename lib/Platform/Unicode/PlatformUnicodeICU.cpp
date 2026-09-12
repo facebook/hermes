@@ -14,6 +14,7 @@
 
 #include <time.h>
 
+#include <cstring>
 #include <memory>
 
 namespace hermes {
@@ -240,6 +241,18 @@ void convertToCase(
     CaseConversion targetCase,
     bool useCurrentLocale) {
   icu_impl::convertToCase(cs, targetCase, useCurrentLocale);
+}
+
+bool localeAffectsCasing() {
+  char lang[8];
+  UErrorCode err = U_ZERO_ERROR;
+  int32_t len = uloc_getLanguage(uloc_getDefault(), lang, sizeof(lang), &err);
+  if (U_FAILURE(err) || len <= 0)
+    return false;
+  auto is = [&](const char *s) {
+    return (int32_t)strlen(s) == len && memcmp(lang, s, len) == 0;
+  };
+  return is("tr") || is("az") || is("lt");
 }
 
 void normalize(llvh::SmallVectorImpl<char16_t> &buf, NormalizationForm form) {

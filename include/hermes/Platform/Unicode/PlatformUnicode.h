@@ -66,6 +66,15 @@ void convertToCase(
     CaseConversion targetCase,
     bool useCurrentLocale);
 
+/// \return whether the host's current locale changes the result of case
+/// conversion (e.g. a Turkish, Azerbaijani, or Lithuanian locale). The
+/// Hermes backend computes this once per process and caches the result; the
+/// CoreFoundation backend caches only the underlying locale object and
+/// recomputes the result on every call; the ICU and Java backends query the
+/// current locale afresh on every call; the Emscripten and LITE backends
+/// have no host locale source and always return a hardcoded false.
+bool localeAffectsCasing();
+
 /// Options for normalizing Unicode strings. Defined in
 /// UnicodeNormalization.h so that the table-driven normalizer does not have to
 /// depend on backend selection.
