@@ -59,9 +59,21 @@ int localeCompare(
     llvh::ArrayRef<char16_t> left,
     llvh::ArrayRef<char16_t> right);
 
-/// Format the given timestamp \p unixtimeMs according to the user's preferred
-/// locale. Include date and time formatting corresponding to \p formatDate and
-/// \p formatTime respectively. Assigns the result into \p buf.
+/// Format the given timestamp \p unixtimeMs, including date and time
+/// formatting corresponding to \p formatDate and \p formatTime respectively.
+/// Assigns the result into \p buf. The timestamp is interpreted in the host's
+/// local timezone by every backend.
+///
+/// The format is backend-specific, and only some backends use the host locale
+/// at all. The Hermes, LITE and Emscripten backends call formatDateTimeFixed,
+/// which emits a fixed English form ("Dec 31, 1969, 7:00:00 PM"); they consult
+/// no locale, so the output is identical on every machine and in every
+/// container. The CoreFoundation and Java backends hand the timestamp to the
+/// platform formatter under the host's current locale, so their output tracks
+/// it.
+///
+/// See doc/SpecIncompat.md for what this means for
+/// Date.prototype.toLocaleString and its siblings.
 void dateFormat(
     double unixtimeMs,
     bool formatDate,
