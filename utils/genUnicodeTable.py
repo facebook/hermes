@@ -600,7 +600,8 @@ def build_collation_runs(single, style_index):
 
 
 def verify_collation_runs(runs, single, styles):
-    """Assert the run encoding reproduces every input mapping exactly.
+    """Assert the run encoding reproduces every input mapping exactly, and
+    that its fields fit the C++ struct's bit widths.
 
     The encoder relies on primary weights advancing predictably; a data
     change that broke that assumption would otherwise emit silently wrong
@@ -617,6 +618,63 @@ def verify_collation_runs(runs, single, styles):
             rebuilt[first + k] = (var, prim + k * step, sec, ter)
     assert rebuilt == single, (
         f"run encoding lost data: {len(rebuilt)} rebuilt vs {len(single)} input"
+    )
+    assert max(r[0] for r in runs) < (1 << 21), "code point must fit in 21 bits"
+    assert max(r[2] for r in runs) < 65536, "primary must fit in uint16_t"
+
+
+def verify_style_sizes(styles):
+    """Assert the pooled secondary/tertiary/variable styles fit the C++
+    struct's bit widths."""
+    assert len(styles) < 65536, "style index must fit in uint16_t"
+    assert max(s for _, s, _ in styles) < 65536, "secondary must fit in uint16_t"
+    assert max(t for _, _, t in styles) < 256, "tertiary must fit in uint8_t"
+
+
+def verify_no_implicit_overlap(single, multi, implicit):
+    """Assert no code point in an `@implicitweights` range also has an
+    explicit `single`/`multi` entry, which would make the lookup order
+    between the two tables ambiguous."""
+    for first, last, _ in implicit:
+        for cp in range(first, last + 1):
+            assert cp not in single and cp not in multi, (
+                f"U+{cp:04X} is in an @implicitweights range but also has an "
+                "explicit entry; the lookup order would be ambiguous"
+            )
+
+
+def verify_collation_pool(pool, expansions):
+    """Assert the shared collation element pool and the expansions indexing
+    into it fit the C++ struct's bit widths."""
+    assert len(pool) < 65536, "pool offset must fit in uint16_t"
+    assert all(length < 256 for _, _, length in expansions), (
+        "expansion length must fit in uint8_t"
+    )
+
+
+def verify_collation_invariants(single, contractions):
+    """Check the properties of the DUCET data, as opposed to Unicode itself,
+    that the ASCII fast path in UnicodeCollation.cpp relies on, plus the
+    contraction key size its C++ matcher hardcodes.
+
+    ASCII's NFD-stability needs no check here: it is guaranteed by Unicode's
+    stability policy, not by this data. These three properties have no such
+    guarantee and could change with a future allkeys.txt, so the fast path
+    would otherwise be relying on an unstated assumption."""
+    max_contraction = max(len(cps) for cps in contractions)
+    assert max_contraction <= 3, (
+        f"contractions of {max_contraction} code points exceed the fixed "
+        "three-code-point key; the C++ matcher would truncate them"
+    )
+    assert not any(all(c < 0x80 for c in cps) for cps in contractions), (
+        "an all-ASCII contraction exists; the ASCII fast path in "
+        "UnicodeCollation.cpp assumes none does and would be wrong"
+    )
+    assert all(cp in single for cp in range(0x80)), (
+        "an ASCII code point has no single-element mapping in the DUCET "
+        "data (it may expand instead, or be missing entirely); the ASCII "
+        "fast path in UnicodeCollation.cpp would silently treat it as "
+        "completely ignorable instead of weighing it"
     )
 
 
@@ -642,21 +700,12 @@ def print_collation_tables(
         }
     )
     style_index = {k: i for i, k in enumerate(styles)}
-    assert len(styles) < 65536, "style index must fit in uint16_t"
-    assert max(s for _, s, _ in styles) < 65536, "secondary must fit in uint16_t"
-    assert max(t for _, _, t in styles) < 256, "tertiary must fit in uint8_t"
+    verify_style_sizes(styles)
 
     runs = build_collation_runs(single, style_index)
     verify_collation_runs(runs, single, styles)
-    assert max(r[0] for r in runs) < (1 << 21), "code point must fit in 21 bits"
-    assert max(r[2] for r in runs) < 65536, "primary must fit in uint16_t"
 
-    for first, last, _ in implicit:
-        for cp in range(first, last + 1):
-            assert cp not in single and cp not in multi, (
-                f"U+{cp:04X} is in an @implicitweights range but also has an "
-                "explicit entry; the lookup order would be ambiguous"
-            )
+    verify_no_implicit_overlap(single, multi, implicit)
 
     print_template(
         """
@@ -721,15 +770,9 @@ struct CollRun {
         ces = contractions[cps]
         contraction_rows.append((cps, intern(ces), len(ces)))
 
-    assert len(pool) < 65536, "pool offset must fit in uint16_t"
-    assert all(length < 256 for _, _, length in expansions), (
-        "expansion length must fit in uint8_t"
-    )
+    verify_collation_pool(pool, expansions)
     max_contraction = max(len(cps) for cps, _, _ in contraction_rows)
-    assert max_contraction <= 3, (
-        f"contractions of {max_contraction} code points exceed the fixed "
-        "three-code-point key; the C++ matcher would truncate them"
-    )
+    verify_collation_invariants(single, contractions)
 
     print_template(
         """
