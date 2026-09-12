@@ -104,6 +104,13 @@ class UnicodeDataFiles:
 PROPERTIES_FILES = [f for f in UnicodeDataFiles.URLS if f != "NormalizationTest.txt"]
 NORMALIZATION_FILES = ["UnicodeData.txt", "DerivedNormalizationProps.txt"]
 NORMTEST_FILES = ["NormalizationTest.txt"]
+CASING_FILES = [
+    "UnicodeData.txt",
+    "SpecialCasing.txt",
+    "DerivedCoreProperties.txt",
+    "PropList.txt",
+]
+CASETEST_FILES = ["UnicodeData.txt", "SpecialCasing.txt"]
 
 
 # Unicode data field indexes. See UnicodeData.txt.
@@ -447,6 +454,18 @@ def parse_codepoint_ranges(lines: Iterable[str], pred) -> dict[str, list[range_t
         ranges[last_name].append((begin, last_cp))
 
     return ranges
+
+
+def binary_property_ranges(lines, prop):
+    """Merged inclusive ranges of code points having binary property \\p prop."""
+    out = []
+    for line in lines:
+        f = split_fields(line)
+        if len(f) < 2 or f[1] != prop:
+            continue
+        out.append(parse_range(f[0]))
+    out.sort()
+    return merge_adjacent_ranges(out)
 
 
 def parse_property_aliases(
@@ -1283,6 +1302,49 @@ class DeltaMapBlock:
         return code.strip()
 
 
+class FullCaseData:
+    """Full Unicode case mappings, including the multi-character mappings and
+    the properties needed by the conditional rules. Distinct from CaseMap,
+    which keeps only single-character locale-insensitive mappings for RegExp
+    canonicalization."""
+
+    def __init__(self, unicode_data_lines, special_casing_lines):
+        self.simple_upper = {}  # cp -> cp
+        self.simple_lower = {}  # cp -> cp
+        self.full_upper = {}  # cp -> [cp, ...], only when longer than one
+        self.full_lower = {}
+        for line in unicode_data_lines:
+            f = line.split(";")
+            if len(f) < 14:
+                continue
+            cp = int(f[CODEPOINT_FIELD], 16)
+            if f[UPPERCASE_FIELD].strip():
+                self.simple_upper[cp] = int(f[UPPERCASE_FIELD], 16)
+            if f[LOWERCASE_FIELD].strip():
+                self.simple_lower[cp] = int(f[LOWERCASE_FIELD], 16)
+        for line in special_casing_lines:
+            f = [x.strip() for x in line.split("#")[0].split(";")]
+            if len(f) < 5 or not f[0]:
+                continue
+            # Conditional entries are implemented in C++, not tabulated.
+            if f[4]:
+                continue
+            cp = int(f[0], 16)
+            lower = [int(x, 16) for x in f[1].split()]
+            upper = [int(x, 16) for x in f[3].split()]
+            if len(upper) > 1:
+                self.full_upper[cp] = upper
+            if len(lower) > 1:
+                self.full_lower[cp] = lower
+
+    def delta_pairs(self, simple, full):
+        """(cp, mapped) pairs for the delta blocks, excluding code points that
+        have a full mapping since those are handled by the side table."""
+        return [
+            (cp, m) for cp, m in sorted(simple.items()) if cp != m and cp not in full
+        ]
+
+
 class CaseMap:
     """Unicode case mapping helper.
 
@@ -1393,6 +1455,117 @@ ${entry_text}
         entry_count=len(blocks),
         entry_text=",\n".join(b.output() for b in blocks),
     )
+
+
+def print_case_tables(case, cased, case_ignorable, soft_dotted):
+    """Emit CaseData.inc."""
+    print_template(
+        """
+/// A run of code points sharing a case-mapping delta, in the same encoding as
+/// UNICODE_FOLDS: cp maps to cp + delta when (cp - start) % modulo == 0.
+struct CaseDelta {
+  unsigned start : 24;
+  unsigned count : 8;
+  int delta : 24;
+  unsigned modulo : 8;
+};
+
+/// A multi-character case mapping, as an offset and length into
+/// FULL_CASE_POOL.
+struct FullCaseEntry { uint32_t cp; uint32_t offset; uint8_t length; };
+
+/// An inclusive range of code points sharing a binary property.
+struct CaseRange { uint32_t first; uint32_t last; };
+"""
+    )
+
+    for name, pairs in (
+        ("TO_UPPER_DELTAS", case.delta_pairs(case.simple_upper, case.full_upper)),
+        ("TO_LOWER_DELTAS", case.delta_pairs(case.simple_lower, case.full_lower)),
+    ):
+        blocks = []
+        for p in pairs:
+            DeltaMapBlock.append_to_list(blocks, p)
+        print(f"static constexpr CaseDelta {name}[] = {{")
+        for b in blocks:
+            print(f"  {b.output()},")
+        print("};")
+        print("")
+
+    pool = []
+    pool_index = {}
+
+    def intern(seq):
+        key = tuple(seq)
+        if key not in pool_index:
+            pool_index[key] = len(pool)
+            pool.extend(seq)
+        return pool_index[key]
+
+    tables = {}
+    for name, mapping in (
+        ("FULL_UPPER", case.full_upper),
+        ("FULL_LOWER", case.full_lower),
+    ):
+        entries = []
+        for cp in sorted(mapping):
+            seq = mapping[cp]
+            assert all(c <= 0xFFFF for c in seq), f"{cp:04X} maps outside the BMP"
+            entries.append((cp, intern(seq), len(seq)))
+        tables[name] = entries
+
+    print_codepoint_array("FULL_CASE_POOL", "char16_t", pool)
+
+    for name, entries in tables.items():
+        print(f"static constexpr FullCaseEntry {name}[] = {{")
+        for cp, offset, length in entries:
+            print(f"  {{{as_hex(cp)}, {offset}, {length}}},")
+        print("};")
+        print("")
+
+    for name, ranges in (
+        ("CASED_RANGES", cased),
+        ("CASE_IGNORABLE_RANGES", case_ignorable),
+        ("SOFT_DOTTED_RANGES", soft_dotted),
+    ):
+        print(f"static constexpr CaseRange {name}[] = {{")
+        for first, last in ranges:
+            print(f"  {{{as_hex(first)}, {as_hex(last)}}},")
+        print("};")
+        print("")
+
+
+def print_case_test_data(case):
+    """Emit CaseMappingTestData.inc: expectations derived directly from the
+    UCD dictionaries, so the test cross-checks the delta-block compression
+    rather than restating it.
+
+    Emitted as two lists, one per direction, each excluding code points that
+    have a multi-character mapping in THAT direction. Full mappings are
+    asymmetric -- 102 code points have one only for uppercase and U+0130 only
+    for lowercase -- so a single combined list would either lose coverage or
+    force the test to guard its assertions, which would let it pass
+    vacuously."""
+    print_template(
+        """
+/// One code point's expected single-character mapping, taken straight from
+/// UnicodeData.txt rather than through the compressed tables.
+struct SimpleCaseExpectation { uint32_t cp; uint32_t mapped; };
+"""
+    )
+    for name, simple, full in (
+        ("SIMPLE_UPPER_EXPECTATIONS", case.simple_upper, case.full_upper),
+        ("SIMPLE_LOWER_EXPECTATIONS", case.simple_lower, case.full_lower),
+    ):
+        print("// clang-format off")
+        print(f"static constexpr SimpleCaseExpectation {name}[] = {{")
+        for cp in sorted(simple):
+            if cp in full:
+                continue
+            print(f"  {{{as_hex(cp)}, {as_hex(simple[cp])}}},")
+        print("};")
+        print("// clang-format on")
+        print("")
 
 
 class NormalizationData:
@@ -1698,7 +1871,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--table",
-        choices=("properties", "normalization", "normtest"),
+        choices=("properties", "normalization", "normtest", "casing", "casetest"),
         default="properties",
         help="which generated file to emit (default: properties)",
     )
@@ -1713,6 +1886,28 @@ if __name__ == "__main__":
             NormalizationData(
                 UnicodeDataFiles.get_lines("UnicodeData.txt"),
                 UnicodeDataFiles.get_lines("DerivedNormalizationProps.txt"),
+            )
+        )
+    elif args.table == "casing":
+        print_header(CASING_FILES, structs=False)
+        derived = UnicodeDataFiles.get_lines("DerivedCoreProperties.txt")
+        print_case_tables(
+            FullCaseData(
+                UnicodeDataFiles.get_lines("UnicodeData.txt"),
+                UnicodeDataFiles.get_lines("SpecialCasing.txt"),
+            ),
+            binary_property_ranges(derived, "Cased"),
+            binary_property_ranges(derived, "Case_Ignorable"),
+            binary_property_ranges(
+                UnicodeDataFiles.get_lines("PropList.txt"), "Soft_Dotted"
+            ),
+        )
+    elif args.table == "casetest":
+        print_header(CASETEST_FILES, structs=False)
+        print_case_test_data(
+            FullCaseData(
+                UnicodeDataFiles.get_lines("UnicodeData.txt"),
+                UnicodeDataFiles.get_lines("SpecialCasing.txt"),
             )
         )
     else:
