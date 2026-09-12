@@ -61,6 +61,11 @@ void convertToCase(
   unicode::convertCaseUTF16(str, targetCase, unicode::CaseLocale::Root);
 }
 
+bool localeAffectsCasing() {
+  // There is no locale source on this platform yet.
+  return false;
+}
+
 void normalize(llvh::SmallVectorImpl<char16_t> &buf, NormalizationForm form) {
   unicode::normalizeUTF16(buf, form);
 }
