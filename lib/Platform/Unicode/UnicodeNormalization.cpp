@@ -134,17 +134,6 @@ uint32_t composePair(uint32_t a, uint32_t b) {
   return it->composite;
 }
 
-/// Decode the next code point of \p buf starting at \p i, advancing \p i past
-/// it. An unpaired surrogate decodes to its own value.
-uint32_t nextCodePoint(llvh::ArrayRef<char16_t> buf, size_t &i) {
-  uint32_t cp = buf[i++];
-  if (isHighSurrogate(cp) && i < buf.size() && isLowSurrogate(buf[i])) {
-    cp = utf16SurrogatePairToCodePoint(cp, buf[i]);
-    ++i;
-  }
-  return cp;
-}
-
 /// \return true if \p buf is already in \p form, per the UAX #15 quick check.
 /// A Maybe result is reported as false so the caller runs the full algorithm.
 bool isAlreadyNormalized(llvh::ArrayRef<char16_t> buf, NormalizationForm form) {
