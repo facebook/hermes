@@ -10,6 +10,7 @@
 #if HERMES_PLATFORM_UNICODE == HERMES_PLATFORM_UNICODE_LITE
 
 #include "hermes/Platform/Unicode/UnicodeCaseConversion.h"
+#include "hermes/Platform/Unicode/UnicodeCollation.h"
 #include "hermes/Platform/Unicode/UnicodeNormalization.h"
 
 namespace hermes {
@@ -18,17 +19,7 @@ namespace platform_unicode {
 int localeCompare(
     llvh::ArrayRef<char16_t> left,
     llvh::ArrayRef<char16_t> right) {
-  for (size_t i = 0; i < left.size(); i++) {
-    if (i >= right.size()) {
-      return 1;
-    }
-    if (left[i] > right[i]) {
-      return 1;
-    } else if (left[i] < right[i]) {
-      return -1;
-    }
-  }
-  return left.size() < right.size() ? -1 : 0;
+  return unicode::compareUTF16(left, right);
 }
 
 void dateFormat(
