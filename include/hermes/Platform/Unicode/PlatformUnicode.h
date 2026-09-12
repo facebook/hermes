@@ -18,6 +18,9 @@
 #define HERMES_PLATFORM_UNICODE_ICU 3
 #define HERMES_PLATFORM_UNICODE_EMSCRIPTEN 4
 #define HERMES_PLATFORM_UNICODE_LITE 5
+/// Self-contained implementation using Hermes' own generated Unicode tables,
+/// with no dependency on a system library.
+#define HERMES_PLATFORM_UNICODE_HERMES 6
 
 #ifndef HERMES_PLATFORM_UNICODE
 #if defined(__ANDROID__)
