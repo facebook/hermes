@@ -18,6 +18,17 @@ namespace unicode {
 
 #include "NormalizationData.inc"
 
+uint8_t getCanonicalCombiningClass(uint32_t cp) {
+  auto *it = std::lower_bound(
+      std::begin(CCC_RANGES),
+      std::end(CCC_RANGES),
+      cp,
+      [](const CCCRange &r, uint32_t cp) { return r.last < cp; });
+  if (it == std::end(CCC_RANGES) || cp < it->first)
+    return 0;
+  return it->ccc;
+}
+
 namespace {
 
 /// Hangul composition constants, UAX #15 section 10.
@@ -35,18 +46,6 @@ constexpr uint32_t kSCount = kLCount * kNCount;
 /// A combining class greater than every real one, used to mark that no starter
 /// has been seen yet so that nothing may compose onto it.
 constexpr uint8_t kNoStarter = 255;
-
-/// \return the canonical combining class of \p cp, or 0.
-uint8_t getCCC(uint32_t cp) {
-  auto *it = std::lower_bound(
-      std::begin(CCC_RANGES),
-      std::end(CCC_RANGES),
-      cp,
-      [](const CCCRange &r, uint32_t cp) { return r.last < cp; });
-  if (it == std::end(CCC_RANGES) || cp < it->first)
-    return 0;
-  return it->ccc;
-}
 
 /// \return true if \p cp has Quick_Check No or Maybe for \p form, meaning the
 /// fast path must not be taken.
@@ -152,7 +151,7 @@ bool isAlreadyNormalized(llvh::ArrayRef<char16_t> buf, NormalizationForm form) {
   uint8_t lastCCC = 0;
   for (size_t i = 0; i < buf.size();) {
     uint32_t cp = nextCodePoint(buf, i);
-    uint8_t ccc = getCCC(cp);
+    uint8_t ccc = getCanonicalCombiningClass(cp);
     if (ccc != 0 && ccc < lastCCC)
       return false;
     if (isQCNotYes(cp, form))
@@ -184,13 +183,13 @@ void decomposeCodePoint(
 /// Sort each maximal run of non-starters by combining class, stably.
 void canonicalOrder(llvh::SmallVectorImpl<char32_t> &s) {
   for (size_t i = 1; i < s.size(); ++i) {
-    uint8_t ccc = getCCC(s[i]);
+    uint8_t ccc = getCanonicalCombiningClass(s[i]);
     if (ccc == 0)
       continue;
     char32_t c = s[i];
     size_t j = i;
     while (j > 0) {
-      uint8_t prevCCC = getCCC(s[j - 1]);
+      uint8_t prevCCC = getCanonicalCombiningClass(s[j - 1]);
       if (prevCCC == 0 || prevCCC <= ccc)
         break;
       s[j] = s[j - 1];
@@ -207,10 +206,10 @@ void composeInPlace(llvh::SmallVectorImpl<char32_t> &s) {
   size_t starterPos = 0;
   uint32_t starter = s[0];
   size_t outPos = 1;
-  uint8_t lastCCC = getCCC(starter) != 0 ? kNoStarter : 0;
+  uint8_t lastCCC = getCanonicalCombiningClass(starter) != 0 ? kNoStarter : 0;
   for (size_t i = 1; i < s.size(); ++i) {
     uint32_t ch = s[i];
-    uint8_t chCCC = getCCC(ch);
+    uint8_t chCCC = getCanonicalCombiningClass(ch);
     uint32_t composite = composePair(starter, ch);
     if (composite != 0 && (lastCCC < chCCC || lastCCC == 0)) {
       s[starterPos] = composite;

@@ -9,6 +9,7 @@
 
 #if HERMES_PLATFORM_UNICODE == HERMES_PLATFORM_UNICODE_EMSCRIPTEN
 
+#include "hermes/Platform/Unicode/UnicodeCaseConversion.h"
 #include "hermes/Platform/Unicode/UnicodeNormalization.h"
 
 #include <emscripten.h>
@@ -56,7 +57,8 @@ void convertToCase(
     llvh::SmallVectorImpl<char16_t> &str,
     CaseConversion targetCase,
     bool useCurrentLocale) {
-  // FIXME: implement this.
+  // Root is deliberate: there is no locale source on this platform yet.
+  unicode::convertCaseUTF16(str, targetCase, unicode::CaseLocale::Root);
 }
 
 void normalize(llvh::SmallVectorImpl<char16_t> &buf, NormalizationForm form) {
