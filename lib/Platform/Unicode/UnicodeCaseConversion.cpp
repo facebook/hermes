@@ -314,17 +314,6 @@ void convertCodePoint(
   appendDefaultMapping(s[i], targetCase, out);
 }
 
-/// Decode the next code point of \p buf starting at \p i, advancing \p i
-/// past it. An unpaired surrogate decodes to its own value.
-uint32_t nextCodePoint(llvh::ArrayRef<char16_t> buf, size_t &i) {
-  uint32_t cp = buf[i++];
-  if (isHighSurrogate(cp) && i < buf.size() && isLowSurrogate(buf[i])) {
-    cp = utf16SurrogatePairToCodePoint(cp, buf[i]);
-    ++i;
-  }
-  return cp;
-}
-
 } // namespace
 
 void convertCaseUTF16(
