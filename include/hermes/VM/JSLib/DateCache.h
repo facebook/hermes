@@ -19,25 +19,29 @@ enum class TimeType : int8_t {
   Utc,
 };
 
-/// Cache local time offset (including daylight saving offset).
+/// Cache local time offset (standard offset + daylight saving offset).
 ///
-/// Standard offset is computed via localTZA() and cached. DST is cached in an
-/// array of time intervals, time in the same interval has a fixed DST offset.
-/// For every new time point that is not included in any existing time interval,
-/// compute its DST offset, try extending an existing interval, or creating a
-/// new one and storing to the cache array (replace the least recently used
-/// cache if it's full).
+/// The total local offset is cached in an array of time intervals; time in the
+/// same interval has a fixed total offset. For every new time point that is not
+/// included in any existing time interval, compute its total offset, try
+/// extending an existing interval, or create a new one and store it in the
+/// cache array (replacing the least recently used entry if it's full).
 ///
-/// The algorithm of the DST caching is described below:
-/// 1. Initialize every interval in the DST cache array to be [t_max, -t_max],
+/// Note that the total offset is cached, not just the DST offset: the standard
+/// offset itself can change over history (e.g. Europe/Kyiv was UTC+3 until
+/// 1991 and is UTC+2 now), so adding a single cached standard offset to a
+/// cached DST offset would produce wrong results for such dates.
+///
+/// The algorithm of the offset caching is described below:
+/// 1. Initialize every interval in the cache array to be [t_max, -t_max],
 /// which is considered an "empty" interval, here t_max is the maximum epoch
 /// time supported by some OS time APIs. Initialize candidate_ to point to the
 /// first interval in the array. And constant kDSTDeltaMs is the maximum
-/// time range that can have at most one DST transition. Each entry also has an
+/// time range that can have at most one offset transition. Each entry also has an
 /// epoch value that is used to find out the least recently used entry, but we
 /// omit the operations on them in this description.
 /// 2. Given a UTC time point t, check if it's included in candidate_, if yes,
-/// return the DST offset of candidate_. Otherwise, go to step 3.
+/// return the offset of candidate_. Otherwise, go to step 3.
 /// 3. Search the cache array and try to find two intervals:
 ///    before: [s_before, e_before] where s_before <= t and as close as
 ///    possible.
@@ -46,20 +50,20 @@ enum class TimeType : int8_t {
 ///    If one interval is not found, let it point to an empty interval in the
 ///    cache array (if no empty interval in it, reset the least recently used
 ///    one to empty and use it). Assign before to candidate_.
-/// 4. Check if the the before interval is empty, if yes, compute the DST of t,
-///    and set its interval to [t, t]. Otherwise, go to step 5.
+/// 4. Check if the the before interval is empty, if yes, compute the offset of
+///    t, and set its interval to [t, t]. Otherwise, go to step 5.
 /// 5. Check if t is included in the new non-empty before interval, if yes,
-///    return its DST. Otherwise, go to step 6.
-/// 6. If t > R_new, where R_new = before.end + kDSTDeltaMs, compute the DST
-///    offset for t and call extendOrRecomputeCacheEntry(after, t, offset) (this
+///    return its offset. Otherwise, go to step 6.
+/// 6. If t > R_new, where R_new = before.end + kDSTDeltaMs, compute the offset
+///    for t and call extendOrRecomputeCacheEntry(after, t, offset) (this
 ///    function is described later) to update after, assign after to candidate_,
 ///    return offset. Otherwise, go to step 7.
-/// 7. If t <= R_new < after.start, compute the DST offset for t and call
+/// 7. If t <= R_new < after.start, compute the offset for t and call
 ///    extendOrRecomputeCacheEntry(after, t, offset) to update after.
 /// 8. If before.offset == after.offset, merge after to before and
 ///    reset after, then return the offset. Otherwise, go to step 9.
-/// 9. At this step, there must be one DST transition in interval
-///    (before.end, after.start], compute DST of t and do binary search to
+/// 9. At this step, there must be one offset transition in interval
+///    (before.end, after.start], compute offset of t and do binary search to
 ///    find a time point that has the same offset as t, and extend before or
 ///    after to it. In the end, return the offset (if after is hit, assign it
 ///    to candidate_).
@@ -77,10 +81,12 @@ enum class TimeType : int8_t {
 /// zone. On Windows, currently we don't detect TZ changes as well. But this
 /// could change if we migrate the usage of C API to Win32 API. On MacOS, the
 /// time API does not cache, so we will check if the standard offset has changed
-/// in computeDaylightSaving(), and reset both the standard offset cache and DST
-/// cache in the next call to getLocalTimeOffset() or daylightSavingOffsetInMs()
+/// in computeLocalOffset(), and reset both the standard offset cache and the
+/// offset cache in the next call to getLocalTimeOffset() or localOffsetInMs()
 /// (the current call will still use the old TZ). This is to ensure that they
-/// are consistent w.r.t. the current TZ.
+/// are consistent w.r.t. the current TZ. A standard offset that differs only
+/// for historical dates (not at the current time) does not trigger a reset:
+/// the cache stores total offsets, so those dates are converted correctly.
 class LocalTimeOffsetCache {
  public:
   /// All runtime functionality should use the instance provided in
@@ -101,14 +107,15 @@ class LocalTimeOffsetCache {
     needsToReset_ = false;
   }
 
-  /// Compute local timezone offset (DST included).
+  /// Compute local timezone offset (standard offset + DST).
   /// \param timeMs time in milliseconds.
   /// \param timeType whether \p timeMs is UTC or local time.
   double getLocalTimeOffset(double timeMs, TimeType timeType);
 
   /// \param utcTimeMs UTC epoch in milliseconds.
-  /// \return Daylight saving offset at time \p utcTimeMs.
-  int daylightSavingOffsetInMs(int64_t utcTimeMs);
+  /// \return Total local timezone offset (standard offset + DST) at time
+  /// \p utcTimeMs, in milliseconds.
+  int localOffsetInMs(int64_t utcTimeMs);
 
  private:
   LocalTimeOffsetCache(const LocalTimeOffsetCache &) = delete;
@@ -127,16 +134,20 @@ class LocalTimeOffsetCache {
       std::numeric_limits<int32_t>::max() * MS_PER_SECOND;
 
   struct DSTCacheEntry {
-    /// Start and end time of this DST cache interval, in UTC time.
+    /// Start and end time of this cache interval, in UTC time.
     int64_t startMs{kMaxEpochTimeInMs};
     int64_t endMs{-kMaxEpochTimeInMs};
-    /// The DST offset in [startMs, endMs].
-    int dstOffsetMs{0};
+    /// The total local timezone offset in [startMs, endMs], in milliseconds.
+    int offsetMs{0};
     /// Used for LRU.
     int epoch{0};
 
     /// \return whether this is a valid interval.
     bool isEmpty() const {
+      assert(
+          (startMs <= endMs ||
+           (startMs == kMaxEpochTimeInMs && endMs == -kMaxEpochTimeInMs)) &&
+          "Ill-formed DSTCacheEntry");
       return startMs > endMs;
     }
 
@@ -146,10 +157,10 @@ class LocalTimeOffsetCache {
     }
   };
 
-  /// Compute the DST offset at UTC time \p timeMs.
-  /// Note that this may update needsToReset_ if it detects a different
-  /// standard offset than the cached one.
-  int computeDaylightSaving(int64_t utcTimeMs);
+  /// Compute the total local timezone offset at UTC time \p timeMs.
+  /// Note that this may update needsToReset_ if it detects that the TZ
+  /// environment was updated.
+  int computeLocalOffset(int64_t utcTimeMs);
 
   /// Increase the epoch counter and return it.
   int bumpEpoch() {
@@ -171,16 +182,16 @@ class LocalTimeOffsetCache {
   std::tuple<DSTCacheEntry *, DSTCacheEntry *> findBeforeAndAfterEntries(
       int64_t timeMs);
 
-  /// If entry->dstOffsetMs == \p dstOffsetMs and \p timeMs is included in
+  /// If entry->offsetMs == \p offsetMs and \p timeMs is included in
   /// [entry->startMs - kDSTDeltaMs, entry->endMs], extend entry to
   /// [timeMs, entry->endMs].
   /// Otherwise, let \p entry point to the least recently used cache entry
   /// (except the candidate_ cache) and update its interval to be [timeMs,
-  /// timeMs], and its DST offset to be \p dstOffsetMs.
+  /// timeMs], and its offset to be \p offsetMs.
   void extendOrRecomputeCacheEntry(
       DSTCacheEntry *&entry,
       int64_t timeMs,
-      int dstOffsetMs);
+      int offsetMs);
 
   /// Integer counter used to find least recently used cache.
   int epoch_;
@@ -193,11 +204,16 @@ class LocalTimeOffsetCache {
   /// interval is non-empty and we need a new empty one, reset the least
   /// recently used one (by comparing the epoch value) to empty.
   std::array<DSTCacheEntry, kCacheSize> caches_;
-  /// The standard local timezone offset (without DST offset).
+  /// The standard local timezone offset (without DST offset) at the current
+  /// time. Used as the initial guess when converting local time to UTC, and
+  /// to detect updates to the TZ environment. Note that the historical
+  /// standard offset may differ from this (e.g. Europe/Kyiv was UTC+3 until
+  /// 1991); the cache stores total offsets, so conversions remain correct for
+  /// such dates.
   int64_t ltza_;
   /// Whether needs to reset the cache and ltza_.
-  /// We don't do reset in the middle of daylightSavingOffsetInMs() (essentially
-  /// before any call to computeDaylightSaving() that will detect TZ changes)
+  /// We don't do reset in the middle of localOffsetInMs() (essentially
+  /// before any call to computeLocalOffset() that will detect TZ changes)
   /// because it may cause that function never return if another thread is
   /// keeping updating TZ. But that means we may return incorrect result before
   /// reset(). This is consistent with previous implementation of utcTime() and

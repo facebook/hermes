@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 
 #include "hermes/VM/JSLib/DateCache.h"
 #include "hermes/VM/JSLib/DateUtil.h"
@@ -130,6 +130,29 @@ void setTimeZone(const char *tzname) {
   hermes::oscompat::set_env("TZ", tzname);
   ::tzset();
 }
+
+/// Check whether the IANA timezone database is available by setting TZ to
+/// known IANA names (America/New_York and Pacific/Auckland) and verifying
+/// that both produce a non-zero offset.
+///
+/// \return false on Windows (which does not support IANA names) and
+/// on systems without tzdata installed, where IANA names silently fall back
+/// to UTC (offset 0).
+bool hasIANATimezoneDB() {
+#ifdef _WINDOWS
+  return false;
+#else
+  static hermes::OptValue<bool> result = llvh::None;
+  if (result.hasValue())
+    return result.getValue();
+  setTimeZone("America/New_York");
+  auto nyTZA = localTZA();
+  setTimeZone("Pacific/Auckland");
+  auto aucklandTZA = localTZA();
+  result = nyTZA != 0 && aucklandTZA != 0;
+  return *result;
+#endif
+}
 } // namespace
 
 TEST(DateUtilTest, LocalTZATest) {
@@ -145,38 +168,22 @@ TEST(DateUtilTest, LocalTZATest) {
   // the zones is under DST whatever day this test is ran.
 
   // US Pacific: DST is from Mar to Nov
-#ifdef _WINDOWS
-  setTimeZone("PST8PDT");
-#else
-  setTimeZone("America/Los_Angeles");
-#endif
+  setTimeZone(hasIANATimezoneDB() ? "America/Los_Angeles" : "PST8PDT");
   EXPECT_EQ(-2.88e+7, localTZA());
 
-  // New Zealand: DST is from Oct to Apr
-#ifdef _WINDOWS
-  // This test is skipped due to Windows deficiency in TZ env variable.
-#else
-  setTimeZone("Pacific/Auckland");
+  // New Zealand: DST is from Oct to Apr.
+  setTimeZone(hasIANATimezoneDB() ? "Pacific/Auckland" : "NZT-12");
   EXPECT_EQ(4.32e+7, localTZA());
-#endif
 
   // Disble DST entirely and make sure the TZA is the same.
   // Test both positive and negative zone.
 
   // Negative fixed zone
-#ifdef _WINDOWS
-  setTimeZone("PST8");
-#else
-  setTimeZone("Etc/GMT+8");
-#endif
+  setTimeZone(hasIANATimezoneDB() ? "Etc/GMT+8" : "PST8");
   EXPECT_EQ(-2.88e+7, localTZA());
 
   // Positive fixed zone
-#ifdef _WINDOWS
-  setTimeZone("JST-9");
-#else
-  setTimeZone("Asia/Tokyo");
-#endif
+  setTimeZone(hasIANATimezoneDB() ? "Asia/Tokyo" : "JST-9");
   EXPECT_EQ(3.24e+7, localTZA());
 
   hermes::oscompat::unset_env("TZ");
@@ -212,26 +219,70 @@ TEST(DateUtilTest, EquivalentTimeTest) {
   EXPECT_EQ(1767270660, detail::equivalentTime(3833759507460));
 }
 
-TEST(DateUtilTest, DaylightSavingTATest) {
+TEST(DateUtilTest, LocalOffsetTest) {
   LocalTimeOffsetCache localTimeOffsetCache;
-  /// A wrapper that implements the deleted daylightSavingTA() function.
-  auto daylightSavingTA = [&localTimeOffsetCache](double timeMs) {
-    return localTimeOffsetCache.daylightSavingOffsetInMs(timeMs);
+  /// A wrapper that implements the deleted daylightSavingTA() function, now
+  /// returning the total local offset (standard offset + DST).
+  auto localOffset = [&localTimeOffsetCache](double timeMs) {
+    return localTimeOffsetCache.localOffsetInMs(timeMs);
   };
 
-  setTimeZone("America/Los_Angeles");
+  setTimeZone(hasIANATimezoneDB() ? "America/Los_Angeles" : "PST8PDT");
   localTimeOffsetCache.reset();
-  EXPECT_EQ(MS_PER_HOUR, daylightSavingTA(1489530532000)); // Mar 14, 2017
-  EXPECT_EQ(MS_PER_HOUR, daylightSavingTA(1019514530000)); // Apr 22, 2002
-  EXPECT_EQ(0, daylightSavingTA(1487111330000)); // Feb 14, 2017
-  EXPECT_EQ(0, daylightSavingTA(1017700130000)); // Apr 1, 2002
+  EXPECT_EQ(-7 * MS_PER_HOUR, localOffset(1489530532000)); // Mar 14, 2017
+  EXPECT_EQ(-7 * MS_PER_HOUR, localOffset(1019514530000)); // Apr 22, 2002
+  EXPECT_EQ(-8 * MS_PER_HOUR, localOffset(1487111330000)); // Feb 14, 2017
+  // Apr 1, 2002 was before the 2007 US DST rule change. Only IANA tzdata
+  // has the historic rules needed to correctly report no DST for this date.
+  if (hasIANATimezoneDB())
+    EXPECT_EQ(-8 * MS_PER_HOUR, localOffset(1017700130000)); // Apr 1, 2002
 
-  setTimeZone("America/Chicago");
+  setTimeZone(hasIANATimezoneDB() ? "America/Chicago" : "CST6CDT");
   localTimeOffsetCache.reset();
-  EXPECT_EQ(MS_PER_HOUR, daylightSavingTA(1489530532000)); // Mar 14, 2017
-  EXPECT_EQ(MS_PER_HOUR, daylightSavingTA(1019514530000)); // Apr 22, 2002
-  EXPECT_EQ(0, daylightSavingTA(1487111330000)); // Feb 14, 2017
-  EXPECT_EQ(0, daylightSavingTA(1017700130000)); // Apr 1, 2002
+  EXPECT_EQ(-5 * MS_PER_HOUR, localOffset(1489530532000)); // Mar 14, 2017
+  EXPECT_EQ(-5 * MS_PER_HOUR, localOffset(1019514530000)); // Apr 22, 2002
+  EXPECT_EQ(-6 * MS_PER_HOUR, localOffset(1487111330000)); // Feb 14, 2017
+  // Apr 1, 2002 was before the 2007 US DST rule change. Only IANA tzdata
+  // has the historic rules needed to correctly report no DST for this date.
+  if (hasIANATimezoneDB())
+    EXPECT_EQ(-6 * MS_PER_HOUR, localOffset(1017700130000)); // Apr 1, 2002
+
+  hermes::oscompat::unset_env("TZ");
+}
+
+TEST(DateUtilTest, HistoricalStandardOffsetChangeTest) {
+  // Regression test for https://github.com/facebook/hermes/issues/2159 :
+  // the standard (non-DST) offset itself can change over history.
+  // Europe/Kyiv was UTC+3/+4 (MSK/MSD) until 1991 and is UTC+2/+3 (EET/EEST)
+  // now. Conversions of dates in the UTC+3 era must use the historical
+  // standard offset, not the current one.
+  // Requires the IANA timezone database for the historical rules; POSIX TZ
+  // strings cannot express a standard-offset change, and Windows does not
+  // follow historic rules.
+  if (!hasIANATimezoneDB()) {
+    return;
+  }
+  LocalTimeOffsetCache localTimeOffsetCache;
+  setTimeZone("Europe/Kyiv");
+  localTimeOffsetCache.reset();
+
+  // 1984-03-31T20:59:59.999Z == 1984-03-31 23:59:59.999+03:00 (MSK).
+  // Must report the historical total offset UTC+3, not the modern UTC+2.
+  EXPECT_EQ(
+      3 * MS_PER_HOUR, localTimeOffsetCache.localOffsetInMs(449614799999));
+
+  // End-to-end check of the issue repro:
+  //   const d = new Date(1984, 2, 31);
+  //   d.setHours(23, 59, 59, 999);
+  //   d.getDate() === 31
+  // (used to be 1, i.e. April 1st, because the modern UTC+2 standard offset
+  // was applied to the 1984 date).
+  double d = makeDate(makeDay(1984, 2, 31), 0);
+  double t = timeClip(utcTime(d, localTimeOffsetCache));
+  double lt = localTime(t, localTimeOffsetCache);
+  double date = makeDate(day(lt), makeTime(23, 59, 59, 999));
+  double t2 = timeClip(utcTime(date, localTimeOffsetCache));
+  EXPECT_EQ(31, dateFromTime(localTime(t2, localTimeOffsetCache)));
 
   hermes::oscompat::unset_env("TZ");
 }
@@ -254,38 +305,22 @@ TEST(DateUtilTest, LocalTimeTest) {
 
   LocalTimeOffsetCache localTimeOffsetCache;
 
-#ifdef _WINDOWS
-  setTimeZone("PST8PDT");
-#else
-  setTimeZone("America/Los_Angeles");
-#endif
+  setTimeZone(hasIANATimezoneDB() ? "America/Los_Angeles" : "PST8PDT");
   localTimeOffsetCache.reset();
   EXPECT_EQ(1530435600000, localTime(1530460800000, localTimeOffsetCache));
   EXPECT_EQ(1530460800000, utcTime(1530435600000, localTimeOffsetCache));
 
-#ifdef _WINDOWS
-  setTimeZone("EST5EDT");
-#else
-  setTimeZone("America/New_York");
-#endif
+  setTimeZone(hasIANATimezoneDB() ? "America/New_York" : "EST5EDT");
   localTimeOffsetCache.reset();
   EXPECT_EQ(1530446400000, localTime(1530460800000, localTimeOffsetCache));
   EXPECT_EQ(1530460800000, utcTime(1530446400000, localTimeOffsetCache));
 
-#ifdef _WINDOWS
-  // This test is skipped due to Windows deficiency in TZ env variable.
-#else
-  setTimeZone("Pacific/Auckland");
+  setTimeZone(hasIANATimezoneDB() ? "Pacific/Auckland" : "NZT-12");
   localTimeOffsetCache.reset();
   EXPECT_EQ(1530504000000, localTime(1530460800000, localTimeOffsetCache));
   EXPECT_EQ(1530460800000, utcTime(1530504000000, localTimeOffsetCache));
-#endif
 
-#ifdef _WINDOWS
-  setTimeZone("JST-9");
-#else
-  setTimeZone("Asia/Tokyo");
-#endif
+  setTimeZone(hasIANATimezoneDB() ? "Asia/Tokyo" : "JST-9");
   localTimeOffsetCache.reset();
   EXPECT_EQ(1530493200000, localTime(1530460800000, localTimeOffsetCache));
   EXPECT_EQ(1530460800000, utcTime(1530493200000, localTimeOffsetCache));
