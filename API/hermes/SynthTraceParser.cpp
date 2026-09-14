@@ -535,6 +535,16 @@ SynthTrace getTrace(
             arrayIndex->getValue(),
             SynthTrace::decode(propValue->c_str()));
         break;
+      case RecordType::ArrayPush: {
+        auto *elements = llvh::dyn_cast<JSONArray>(obj->get("elements"));
+        auto *length = llvh::dyn_cast<JSONNumber>(obj->get("length"));
+        trace.emplace_back<SynthTrace::ArrayPushRecord>(
+            timeFromStart,
+            objID->getValue(),
+            getListOfTraceValues(elements),
+            length->getValue());
+        break;
+      }
       case RecordType::CallFromNative:
         trace.emplace_back<SynthTrace::CallFromNativeRecord>(
             timeFromStart,
