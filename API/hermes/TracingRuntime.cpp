@@ -956,6 +956,34 @@ jsi::ArrayBuffer TracingRuntime::createArrayBuffer(
   throw std::logic_error("Cannot create external ArrayBuffers in trace mode.");
 }
 
+jsi::Uint8Array TracingRuntime::createUint8Array(size_t length) {
+  auto arr = RD::createUint8Array(length);
+  trace_.emplace_back<SynthTrace::CreateUInt8ArrayRecord>(
+      getTimeSinceStart(), defObjectID(arr), length);
+  return arr;
+}
+
+jsi::Uint8Array TracingRuntime::createUint8Array(
+    const jsi::ArrayBuffer &buffer,
+    size_t offset,
+    size_t length) {
+  auto arr = RD::createUint8Array(buffer, offset, length);
+  trace_.emplace_back<SynthTrace::CreateUInt8ArrayFromArrayBufferRecord>(
+      getTimeSinceStart(),
+      defObjectID(arr),
+      useObjectID(buffer),
+      offset,
+      length);
+  return arr;
+}
+
+jsi::ArrayBuffer TracingRuntime::buffer(const jsi::TypedArray &typedArray) {
+  auto buf = RD::buffer(typedArray);
+  trace_.emplace_back<SynthTrace::GetBufferFromTypedArrayRecord>(
+      getTimeSinceStart(), defObjectID(buf), useObjectID(typedArray));
+  return buf;
+}
+
 size_t TracingRuntime::size(const jsi::Array &arr) {
   // Array size inquiries read from the length property, which is
   // non-configurable and thus cannot have side effects.
