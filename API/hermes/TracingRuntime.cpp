@@ -1108,6 +1108,12 @@ void TracingRuntime::setExternalMemoryPressure(
   RD::setExternalMemoryPressure(obj, amount);
 }
 
+std::shared_ptr<jsi::MutableBuffer> TracingRuntime::tryGetMutableBuffer(
+    const jsi::ArrayBuffer &) {
+  throw std::logic_error(
+      "Cannot retrieve MutableBuffer from ArrayBuffer in trace mode.");
+}
+
 jsi::ICast *TracingRuntime::castInterface(const jsi::UUID &interfaceUUID) {
   auto *interface = RD::castInterface(interfaceUUID);
   if (!interface) {
