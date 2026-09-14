@@ -175,52 +175,68 @@ class SynthTrace {
   /// Represents the encoding type of a String or PropNameId
   enum class StringEncodingType { ASCII, UTF8, UTF16 };
 
+  /// Represents the type of JavaScript Error being created.
+  enum class JSErrorType {
+    Error,
+    EvalError,
+    RangeError,
+    ReferenceError,
+    SyntaxError,
+    TypeError,
+    URIError,
+  };
+
   /// A TimePoint is a time when some event occurred.
   using TimePoint = std::chrono::steady_clock::time_point;
   using TimeSinceStart = std::chrono::milliseconds;
 
-#define SYNTH_TRACE_RECORD_TYPES(RECORD) \
-  RECORD(BeginExecJS)                    \
-  RECORD(EndExecJS)                      \
-  RECORD(Marker)                         \
-  RECORD(CreateObject)                   \
-  RECORD(CreateObjectWithPrototype)      \
-  RECORD(CreateString)                   \
-  RECORD(CreatePropNameID)               \
-  RECORD(CreatePropNameIDWithValue)      \
-  RECORD(CreateHostObject)               \
-  RECORD(CreateHostFunction)             \
-  RECORD(QueueMicrotask)                 \
-  RECORD(DrainMicrotasks)                \
-  RECORD(GetProperty)                    \
-  RECORD(SetProperty)                    \
-  RECORD(HasProperty)                    \
-  RECORD(GetPropertyNames)               \
-  RECORD(CreateArray)                    \
-  RECORD(ArrayRead)                      \
-  RECORD(ArrayWrite)                     \
-  RECORD(CallFromNative)                 \
-  RECORD(ConstructFromNative)            \
-  RECORD(ReturnFromNative)               \
-  RECORD(ReturnToNative)                 \
-  RECORD(CallToNative)                   \
-  RECORD(GetPropertyNative)              \
-  RECORD(GetPropertyNativeReturn)        \
-  RECORD(SetPropertyNative)              \
-  RECORD(SetPropertyNativeReturn)        \
-  RECORD(GetNativePropertyNames)         \
-  RECORD(GetNativePropertyNamesReturn)   \
-  RECORD(CreateBigInt)                   \
-  RECORD(BigIntToString)                 \
-  RECORD(SetExternalMemoryPressure)      \
-  RECORD(Utf8)                           \
-  RECORD(Utf16)                          \
-  RECORD(GetStringData)                  \
-  RECORD(GetPrototype)                   \
-  RECORD(SetPrototype)                   \
-  RECORD(DeleteProperty)                 \
-  RECORD(Serialize)                      \
-  RECORD(Deserialize)                    \
+#define SYNTH_TRACE_RECORD_TYPES(RECORD)  \
+  RECORD(BeginExecJS)                     \
+  RECORD(EndExecJS)                       \
+  RECORD(Marker)                          \
+  RECORD(CreateObject)                    \
+  RECORD(CreateObjectWithPrototype)       \
+  RECORD(CreateString)                    \
+  RECORD(CreatePropNameID)                \
+  RECORD(CreatePropNameIDWithValue)       \
+  RECORD(CreateHostObject)                \
+  RECORD(CreateHostFunction)              \
+  RECORD(QueueMicrotask)                  \
+  RECORD(DrainMicrotasks)                 \
+  RECORD(GetProperty)                     \
+  RECORD(SetProperty)                     \
+  RECORD(HasProperty)                     \
+  RECORD(GetPropertyNames)                \
+  RECORD(CreateArray)                     \
+  RECORD(ArrayRead)                       \
+  RECORD(ArrayWrite)                      \
+  RECORD(ArrayPush)                       \
+  RECORD(CallFromNative)                  \
+  RECORD(ConstructFromNative)             \
+  RECORD(ReturnFromNative)                \
+  RECORD(ReturnToNative)                  \
+  RECORD(CallToNative)                    \
+  RECORD(GetPropertyNative)               \
+  RECORD(GetPropertyNativeReturn)         \
+  RECORD(SetPropertyNative)               \
+  RECORD(SetPropertyNativeReturn)         \
+  RECORD(GetNativePropertyNames)          \
+  RECORD(GetNativePropertyNamesReturn)    \
+  RECORD(CreateBigInt)                    \
+  RECORD(BigIntToString)                  \
+  RECORD(SetExternalMemoryPressure)       \
+  RECORD(Utf8)                            \
+  RECORD(Utf16)                           \
+  RECORD(GetStringData)                   \
+  RECORD(GetPrototype)                    \
+  RECORD(SetPrototype)                    \
+  RECORD(DeleteProperty)                  \
+  RECORD(Serialize)                       \
+  RECORD(Deserialize)                     \
+  RECORD(CreateUInt8Array)                \
+  RECORD(CreateUInt8ArrayFromArrayBuffer) \
+  RECORD(GetBufferFromTypedArray)         \
+  RECORD(CreateJSError)                   \
   RECORD(Global)
 
   /// RecordType is a tag used to differentiate which type of record it is.
@@ -1053,6 +1069,128 @@ class SynthTrace {
     }
   };
 
+  /// A CreateUInt8ArrayRecord is an event where a new UInt8Array is created
+  /// with a specific length.
+  struct CreateUInt8ArrayRecord final : public Record {
+    static constexpr RecordType type{RecordType::CreateUInt8Array};
+    /// The ObjectID of the UInt8Array that was created by createUint8Array().
+    const ObjectID objID_;
+    /// The length of the UInt8Array that was passed to createUint8Array().
+    const size_t length_;
+
+    explicit CreateUInt8ArrayRecord(
+        TimeSinceStart time,
+        ObjectID objID,
+        size_t length)
+        : Record(time), objID_(objID), length_(length) {}
+
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
+    RecordType getType() const override {
+      return type;
+    }
+    std::vector<ObjectID> defs() const override {
+      return {objID_};
+    }
+  };
+
+  /// A CreateUInt8ArrayFromArrayBufferRecord is an event where a new UInt8Array
+  /// is created from an existing ArrayBuffer with offset and length.
+  struct CreateUInt8ArrayFromArrayBufferRecord final : public Record {
+    static constexpr RecordType type{
+        RecordType::CreateUInt8ArrayFromArrayBuffer};
+    /// The ObjectID of the UInt8Array that was created by createUint8Array().
+    const ObjectID objID_;
+    /// The ObjectID of the ArrayBuffer used to create the UInt8Array.
+    const ObjectID bufferID_;
+    /// The byte offset into the ArrayBuffer.
+    const size_t offset_;
+    /// The length of the UInt8Array view.
+    const size_t length_;
+
+    explicit CreateUInt8ArrayFromArrayBufferRecord(
+        TimeSinceStart time,
+        ObjectID objID,
+        ObjectID bufferID,
+        size_t offset,
+        size_t length)
+        : Record(time),
+          objID_(objID),
+          bufferID_(bufferID),
+          offset_(offset),
+          length_(length) {}
+
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
+    RecordType getType() const override {
+      return type;
+    }
+    std::vector<ObjectID> defs() const override {
+      return {objID_};
+    }
+    std::vector<ObjectID> uses() const override {
+      return {bufferID_};
+    }
+  };
+
+  /// A GetBufferFromTypedArrayRecord is an event where the underlying
+  /// ArrayBuffer of a TypedArray is retrieved.
+  struct GetBufferFromTypedArrayRecord final : public Record {
+    static constexpr RecordType type{RecordType::GetBufferFromTypedArray};
+    /// The ObjectID of the ArrayBuffer returned by buffer().
+    const ObjectID bufferID_;
+    /// The ObjectID of the TypedArray whose buffer was queried.
+    const ObjectID typedArrayID_;
+
+    explicit GetBufferFromTypedArrayRecord(
+        TimeSinceStart time,
+        ObjectID bufferID,
+        ObjectID typedArrayID)
+        : Record(time), bufferID_(bufferID), typedArrayID_(typedArrayID) {}
+
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
+    RecordType getType() const override {
+      return type;
+    }
+    std::vector<ObjectID> defs() const override {
+      return {bufferID_};
+    }
+    std::vector<ObjectID> uses() const override {
+      return {typedArrayID_};
+    }
+  };
+
+  /// A CreateJSErrorRecord is an event where a JavaScript Error object is
+  /// created with a specific type and message.
+  struct CreateJSErrorRecord final : public Record {
+    static constexpr RecordType type{RecordType::CreateJSError};
+    /// The ObjectID of the error Value that was created.
+    const ObjectID objID_;
+    /// The type of error being created.
+    const JSErrorType errorType_;
+    /// The ObjectID of the message String passed to create the error.
+    const ObjectID messageID_;
+
+    explicit CreateJSErrorRecord(
+        TimeSinceStart time,
+        ObjectID objID,
+        JSErrorType errorType,
+        ObjectID messageID)
+        : Record(time),
+          objID_(objID),
+          errorType_(errorType),
+          messageID_(messageID) {}
+
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
+    RecordType getType() const override {
+      return type;
+    }
+    std::vector<ObjectID> defs() const override {
+      return {objID_};
+    }
+    std::vector<ObjectID> uses() const override {
+      return {messageID_};
+    }
+  };
+
   /// An ArrayReadRecord is an event where a value was read from an index
   /// of an array.
   /// It is modeled separately from GetProperty because it is more efficient to
@@ -1102,6 +1240,37 @@ class SynthTrace {
       pushIfTrackedValue(value_, uses);
       return uses;
     }
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
+  };
+
+  struct ArrayPushRecord final : public Record {
+    static constexpr RecordType type{RecordType::ArrayPush};
+    /// The ObjectID of the array
+    const ObjectID objID_;
+    /// The elements being pushed to the array
+    const std::vector<TraceValue> elements_;
+    /// The returned length from calling Array.push
+    size_t length_;
+
+    explicit ArrayPushRecord(
+        TimeSinceStart time,
+        ObjectID objID,
+        const std::vector<TraceValue> &elements,
+        size_t length)
+        : Record(time), objID_(objID), elements_(elements), length_(length) {}
+
+    RecordType getType() const override {
+      return type;
+    }
+
+    std::vector<ObjectID> uses() const override {
+      std::vector<ObjectID> uses{objID_};
+      for (const auto &val : elements_) {
+        pushIfTrackedValue(val, uses);
+      }
+      return uses;
+    }
+
     void toJSONInternal(::hermes::JSONEmitter &json) const override;
   };
 

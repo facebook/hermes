@@ -14,6 +14,7 @@
 #include "hermes/Support/SourceErrorManager.h"
 
 #include <sstream>
+#include <unordered_map>
 
 namespace facebook {
 namespace hermes {
@@ -22,6 +23,17 @@ namespace tracing {
 using namespace ::hermes::parser;
 
 namespace {
+
+static const std::unordered_map<std::string, SynthTrace::JSErrorType>
+    kStringToJSErrorType = {
+        {"Error", SynthTrace::JSErrorType::Error},
+        {"EvalError", SynthTrace::JSErrorType::EvalError},
+        {"RangeError", SynthTrace::JSErrorType::RangeError},
+        {"ReferenceError", SynthTrace::JSErrorType::ReferenceError},
+        {"SyntaxError", SynthTrace::JSErrorType::SyntaxError},
+        {"TypeError", SynthTrace::JSErrorType::TypeError},
+        {"URIError", SynthTrace::JSErrorType::URIError},
+};
 
 SynthTrace::StringEncodingType getStringEncodingType(
     const std::string &encodingStr) {
@@ -523,6 +535,44 @@ SynthTrace getTrace(
             objID->getValue(),
             getNumberAs<uint64_t>(obj->get("length")));
         break;
+      case RecordType::CreateUInt8Array: {
+        trace.emplace_back<SynthTrace::CreateUInt8ArrayRecord>(
+            timeFromStart,
+            objID->getValue(),
+            getNumberAs<uint64_t>(obj->get("length")));
+        break;
+      }
+      case RecordType::CreateUInt8ArrayFromArrayBuffer: {
+        auto *objID = llvh::cast<JSONNumber>(obj->get("objID"));
+        auto *bufferID = llvh::cast<JSONNumber>(obj->get("bufferID"));
+        trace.emplace_back<SynthTrace::CreateUInt8ArrayFromArrayBufferRecord>(
+            timeFromStart,
+            objID->getValue(),
+            bufferID->getValue(),
+            getNumberAs<uint64_t>(obj->get("offset")),
+            getNumberAs<uint64_t>(obj->get("length")));
+        break;
+      }
+      case RecordType::GetBufferFromTypedArray: {
+        auto *bufferID = llvh::cast<JSONNumber>(obj->get("bufferID"));
+        auto *typedArrayID = llvh::cast<JSONNumber>(obj->get("typedArrayID"));
+        trace.emplace_back<SynthTrace::GetBufferFromTypedArrayRecord>(
+            timeFromStart, bufferID->getValue(), typedArrayID->getValue());
+        break;
+      }
+      case RecordType::CreateJSError: {
+        auto *errorTypeStr = llvh::cast<JSONString>(obj->get("errorType"));
+        auto *messageID = llvh::cast<JSONNumber>(obj->get("messageID"));
+        auto it = kStringToJSErrorType.find(errorTypeStr->str());
+        assert(
+            it != kStringToJSErrorType.end() && "Unknown error type in trace");
+        trace.emplace_back<SynthTrace::CreateJSErrorRecord>(
+            timeFromStart,
+            objID->getValue(),
+            it->second,
+            messageID->getValue());
+        break;
+      }
       case RecordType::ArrayRead: {
         trace.emplace_back<SynthTrace::ArrayReadRecord>(
             timeFromStart, objID->getValue(), arrayIndex->getValue());
@@ -535,6 +585,16 @@ SynthTrace getTrace(
             arrayIndex->getValue(),
             SynthTrace::decode(propValue->c_str()));
         break;
+      case RecordType::ArrayPush: {
+        auto *elements = llvh::dyn_cast<JSONArray>(obj->get("elements"));
+        auto *length = llvh::dyn_cast<JSONNumber>(obj->get("length"));
+        trace.emplace_back<SynthTrace::ArrayPushRecord>(
+            timeFromStart,
+            objID->getValue(),
+            getListOfTraceValues(elements),
+            length->getValue());
+        break;
+      }
       case RecordType::CallFromNative:
         trace.emplace_back<SynthTrace::CallFromNativeRecord>(
             timeFromStart,
