@@ -18,6 +18,7 @@
 #include "llvh/Support/raw_ostream.h"
 
 #include <cmath>
+#include <unordered_map>
 
 namespace facebook {
 namespace hermes {
@@ -527,6 +528,26 @@ void SynthTrace::GetBufferFromTypedArrayRecord::toJSONInternal(
   Record::toJSONInternal(json);
   json.emitKeyValue("bufferID", bufferID_);
   json.emitKeyValue("typedArrayID", typedArrayID_);
+}
+
+namespace {
+static const std::unordered_map<SynthTrace::JSErrorType, const char *>
+    kJSErrorTypeToString = {
+        {SynthTrace::JSErrorType::Error, "Error"},
+        {SynthTrace::JSErrorType::EvalError, "EvalError"},
+        {SynthTrace::JSErrorType::RangeError, "RangeError"},
+        {SynthTrace::JSErrorType::ReferenceError, "ReferenceError"},
+        {SynthTrace::JSErrorType::SyntaxError, "SyntaxError"},
+        {SynthTrace::JSErrorType::TypeError, "TypeError"},
+        {SynthTrace::JSErrorType::URIError, "URIError"},
+};
+} // namespace
+
+void SynthTrace::CreateJSErrorRecord::toJSONInternal(JSONEmitter &json) const {
+  Record::toJSONInternal(json);
+  json.emitKeyValue("objID", objID_);
+  json.emitKeyValue("errorType", kJSErrorTypeToString.at(errorType_));
+  json.emitKeyValue("messageID", messageID_);
 }
 
 void SynthTrace::ArrayReadRecord::toJSONInternal(JSONEmitter &json) const {
