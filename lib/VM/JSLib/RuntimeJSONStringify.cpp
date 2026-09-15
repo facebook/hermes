@@ -10,6 +10,7 @@
 #include "Object.h"
 
 #include "hermes/Support/BuildTable256.h"
+#include "hermes/Support/Conversions.h"
 #include "hermes/Support/FastArraySearch.h"
 #include "hermes/VM/ArrayLike.h"
 #include "hermes/VM/ArrayStorage.h"
@@ -196,6 +197,11 @@ class JSONStringifyer {
 
   /// Append the string indicated as \p str to output_.
   void appendToOutput(const StringPrimitive *str);
+
+  /// Format \p num per ES ToString(Number) and append the resulting characters
+  /// directly to output_, without allocating a StringPrimitive.
+  /// \pre std::isfinite(num)
+  void appendToOutput(double num);
 };
 } // namespace
 
@@ -492,12 +498,9 @@ CallResult<bool> JSONStringifyer::operationStrValue(
 
   // Str.9.
   if (lv_.operationStrValue->isNumber()) {
-    if (std::isfinite(lv_.operationStrValue->getNumber())) {
-      auto status = toString_RJS(runtime_, lv_.operationStrValue);
-      assert(
-          status != ExecutionStatus::EXCEPTION &&
-          "toString on a number cannot fail");
-      appendToOutput(status->get());
+    double num = lv_.operationStrValue->getNumber();
+    if (std::isfinite(num)) {
+      appendToOutput(num);
     } else {
       appendToOutput(Predefined::getSymbolID(Predefined::null));
     }
@@ -1090,6 +1093,13 @@ void JSONStringifyer::appendToOutput(SymbolID identifierID) {
 
 void JSONStringifyer::appendToOutput(const StringPrimitive *str) {
   str->appendUTF16String(output_);
+}
+
+void JSONStringifyer::appendToOutput(double num) {
+  assert(std::isfinite(num) && "non-finite is handled by the caller");
+  char buf8[hermes::NUMBER_TO_STRING_BUF_SIZE];
+  llvh::StringRef str = hermes::numberToString(num, buf8, sizeof(buf8));
+  output_.append(str.begin(), str.end());
 }
 
 CallResult<HermesValue> JSONStringifyer::stringify(Handle<> value) {
