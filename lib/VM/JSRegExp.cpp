@@ -56,8 +56,8 @@ void JSRegExpBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSRegExp *>(cell);
   mb.setVTable(&JSRegExp::vt);
-  mb.addField(&self->pattern_);
-  mb.addField(&self->groupNameMappings_);
+  mb.addField("pattern", &self->pattern_);
+  mb.addField("groupNameMappings", &self->groupNameMappings_);
 }
 
 PseudoHandle<JSRegExp> JSRegExp::create(
