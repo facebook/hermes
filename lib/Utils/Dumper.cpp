@@ -182,8 +182,7 @@ void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
       os_ << "-0";
     } else {
       char buf[NUMBER_TO_STRING_BUF_SIZE];
-      numberToString(LN->getValue(), buf, sizeof(buf));
-      os_ << buf;
+      os_ << numberToString(LN->getValue(), buf, sizeof(buf));
     }
   } else if (isa<LiteralEmpty>(V)) {
     os_ << "empty";

@@ -906,8 +906,7 @@ void PrettyDisassembleVisitor::visitOperand(
       dumpOperandFunction(operandVal, os_);                         \
     } else if (operandType == OperandType::Double) {                \
       char buf[hermes::NUMBER_TO_STRING_BUF_SIZE];                  \
-      (void)hermes::numberToString(operandVal, buf, sizeof(buf));   \
-      os_ << buf;                                                   \
+      os_ << hermes::numberToString(operandVal, buf, sizeof(buf));  \
     } else {                                                        \
       /* Trick to print out 1-byte value as int instead of char. */ \
       os_ << +operandVal;                                           \

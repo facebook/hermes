@@ -180,7 +180,7 @@ class TwineChar16 {
       : leftKind_(DoubleKind), rightKind_(EmptyKind), rightSize_(0) {
     char buf[NUMBER_TO_STRING_BUF_SIZE];
     // This is the only way to calculate the size.
-    leftSize_ = numberToString(f, buf, sizeof(buf));
+    leftSize_ = numberToString(f, buf, sizeof(buf)).size();
     leftChild_.flt = f;
     assert(isValid());
   }

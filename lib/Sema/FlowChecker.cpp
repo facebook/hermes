@@ -4133,8 +4133,8 @@ UniqueString *FlowChecker::propertyKeyAsIdentifier(ESTree::Node *Key) {
     LLVM_DEBUG(
         llvh::dbgs() << "Loading Numeric Literal \"" << Lit->_value << "\"\n");
     char buf[NUMBER_TO_STRING_BUF_SIZE];
-    auto len = numberToString(Lit->_value, buf, sizeof(buf));
-    return astContext_.getIdentifier(llvh::StringRef{buf, len})
+    return astContext_
+        .getIdentifier(numberToString(Lit->_value, buf, sizeof(buf)))
         .getUnderlyingPointer();
   }
 

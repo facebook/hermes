@@ -307,10 +307,10 @@ TEST(ConversionsTest, doubleToFloat16Test) {
 TEST(ConversionsTest, numberToStringTest) {
   char buf[NUMBER_TO_STRING_BUF_SIZE];
 
-#define DoubleToStringTest(expected, value)  \
-  do {                                       \
-    numberToString(value, buf, sizeof(buf)); \
-    EXPECT_STREQ(expected, buf);             \
+#define DoubleToStringTest(expected, value)          \
+  do {                                               \
+    numberToStringSlowPath(value, buf, sizeof(buf)); \
+    EXPECT_STREQ(expected, buf);                     \
   } while (0)
 
   DoubleToStringTest("NaN", std::nan(""));
@@ -346,6 +346,38 @@ TEST(ConversionsTest, numberToStringTest) {
   DoubleToStringTest("0", 0);
   DoubleToStringTest("12384", 12384);
   DoubleToStringTest("-12384", -12384);
+}
+
+/// numberToStringTest above covers numberToStringSlowPath. This covers
+/// numberToString, whose job is to pick between the fast and the slow path.
+TEST(ConversionsTest, numberToStringFastPathTest) {
+  char buf[NUMBER_TO_STRING_BUF_SIZE];
+
+#define NumberToStringTest(expected, value) \
+  EXPECT_EQ(expected, numberToString(value, buf, sizeof(buf)).str())
+
+  // Positive integers below 2^31 take the fast path.
+  NumberToStringTest("1", 1);
+  NumberToStringTest("9", 9);
+  NumberToStringTest("10", 10);
+  NumberToStringTest("12384", 12384);
+  NumberToStringTest("2147483647", 2147483647);
+
+  // Everything else must fall through to the slow path. Note that zero and -0
+  // are excluded by the "> 0" test rather than by an explicit check, so -0 in
+  // particular is worth pinning: it must not come out as "-0".
+  NumberToStringTest("0", 0.0);
+  NumberToStringTest("0", -0.0);
+  NumberToStringTest("-1", -1);
+  NumberToStringTest("-12384", -12384);
+  NumberToStringTest("2147483648", 2147483648.0);
+  NumberToStringTest("1.5", 1.5);
+  NumberToStringTest("1e+21", 1e21);
+  NumberToStringTest("NaN", std::nan(""));
+  NumberToStringTest("Infinity", std::numeric_limits<double>::infinity());
+  NumberToStringTest("-Infinity", -std::numeric_limits<double>::infinity());
+
+#undef NumberToStringTest
 }
 
 } // end anonymous namespace
