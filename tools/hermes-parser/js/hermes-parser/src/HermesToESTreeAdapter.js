@@ -14,10 +14,11 @@ import type {ParserOptions} from './ParserOptions';
 import HermesASTAdapter from './HermesASTAdapter';
 import {getModuleDocblock} from './getModuleDocblock';
 
-declare var BigInt: ?(value: $FlowFixMe) => mixed;
+// eslint-disable-next-line no-unused-vars
+declare var BigInt: ?(value: $FlowFixMe) => unknown;
 
 export default class HermesToESTreeAdapter extends HermesASTAdapter {
-  +code: string;
+  readonly code: string;
 
   constructor(options: ParserOptions, code: string) {
     super(options);
@@ -161,7 +162,7 @@ export default class HermesToESTreeAdapter extends HermesASTAdapter {
     let value;
     try {
       value = new RegExp(pattern, flags);
-    } catch (e) {
+    } catch {
       value = null;
     }
 

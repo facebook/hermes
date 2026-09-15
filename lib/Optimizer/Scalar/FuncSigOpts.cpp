@@ -34,7 +34,10 @@ static bool capturesArgumentVector(Function *F) {
       if (llvh::isa<CreateArgumentsInst>(I))
         return true;
       if (auto *CB = llvh::dyn_cast<CallBuiltinInst>(&I)) {
-        if (CB->getBuiltinIndex() == BuiltinMethod::HermesBuiltin_copyRestArgs)
+        if (CB->getBuiltinIndex() ==
+                BuiltinMethod::HermesBuiltin_copyRestArgs ||
+            CB->getBuiltinIndex() ==
+                BuiltinMethod::HermesBuiltin_copyRestArgsFast)
           return true;
       }
     }

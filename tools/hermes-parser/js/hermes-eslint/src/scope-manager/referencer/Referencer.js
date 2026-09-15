@@ -125,7 +125,7 @@ function getJsxName(name: JSXTagNameExpression): string {
 
 const FBT_NAMES = new Set(['fbt', 'fbs']);
 
-type ReferencerOptions = $ReadOnly<{
+type ReferencerOptions = Readonly<{
   ...VisitorOptions,
   fbtSupport: boolean | null,
   jsxPragma: string | null,
@@ -134,10 +134,10 @@ type ReferencerOptions = $ReadOnly<{
 
 // Referencing variables and creating bindings.
 class Referencer extends Visitor {
-  +_jsxPragma: string | null;
-  +_jsxFragmentName: string | null;
-  +_fbtSupport: boolean | null;
-  +scopeManager: ScopeManager;
+  readonly _jsxPragma: string | null;
+  readonly _jsxFragmentName: string | null;
+  readonly _fbtSupport: boolean | null;
+  readonly scopeManager: ScopeManager;
 
   constructor(
     {

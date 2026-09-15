@@ -11,7 +11,6 @@
 import invariant from './invariant';
 import CHECKED_CAST from 'sh/CHECKED_CAST';
 import {queueMicrotask} from 'sh/microtask';
-import {join} from 'sh/fastarray';
 
 function padString(str: string, len: number): string {
   let result: string = '';
@@ -95,7 +94,7 @@ let workInProgressState: State<mixed> | null = null;
 /**
  * Queue of updates triggered *during* render.
  */
-const renderPhaseUpdateQueue: Update<mixed>[] = [];
+let renderPhaseUpdateQueue: Update<mixed>[] = [];
 
 /**
  * Public API to create a new "root", this is where React attaches rendering to a host element.
@@ -116,12 +115,12 @@ export function useState<T>(
    */
   initial: T,
 ): [T, SetState<T>] {
-  const root: Root = CHECKED_CAST<Root>(workInProgressRoot);
-  const fiber: Fiber = CHECKED_CAST<Fiber>(workInProgressFiber);
   invariant(
-    fiber !== null && root !== null,
+    workInProgressFiber !== null && workInProgressRoot !== null,
     'useState() called outside of render',
   );
+  const root: Root = CHECKED_CAST<Root>(workInProgressRoot);
+  const fiber: Fiber = CHECKED_CAST<Fiber>(workInProgressFiber);
 
   let state: State<T>;
   const _workInProgressState: State<mixed> | null = workInProgressState;
@@ -167,9 +166,9 @@ export function useState<T>(
   ];
 }
 
-const callbacks = new Map();
+const callbacks = new Map<string, any>();
 export function callOnClickOrChange(id: string, event: any): void {
-  const callback = callbacks.get(id);
+  const callback: any = callbacks.get(id);
   if (callback == null) {
     throw new Error('No callback registered with id: ' + id);
   }
@@ -268,7 +267,8 @@ class Root {
   /**
    * Drive any remaining work to completion and return the rendered result
    */
-  render(element: React$MixedElement): string {
+  // Reconcile only: build/update the retained fiber tree. No serialization.
+  update(element: React$MixedElement): void {
     invariant(
       workInProgressFiber === null && workInProgressState === null,
       'Cannot render, an existing render is in progress',
@@ -278,12 +278,21 @@ class Root {
     if (hasChanges) {
       this.doWork(element);
     }
+  }
 
+  // Serialize the retained fiber tree to a string. Separate from update() so
+  // callers can reconcile without paying serialization cost every time.
+  toString(): string {
     invariant(this.root !== null, 'Expected root to be rendered');
     const root: Fiber = CHECKED_CAST<Fiber>(this.root);
     const output: string[] = [];
     this.printFiber(root, output, 0);
-    return join(output, '\n');
+    return output.join('\n');
+  }
+
+  render(element: React$MixedElement): string {
+    this.update(element);
+    return this.toString();
   }
 
   doWork(element: React$MixedElement): void {
@@ -410,7 +419,7 @@ class Root {
               );
               hasChanges = update.run() || hasChanges;
             }
-            renderPhaseUpdateQueue.length = 0;
+            renderPhaseUpdateQueue = [];
             if (!hasChanges) {
               break;
             }
@@ -424,11 +433,11 @@ class Root {
           if (id != null) {
             const onClick = fiber.props.onClick;
             if (onClick != null) {
-              callbacks.set(id, onClick);
+              callbacks.set(CHECKED_CAST<string>(id), onClick);
             }
             const onChange = fiber.props.onChange;
             if (onChange != null) {
-              callbacks.set(id, onChange);
+              callbacks.set(CHECKED_CAST<string>(id), onChange);
             }
           }
           break;
@@ -471,7 +480,7 @@ class Root {
           CHECKED_CAST<string>(element.type),
         );
         invariant(
-          element.props !== null && typeof element.props === 'object',
+          (element.props: any) !== null && typeof element.props === 'object',
           'Expected component props',
         );
 
@@ -481,13 +490,16 @@ class Root {
         delete props.children;
 
         fiber = new Fiber(type, props, element.key);
-        this.mountChildren(children, fiber);
+        this.mountChildren(CHECKED_CAST<React$Node>(children), fiber);
       } else {
         switch (element.type) {
           case REACT_FRAGMENT_TYPE: {
             const type: FiberType = new FiberTypeFragment();
             fiber = new Fiber(type, (element.props: any), element.key);
-            this.mountChildren(element.props.children, fiber);
+            this.mountChildren(
+              CHECKED_CAST<React$Node>(element.props.children),
+              fiber,
+            );
             break;
           }
           default: {
@@ -506,7 +518,7 @@ class Root {
   }
 
   mountChildren(children: React$Node, parentFiber: Fiber): void {
-    if (Array.isArray(children)) {
+    if (globalThis.Array.isArray(children)) {
       let prev: Fiber | null = null;
       for (const childElement of CHECKED_CAST<any[]>(children)) {
         if (childElement == null) {
@@ -542,7 +554,7 @@ class Root {
   ): Fiber {
     if (
       prevChild !== null &&
-      CHECKED_CAST<Fiber>(prevChild).type === element.type
+      CHECKED_CAST<Fiber>(prevChild).type === (element.type: any)
     ) {
       let prevChild: Fiber = CHECKED_CAST<Fiber>(prevChild);
       // Only host and fragment nodes have to be reconciled: otherwise this is a
@@ -551,7 +563,7 @@ class Root {
       switch (prevChild.type.kind) {
         case 'host': {
           invariant(
-            element.props !== null && typeof element.props === 'object',
+            (element.props: any) !== null && typeof element.props === 'object',
             'Expected component props',
           );
 
@@ -566,7 +578,7 @@ class Root {
         }
         case 'fragment': {
           invariant(
-            element.props !== null && typeof element.props === 'object',
+            (element.props: any) !== null && typeof element.props === 'object',
             'Expected component props',
           );
 
@@ -576,7 +588,7 @@ class Root {
         }
         case 'component': {
           invariant(
-            element.props !== null && typeof element.props === 'object',
+            (element.props: any) !== null && typeof element.props === 'object',
             'Expected component props',
           );
           prevChild.props = element.props;
@@ -598,7 +610,7 @@ class Root {
    */
   reconcileChildren(parent: Fiber, children: React$Node): void {
     const prevChild: Fiber | null = parent.child;
-    if (Array.isArray(children)) {
+    if (globalThis.Array.isArray(children)) {
       let childrenArray = CHECKED_CAST<React$MixedElement[]>(children);
       // Fast-path for empty and single-element arrays
       if (childrenArray.length === 0) {
@@ -650,7 +662,7 @@ class Root {
       'Expected children to have multiple elements',
     );
     // map existing children by key to make subsequent lookup O(log n)
-    const keyedChildren: any = new Map();
+    const keyedChildren: any = new Map<Fiber, Fiber>();
     let current: Fiber | null = parent.child;
     while (current !== null) {
       if (CHECKED_CAST<Fiber>(current).key !== null) {
@@ -745,7 +757,7 @@ class FiberTypeText extends FiberType {
  * the framework only looks at the identity of prop values and does not otherwise make any
  * assumptions about which props may exist and what their types are.
  */
-export type Props = any;
+export type Props = {+[prop: string]: mixed};
 
 /**
  * Data storage for the useState() hook

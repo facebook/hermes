@@ -124,7 +124,7 @@ static void auditInferredTypes(Function *F) {
         TypeNumber++;
       } else if (t.isObjectType()) {
         TypeObject++;
-      } else if (t.canBeAny()) {
+      } else if (F->getParent()->getTypeContext().canBeAny(t)) {
         TypeAny++;
       } else {
         // Other cases not counted above, e.g. union types.

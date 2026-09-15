@@ -83,7 +83,7 @@ RegClass RegisterAllocator::getRegClass(Instruction *inst) {
   Type t = inst->getType();
   if (t.isNumberType())
     return RegClass::Number;
-  if (t.isNonPtr())
+  if (inst->getModule()->getTypeContext().isNonPtr(t))
     return RegClass::NonPtr;
   return RegClass::Other;
 }

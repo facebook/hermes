@@ -53,7 +53,7 @@
         "use unsafe";
 
         let res = _malloc(size);
-        if (res === 0) throw Error("OOM");
+        if ((res: any) === 0) throw Error("OOM");
         return res;
     }
 

@@ -17,7 +17,7 @@ var b: B;
 // CHECK-NEXT:%tuple.2 = tuple(void)
 
 // CHECK:SemContext
-// CHECK-NEXT:Func strict
+// CHECK-NEXT:Func strict mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:        Decl %d.2 'b' Var : %tuple.2

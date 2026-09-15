@@ -11,7 +11,6 @@
 import type {Props, React$MixedElement} from 'react';
 import type {Album} from './data/albums';
 
-import {map} from 'sh/fastarray';
 import Image from 'next/image';
 import {PlusCircledIcon} from '@radix-ui/react-icons';
 
@@ -94,8 +93,7 @@ export default function MusicPage(props: Props): React$MixedElement {
                       <div className="relative">
                         {/* <ScrollArea> */}
                         <div className="flex space-x-4 pb-4">
-                          {map<Album, React$MixedElement>(
-                            listenNowAlbums,
+                          {listenNowAlbums.map<React$MixedElement>(
                             (album: Album, _i: number): React$MixedElement => (
                               <AlbumArtwork
                                 key={album.name}
@@ -123,8 +121,7 @@ export default function MusicPage(props: Props): React$MixedElement {
                       <div className="relative">
                         {/* <ScrollArea> */}
                         <div className="flex space-x-4 pb-4">
-                          {map<Album, React$MixedElement>(
-                            madeForYouAlbums,
+                          {madeForYouAlbums.map<React$MixedElement>(
                             (album: Album, _i: number): React$MixedElement => (
                               <AlbumArtwork
                                 key={album.name}

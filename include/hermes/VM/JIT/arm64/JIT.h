@@ -134,6 +134,11 @@ class JITContext {
     memoryLimit_ = memoryLimit;
   }
 
+  /// Set the largest lazy JIT id assignable to a HiddenClass. Exposed only so
+  /// that tests can reach the exhaustion path without interning 65535 hidden
+  /// classes; production code should leave this at the default.
+  void setHCIdLimit(uint32_t hcIdLimit);
+
   /// Set the flag to emit asserts in the JIT'ed code.
   void setEmitAsserts(bool emitAsserts) {
     emitAsserts_ = emitAsserts;

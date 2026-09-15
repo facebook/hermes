@@ -21,6 +21,11 @@ class JITContext::Impl {
 
   static constexpr uint16_t kHCIdOverflow = 0xFFFF;
 
+  /// The largest id assignable to a hidden class. Lowered only by tests, so
+  /// that the exhaustion path can be reached without interning 65535 hidden
+  /// classes; the true ceiling is the width of HiddenClass::lazyJITId_.
+  uint16_t hcIdLimit{kHCIdOverflow};
+
   /// Hidden classes that we used by the emitted JIT code. Since we never
   /// throw away code, they can never be freed.
   /// This value is either Undefined or  a pointer to ArrayStorageSmall. It is

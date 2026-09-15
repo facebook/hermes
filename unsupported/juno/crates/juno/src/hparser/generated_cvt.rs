@@ -71,7 +71,6 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
           ast::builder::FunctionExpression::build_template(gc, template)
         }
         NodeKind::ArrowFunctionExpression => {
-          let id = cvt_node_ptr_opt(cvt, gc, hermes_get_ArrowFunctionExpression_id(n));
           let params = cvt_node_list(cvt, gc, hermes_get_ArrowFunctionExpression_params(n));
           let body = cvt_node_ptr(cvt, gc, hermes_get_ArrowFunctionExpression_body(n));
           let type_parameters = cvt_node_ptr_opt(cvt, gc, hermes_get_ArrowFunctionExpression_typeParameters(n));
@@ -81,7 +80,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
           let is_async = hermes_get_ArrowFunctionExpression_async(n);
           let mut template = ast::template::ArrowFunctionExpression {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
-                  id,
+                  id: None,
                   params,
                   body,
                   type_parameters,
@@ -1643,7 +1642,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
           ast::builder::QualifiedTypeofIdentifier::build_template(gc, template)
         }
         NodeKind::TupleTypeAnnotation => {
-          let types = cvt_node_list(cvt, gc, hermes_get_TupleTypeAnnotation_types(n));
+          let types = cvt_node_list(cvt, gc, hermes_get_TupleTypeAnnotation_elementTypes(n));
           let inexact = hermes_get_TupleTypeAnnotation_inexact(n);
           let mut template = ast::template::TupleTypeAnnotation {
               metadata: ast::TemplateMetadata {range, ..Default::default()},

@@ -4,8 +4,6 @@
 [ignore]
 <PROJECT_ROOT>/.*/dist
 <PROJECT_ROOT>/.*/node_modules
-<PROJECT_ROOT>/flow-api-translator/__tests__/flowDefToTSDef/fixtures
-<PROJECT_ROOT>/flow-api-translator/__tests__/flowToJS/fixtures
 <PROJECT_ROOT>/prettier-hermes-v2-backport
 
 [options]
@@ -25,10 +23,10 @@ module.name_mapper='^prettier-plugin-hermes-parser$' -> '<PROJECT_ROOT>/prettier
 
 enums=true
 component_syntax=false
-experimental.pattern_matching=false
+pattern_matching=false
 
 [version]
-^0.311.0
+^0.324.0
 
 [lints]
 untyped-type-import=error

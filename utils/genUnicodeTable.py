@@ -348,6 +348,20 @@ def split_fields(line) -> list[str]:
 range_tuple = tuple[int, int]
 
 
+def merge_adjacent_ranges(ranges: list[range_tuple]) -> list[range_tuple]:
+    """Merge adjacent or overlapping ranges in a sorted list."""
+    if not ranges:
+        return ranges
+    merged = [ranges[0]]
+    for start, end in ranges[1:]:
+        prev_start, prev_end = merged[-1]
+        if start <= prev_end + 1:
+            merged[-1] = (prev_start, max(prev_end, end))
+        else:
+            merged.append((start, end))
+    return merged
+
+
 def parse_range(range_str) -> range_tuple:
     """
     Parse the alternative codepoint range format, e.g. "1..10", or "1" into a
@@ -917,6 +931,14 @@ range_array_pool_size_bits: {self._metrics["range_array_pool_size"].bit_length()
                 canonical_name = script_property_aliases_by_alias[short_key][1]
                 script_extensions_property_ranges[canonical_name].extend(ranges)
 
+        # Sort and merge ranges. The ranges were collected from multiple
+        # multi-script lines in ScriptExtensions.txt, so they may be out of
+        # order and adjacent ranges from different lines may not be merged.
+        for name in script_extensions_property_ranges:
+            script_extensions_property_ranges[name] = merge_adjacent_ranges(
+                sorted(script_extensions_property_ranges[name])
+            )
+
         pool = self.script_property_pool
         ext_pool = self.script_extensions_property_pool
         # Update the string pool with the script property names and aliases
@@ -948,16 +970,13 @@ range_array_pool_size_bits: {self._metrics["range_array_pool_size"].bit_length()
                     offset=script_range_offset,
                     size=len(ranges) + len(ext_ranges),
                 )
-                # Manually mark the range array pool entry for the script
-                # extension. This is necessary because the script extension
-                # needs to refer to offset for the script, and cover a range of
-                # 2, but still only increment the range array pool index by 1.
+                # Point directly at the combined Script_Extensions pool ref,
+                # which already includes both Script and Script_Extensions
+                # ranges as a single entry.
                 ext_pool.mark_range_array_pool_manual(
                     canonical_name,
-                    script_range_array_offset,
-                    # This is size 2 because it is the script range (1) script
-                    # and the extension range (1).
-                    2,
+                    script_range_array_offset + 1,
+                    1,
                 )
 
         # Manually map the "Zzzz" / "Unknown" script property to the "Cn" /

@@ -118,19 +118,52 @@ class FastArray : public JSObject {
     return pushSlow(self, runtime, val);
   }
 
-  static ExecutionStatus
-  append(Handle<FastArray> self, Runtime &runtime, Handle<FastArray> other) {
+  /// Pop the last \p n elements from the array and decrease the length by the
+  /// number of elements popped. If \p n exceeds the current length, all
+  /// elements are popped.
+  /// \return the topmost popped element, or undefined if no elements were
+  /// popped (either the array was empty or \p n was zero).
+  static HermesValue pop(Handle<FastArray> self, Runtime &runtime, uint32_t n) {
+    uint32_t sz = self->indexedStorage_.getNonNull(runtime)->size();
+    if (sz == 0 || n == 0)
+      return HermesValue::encodeUndefinedValue();
+
+    uint32_t toPop = std::min(n, sz);
+    uint32_t newSz = sz - toPop;
+
+    // Encode the new length before shrinking, this can allocate.
+    auto newLen = SmallHermesValue::encodeNumberValue(newSz, runtime);
+
+    NoAllocScope noAlloc{runtime};
+    auto *storage = self->indexedStorage_.getNonNull(runtime);
+    // Capture the topmost element about to be popped before resizing.
+    SmallHermesValue lastSHV = storage->at(sz - 1);
+    ArrayStorageSmall::resizeWithinCapacity(storage, runtime.getHeap(), newSz);
+    HermesValue val = lastSHV.unboxToHV(runtime);
+    self->setLength(runtime, newLen);
+    return val;
+  }
+
+  /// Append the elements of \p other starting at index \p fromIndex onto the
+  /// end of \p self.
+  static ExecutionStatus append(
+      Handle<FastArray> self,
+      Runtime &runtime,
+      Handle<FastArray> other,
+      uint32_t fromIndex = 0) {
     auto *storage = self->indexedStorage_.getNonNull(runtime);
     auto *otherStorage = other->indexedStorage_.getNonNull(runtime);
+    assert(fromIndex <= otherStorage->size() && "fromIndex out of range");
     size_t curSz = storage->size();
-    size_t newSz = curSz + otherStorage->size();
-    if (LLVM_LIKELY(newSz < storage->capacity())) {
-      storage->appendWithinCapacity(runtime, otherStorage);
+    size_t copyLen = otherStorage->size() - fromIndex;
+    size_t newSz = curSz + copyLen;
+    if (LLVM_LIKELY(newSz <= storage->capacity())) {
+      storage->appendWithinCapacity(runtime, otherStorage, fromIndex);
       auto shv = SmallHermesValue::encodeNumberValue(newSz, runtime);
       self->setLength(runtime, shv);
       return ExecutionStatus::RETURNED;
     }
-    return appendSlow(self, runtime, other);
+    return appendSlow(self, runtime, other, fromIndex);
   }
 
   /// Construct an instance of the hidden class describing the layout of JSArray
@@ -171,8 +204,11 @@ class FastArray : public JSObject {
   static ExecutionStatus
   pushSlow(Handle<FastArray> self, Runtime &runtime, Handle<> val);
 
-  static ExecutionStatus
-  appendSlow(Handle<FastArray> self, Runtime &runtime, Handle<FastArray> other);
+  static ExecutionStatus appendSlow(
+      Handle<FastArray> self,
+      Runtime &runtime,
+      Handle<FastArray> other,
+      uint32_t fromIndex = 0);
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION
   /// Adds the special indexed element edges from this array to its backing

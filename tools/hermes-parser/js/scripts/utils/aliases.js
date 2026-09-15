@@ -21,7 +21,7 @@
  *  - Remove TS support.
  *  - Rename "Property" alias, ESTree has a "Property" AST node.
  */
-export default ({
+const aliases: Readonly<{[string]: ReadonlyArray<string>}> = {
   ArrayExpression: ['Expression'],
   AssignmentExpression: ['Expression'],
   BinaryExpression: ['Binary', 'Expression'],
@@ -351,4 +351,5 @@ export default ({
   TSNonNullExpression: ['Expression'],
   TSExportAssignment: ['Statement'],
   TSNamespaceExportDeclaration: ['Statement'],
-}: $ReadOnly<{[string]: $ReadOnlyArray<string>}>);
+};
+export default aliases;

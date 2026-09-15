@@ -56,7 +56,7 @@ function retval(c: C | null): C {
 // CHECK-NEXT:})
 
 // CHECK:SemContext
-// CHECK-NEXT:Func strict
+// CHECK-NEXT:Func strict mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:        Decl %d.2 'C' Class : %class_constructor.3
@@ -70,25 +70,25 @@ function retval(c: C | null): C {
 // CHECK-NEXT:        hoistedFunction assign
 // CHECK-NEXT:        hoistedFunction retval
 // CHECK-NEXT:        Scope %s.2
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.3
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict noImplicitReturn
 // CHECK-NEXT:        Scope %s.4
 // CHECK-NEXT:            Decl %d.8 'cur' Parameter : %union.4
 // CHECK-NEXT:            Decl %d.9 'arguments' Var Arguments
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.5
 // CHECK-NEXT:            Decl %d.10 'cur' Parameter : %union.4
 // CHECK-NEXT:            Decl %d.11 'bar' Var : %function.9
 // CHECK-NEXT:            Decl %d.12 'arguments' Var Arguments
 // CHECK-NEXT:            hoistedFunction bar
 // CHECK-NEXT:            Scope %s.6
-// CHECK-NEXT:        Func strict
+// CHECK-NEXT:        Func strict mayReachImplicitReturn
 // CHECK-NEXT:            Scope %s.7
 // CHECK-NEXT:                Decl %d.13 'c' Parameter : %class.2
 // CHECK-NEXT:                Decl %d.14 'cv' Parameter : %union.8
 // CHECK-NEXT:                Decl %d.15 'arguments' Var Arguments
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.8
 // CHECK-NEXT:            Decl %d.16 'cur' Parameter : %union.4
 // CHECK-NEXT:            Decl %d.17 'a' Let : %union.4
@@ -96,7 +96,7 @@ function retval(c: C | null): C {
 // CHECK-NEXT:            Decl %d.19 'arguments' Var Arguments
 // CHECK-NEXT:            Scope %s.9
 // CHECK-NEXT:                Decl %d.20 'b' Let : %class.2
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict noImplicitReturn
 // CHECK-NEXT:        Scope %s.10
 // CHECK-NEXT:            Decl %d.21 'c' Parameter : %union.4
 // CHECK-NEXT:            Decl %d.22 'arguments' Var Arguments

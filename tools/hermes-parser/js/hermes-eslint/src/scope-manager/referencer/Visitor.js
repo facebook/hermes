@@ -21,13 +21,13 @@ import type {VisitorOptions} from './VisitorBase';
 import {VisitorBase} from './VisitorBase';
 import {PatternVisitor} from './PatternVisitor';
 
-type VisitPatternOptions = $ReadOnly<{
+type VisitPatternOptions = Readonly<{
   ...PatternVisitorOptions,
   processRightHandNodes?: boolean,
 }>;
 
 class Visitor extends VisitorBase {
-  +_options: VisitorOptions;
+  readonly _options: VisitorOptions;
   constructor(optionsOrVisitor: VisitorOptions | Visitor) {
     super(
       optionsOrVisitor instanceof Visitor

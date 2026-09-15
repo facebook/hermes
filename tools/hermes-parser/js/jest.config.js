@@ -41,6 +41,13 @@ module.exports = {
       ]),
     ),
 
+    // prettier-plugin-hermes-parser is a pre-built bundle without src/index.js
+    '^prettier-plugin-hermes-parser$': path.resolve(
+      __dirname,
+      'prettier-plugin-hermes-parser',
+      'index.mjs',
+    ),
+
     // hermes-parser
     '.*/HermesParserWASM$': path.resolve(
       __dirname,

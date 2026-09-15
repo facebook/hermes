@@ -74,3 +74,24 @@ print(m.has('x'));
 // CHECK-NEXT: false
 print(m.has('b'));
 // CHECK-NEXT: false
+
+// size.
+let m4 = new Map<string, number>();
+print(m4.size);
+// CHECK-NEXT: 0
+m4.set('a', 1);
+print(m4.size);
+// CHECK-NEXT: 1
+m4.set('b', 2);
+m4.set('c', 3);
+print(m4.size);
+// CHECK-NEXT: 3
+m4.set('a', 42);
+print(m4.size);
+// CHECK-NEXT: 3
+m4.delete('b');
+print(m4.size);
+// CHECK-NEXT: 2
+m4.clear();
+print(m4.size);
+// CHECK-NEXT: 0

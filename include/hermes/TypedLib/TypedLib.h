@@ -14,4 +14,7 @@ namespace hermes {
 /// Get the TypedLib source code for parsing as a prelude in typed mode.
 llvh::StringRef getTypedLibSource();
 
+/// Get the Typed language documentation (doc/TypedLanguage.md) contents.
+llvh::StringRef getTypedLanguageDoc();
+
 } // namespace hermes

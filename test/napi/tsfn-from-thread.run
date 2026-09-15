@@ -1,0 +1,18 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+// REQUIRES: napi, jsi_unstable
+// UNSUPPORTED: windows
+
+// Spawns a worker thread inside the addon that posts 5 calls through
+// a threadsafe function back to JS. Each dispatch goes through the
+// host adapter's post_task trampoline into EventLoopControl, which
+// runs the JS callback on the JS thread.
+
+// RUN: echo 'var a = loadNativeModule("%napi_addon_dir/napi_async_work_addon.node"); var n = 0; a.postFromThread(5, function(i) { n++; if (n === 5) print("tsfn done " + i); });' > %t.js && %hermes %t.js | %FileCheck --match-full-lines %s
+
+// CHECK: tsfn done 5

@@ -56,3 +56,23 @@ s3.forEach(v => { print(v); });
 // CHECK-NEXT: 10
 // CHECK-NEXT: 20
 // CHECK-NEXT: 30
+
+// size.
+let s4 = new Set<string>();
+print(s4.size);
+// CHECK-NEXT: 0
+s4.add('a');
+print(s4.size);
+// CHECK-NEXT: 1
+s4.add('b').add('c');
+print(s4.size);
+// CHECK-NEXT: 3
+s4.add('a');
+print(s4.size);
+// CHECK-NEXT: 3
+s4.delete('b');
+print(s4.size);
+// CHECK-NEXT: 2
+s4.clear();
+print(s4.size);
+// CHECK-NEXT: 0

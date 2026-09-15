@@ -25,7 +25,7 @@ switch (i) {
 // CHECK-NEXT:%class.2 = class(Array<number>)
 
 // CHECK:SemContext
-// CHECK-NEXT:Func strict
+// CHECK-NEXT:Func strict mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:        Decl %d.2 'arr' Var : %class.2

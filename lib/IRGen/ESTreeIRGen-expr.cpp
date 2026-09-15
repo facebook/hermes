@@ -22,13 +22,14 @@ Value *ESTreeIRGen::enforceExprType(hermes::Value *value, ESTree::Node *expr) {
 
   Type exprIRType = flowTypeToIRType(exprFlowType);
   Type valueType = value->getType();
+  TypeContext &tc = getTypeContext();
   // NOTE: equal sets are subsets of each other, but we want to do the fast
   // check first. In theory, it should catsh 100% of the cases when IRGen is
   // fully typed.
-  if (exprIRType == valueType || valueType.isSubsetOf(exprIRType))
+  if (exprIRType == valueType || tc.isSubsetOf(valueType, exprIRType))
     return value;
 
-  if (!exprIRType.isSubsetOf(valueType)) {
+  if (!tc.isSubsetOf(exprIRType, valueType)) {
     Mod->getContext().getSourceErrorManager().error(
         expr->getSourceRange(),
         "Internal error: Flow expr type is not a subset of value type");
@@ -512,6 +513,20 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
           call, llvh::cast<ESTree::IdentifierNode>(Mem->_property));
     }
 
+    // Typed `fn.call(thisArg, args...)` lowers to a direct CallInst, the
+    // same shape that `$SHBuiltin.call` produces. Sema has already verified
+    // the receiver is a function type, so the property `call` is guaranteed
+    // to be Function.prototype.call.
+    if (!Mem->_computed) {
+      if (auto *propId = llvh::dyn_cast<ESTree::IdentifierNode>(Mem->_property);
+          propId && propId->_name == kw_.identCall) {
+        if (llvh::isa<flow::BaseFunctionType>(
+                flowContext_.getNodeTypeOrAny(Mem->_object)->info)) {
+          return genTypedFunctionPrototypeCall(call, Mem);
+        }
+      }
+    }
+
     MemberExpressionResult memResult =
         genMemberExpression(Mem, MemberExpressionOperation::Load);
 
@@ -688,6 +703,33 @@ Value *ESTreeIRGen::genSHBuiltin(
     return Builder.createFastArrayLengthInst(array);
   }
 
+  // %SHBuiltin.fastArrayPop(arr: Array<T>, n: number): T | void;
+  if (builtin->_name == kw_.identFastArrayPop) {
+    if (call->_arguments.size() != 2) {
+      Mod->getContext().getSourceErrorManager().error(
+          call->getSourceRange(),
+          "fastArrayPop requires exactly two arguments");
+      return Builder.getLiteralUndefined();
+    }
+    auto it = call->_arguments.begin();
+    Value *array = genExpression(&*it++);
+    Value *count = genExpression(&*it);
+    return genBuiltinCall(
+        BuiltinMethod::HermesBuiltin_fastArrayPop, {array, count});
+  }
+
+  // %SHBuiltin.fastArrayLength(arr: Array<T>): number;
+  if (builtin->_name == kw_.identFastArrayLength) {
+    if (call->_arguments.size() != 1) {
+      Mod->getContext().getSourceErrorManager().error(
+          call->getSourceRange(),
+          "fastArrayLength requires exactly one argument");
+      return Builder.getLiteralUndefined();
+    }
+    Value *array = genExpression(&call->_arguments.front());
+    return Builder.createFastArrayLengthInst(array);
+  }
+
   if (builtin->_name == kw_.identModuleFactory) {
     return genSHBuiltinModuleFactory(call);
   }
@@ -733,6 +775,29 @@ Value *ESTreeIRGen::genSHBuiltinCall(ESTree::CallExpressionNode *call) {
 
   return Builder.createCallInst(
       callee, /* newTarget */ Builder.getLiteralUndefined(), thisValue, args);
+}
+
+Value *ESTreeIRGen::genTypedFunctionPrototypeCall(
+    ESTree::CallExpressionNode *call,
+    ESTree::MemberExpressionNode *mem) {
+  Value *callee = genExpression(mem->_object);
+  Value *thisValue = Builder.getLiteralUndefined();
+  llvh::SmallVector<Value *, 4> args{};
+  bool sawThis = false;
+  for (ESTree::Node &arg : call->_arguments) {
+    Value *v = genExpression(&arg);
+    if (!sawThis) {
+      thisValue = v;
+      sawThis = true;
+    } else {
+      args.push_back(v);
+    }
+  }
+  return Builder.createCallInst(
+      callee,
+      /* newTarget */ Builder.getLiteralUndefined(),
+      thisValue,
+      args);
 }
 
 Value *ESTreeIRGen::genSHBuiltinExternC(ESTree::CallExpressionNode *call) {
@@ -855,12 +920,16 @@ Value *ESTreeIRGen::emitCall(
         newTarget,
         thisVal,
         args);
-    if (llvh::isa<flow::BaseFunctionType>(
+    if (auto *baseFunctionType = llvh::dyn_cast<flow::BaseFunctionType>(
             flowContext_.getNodeTypeOrAny(getCallee(call))->info)) {
       // Every BaseFunctionType currently is going to be compiled to a
       // NativeJSFunction, so always set this flag.
       // Eventually we will have bytecode, etc.
       callInst->getAttributesRef(Mod).isNativeJSFunction = true;
+      if (auto *typedFunc =
+              llvh::dyn_cast<flow::TypedFunctionType>(baseFunctionType)) {
+        callInst->setType(flowTypeToIRType(typedFunc->getReturnType()));
+      }
     }
     return callInst;
   }
@@ -1134,7 +1203,8 @@ void ESTreeIRGen::emitTypedFinalMethodClosureStore(
   Builder.createStoreFrameInst(curFunction()->curScope(), function, var);
   setDeclData(decl, var);
   if (auto *CFI = llvh::dyn_cast<CreateFunctionInst>(function)) {
-    nonOverriddenMethods_.try_emplace(&field, CFI->getFunctionCode());
+    // Don't populate nonOverriddenMethods_ here,
+    // because it's only read for methods placed in the vtable.
     declFunctions_.try_emplace(decl, CFI->getFunctionCode());
   }
 }
@@ -1177,7 +1247,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
 
   // Check if we are loading from a FastArray, and generate the typed IR.
   // This must be checked before the general ClassType case because Array<T>
-  // is a ClassType but needs special handling for computed access and .length.
+  // is a ClassType but needs special handling for computed access.
   // NOTE: This is required for correctness, since a regular property load from
   // a FastArray will simply return undefined if it is out-of-bounds.
   if (flowContext_.isArrayClassType(
@@ -1192,14 +1262,6 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
               flowTypeToIRType(flowContext_.getNodeTypeOrAny(mem))),
           nullptr,
           baseValue};
-    }
-
-    // If we are reading the length from a known FastArray, use a
-    // specialised instruction to load it efficiently.
-    auto *ident = llvh::dyn_cast<ESTree::IdentifierNode>(mem->_property);
-    if (!mem->_computed && ident && ident->_name == kw_.identLength) {
-      return MemberExpressionResult{
-          Builder.createFastArrayLengthInst(baseValue), nullptr, baseValue};
     }
   }
 
@@ -1228,8 +1290,9 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
       if (optFieldLookup) {
         size_t fieldIndex = *optFieldLookup->getField()->layoutSlotIR;
         Type irType = flowTypeToIRType(optFieldLookup->getField()->type);
+        TypeContext &tc = getTypeContext();
         Instruction *inst;
-        if (irType.canBePrimitive()) {
+        if (tc.canBePrimitive(irType)) {
           // If the type can be a primitive, it will have a default value that
           // doesn't need IDZ.
           inst =
@@ -1241,7 +1304,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
                   baseValue,
                   fieldIndex,
                   propName,
-                  Type::unionTy(irType, Type::createUninit())),
+                  tc.unionTy(irType, Type::createUninit())),
               Type::createUninit());
         }
         return MemberExpressionResult{inst, nullptr, baseValue};
@@ -1314,14 +1377,29 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
       auto propName = Identifier::getFromPointer(
           llvh::cast<ESTree::IdentifierNode>(mem->_property)->_name);
       auto optIndex = objType->findField(propName);
-      assert(optIndex.hasValue() && "Expected field to exist");
-      const auto &field = objType->getFields()[*optIndex];
+      if (optIndex.hasValue()) {
+        const auto &field = objType->getFields()[*optIndex];
+        return MemberExpressionResult{
+            Builder.createPrLoadInst(
+                baseValue,
+                *optIndex,
+                Builder.getLiteralString(propName),
+                flowTypeToIRType(field.type)),
+            nullptr,
+            baseValue};
+      }
+    }
+    // Either a computed access or a dot access with no named field: this is an
+    // indexer read. The dynamic load yields `T | void` (a missing key reads as
+    // `undefined`); narrow it to `T` with a checked cast, so a read of a
+    // missing key throws. The FlowChecker types the member expression as `T`.
+    if (const auto &indexer = objType->getIndexer()) {
+      Type valueIRType = flowTypeToIRType(indexer->valueType);
+      auto *loadProp = Builder.createLoadPropertyInst(baseValue, propValue);
+      loadProp->setType(
+          getTypeContext().unionTy(valueIRType, Type::createUndefined()));
       return MemberExpressionResult{
-          Builder.createPrLoadInst(
-              baseValue,
-              *optIndex,
-              Builder.getLiteralString(propName),
-              flowTypeToIRType(field.type)),
+          Builder.createCheckedTypeCastInst(loadProp, valueIRType),
           nullptr,
           baseValue};
     }
@@ -1362,7 +1440,8 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
     } else {
       auto *loadProp = Builder.createLoadPropertyInst(baseValue, propValue);
       loadProp->setType(
-          Type::unionTy(Type::createString(), Type::createUndefined()));
+          getTypeContext().unionTy(
+              Type::createString(), Type::createUndefined()));
       auto *cast =
           Builder.createCheckedTypeCastInst(loadProp, Type::createString());
       return MemberExpressionResult{cast, nullptr, baseValue};
@@ -1469,7 +1548,7 @@ void ESTreeIRGen::emitTypedFieldStore(
       object,
       fieldIndex,
       propName,
-      flowTypeToIRType(field->type).isNonPtr());
+      getTypeContext().isNonPtr(flowTypeToIRType(field->type)));
 }
 
 void ESTreeIRGen::emitMemberStore(
@@ -1571,15 +1650,18 @@ void ESTreeIRGen::emitMemberStore(
       auto propName = Identifier::getFromPointer(
           llvh::cast<ESTree::IdentifierNode>(mem->_property)->_name);
       auto optIndex = objType->findField(propName);
-      assert(optIndex.hasValue() && "Expected field to exist");
-      const auto &field = objType->getFields()[*optIndex];
-      Builder.createPrStoreInst(
-          storedValue,
-          baseValue,
-          *optIndex,
-          Builder.getLiteralString(propName),
-          flowTypeToIRType(field.type).isNonPtr());
-      return;
+      if (optIndex.hasValue()) {
+        const auto &field = objType->getFields()[*optIndex];
+        Builder.createPrStoreInst(
+            storedValue,
+            baseValue,
+            *optIndex,
+            Builder.getLiteralString(propName),
+            getTypeContext().isNonPtr(flowTypeToIRType(field.type)));
+        return;
+      }
+      // No named field: this is an indexer object. Fall through to dynamic
+      // by-name access, the same lowering used for computed indexer access.
     }
   }
 
@@ -1596,7 +1678,8 @@ void ESTreeIRGen::emitMemberStore(
           baseValue,
           ulen,
           Builder.getLiteralString(llvh::Twine(ulen)),
-          flowTypeToIRType(tupleType->getTypes()[ulen]).isNonPtr());
+          getTypeContext().isNonPtr(
+              flowTypeToIRType(tupleType->getTypes()[ulen])));
       return;
     }
     Mod->getContext().getSourceErrorManager().error(
@@ -1756,7 +1839,12 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
 
   if (flow::ExactObjectType *objType = llvh::dyn_cast<flow::ExactObjectType>(
           flowContext_.getNodeTypeOrAny(Expr)->info)) {
-    return genTypedObjectExpr(Expr, objType);
+    // Indexer-typed object literals (e.g. produced by spreading a dictionary)
+    // have no fixed slots, so the slot-based typed lowering cannot serve them.
+    // Fall through to the dynamic lowering below, which copies spread sources
+    // with copyDataProperties.
+    if (!objType->hasIndexer())
+      return genTypedObjectExpr(Expr, objType);
   }
 
   /// Store information about a property. Is it an accessor (getter/setter) or
@@ -2136,6 +2224,33 @@ Value *ESTreeIRGen::genTypedObjectExpr(
       storedValues{};
   llvh::SmallVector<char, 32> stringStorage{};
   for (auto &node : Expr->_properties) {
+    if (auto *spread = llvh::dyn_cast<ESTree::SpreadElementNode>(&node)) {
+      // FlowChecker degrades the enclosing object literal to 'any' when
+      // a spread argument has type 'any'. This function is not
+      // run in that case, so the spread type must be ExactObjectType if we're
+      // here.
+      auto *spreadInfo = flowContext_.getNodeTypeOrAny(spread->_argument)->info;
+      assert(
+          llvh::isa<flow::ExactObjectType>(spreadInfo) &&
+          "spread source in typed object literal must be ExactObjectType");
+      auto *srcType = llvh::cast<flow::ExactObjectType>(spreadInfo);
+      Value *src = genExpression(spread->_argument);
+      for (size_t i = 0, e = srcType->getFields().size(); i < e; ++i) {
+        const auto &srcField = srcType->getFields()[i];
+        Value *loaded = Builder.createPrLoadInst(
+            src,
+            i,
+            Builder.getLiteralString(srcField.name),
+            flowTypeToIRType(srcField.type));
+        auto optIndex = type->findField(srcField.name);
+        assert(
+            optIndex.hasValue() &&
+            "Spread field must exist in destination type");
+        storedValues[srcField.name] = {loaded, *optIndex};
+      }
+      continue;
+    }
+
     auto *prop = llvh::cast<ESTree::PropertyNode>(&node);
     assert(
         !prop->_computed && !prop->_method && prop->_kind == kw_.identInit &&
@@ -2197,7 +2312,8 @@ Value *ESTreeIRGen::genTypedObjectExpr(
           result,
           idx,
           name,
-          flowTypeToIRType(type->getFields()[idx].type).isNonPtr());
+          getTypeContext().isNonPtr(
+              flowTypeToIRType(type->getFields()[idx].type)));
     }
   }
 
@@ -2682,7 +2798,8 @@ Value *ESTreeIRGen::genUpdateExpr(ESTree::UpdateExpressionNode *updateExpr) {
 
   // Postfix updates need to convert the original value to numeric before
   // Inc/Dec to ensure the updateExpr has the proper result value.
-  if (!isPrefix && !original->getType().isSubsetOf(Type::createNumeric()))
+  if (!isPrefix &&
+      !getTypeContext().isSubsetOf(original->getType(), Type::createNumeric()))
     original = Builder.createAsNumericInst(original);
 
   // Create the inc or dec.

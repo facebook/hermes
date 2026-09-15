@@ -22,7 +22,7 @@ v3 = [4, "def"];
 // CHECK-NEXT:%union.4 = union(any | %tuple.2)
 
 // CHECK:SemContext
-// CHECK-NEXT:Func strict
+// CHECK-NEXT:Func strict mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:        Decl %d.2 'f1' Var : %function.3
@@ -31,7 +31,7 @@ v3 = [4, "def"];
 // CHECK-NEXT:        Decl %d.5 'v3' Let : %tuple.2
 // CHECK-NEXT:        Decl %d.6 'arguments' Var Arguments
 // CHECK-NEXT:        hoistedFunction f1
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.7 'x' Parameter : %tuple.2
 // CHECK-NEXT:            Decl %d.8 'arguments' Var Arguments

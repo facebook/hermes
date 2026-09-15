@@ -27,11 +27,11 @@ function f(i) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:SemContext
-// CHECK-NEXT:Func loose
+// CHECK-NEXT:Func loose mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'f' GlobalProperty
 // CHECK-NEXT:        hoistedFunction f
-// CHECK-NEXT:    Func loose
+// CHECK-NEXT:    Func loose noImplicitReturn
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.2 'i' Parameter
 // CHECK-NEXT:            Decl %d.3 'j' Var
@@ -44,16 +44,16 @@ function f(i) {
 // CHECK-NEXT:                Decl %d.9 'A0' ClassExprName
 // CHECK-NEXT:            Scope %s.4
 // CHECK-NEXT:                Decl %d.10 'A1' ClassExprName
-// CHECK-NEXT:        Func strict
+// CHECK-NEXT:        Func strict mayReachImplicitReturn
 // CHECK-NEXT:            Scope %s.5
 // CHECK-NEXT:                Decl %d.11 'arguments' Var Arguments
-// CHECK-NEXT:        Func strict
+// CHECK-NEXT:        Func strict mayReachImplicitReturn
 // CHECK-NEXT:            Scope %s.6
 // CHECK-NEXT:                Decl %d.12 'arguments' Var Arguments
-// CHECK-NEXT:        Func strict
+// CHECK-NEXT:        Func strict mayReachImplicitReturn
 // CHECK-NEXT:            Scope %s.7
 // CHECK-NEXT:                Decl %d.13 'arguments' Var Arguments
-// CHECK-NEXT:        Func strict
+// CHECK-NEXT:        Func strict mayReachImplicitReturn
 // CHECK-NEXT:            Scope %s.8
 // CHECK-NEXT:                Decl %d.14 'arguments' Var Arguments
 

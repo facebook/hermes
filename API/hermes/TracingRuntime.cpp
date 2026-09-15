@@ -11,15 +11,87 @@
 #include <hermes/Platform/Logging.h>
 #include <hermes/Support/Algorithms.h>
 #include <hermes/Support/JSONEmitter.h>
+#include <hermes/VM/Callable.h>
+#include <hermes/VM/JSObject.h>
+#include <hermes/VM/Operations.h>
+#include <hermes/VM/Predefined.h>
+#include <hermes/VM/Runtime-inline.h>
+#include <hermes/VM/Runtime.h>
 #include <hermes/VM/SerializedValue.h>
 
+#include <llvh/ADT/ArrayRef.h>
 #include <llvh/Support/raw_ostream.h>
 #include "llvh/Support/FileSystem.h"
 #include "llvh/Support/SHA1.h"
 
+#include <math.h>
+#include <cmath>
+#include <cstdint>
+
 namespace facebook {
 namespace hermes {
 namespace tracing {
+
+namespace {
+
+using namespace ::hermes;
+using namespace ::hermes::vm;
+
+using Math1ArgFuncPtr = double (*)(double);
+using Math2ArgFuncPtr = double (*)(double, double);
+
+struct TraceableMathBuiltin {
+  Predefined::Str name;
+  BuiltinMethod::Enum builtinIndex;
+  unsigned paramCount;
+  Math1ArgFuncPtr function1Arg;
+  Math2ArgFuncPtr function2Arg;
+};
+
+/// Stabilize the result of a math function across platforms by dropping the
+/// last bit.
+HermesValue stabilizeMathResult(HermesValue result) {
+  double number = result.getNumber();
+  if (LLVM_UNLIKELY(!std::isfinite(number))) {
+    return result;
+  }
+
+  uint64_t bits = llvh::DoubleToBits(number);
+  bits &= ~uint64_t{1};
+  return HermesValue::encodeTrustedNumberValue(llvh::BitsToDouble(bits));
+}
+
+CallResult<HermesValue> traceableMathFunction1Arg(void *ctx, Runtime &runtime) {
+  auto args = runtime.getCurrentFrame().getNativeArgs();
+  auto function = reinterpret_cast<Math1ArgFuncPtr>(ctx);
+
+  auto res = toNumber_RJS(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  double result = function(res->getNumber());
+  return stabilizeMathResult(HermesValue::encodeTrustedNumberValue(result));
+}
+
+CallResult<HermesValue> traceableMathFunction2Arg(void *ctx, Runtime &runtime) {
+  auto args = runtime.getCurrentFrame().getNativeArgs();
+  auto function = reinterpret_cast<Math2ArgFuncPtr>(ctx);
+
+  auto res = toNumber_RJS(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  double arg0 = res->getNumber();
+
+  res = toNumber_RJS(runtime, args.getArgHandle(1));
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  double result = function(arg0, res->getNumber());
+  return stabilizeMathResult(HermesValue::encodeTrustedNumberValue(result));
+}
+
+} // namespace
 
 TracingRuntime::TracingRuntime(
     std::shared_ptr<jsi::Runtime> runtime,
@@ -40,6 +112,114 @@ SynthTrace::ObjectID TracingRuntime::useObjectID(const jsi::Pointer &p) const {
 SynthTrace::ObjectID TracingRuntime::defObjectID(const jsi::Pointer &p) {
   uniqueIDs_[getPointerValue(p)] = currentUniqueID_;
   return currentUniqueID_++;
+}
+
+void installTraceableBuiltinWrappers(jsi::Runtime &jsRuntime) {
+  // jsRuntime could be TracingRuntime if run `synth` with `--trace` flag.
+  if (auto *tracingRuntime = dynamic_cast<TracingRuntime *>(&jsRuntime)) {
+    installTraceableBuiltinWrappers(tracingRuntime->plain());
+    return;
+  }
+
+  // These static Math builtins are not required by IEEE 754 to be correctly
+  // rounded, and may differ across libm implementations. Do not include
+  // operations like sqrt or fma, which IEEE 754 does require to be correctly
+  // rounded.
+  // NOTE: This mapping needs to be synced with MathStdFunctions.def (we can't
+  // access it here) and Builtins.def.
+  static const TraceableMathBuiltin traceableMathBuiltins[] = {
+      {Predefined::acos, BuiltinMethod::Math_acos, 1, std::acos, nullptr},
+      {Predefined::acosh, BuiltinMethod::Math_acosh, 1, ::acosh, nullptr},
+      {Predefined::asin, BuiltinMethod::Math_asin, 1, std::asin, nullptr},
+      {Predefined::asinh, BuiltinMethod::Math_asinh, 1, ::asinh, nullptr},
+      {Predefined::atan, BuiltinMethod::Math_atan, 1, std::atan, nullptr},
+      {Predefined::atanh, BuiltinMethod::Math_atanh, 1, ::atanh, nullptr},
+      {Predefined::atan2, BuiltinMethod::Math_atan2, 2, nullptr, std::atan2},
+      {Predefined::cbrt, BuiltinMethod::Math_cbrt, 1, ::cbrt, nullptr},
+      {Predefined::cos, BuiltinMethod::Math_cos, 1, std::cos, nullptr},
+      {Predefined::cosh, BuiltinMethod::Math_cosh, 1, ::cosh, nullptr},
+      {Predefined::exp, BuiltinMethod::Math_exp, 1, std::exp, nullptr},
+      {Predefined::expm1, BuiltinMethod::Math_expm1, 1, ::expm1, nullptr},
+      {Predefined::log, BuiltinMethod::Math_log, 1, std::log, nullptr},
+      {Predefined::log10, BuiltinMethod::Math_log10, 1, std::log10, nullptr},
+      {Predefined::log1p, BuiltinMethod::Math_log1p, 1, ::log1p, nullptr},
+      {Predefined::log2, BuiltinMethod::Math_log2, 1, std::log2, nullptr},
+      {Predefined::pow, BuiltinMethod::Math_pow, 2, nullptr, expOp},
+      {Predefined::sin, BuiltinMethod::Math_sin, 1, std::sin, nullptr},
+      {Predefined::sinh, BuiltinMethod::Math_sinh, 1, ::sinh, nullptr},
+      {Predefined::tan, BuiltinMethod::Math_tan, 1, std::tan, nullptr},
+      {Predefined::tanh, BuiltinMethod::Math_tanh, 1, ::tanh, nullptr},
+  };
+
+  auto *hermes = jsi::castInterface<IHermes>(&jsRuntime);
+  if (!hermes) {
+    return;
+  }
+
+  auto *runtime = static_cast<Runtime *>(hermes->getVMRuntimeUnsafe());
+  GCScope gcScope(*runtime);
+  struct : public Locals {
+    PinnedValue<JSObject> math;
+    PinnedValue<NativeFunction> replacementMathFunction;
+  } lv;
+  LocalsRAII lraii{*runtime, &lv};
+
+  auto mathRes = JSObject::getNamed_RJS(
+      runtime->getGlobal(),
+      *runtime,
+      Predefined::getSymbolID(Predefined::Math));
+  if (LLVM_UNLIKELY(mathRes == ExecutionStatus::EXCEPTION)) {
+    runtime->clearThrownValue();
+    throw jsi::JSINativeException(
+        "Failed to get Math while installing trace wrappers");
+  }
+  lv.math.castAndSetHermesValue<JSObject>(mathRes->getHermesValue());
+
+  DefinePropertyFlags mathWrapperDPF =
+      DefinePropertyFlags::getNewNonEnumerableFlags();
+  for (const TraceableMathBuiltin &traceableMathBuiltin :
+       traceableMathBuiltins) {
+    GCScopeMarkerRAII marker{gcScope};
+    SymbolID functionID = Predefined::getSymbolID(traceableMathBuiltin.name);
+    void *functionContext;
+    NativeFunctionPtr nativeFunctionPtr;
+    if (traceableMathBuiltin.paramCount == 1) {
+      functionContext =
+          reinterpret_cast<void *>(traceableMathBuiltin.function1Arg);
+      nativeFunctionPtr = traceableMathFunction1Arg;
+    } else if (traceableMathBuiltin.paramCount == 2) {
+      functionContext =
+          reinterpret_cast<void *>(traceableMathBuiltin.function2Arg);
+      nativeFunctionPtr = traceableMathFunction2Arg;
+    } else {
+      hermes_fatal("unsupported traceable Math function parameter count");
+    }
+
+    lv.replacementMathFunction = *NativeFunction::create(
+        *runtime,
+        Handle<JSObject>::vmcast(&runtime->functionPrototype),
+        Runtime::makeNullHandle<Environment>(),
+        functionContext,
+        nativeFunctionPtr,
+        functionID,
+        traceableMathBuiltin.paramCount,
+        Runtime::makeNullHandle<JSObject>());
+
+    auto defineRes = JSObject::defineOwnProperty(
+        lv.math,
+        *runtime,
+        functionID,
+        mathWrapperDPF,
+        lv.replacementMathFunction);
+    if (LLVM_UNLIKELY(defineRes == ExecutionStatus::EXCEPTION || !*defineRes)) {
+      runtime->clearThrownValue();
+      throw jsi::JSINativeException(
+          "Failed to define Math function while installing wrappers");
+    }
+
+    runtime->overwriteBuiltinUnsafe(
+        traceableMathBuiltin.builtinIndex, *lv.replacementMathFunction);
+  }
 }
 
 void TracingRuntime::replaceNondeterministicFuncs() {
@@ -84,6 +264,8 @@ void TracingRuntime::replaceNondeterministicFuncs() {
           return result;
         }
       });
+
+  installTraceableBuiltinWrappers(*runtime_);
 
   // Below two host functions are for WeakRef hook.
   // We assign a new ObjectID for PointerValuea*, but for the case of Object

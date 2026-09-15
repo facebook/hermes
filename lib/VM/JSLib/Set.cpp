@@ -377,8 +377,6 @@ CallResult<HermesValue> setConstructor(void *, Runtime &runtime) {
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
   }
-
-  return lv.self.getHermesValue();
 }
 
 // ES12 23.2.3.1 Set.prototype.add ( value )

@@ -645,6 +645,54 @@ SHERMES_EXPORT void _sh_ljs_put_by_val_with_receiver_rjs(
     SHLegacyValue *receiver,
     bool isStrict);
 
+/// Put a property given a valid array index \p key.
+SHERMES_EXPORT void _sh_ljs_put_by_index_loose_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    uint32_t key,
+    SHLegacyValue *value);
+SHERMES_EXPORT void _sh_ljs_put_by_index_strict_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    uint32_t key,
+    SHLegacyValue *value);
+
+/// Optimized put-by-val when the key is known to be a number at compile time.
+/// The key is passed by value (not pointer) because numbers are immediate
+/// values that do not require GC rooting. Tries sh_tryfast_f64_to_u32 inline,
+/// then calls _sh_ljs_put_by_index on success, or falls back to the generic
+/// put-by-val path.
+static inline void _sh_ljs_put_by_val_numeric_loose_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHLegacyValue key,
+    SHLegacyValue *value) {
+  assert(_sh_ljs_is_double(key) && "key must be a number");
+  uint32_t index;
+  // Reject 0xFFFFFFFF: valid uint32 but not a valid array index.
+  if (SH_LIKELY(
+          sh_tryfast_f64_to_u32(key.f64, index) && index != 0xFFFFFFFFu)) {
+    _sh_ljs_put_by_index_loose_rjs(shr, target, index, value);
+    return;
+  }
+  _sh_ljs_put_by_val_loose_rjs(shr, target, &key, value);
+}
+static inline void _sh_ljs_put_by_val_numeric_strict_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHLegacyValue key,
+    SHLegacyValue *value) {
+  assert(_sh_ljs_is_double(key) && "key must be a number");
+  uint32_t index;
+  // Reject 0xFFFFFFFF: valid uint32 but not a valid array index.
+  if (SH_LIKELY(
+          sh_tryfast_f64_to_u32(key.f64, index) && index != 0xFFFFFFFFu)) {
+    _sh_ljs_put_by_index_strict_rjs(shr, target, index, value);
+    return;
+  }
+  _sh_ljs_put_by_val_strict_rjs(shr, target, &key, value);
+}
+
 /// Load a property from direct storage.
 SHERMES_EXPORT SHLegacyValue
 _sh_prload_direct(SHRuntime *shr, SHLegacyValue source, uint32_t propIndex);
@@ -965,6 +1013,28 @@ static inline bool _sh_ljs_equal_rjs_inline(
 }
 
 SHERMES_EXPORT bool _sh_ljs_strict_equal(SHLegacyValue a, SHLegacyValue b);
+
+/// Inline fast path for strict equality (===).
+/// Handles the common cases inline: same raw bits (identity check for objects,
+/// bools, null, undefined, symbols) and both-number comparison. Falls back to
+/// out-of-line for string/bigint deep compare, different types, and mixed NaN
+/// patterns.
+static inline bool _sh_ljs_strict_equal_inline(
+    SHLegacyValue a,
+    SHLegacyValue b) {
+  // Fast path: raw bits match → equal iff not a NaN.
+  // Covers: same object pointer, same bool, null===null, undefined===undefined,
+  // same symbol, same non-NaN number (same bit pattern).
+  // For NaN, a.f64 == a.f64 is false per IEEE 754.
+  if (a.raw == b.raw)
+    return !_sh_ljs_is_double(a) || a.f64 == a.f64;
+  // Fast path: both are non-NaN numbers → compare as doubles.
+  // Handles +0 === -0 (true) and different numeric values.
+  if (_sh_ljs_are_both_non_nan_numbers(a, b))
+    return a.f64 == b.f64;
+  // Out-of-line: string/bigint deep compare, different types, mixed NaN.
+  return _sh_ljs_strict_equal(a, b);
+}
 
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_add_rjs(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b);

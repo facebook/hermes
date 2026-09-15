@@ -57,7 +57,7 @@ let e: number = box.pair<number, string>(10, "test");
 // CHECK-NEXT:})
 
 // CHECK:SemContext
-// CHECK-NEXT:Func strict
+// CHECK-NEXT:Func strict mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:        Decl %d.2 'Box' Class : %class_constructor.3
@@ -72,27 +72,27 @@ let e: number = box.pair<number, string>(10, "test");
 // CHECK-NEXT:            Decl %d.10 'identity' Const
 // CHECK-NEXT:            Decl %d.11 'identity' Const
 // CHECK-NEXT:            Decl %d.12 'pair' Const
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.3
 // CHECK-NEXT:            Decl %d.13 'arguments' Var Arguments
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict noImplicitReturn
 // CHECK-NEXT:        Scope %s.4
 // CHECK-NEXT:            Decl %d.14 'x' Parameter
 // CHECK-NEXT:            Decl %d.15 'arguments' Var Arguments
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict noImplicitReturn
 // CHECK-NEXT:        Scope %s.5
 // CHECK-NEXT:            Decl %d.16 'x' Parameter
 // CHECK-NEXT:            Decl %d.17 'y' Parameter
 // CHECK-NEXT:            Decl %d.18 'arguments' Var Arguments
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict noImplicitReturn
 // CHECK-NEXT:        Scope %s.6
 // CHECK-NEXT:            Decl %d.19 'x' Parameter : number
 // CHECK-NEXT:            Decl %d.20 'arguments' Var Arguments
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict noImplicitReturn
 // CHECK-NEXT:        Scope %s.7
 // CHECK-NEXT:            Decl %d.21 'x' Parameter : string
 // CHECK-NEXT:            Decl %d.22 'arguments' Var Arguments
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict noImplicitReturn
 // CHECK-NEXT:        Scope %s.8
 // CHECK-NEXT:            Decl %d.23 'x' Parameter : number
 // CHECK-NEXT:            Decl %d.24 'y' Parameter : string

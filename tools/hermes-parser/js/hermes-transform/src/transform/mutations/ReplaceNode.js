@@ -17,7 +17,7 @@ import {moveCommentsToNewNode} from '../comments/comments';
 import {InvalidReplacementError} from '../Errors';
 import {getOriginalNode} from '../../detachedNode';
 
-export type ReplaceNodeMutation = $ReadOnly<{
+export type ReplaceNodeMutation = Readonly<{
   type: 'replaceNode',
   target: ESNode,
   nodeToReplaceWith: DetachedNode<ESNode>,
@@ -27,7 +27,7 @@ export type ReplaceNodeMutation = $ReadOnly<{
 export function createReplaceNodeMutation(
   target: ReplaceNodeMutation['target'],
   nodeToReplaceWith: ReplaceNodeMutation['nodeToReplaceWith'],
-  options?: $ReadOnly<{keepComments?: boolean}>,
+  options?: Readonly<{keepComments?: boolean}>,
 ): ReplaceNodeMutation {
   return {
     type: 'replaceNode',
@@ -53,7 +53,7 @@ export function performReplaceNodeMutation(
 
   if (replacementParent.type === 'array') {
     const parent: interface {
-      [string]: $ReadOnlyArray<DetachedNode<ESNode>>,
+      [string]: ReadonlyArray<DetachedNode<ESNode>>,
     } = replacementParent.parent;
     parent[replacementParent.key] = astArrayMutationHelpers.replaceInArray(
       parent[replacementParent.key],
@@ -61,7 +61,7 @@ export function performReplaceNodeMutation(
       [mutation.nodeToReplaceWith],
     );
   } else {
-    (replacementParent.parent: interface {[string]: mixed})[
+    (replacementParent.parent as interface {[string]: unknown})[
       replacementParent.key
     ] = mutation.nodeToReplaceWith;
   }
@@ -73,7 +73,7 @@ export function performReplaceNodeMutation(
   return replacementParent.parent;
 }
 
-function getParentKey(target: ESNode): $ReadOnly<
+function getParentKey(target: ESNode): Readonly<
   | {
       type: 'single',
       parent: ESNode,
@@ -88,7 +88,7 @@ function getParentKey(target: ESNode): $ReadOnly<
 > {
   const parent = target.parent;
   for (const key of getVisitorKeys(parent)) {
-    const child = (parent: $FlowFixMe)[key];
+    const child = (parent as $FlowFixMe)[key];
     if (isNode(child)) {
       // $FlowFixMe[invalid-compare]
       if (child === target) {

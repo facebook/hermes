@@ -12,10 +12,13 @@
 #include "hermes/Support/OSCompat.h"
 
 #include <cassert>
+#include <tuple>
 
 // Include windows.h first because other includes from windows API need it.
 // The blank line after the include is necessary to avoid lint error.
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #ifndef NOMINMAX
 #define NOMINMAX // do not define min/max macros
 #endif
@@ -236,6 +239,7 @@ void vm_free_aligned(void *p, size_t sz) {
   MEMORY_BASIC_INFORMATION mbi;
   SIZE_T query_ret = VirtualQuery(p, &mbi, sizeof(MEMORY_BASIC_INFORMATION));
   assert(query_ret != 0 && "Failed to invoke VirtualQuery in vm_free_aligned");
+  std::ignore = query_ret;
 
   BOOL ret = VirtualFree(mbi.AllocationBase, 0, MEM_RELEASE);
   assert(ret && "Failed to invoke VirtualFree in vm_free_aligned.");
@@ -552,6 +556,10 @@ std::vector<bool> sched_getaffinity() {
 int sched_getcpu() {
   // Not yet supported.
   return -1;
+}
+
+std::chrono::steady_clock::time_point sampling_clock_now() noexcept {
+  return std::chrono::steady_clock::now();
 }
 
 bool set_env(const char *name, const char *value) {

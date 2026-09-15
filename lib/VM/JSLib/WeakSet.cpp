@@ -156,8 +156,6 @@ CallResult<HermesValue> weakSetConstructor(void *, Runtime &runtime) {
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
   }
-
-  return HermesValue::encodeUndefinedValue();
 }
 
 CallResult<HermesValue> weakSetPrototypeAdd(void *, Runtime &runtime) {

@@ -23,8 +23,8 @@ import {ImportBindingDefinition} from '../definition';
 import {Visitor} from './Visitor';
 
 class ImportVisitor extends Visitor {
-  +_declaration: ImportDeclaration;
-  +_referencer: Referencer;
+  readonly _declaration: ImportDeclaration;
+  readonly _referencer: Referencer;
 
   constructor(declaration: ImportDeclaration, referencer: Referencer) {
     super(referencer);
@@ -40,9 +40,7 @@ class ImportVisitor extends Visitor {
   visitImport(
     id: Identifier,
     specifier:
-      | ImportDefaultSpecifier
-      | ImportNamespaceSpecifier
-      | ImportSpecifier,
+      ImportDefaultSpecifier | ImportNamespaceSpecifier | ImportSpecifier,
   ): void {
     this._referencer
       .currentScope()

@@ -17,7 +17,7 @@ let _ = function (p: c_ptr): void {
     p > p;
 // CHECK: {{.*}}:[[@LINE-1]]:5: error: ft: incompatible binary operation: > cannot be applied to c_ptr and c_ptr
     p !== "hello";
-// FIXME! This should have been an error.
+// CHECK: {{.*}}:[[@LINE-1]]:5: error: ft: !== cannot be applied to c_ptr and string
 }
 
-// CHECK: Emitted 4 errors. exiting.
+// CHECK: Emitted 5 errors. exiting.

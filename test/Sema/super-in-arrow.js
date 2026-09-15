@@ -33,7 +33,7 @@ class Bar2 extends Foo {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:SemContext
-// CHECK-NEXT:Func loose
+// CHECK-NEXT:Func loose mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'Foo' Class
 // CHECK-NEXT:        Decl %d.2 'Bar' Class
@@ -44,22 +44,22 @@ class Bar2 extends Foo {
 // CHECK-NEXT:            Decl %d.5 'Bar' ClassExprName
 // CHECK-NEXT:        Scope %s.4
 // CHECK-NEXT:            Decl %d.6 'Bar2' ClassExprName
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.5
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.6
 // CHECK-NEXT:            Decl %d.7 'f' Var
 // CHECK-NEXT:            Decl %d.8 'arguments' Var Arguments
-// CHECK-NEXT:        Func strict
+// CHECK-NEXT:        Func strict mayReachImplicitReturn
 // CHECK-NEXT:            Scope %s.7
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.8
 // CHECK-NEXT:            Decl %d.9 'f0' Var
 // CHECK-NEXT:            Decl %d.10 'arguments' Var Arguments
-// CHECK-NEXT:        Func strict
+// CHECK-NEXT:        Func strict mayReachImplicitReturn
 // CHECK-NEXT:            Scope %s.9
 // CHECK-NEXT:                Decl %d.11 'f1' Var
-// CHECK-NEXT:            Func strict
+// CHECK-NEXT:            Func strict mayReachImplicitReturn
 // CHECK-NEXT:                Scope %s.10
 
 // CHECK:Program Scope %s.1

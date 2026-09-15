@@ -1,6 +1,0 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
-
-exports[`TSDefToFlowDef function 1`] = `
-"declare function foo(): void;
-"
-`;

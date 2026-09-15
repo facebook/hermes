@@ -120,12 +120,22 @@ uint32_t IdentifierHashTable::lookupString(
 }
 
 void IdentifierHashTable::insert(uint32_t idx, SymbolID id) {
+  const uint32_t isIndexDeleted = table_.isDeleted(idx);
   table_.set(idx, id.unsafeGetIndex());
   ++size_;
-  ++nonEmptyEntryCount_;
+  assert(
+      deletedEntryCount_ >= isIndexDeleted &&
+      "deletedEntryCount_ should not underflow");
+  deletedEntryCount_ -= isIndexDeleted;
 
   if (shouldGrow()) {
-    growAndRehash(capacity() * 2);
+    if (size_ >= (capacity() >> 2)) {
+      growAndRehash(capacity() * 2);
+    } else {
+      // The load factor is dominated by deleted entries, not live ones.
+      // Compact in place at the current capacity instead of growing.
+      rehash(capacity());
+    }
   }
 }
 
@@ -138,10 +148,17 @@ void IdentifierHashTable::remove(const StringPrimitive *str) {
 }
 
 void IdentifierHashTable::growAndRehash(uint32_t newCapacity) {
-  // Guard against potential overflow in the calculation of new capacity.
+  // A new capacity that is not strictly greater than the current one means the
+  // caller's computation overflowed (e.g. capacity() * 2 or NextPowerOf2()
+  // wrapped around), so there is no room to actually grow.
   if (LLVM_UNLIKELY(newCapacity <= capacity())) {
     hermes_fatal("too many identifiers created");
   }
+  rehash(newCapacity);
+}
+
+void IdentifierHashTable::rehash(uint32_t newCapacity) {
+  assert(newCapacity >= capacity() && "rehash must not shrink the table");
   assert(llvh::isPowerOf2_32(newCapacity) && "capacity must be power of 2");
   CompactTable tmpTable(newCapacity, table_.getCurrentScale());
   tmpTable.swap(table_);
@@ -163,5 +180,5 @@ void IdentifierHashTable::growAndRehash(uint32_t newCapacity) {
     }
     table_.set(idx, oldVal);
   }
-  nonEmptyEntryCount_ = size_;
+  deletedEntryCount_ = 0;
 }

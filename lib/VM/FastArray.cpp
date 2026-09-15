@@ -162,7 +162,8 @@ FastArray::pushSlow(Handle<FastArray> self, Runtime &runtime, Handle<> val) {
 ExecutionStatus FastArray::appendSlow(
     Handle<FastArray> self,
     Runtime &runtime,
-    Handle<FastArray> other) {
+    Handle<FastArray> other,
+    uint32_t fromIndex) {
   struct : public Locals {
     PinnedValue<ArrayStorageSmall> storage;
     PinnedValue<ArrayStorageSmall> otherStorage;
@@ -176,7 +177,8 @@ ExecutionStatus FastArray::appendSlow(
           ArrayStorageSmall::append(
               MutableHandle<ArrayStorageSmall>{lv.storage},
               runtime,
-              lv.otherStorage) == ExecutionStatus::EXCEPTION))
+              lv.otherStorage,
+              fromIndex) == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
   self->indexedStorage_.setNonNull(
       runtime, lv.storage.get(), runtime.getHeap());

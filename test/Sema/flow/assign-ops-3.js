@@ -23,13 +23,13 @@ return function foo(x: any): string {
 // CHECK-NEXT:%function.2 = function(x: any): string
 
 // CHECK:SemContext
-// CHECK-NEXT:Func strict
+// CHECK-NEXT:Func strict noImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:        Decl %d.2 'arguments' Var Arguments
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.3 'foo' FunctionExprName : %function.2
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict noImplicitReturn
 // CHECK-NEXT:        Scope %s.3
 // CHECK-NEXT:            Decl %d.4 'x' Parameter : any
 // CHECK-NEXT:            Decl %d.5 'res' Let : string

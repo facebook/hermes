@@ -36,9 +36,10 @@ function TextArea(props: Props): React$MixedElement {
 }
 
 function Select(props: Props): React$MixedElement {
-  const children = [];
-  for (let i = 0; i < props.options.length; i++) {
-    const option = props.options[i];
+  const children: React$MixedElement[] = [];
+  const options: any = props.options;
+  for (let i = 0; i < options.length; i++) {
+    const option = options[i];
     children.push(
       <option key={option.value} value={option.value}>
         {option.label}

@@ -68,16 +68,25 @@ void sizeCheck(FromType val, const char *msg) {
   }
 }
 
-/// If \p FromType is wider than \p ToType, performs an overflow check
-/// on \p from, calling hermes_fatal with \p msg if \p from is not
-/// representable in \p ToType. Otherwise, returns \p from cast to \p ToType.
-/// Requires \p FromType and \p ToType to obey the narrowingPreconditions: that
-/// they are both integral, have the same signed-ness, and that \p FromType
-/// is at least as wide as \p ToType.
+/// Checked narrowing cast. Casts \p from to \p ToType, calling hermes_fatal
+/// with \p msg if the value doesn't round-trip or changes sign.
+/// Both types must be integral. Unlike sizeCheck/unsafeNarrow, this handles
+/// signed/unsigned conversions correctly.
 template <typename ToType, typename FromType>
 ToType safePossiblyNarrowingCast(FromType from, const char *msg) {
-  sizeCheck<ToType, FromType>(from, msg);
-  return static_cast<ToType>(from);
+  static_assert(
+      std::is_integral_v<FromType> && std::is_integral_v<ToType>,
+      "safePossiblyNarrowingCast is only for integral types");
+  auto result = static_cast<ToType>(from);
+  // Round-trip equality alone is insufficient for signed/unsigned mismatches
+  // (e.g. uint32_t 0xFFFFFFFF -> int32_t -1 -> uint32_t 0xFFFFFFFF passes
+  // the round-trip but the value doesn't fit). Check sign preservation too.
+  hermes_assert(
+      static_cast<FromType>(result) == from &&
+          (std::is_signed_v<FromType> == std::is_signed_v<ToType> ||
+           (from >= FromType{0}) == (result >= ToType{0})),
+      msg);
+  return result;
 }
 
 /// Casts \p from to \p ToType, suppressing any associated compiler errors.

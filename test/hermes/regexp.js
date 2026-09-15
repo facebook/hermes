@@ -611,3 +611,8 @@ try {
   print(e)
 }
 // CHECK-LABEL: SyntaxError: Invalid RegExp: Quantifier has nothing to repeat
+
+// Case-insensitive word boundary (\b with /iu).
+// U+212A KELVIN SIGN canonicalizes to 'k', so \b should treat it as a word char.
+print(/\bk\b/iu.test("\u212A"));
+// CHECK-NEXT: true

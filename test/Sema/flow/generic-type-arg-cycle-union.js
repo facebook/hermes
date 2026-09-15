@@ -20,7 +20,7 @@ var d: D;
 // CHECK-NEXT:%tuple.3 = tuple(%union.2)
 
 // CHECK:SemContext
-// CHECK-NEXT:Func strict
+// CHECK-NEXT:Func strict mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:        Decl %d.2 'd' Var : %union.2

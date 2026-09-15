@@ -19,11 +19,11 @@ function func() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:SemContext
-// CHECK-NEXT:Func loose
+// CHECK-NEXT:Func loose mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'func' GlobalProperty
 // CHECK-NEXT:        hoistedFunction func
-// CHECK-NEXT:    Func loose
+// CHECK-NEXT:    Func loose mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.2 'inner' Var
 // CHECK-NEXT:            Decl %d.3 'arguments' Var Arguments
@@ -31,7 +31,7 @@ function func() {
 // CHECK-NEXT:                Decl %d.4 'inner' ScopedFunction
 // CHECK-NEXT:                Decl %d.5 'foo' Let
 // CHECK-NEXT:                hoistedFunction inner
-// CHECK-NEXT:        Func loose
+// CHECK-NEXT:        Func loose mayReachImplicitReturn
 // CHECK-NEXT:            Scope %s.4
 // CHECK-NEXT:                Decl %d.6 'arguments' Var Arguments
 

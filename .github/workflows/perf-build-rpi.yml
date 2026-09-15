@@ -1,0 +1,53 @@
+name: Perf Build (ARM release binaries)
+
+# Builds the release binaries (synth + hermesc) used for ARM perf testing.
+# On every commit to the tracked branch, this compiles them on GitHub's ARM
+# runners and publishes them as the `hermes-bin` artifact.
+
+on:
+  push:
+    branches:
+      - static_h
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: 'Git SHA to build (defaults to current commit)'
+        required: false
+        type: string
+
+env:
+  COMMIT_SHA: ${{ inputs.sha || github.sha }}
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: arm64v8/debian:trixie
+    steps:
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y cmake ninja-build clang-19 build-essential libicu-dev zip python3 git
+
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ env.COMMIT_SHA }}
+
+      - name: Build Release
+        run: |
+          export CC=clang-19
+          export CXX=clang++-19
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --target synth hermesc
+
+      - name: Upload binaries
+        uses: actions/upload-artifact@v7
+        with:
+          name: hermes-bin
+          # Common ancestor is build/bin, so the artifact contains synth and
+          # hermesc flat at the top level. The Pi keys results off the run's
+          # headSha and fetches the commit timestamp from the API.
+          path: |
+            build/bin/synth
+            build/bin/hermesc

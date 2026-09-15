@@ -13,10 +13,10 @@ import type {MutationContext} from '../MutationContext';
 
 import {isNode} from 'hermes-parser';
 
-export type ModifyNodeInPlaceMutation = $ReadOnly<{
+export type ModifyNodeInPlaceMutation = Readonly<{
   type: 'modifyNodeInPlace',
   target: ESNode,
-  newProps: $ReadOnly<{...}>,
+  newProps: Readonly<{...}>,
 }>;
 
 export function createModifyNodeInPlaceMutation(

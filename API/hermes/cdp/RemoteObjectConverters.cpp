@@ -17,6 +17,12 @@ namespace m = ::facebook::hermes::cdp::message;
 
 constexpr size_t kMaxPreviewProperties = 10;
 
+// Parity with V8. 01 Sep, 2026
+// V8 uses this placeholder when the detailed error is in the `exception`
+// field, preventing DevTools from displaying the same error twice.
+// https://source.chromium.org/chromium/chromium/src/+/main:v8/src/inspector/injected-script.cc;l=362;drc=bdc48d1b1312cc40c00282efb1c9c5f41dcdca9a
+constexpr char kExceptionDetailsPlaceholderText[] = "Uncaught";
+
 // Parity with V8. 13 Aug, 2024
 // https://source.chromium.org/chromium/chromium/src/+/main:v8/src/inspector/value-mirror.cc;l=191-201;drc=bdc48d1b1312cc40c00282efb1c9c5f41dcdca9a
 static std::string abbreviateString(const std::string &str) {
@@ -464,7 +470,7 @@ m::runtime::ExceptionDetails m::runtime::makeExceptionDetails(
     cdp::RemoteObjectsTable &objTable,
     const std::string &objectGroup) {
   m::runtime::ExceptionDetails exceptionDetails;
-  exceptionDetails.text = error.getMessage() + "\n" + error.getStack();
+  exceptionDetails.text = kExceptionDetailsPlaceholderText;
   exceptionDetails.exception = m::runtime::makeRemoteObjectForError(
       runtime, error.value(), objTable, objectGroup);
   return exceptionDetails;
@@ -485,7 +491,7 @@ m::runtime::ExceptionDetails m::runtime::makeExceptionDetails(
   assert(result.isException);
   m::runtime::ExceptionDetails exceptionDetails;
 
-  exceptionDetails.text = result.exceptionDetails.text;
+  exceptionDetails.text = kExceptionDetailsPlaceholderText;
   exceptionDetails.scriptId =
       std::to_string(result.exceptionDetails.location.fileId);
   exceptionDetails.url = result.exceptionDetails.location.fileName;

@@ -6,6 +6,7 @@
  */
 
 #include "hermes/CompilerDriver/CompilerDriver.h"
+#include "hermes/TypedLib/TypedLib.h"
 
 #include "llvh/Support/CommandLine.h"
 #include "llvh/Support/FileSystem.h"
@@ -30,6 +31,11 @@ int main(int argc, char **argv) {
 #endif
   llvh::cl::AddExtraVersionPrinter(driver::printHermesCompilerVersion);
   llvh::cl::ParseCommandLineOptions(argc, argv, "Hermes driver\n");
+
+  if (cl::HelpTyped) {
+    llvh::outs() << getTypedLanguageDoc();
+    return 0;
+  }
 
   if (driver::outputFormatFromCommandLineOptions() ==
       OutputFormatKind::Execute) {

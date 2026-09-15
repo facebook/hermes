@@ -48,7 +48,7 @@ class BBB<T> {
 // CHECK-NEXT:})
 
 // CHECK:SemContext
-// CHECK-NEXT:Func strict
+// CHECK-NEXT:Func strict mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:        Decl %d.2 'AAA' Class : %class_constructor.3
@@ -58,15 +58,15 @@ class BBB<T> {
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:        Scope %s.3
 // CHECK-NEXT:        Scope %s.4
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.5
 // CHECK-NEXT:            Decl %d.6 'arguments' Var Arguments
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.6
 // CHECK-NEXT:            Decl %d.7 'root' Parameter
 // CHECK-NEXT:            Decl %d.8 'val' Parameter
 // CHECK-NEXT:            Decl %d.9 'arguments' Var Arguments
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.7
 // CHECK-NEXT:            Decl %d.10 'root' Parameter : %class.2
 // CHECK-NEXT:            Decl %d.11 'val' Parameter : number

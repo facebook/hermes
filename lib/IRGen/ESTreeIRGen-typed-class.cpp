@@ -51,6 +51,20 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
     const flow::ClassType::Field &field =
         classType->getHomeObjectTypeInfo()->getFields()[idx];
     if (field.isMethod() && field.isPrivate) {
+      if (field.isOverloaded()) {
+        // Overloaded final private method: emit each non-generic overload
+        // as its own closure / Variable. Generic overloads are emitted
+        // through specializations.
+        for (auto &[overloadMethod, overloadType] : field.overloads) {
+          if (llvh::isa<flow::GenericType>(overloadType->info))
+            continue;
+          sema::Decl *decl = semCtx_.getExpressionDecl(
+              ESTree::getPropertyIdentifier(overloadMethod->_key));
+          emitTypedFinalMethodClosureStore(field, overloadMethod, decl);
+        }
+        continue;
+      }
+
       // Skip generic private methods - emitted through specializations.
       if (llvh::isa<flow::GenericType>(field.type->info))
         continue;
@@ -120,7 +134,14 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
         flowVarType = fieldPtr->getterType;
       else if (method->_kind == kw_.identSet && fieldPtr->setterType)
         flowVarType = fieldPtr->setterType;
-      else
+      else if (fieldPtr->isOverloaded()) {
+        // For overloaded static methods, look up this method's type in the
+        // overloads map (fieldPtr->type is null for overloaded fields).
+        flowVarType = fieldPtr->overloads.lookup(method);
+        assert(flowVarType && "static method must exist in overloads");
+        if (llvh::isa<flow::GenericType>(flowVarType->info))
+          continue;
+      } else
         flowVarType = fieldPtr->type;
       Variable *var = Builder.createVariable(
           curFunction()->curScope()->getVariableScope(),
@@ -498,7 +519,30 @@ Value *ESTreeIRGen::emitTypedClassAllocation(
       // Final methods don't get a layout slot in the home object.
       // They are accessed through Variables instead.
       if (field.finalMethod) {
-        if (llvh::isa<flow::GenericType>(field.type->info)) {
+        if (field.isOverloaded()) {
+          // Overloaded final method: emit each overload as a separate
+          // closure.
+          if (entry.classType == classType) {
+            // Field was defined in this class (not inherited).
+            // Emit the code here.
+            auto getFinalDecl = [this](ESTree::MethodDefinitionNode *m) {
+              return semCtx_.getExpressionDecl(
+                  ESTree::getPropertyIdentifier(m->_key));
+            };
+            for (auto &[overloadMethod, overloadType] : field.overloads) {
+              if (llvh::isa<flow::GenericType>(overloadType->info)) {
+                // Generic overload — codegen happens via specializations
+                // emitted from the call site (see FlowChecker overload
+                // resolution).
+                continue;
+              }
+              emitTypedFinalMethodClosureStore(
+                  field, overloadMethod, getFinalDecl(overloadMethod));
+            }
+          }
+          return;
+        }
+        if (field.type && llvh::isa<flow::GenericType>(field.type->info)) {
           // Generic final method - no codegen needed here.
           return;
         }
@@ -554,7 +598,8 @@ Value *ESTreeIRGen::emitTypedClassAllocation(
       // Class element is a field.
       // Need to emit an IDZ check for types that can't have a primitive
       // default.
-      Value *initValue = flowTypeToIRType(field.type).canBePrimitive()
+      Value *initValue =
+          getTypeContext().canBePrimitive(flowTypeToIRType(field.type))
           ? getDefaultInitValue(field.type)
           : Builder.getLiteralUninit();
       propMap[*field.layoutSlotIR] = {name, initValue};
@@ -642,10 +687,11 @@ Type ESTreeIRGen::flowTypeToIRType(flow::TypeInfo *flowType) {
     case flow::TypeKind::Mixed:
       return Type::createAnyType();
     case flow::TypeKind::Union: {
+      TypeContext &tc = getTypeContext();
       Type res = Type::createNoType();
       for (flow::Type *elemType :
            llvh::cast<flow::UnionType>(flowType)->getTypes()) {
-        res = Type::unionTy(res, flowTypeToIRType(elemType));
+        res = tc.unionTy(res, flowTypeToIRType(elemType));
       }
       return res;
     }

@@ -160,6 +160,17 @@ if (HERMESVM_ALLOW_JIT)
   list(APPEND source_files
           JIT/RuntimeOffsets.h
           JIT/arm64/JitEmitter.cpp JIT/arm64/JitEmitter.h
+          JIT/arm64/JitEmitter-internal.cpp JIT/arm64/JitEmitter-internal.h
+          JIT/arm64/JitEmitter-regalloc.cpp
+          JIT/arm64/JitEmitter-alloc.cpp
+          JIT/arm64/JitEmitter-const.cpp
+          JIT/arm64/JitEmitter-object.cpp
+          JIT/arm64/JitEmitter-property.cpp
+          JIT/arm64/JitEmitter-call.cpp
+          JIT/arm64/JitEmitter-env.cpp
+          JIT/arm64/JitEmitter-array.cpp
+          JIT/arm64/JitEmitter-arith.cpp
+          JIT/arm64/JitEmitter-control.cpp
           JIT/arm64/JIT.cpp
           JIT/arm64/JitHandlers.cpp JIT/arm64/JitHandlers.h
           JIT/PerfJitDump.cpp

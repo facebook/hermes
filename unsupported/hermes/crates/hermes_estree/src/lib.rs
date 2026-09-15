@@ -7,9 +7,11 @@
 
 include!(concat!(env!("OUT_DIR"), "/generated.rs"));
 mod binding;
+mod de;
 mod generated_extensions;
 mod js_value;
 mod range;
+mod ser;
 
 pub use binding::Binding;
 pub use binding::BindingId;

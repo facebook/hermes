@@ -43,7 +43,7 @@ class A {
 // CHECK-NEXT:})
 
 // CHECK:SemContext
-// CHECK-NEXT:Func strict
+// CHECK-NEXT:Func strict mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:        Decl %d.2 'A' Class : %class_constructor.3
@@ -51,23 +51,23 @@ class A {
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.4 '#x' PrivateField
 // CHECK-NEXT:            Decl %d.5 '#y' PrivateMethod
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.3
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.4
 // CHECK-NEXT:            Decl %d.6 'arguments' Var Arguments
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.5
 // CHECK-NEXT:            Decl %d.7 'B' Class : %class_constructor.5
 // CHECK-NEXT:            Decl %d.8 'arguments' Var Arguments
 // CHECK-NEXT:            Scope %s.6
-// CHECK-NEXT:        Func strict
+// CHECK-NEXT:        Func strict mayReachImplicitReturn
 // CHECK-NEXT:            Scope %s.7
 // CHECK-NEXT:                Decl %d.9 'a' Parameter : %class.2
 // CHECK-NEXT:                Decl %d.10 'arguments' Var Arguments
-// CHECK-NEXT:        Func strict
+// CHECK-NEXT:        Func strict mayReachImplicitReturn
 // CHECK-NEXT:            Scope %s.8
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.9
 
 // CHECK:FunctionExpression : %untyped_function.1

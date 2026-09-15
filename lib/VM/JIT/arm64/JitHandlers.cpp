@@ -483,18 +483,25 @@ SHLegacyValue _jit_call_builtin(
     uint32_t builtinMethodID) {
   auto res = [&]() {
     Runtime &runtime = getRuntime(shr);
-    StackFramePtr newFrame(runtime.getStackPointer());
-    newFrame.getPreviousFrameRef() = HermesValue::encodeNativePointer(frame);
-    newFrame.getSavedIPRef() =
-        HermesValue::encodeNativePointer(runtime.getCurrentIP());
-    newFrame.getSavedCodeBlockRef() = HermesValue::encodeNativePointer(nullptr);
-    newFrame.getSHLocalsRef() = HermesValue::encodeNativePointer(nullptr);
-    newFrame.getArgCountRef() = HermesValue::encodeNativeUInt32(argCount);
-    newFrame.getNewTargetRef() = HermesValue::encodeUndefinedValue();
-
+    // Non-allocating, so it is safe to resolve the callee before the frame
+    // exists.
     auto callee =
         vmcast<NativeFunction>(runtime.getBuiltinCallable(builtinMethodID));
-    newFrame.getCalleeClosureOrCBRef() = HermesValue::encodeObjectValue(callee);
+    auto newFrame = StackFramePtr::initFrame(
+        runtime.getStackPointer(),
+        StackFramePtr(toPHV(frame)),
+        runtime.getCurrentIP(),
+        /* savedCodeBlock */ nullptr,
+        /* locals */ nullptr,
+        argCount,
+        HermesValue::encodeObjectValue(callee),
+        HermesValue::encodeUndefinedValue());
+    // "thisArg" is implicitly assumed to be "undefined": the bytecode never
+    // populates the slot (HBCISel::verifyCall asserts CallBuiltin's `this` is
+    // a non-register-allocated LiteralUndefined), and initFrame writes only
+    // the seven metadata slots, so it must be set here, the same way the
+    // interpreter's implCallBuiltin does.
+    newFrame.getThisArgRef() = HermesValue::encodeUndefinedValue();
 
     GCScopeMarkerRAII marker{runtime};
     return NativeFunction::_nativeCall(callee, runtime);
@@ -505,13 +512,21 @@ SHLegacyValue _jit_call_builtin(
 }
 
 void *_jit_string_switch_imm_table_lookup(
-    StringSwitchDenseMap *table,
+    RuntimeModule *runtimeModule,
+    uint32_t tableIndex,
     SHLegacyValue *switchValueLegacy) {
   PinnedHermesValue *switchValue = toPHV(switchValueLegacy);
   if (!switchValue->isString()) {
     // Not a string; should branch to the default case.
     return nullptr;
   }
+
+  assert(
+      tableIndex < runtimeModule->numStringSwitchImmTables() &&
+      "String Switch index out of range.");
+  StringSwitchDenseMap *table =
+      &runtimeModule->getStringSwitchImmTables()[tableIndex];
+
   auto iter = table->find(switchValue->getString());
   if (iter == table->end()) {
     // Not found; branch to the default case.

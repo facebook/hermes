@@ -17,6 +17,7 @@
 #include <jsi/test/testlib.h>
 
 #include <atomic>
+#include <thread>
 #include <tuple>
 
 using namespace facebook::jsi;
@@ -59,6 +60,88 @@ class HermesRuntimeCustomConfigTest : public ::testing::Test,
       : HermesRuntimeTestBase(makeHermesRuntime(runtimeConfig)) {}
 };
 
+TEST(HermesRuntimeConfigTest, FinalizerThreadRunner) {
+  struct RunnerState {
+    std::atomic<bool> active{false};
+    std::atomic<std::thread::id> thread{std::thread::id{}};
+    std::atomic<bool> finalizedUnderRunner{false};
+    std::atomic<bool> finalizedOnRunnerThread{false};
+  } state;
+
+  class TestHostObject final : public HostObject {
+   public:
+    explicit TestHostObject(RunnerState &state) : state_(state) {}
+
+    ~TestHostObject() override {
+      state_.finalizedUnderRunner = state_.active.load();
+      state_.finalizedOnRunnerThread =
+          state_.thread.load() == std::this_thread::get_id();
+    }
+
+   private:
+    RunnerState &state_;
+  };
+
+  auto runtime = makeHermesRuntime(
+      ::hermes::vm::RuntimeConfig::Builder()
+          .withFinalizerThreadRunner([&state](std::function<void()> run) {
+            state.thread = std::this_thread::get_id();
+            state.active = true;
+            run();
+            state.active = false;
+          })
+          .build());
+  runtime->global().setProperty(
+      *runtime,
+      "hostObject",
+      Object::createFromHostObject(
+          *runtime, std::make_shared<TestHostObject>(state)));
+
+  runtime.reset();
+
+  EXPECT_TRUE(state.finalizedUnderRunner);
+  // Without this the test would also pass if the finalizer ran on the thread
+  // destroying the runtime while the worker happened to be alive.
+  EXPECT_TRUE(state.finalizedOnRunnerThread);
+  EXPECT_FALSE(state.active);
+}
+
+TEST(HermesRuntimeConfigTest, EmptyFinalizerThreadRunner) {
+  // An empty runner is not the same as an unset one: it suppresses the
+  // platform default instead of selecting it. Nothing platform independent
+  // observes the difference, so this only checks that the runtime still
+  // finalizes; the Android behavior it controls is covered by
+  // HostObjectJniTest.
+  std::atomic<bool> finalized{false};
+
+  class TestHostObject final : public HostObject {
+   public:
+    explicit TestHostObject(std::atomic<bool> &finalized)
+        : finalized_(finalized) {}
+
+    ~TestHostObject() override {
+      finalized_ = true;
+    }
+
+   private:
+    std::atomic<bool> &finalized_;
+  };
+
+  auto runtime = makeHermesRuntime(
+      ::hermes::vm::RuntimeConfig::Builder()
+          .withFinalizerThreadRunner(::hermes::vm::ThreadRunner{})
+          .build());
+  runtime->global().setProperty(
+      *runtime,
+      "hostObject",
+      Object::createFromHostObject(
+          *runtime, std::make_shared<TestHostObject>(finalized)));
+
+  runtime.reset();
+
+  EXPECT_TRUE(finalized);
+}
+
 class HermesRuntimeTest : public ::testing::TestWithParam<RuntimeFactory>,
                           public HermesRuntimeTestBase {
  public:
@@ -98,6 +181,23 @@ TEST_P(HermesRuntimeTest, StrictHostFunctionBindTest) {
                   "  return coolify.bind(undefined)();"
                   "})()")
                   .getBool());
+}
+
+TEST_P(HermesRuntimeTest, DrainMicrotasksThrowsFinalizationRegistryError) {
+  eval(R"(
+    var target = {};
+    globalThis.cleanupCount = 0;
+    globalThis.registry = new FinalizationRegistry(() => {
+      cleanupCount += 1;
+      throw new Error('cleanup boom');
+    });
+    registry.register(target, 'held');
+    target = null;
+  )");
+  eval("gc()");
+
+  EXPECT_THROW(rt->drainMicrotasks(), JSError);
+  EXPECT_EQ(eval("cleanupCount").asNumber(), 1);
 }
 
 TEST_P(HermesRuntimeTest, ResetTimezoneCache) {
@@ -1402,6 +1502,15 @@ TEST_P(HermesRuntimeTest, UTF16ConversionTest) {
 
   String loneLowSurrogate = eval("'\\udc4d'").getString(*rt);
   EXPECT_EQ(loneLowSurrogate.utf16(*rt), std::u16string(u"\xdc4d"));
+}
+
+TEST_P(HermesRuntimeTest, PropNameIDForPredefinedStringUtf16Test) {
+  // Predefined strings are registered as lazy identifiers, so their
+  // StringPrimitive is only created when it is first requested. Reading a
+  // PropNameID for one must not do that from inside a no-allocation scope.
+  auto prop = PropNameID::forAscii(*rt, "+Infinity");
+  EXPECT_EQ(prop.utf16(*rt), u"+Infinity");
+  EXPECT_EQ(prop.utf8(*rt), "+Infinity");
 }
 
 TEST_P(HermesRuntimeTest, CreateFromUtf16Test) {
@@ -3169,10 +3278,196 @@ TEST_P(HermesSerializationTest, SerializeWithTransferThrows) {
       serializationInterface->serializeWithTransfer(val, transferArr), JSError);
 }
 
+class HermesWorkerTest : public HermesRuntimeTest {
+ public:
+  HermesWorkerTest() : HermesRuntimeTest() {}
+};
+
+#if HERMES_ENABLE_CORE_EXTENSIONS
+TEST_P(HermesWorkerTest, WebWorkerBasic) {
+  auto workerGlobal = rt->global().getProperty(*rt, "Worker");
+  EXPECT_TRUE(!workerGlobal.isUndefined());
+
+  EXPECT_THROW(eval("new Worker(123);"), JSError);
+
+  // Create a simple worker that just loops forever
+  auto code = R"(
+var worker = new Worker(`while(true) {}`); worker;
+)";
+  auto worker = eval(code).asObject(*rt);
+
+  auto terminate = worker.getPropertyAsFunction(*rt, "terminate");
+  // Terminate on a non-Worker object should throw.
+  Object nonWorkerObject(*rt);
+  EXPECT_THROW(terminate.callWithThis(*rt, nonWorkerObject), JSError);
+
+  // Terminate the worker
+  terminate.callWithThis(*rt, worker);
+
+  code = R"(
+var worker = new Worker(`
+  onmessage = function(msg) {
+    print(msg);
+  }
+`);
+var nontransferable= ["non-transferable"];
+var ab = new ArrayBuffer(8);
+var transfers = [ab];
+worker;
+)";
+  worker = eval(code).asObject(*rt);
+
+  auto postMessage = worker.getPropertyAsFunction(*rt, "postMessage");
+  // postMessage on non-Worker object
+  EXPECT_THROW(postMessage.callWithThis(*rt, nonWorkerObject, 1), JSError);
+  // postMessage with no message
+  EXPECT_THROW(postMessage.callWithThis(*rt, worker), JSError);
+
+  // Post a message, then terminate worker
+  postMessage.callWithThis(*rt, worker, "hello!");
+  // Post a message with transfer, but transfers is not an Array
+  EXPECT_THROW(
+      postMessage.callWithThis(*rt, worker, "hello!", "not an array"), JSError);
+
+  // Post a message with transfer, but don't the transfers array contains
+  // non-transferable arguments
+  auto nontransferable = rt->global().getProperty(*rt, "nontransferable");
+  EXPECT_THROW(
+      postMessage.callWithThis(*rt, worker, "hello!", nontransferable),
+      JSError);
+
+  // Send an ArrayBuffer as message without transfer
+  auto abVal = rt->global().getProperty(*rt, "ab");
+  postMessage.callWithThis(*rt, worker, abVal);
+  // Make sure the original array buffer is not detached
+  auto ab = abVal.asObject(*rt).getArrayBuffer(*rt);
+  EXPECT_FALSE(ab.getProperty(*rt, "detached").asBool());
+
+  // Post a message with transfer
+  auto transfers = rt->global().getProperty(*rt, "transfers");
+  postMessage.callWithThis(*rt, worker, "hello!", transfers);
+  // Make sure the original array buffer is detached.
+  EXPECT_TRUE(ab.getProperty(*rt, "detached").asBool());
+
+  terminate = worker.getPropertyAsFunction(*rt, "terminate");
+  terminate.callWithThis(*rt, worker);
+}
+
+TEST_P(HermesWorkerTest, WorkerFromArrayBuffer) {
+  // Source carried in an ArrayBuffer must construct a Worker (no throw).
+  auto code = R"(
+var bytes = new TextEncoder().encode("var x = 1;");
+var worker = new Worker(bytes.buffer);
+worker;
+)";
+  auto worker = eval(code).asObject(*rt);
+  worker.getPropertyAsFunction(*rt, "terminate").callWithThis(*rt, worker);
+}
+
+TEST_P(HermesWorkerTest, WorkerFromTypedArrayWithOffset) {
+  // A Uint8Array view with a non-zero byteOffset must slice correctly.
+  auto code = R"(
+var whole = new TextEncoder().encode("XXvar y = 2;");
+var view = new Uint8Array(whole.buffer, 2); // skip the leading "XX"
+var worker = new Worker(view);
+worker;
+)";
+  auto worker = eval(code).asObject(*rt);
+  worker.getPropertyAsFunction(*rt, "terminate").callWithThis(*rt, worker);
+}
+
+TEST_P(HermesWorkerTest, WorkerFromDataView) {
+  auto code = R"(
+var bytes = new TextEncoder().encode("var z = 3;");
+var dv = new DataView(bytes.buffer);
+var worker = new Worker(dv);
+worker;
+)";
+  auto worker = eval(code).asObject(*rt);
+  worker.getPropertyAsFunction(*rt, "terminate").callWithThis(*rt, worker);
+}
+
+TEST_P(HermesWorkerTest, WorkerFromBinaryErrors) {
+  // Non-buffer, non-string argument.
+  EXPECT_THROW(eval("new Worker({});"), JSError);
+  // Empty binary input.
+  EXPECT_THROW(eval("new Worker(new ArrayBuffer(0));"), JSError);
+  EXPECT_THROW(eval("new Worker(new Uint8Array(0));"), JSError);
+
+  // Detached buffers must throw a TypeError specifically: a plain Error must
+  // not leak from ArrayBuffer.size(), and a genuine but detached DataView must
+  // still be recognized as a DataView rather than misclassified. Detach via
+  // HermesInternal, matching the existing DetachedArrayBuffer /
+  // ArrayBufferDetached tests in this file.
+  auto thrownName = [&](const char *js) -> std::string {
+    try {
+      eval(js);
+    } catch (const JSError &e) {
+      return e.value()
+          .asObject(*rt)
+          .getProperty(*rt, "name")
+          .asString(*rt)
+          .utf8(*rt);
+    }
+    return "<no throw>";
+  };
+  EXPECT_EQ(
+      thrownName(R"(
+var ab = new ArrayBuffer(8);
+HermesInternal.detachArrayBuffer(ab);
+new Worker(ab);
+)"),
+      "TypeError");
+  EXPECT_EQ(
+      thrownName(R"(
+var ab = new ArrayBuffer(8);
+var dv = new DataView(ab);
+HermesInternal.detachArrayBuffer(ab);
+new Worker(dv);
+)"),
+      "TypeError");
+}
+
+TEST_P(HermesWorkerTest, WorkerFromBytecode) {
+  // Compile a trivial script to Hermes bytecode.
+  std::string bytecode;
+  ASSERT_TRUE(hermes::compileJS("var x = 1;", bytecode));
+
+  auto *api = castInterface<IHermesRootAPI>(makeHermesRootAPI());
+  ASSERT_TRUE(api->isHermesBytecode(
+      reinterpret_cast<const uint8_t *>(bytecode.data()), bytecode.size()));
+
+  // Expose the bytecode to JS as a Uint8Array so `new Worker` receives the
+  // exact bytes (bytecode magic contains bytes >= 0x80, which the old
+  // string/utf8 path would have corrupted).
+  auto u8ctor = rt->global().getPropertyAsFunction(*rt, "Uint8Array");
+  auto arr =
+      u8ctor.callAsConstructor(*rt, (double)bytecode.size()).asObject(*rt);
+  for (size_t i = 0; i < bytecode.size(); ++i) {
+    arr.setProperty(
+        *rt,
+        PropNameID::forUtf8(*rt, std::to_string(i)),
+        (double)(uint8_t)bytecode[i]);
+  }
+  rt->global().setProperty(*rt, "__bc", arr);
+
+  // Constructing from the bytecode bytes must succeed (worker thread starts
+  // and evaluateJavaScript takes the bytecode path).
+  auto worker = eval("var w = new Worker(__bc); w;").asObject(*rt);
+  worker.getPropertyAsFunction(*rt, "terminate").callWithThis(*rt, worker);
+}
+
+INSTANTIATE_TEST_CASE_P(
+    Runtimes,
+    HermesWorkerTest,
+    ::testing::ValuesIn(runtimeGenerators()));
+#endif
+
 INSTANTIATE_TEST_CASE_P(
     Runtimes,
     HermesSerializationTest,
     ::testing::ValuesIn(runtimeGenerators()));
+
 #endif
 
 TEST_P(HermesRuntimeTest, StringLengthTest) {

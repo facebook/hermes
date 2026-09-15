@@ -680,6 +680,11 @@ class ESTreeIRGen {
       flow::FlowContext &flowContext,
       ESTree::Node *root);
 
+  /// \return the TypeContext owned by the Module.
+  TypeContext &getTypeContext() {
+    return Mod->getTypeContext();
+  }
+
   /// Perform IRGeneration for the whole module.
   /// \param topLevelFunctionName the name of the top-level function.
   void doIt(llvh::StringRef topLevelFunctionName);
@@ -877,9 +882,10 @@ class ESTreeIRGen {
   /// Return the default init value for the specified type.
   Value *getDefaultInitValue(flow::Type *type);
 
-  /// Convert a Flow type into an IR type.
-  static Type flowTypeToIRType(flow::TypeInfo *flowType);
-  static Type flowTypeToIRType(flow::Type *flowType) {
+  /// Convert a Flow type into an IR type. Non-static because it needs the
+  /// Module's TypeContext to construct unions.
+  Type flowTypeToIRType(flow::TypeInfo *flowType);
+  Type flowTypeToIRType(flow::Type *flowType) {
     return flowTypeToIRType(flowType->info);
   }
 
@@ -978,6 +984,13 @@ class ESTreeIRGen {
   /// $SHBuiltin.call(fn, thisVal, arg1, arg2, ...)
   /// Calls \c fn with \c thisVal and the specified args.
   Value *genSHBuiltinCall(ESTree::CallExpressionNode *call);
+
+  /// Emit a typed `fn.call(thisArg, arg1, arg2, ...)` invocation as a direct
+  /// CallInst, bypassing the property load. \p mem is the
+  /// MemberExpression `fn.call` extracted from \c call->_callee.
+  Value *genTypedFunctionPrototypeCall(
+      ESTree::CallExpressionNode *call,
+      ESTree::MemberExpressionNode *mem);
 
   /// $SHBuiltin.externC({}, function fopen(path: c_ptr, mode: c_ptr): c_ptr)
   /// Import an external C function.
@@ -1711,6 +1724,17 @@ class ESTreeIRGen {
       flow::TupleType *type,
       Value *source);
 
+  /// Generate code for destructuring assignment to ArrayPattern from a typed
+  /// Array<T> (FastArray). Uses indexed FastArrayLoadInst for prefix elements
+  /// and a CallBuiltinInst to HermesBuiltin.fastArraySlice for the optional
+  /// trailing rest element.
+  /// \p arrayClassType must satisfy flowContext_.isArrayClassType().
+  void emitDestructuringTypedArray(
+      bool declInit,
+      ESTree::ArrayPatternNode *targetPat,
+      flow::Type *arrayClassType,
+      Value *source);
+
   /// A record used by to describe a shared exception handler. Every individual
   /// stores the caught exception in the specified location and branches to the
   /// specified block.
@@ -1740,6 +1764,15 @@ class ESTreeIRGen {
       ESTree::ObjectPatternNode *target,
       Value *source);
 
+  /// Generate code for destructuring assignment to ObjectPattern from a typed
+  /// exact object. Uses PrLoad for each named property and builds the rest
+  /// object (if any) with the correct typed layout using PrLoad/PrStore.
+  void emitDestructuringTypedObject(
+      bool declInit,
+      ESTree::ObjectPatternNode *target,
+      flow::ExactObjectType *srcType,
+      Value *source);
+
   /// Generate code for assigning to the "rest" property in an object
   /// destructuring pattern. \p excludedItems is a list of the keys that have
   /// been destructured so far, so they can be excluded from the rest property.
@@ -1766,15 +1799,14 @@ class ESTreeIRGen {
   /// \return the instruction performing the load.
   Instruction *emitLoad(Value *from, bool inhibitThrow);
 
-  /// Emit an instruction to a store a value into the specified location.
+  /// Emit IR to store a value into the specified location.
   /// \param storedValue value to store
   /// \param ptr location to store into, either a Variable or
   ///     GlobalObjectProperty.
   /// \param declInit whether this is a declaration initializer, so the TDZ
   /// check
   ///     should be skipped.
-  /// \return the instruction performing the store.
-  Instruction *emitStore(Value *storedValue, Value *ptr, bool declInit);
+  void emitStore(Value *storedValue, Value *ptr, bool declInit);
 
   /// Emit IR to load a private name.
   /// \param from value to perform the lookup on.

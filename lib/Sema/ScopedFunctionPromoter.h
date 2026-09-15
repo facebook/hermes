@@ -25,9 +25,8 @@ class SemanticResolver;
 /// block-scoped function declaration, it checks whether a matching let-like
 /// declaration is visible. If not, it is safe to promote.
 ///
-/// The input is a list of block-scoped function function declarations. The
-/// ones that can be promoted are deleted from their own scope and added to the
-/// function scope.
+/// The input is the list of block-scoped function declarations collected in
+/// the current function. \return the ones that can be safely promoted.
 std::vector<ESTree::FunctionDeclarationNode *> getPromotedScopedFuncDecls(
     SemanticResolver &resolver,
     ESTree::FunctionLikeNode *funcNode);

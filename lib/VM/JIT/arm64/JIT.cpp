@@ -31,6 +31,11 @@ JITContext::JITContext(bool enable) : enabled_(enable) {
 
 JITContext::~JITContext() = default;
 
+void JITContext::setHCIdLimit(uint32_t hcIdLimit) {
+  if (impl_)
+    impl_->hcIdLimit = std::min<uint32_t>(hcIdLimit, Impl::kHCIdOverflow);
+}
+
 void JITContext::dumpCounters(llvh::raw_ostream &os) {
   static constexpr const char *kCounterNames[] = {
 #define COUNTER_NAME(name) #name,
@@ -211,6 +216,18 @@ JITCompiledFunctionPtr JITContext::compileImpl(
 JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlock() {
   if (_sh_setjmp(errorJmpBuf_) == 0) {
     auto res = compileCodeBlockImpl();
+    // compileCodeBlockImpl returns null when it hits the memory limit, in which
+    // case the code was never installed and there is nothing for these targets
+    // to point at; computing them from a null base would store bogus pointers
+    // into the module's tables.
+    if (!res) {
+      // Nothing was installed, so the comments collected for this function
+      // have no code to attach to. Drop them, or they would be attributed to
+      // whichever function is compiled next.
+      if (jc_.perfJitDump_)
+        jc_.perfJitDump_->discardPendingCodeComments();
+      return res;
+    }
 
     // Translate now-bound labels to targets.
     uint64_t funcStart = reinterpret_cast<uint64_t>(res);
@@ -260,6 +277,9 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlock() {
         LLVM_DEBUG(printError(llvh::outs()));
       }
     }
+
+    if (jc_.perfJitDump_)
+      jc_.perfJitDump_->discardPendingCodeComments();
 
     codeBlock_->setDontJIT(true);
     return nullptr;
@@ -690,7 +710,8 @@ inline void JITContext::Compiler::emitStringSwitchImm(
 
   em_.stringSwitchImm(
       FR(inst->op1),
-      table,
+      codeBlock_->getRuntimeModule(),
+      inst->op2,
       bbLabelFromInst(inst, inst->op4),
       switchTableLabels);
 

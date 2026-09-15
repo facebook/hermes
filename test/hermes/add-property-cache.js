@@ -125,3 +125,17 @@ Object.setPrototypeOf(proto, p2);
 print(addX({__proto__: proto}).x);
 // CHECK-NEXT: setter 123
 // CHECK-NEXT: undefined
+
+// A Proxy in the prototype chain must not be cached, because it can start
+// intercepting the add without any HiddenClass in the chain changing.
+function addY(obj) {
+  obj.y = 1;
+  return obj;
+}
+var mid = Object.create(new Proxy({}, {}));
+// Give mid a plain writable 'y', so the lookup stops here instead of reaching
+// the proxy: a proxy answers a store by handling it itself, and only a store
+// that stops short of it takes the add property cache path being tested here.
+mid.y = 0;
+print(addY({__proto__: mid}).y, mid.y);
+// CHECK-NEXT: 1 0

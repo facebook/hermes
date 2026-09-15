@@ -58,6 +58,12 @@ LLVM_ATTRIBUTE_NORETURN void hermes_fatal(
     llvh::StringRef prefix,
     std::error_code code);
 
+/// Always-on assert. Calls hermes_fatal if \p cond is false.
+inline void hermes_assert(bool cond, const char *msg) {
+  if (LLVM_UNLIKELY(!cond))
+    hermes_fatal(msg);
+}
+
 } // namespace hermes
 
 // GCC has a bug that requires the specialization to be inside the std

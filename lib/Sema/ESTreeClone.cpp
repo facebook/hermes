@@ -278,6 +278,16 @@ class Cloner {
       llvh::cast<ESTree::FunctionLikeNode>(newNode)->isMethodDefinition =
           func->isMethodDefinition;
 
+      // Clone decorations attached via Hermes.decorate(...) calls.
+      auto *oldDeco = ESTree::getDecoration<ESTree::FunctionLikeDecoration>(
+          llvh::cast<ESTree::FunctionLikeNode>(oldNode));
+      auto *newDeco = ESTree::getDecoration<ESTree::FunctionLikeDecoration>(
+          llvh::cast<ESTree::FunctionLikeNode>(newNode));
+      assert(
+          oldDeco && newDeco &&
+          "FunctionLikeNode missing FunctionLikeDecoration");
+      clone(oldDeco->decorations, newDeco->decorations);
+
       // If a node has an entry in the declCollectorMap_,
       // clone that entry as well so that FlowChecker can use it.
       auto it = declCollectorMap_.find(func);

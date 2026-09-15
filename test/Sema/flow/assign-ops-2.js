@@ -22,13 +22,13 @@ function f(a: any, u: number|string, n: number) {
 // CHECK-NEXT:%function.3 = function(a: any, u: %union.2, n: number): any
 
 // CHECK:SemContext
-// CHECK-NEXT:Func strict
+// CHECK-NEXT:Func strict mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:        Decl %d.2 'f' Var : %function.3
 // CHECK-NEXT:        Decl %d.3 'arguments' Var Arguments
 // CHECK-NEXT:        hoistedFunction f
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.4 'a' Parameter : any
 // CHECK-NEXT:            Decl %d.5 'u' Parameter : %union.2

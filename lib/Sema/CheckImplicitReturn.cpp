@@ -149,6 +149,12 @@ class CheckImplicitReturn {
         return checkTerminationTryStatement(
             llvh::cast<ESTree::TryStatementNode>(node));
 
+#if HERMES_PARSE_FLOW
+      case ESTree::NodeKind::MatchStatement:
+        return checkTerminationMatchStatement(
+            llvh::cast<ESTree::MatchStatementNode>(node));
+#endif
+
       case ESTree::NodeKind::ReturnStatement:
         // Explicit return will always prevent implicit return.
         return TerminationResult::makeMustTerminate();
@@ -241,44 +247,55 @@ class CheckImplicitReturn {
   }
 
   // \return the termination result of a try statement.
+  // A try statement may have a handler, a finalizer, or both. In compile mode
+  // SemanticResolver rewrites the both-present form into nested try statements
+  // before this runs, but in parser mode (resolveASTForParser) it does not, so
+  // the node reaching here can still carry both children. The rewrite is only
+  // a restatement of the language semantics -- "try B catch H finally F" is
+  // "try { try B catch H } finally F" -- so the two cases are composed here in
+  // that same order rather than handled by a third rule.
   TerminationResult checkTerminationTryStatement(
       ESTree::TryStatementNode *node) {
-    auto tryRes = checkTermination(node->_block);
-
     assert(
-        !(node->_handler && node->_finalizer) &&
-        "try-catch-finally should have been transformed by SemanticResolver");
+        (node->_handler || node->_finalizer) &&
+        "try statement must have a handler or a finalizer");
+
+    TerminationResult tryRes = checkTermination(node->_block);
     if (node->_handler) {
-      // Both the try and catch must be terminating if there's no finalizer.
+      // Both the try and catch must be terminating for the pair to terminate.
       auto catchRes = checkTermination(
           llvh::cast<ESTree::CatchClauseNode>(node->_handler)->_body);
       tryRes.targetLabels.insert(
           catchRes.targetLabels.begin(), catchRes.targetLabels.end());
+    }
+
+    if (!node->_finalizer)
       return tryRes;
-    } else {
-      auto finallyRes = checkTermination(node->_finalizer);
-      if (finallyRes.mustTerminate()) {
-        // If the finally block terminates, the try-finally will terminate after
-        // executing the finally.
-        return finallyRes;
-      }
-      if (tryRes.mustTerminate() && finallyRes.mustExecuteNextStatement()) {
-        // If the try definitely terminates and the finally can't break
-        // to another handler in this function, the try-finally will definitely
-        // terminate.
-        // However, we also check that the finally has no control flow
-        // that would prevent the try from being able to terminate, e.g.
-        //     label:
-        //       try { return 1; }
-        //       finally { break label; }
-        // needs to avoid this branch, which mustExecuteNextStatement checks.
-        return tryRes;
-      }
-      // Otherwise, we just combine the possible next points of the try-finally.
-      tryRes.targetLabels.insert(
-          finallyRes.targetLabels.begin(), finallyRes.targetLabels.end());
+
+    // tryRes now describes the whole "try B" or "try B catch H" that the
+    // finally protects, since the finalizer runs however that part completes.
+    auto finallyRes = checkTermination(node->_finalizer);
+    if (finallyRes.mustTerminate()) {
+      // If the finally block terminates, the try-finally will terminate after
+      // executing the finally.
+      return finallyRes;
+    }
+    if (tryRes.mustTerminate() && finallyRes.mustExecuteNextStatement()) {
+      // If the try definitely terminates and the finally can't break
+      // to another handler in this function, the try-finally will definitely
+      // terminate.
+      // However, we also check that the finally has no control flow
+      // that would prevent the try from being able to terminate, e.g.
+      //     label:
+      //       try { return 1; }
+      //       finally { break label; }
+      // needs to avoid this branch, which mustExecuteNextStatement checks.
       return tryRes;
     }
+    // Otherwise, we just combine the possible next points of the try-finally.
+    tryRes.targetLabels.insert(
+        finallyRes.targetLabels.begin(), finallyRes.targetLabels.end());
+    return tryRes;
   }
 
   // \return the termination result of a switch statement, accounting for breaks
@@ -313,6 +330,61 @@ class CheckImplicitReturn {
 
     return result;
   }
+
+#if HERMES_PARSE_FLOW
+  // \return true if \p pattern accepts every value, so a case using it runs
+  // whenever it is reached. This is the 'match' equivalent of a switch's
+  // default case.
+  static bool isIrrefutableMatchPattern(ESTree::Node *pattern) {
+    // 'as' only names what the inner pattern matched, it does not narrow what
+    // is accepted.
+    while (auto *asPattern =
+               llvh::dyn_cast<ESTree::MatchAsPatternNode>(pattern))
+      pattern = asPattern->_pattern;
+    return llvh::isa<ESTree::MatchWildcardPatternNode>(pattern) ||
+        llvh::isa<ESTree::MatchBindingPatternNode>(pattern);
+  }
+
+  // \return the termination result of a Flow 'match' statement.
+  // A match statement is not a break target in Hermes: SemanticResolver never
+  // records it in currentLoopOrSwitch, so a 'break' inside a case body always
+  // refers to an enclosing loop or switch. Consequently there is no label to
+  // remove here, and the labels targeted by the case bodies are simply unioned
+  // so that such breaks are propagated to the enclosing construct.
+  TerminationResult checkTerminationMatchStatement(
+      ESTree::MatchStatementNode *node) {
+    TerminationResult result{};
+    // Whether some case is guaranteed to run, which is what lets the match as
+    // a whole terminate. Mirrors the default case of a switch statement.
+    bool foundIrrefutable = false;
+    for (ESTree::Node &child : node->_cases) {
+      auto *matchCase = llvh::cast<ESTree::MatchStatementCaseNode>(&child);
+      // Cases don't fall through, so every body is checked independently. A
+      // body which completes normally continues after the match, which the
+      // union below propagates.
+      auto caseRes = checkTermination(matchCase->_body);
+      result.targetLabels.insert(
+          caseRes.targetLabels.begin(), caseRes.targetLabels.end());
+      // A guard can fail no matter what the pattern accepts.
+      if (!matchCase->_guard &&
+          isIrrefutableMatchPattern(matchCase->_pattern)) {
+        foundIrrefutable = true;
+        // Cases are tested in order and the first match wins, so no later
+        // case can run. Stop instead of unioning labels that a dead case
+        // targets, which would report control flow that cannot happen.
+        break;
+      }
+    }
+    if (!foundIrrefutable) {
+      // No case has to run, so execution may continue past the match. Note
+      // that exhaustiveness of the patterns taken together is not computed
+      // here, so a match which covers its argument by enumeration is still
+      // treated as able to complete normally.
+      result.targetLabels.insert(TerminationResult::kNextStatementLabel);
+    }
+    return result;
+  }
+#endif
 };
 
 } // namespace

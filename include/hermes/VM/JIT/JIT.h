@@ -114,6 +114,9 @@ class JITContext {
   /// Set the memory limit for JIT'ed code in bytes.
   void setMemoryLimit(uint32_t memoryLimit) {}
 
+  /// Set the largest lazy JIT id assignable to a HiddenClass (testing only).
+  void setHCIdLimit(uint32_t hcIdLimit) {}
+
   /// Set the default threshold for function execution count before a function
   /// is compiled. On a per-function basis, the count may be altered based on
   /// internal heuristics.

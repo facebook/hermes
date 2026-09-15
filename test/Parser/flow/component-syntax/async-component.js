@@ -26,6 +26,57 @@ async component Foo1() {}
 // CHECK-NEXT:       "async": true
 // CHECK-NEXT:     },
 
+// Ensure `await` is recognized as a keyword inside async component bodies.
+async component FooAwait() {
+  const x = await something();
+  return x;
+}
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ComponentDeclaration",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "FooAwait"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "params": [],
+// CHECK-NEXT:       "body": {
+// CHECK-NEXT:         "type": "BlockStatement",
+// CHECK-NEXT:         "body": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "VariableDeclaration",
+// CHECK-NEXT:             "kind": "const",
+// CHECK-NEXT:             "declarations": [
+// CHECK-NEXT:               {
+// CHECK-NEXT:                 "type": "VariableDeclarator",
+// CHECK-NEXT:                 "init": {
+// CHECK-NEXT:                   "type": "AwaitExpression",
+// CHECK-NEXT:                   "argument": {
+// CHECK-NEXT:                     "type": "CallExpression",
+// CHECK-NEXT:                     "callee": {
+// CHECK-NEXT:                       "type": "Identifier",
+// CHECK-NEXT:                       "name": "something"
+// CHECK-NEXT:                     },
+// CHECK-NEXT:                     "arguments": []
+// CHECK-NEXT:                   }
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "id": {
+// CHECK-NEXT:                   "type": "Identifier",
+// CHECK-NEXT:                   "name": "x"
+// CHECK-NEXT:                 }
+// CHECK-NEXT:               }
+// CHECK-NEXT:             ]
+// CHECK-NEXT:           },
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "ReturnStatement",
+// CHECK-NEXT:             "argument": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "x"
+// CHECK-NEXT:             }
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ]
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "async": true
+// CHECK-NEXT:     },
+
 export default async component Foo2() {}
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "ExportDefaultDeclaration",

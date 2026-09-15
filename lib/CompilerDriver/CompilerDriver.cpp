@@ -264,7 +264,7 @@ static opt<bool> Pretty(
 static opt<bool> Typed(
     "typed",
     init(false),
-    desc("Enable typed mode"),
+    desc("Enable typed mode (use -help-typed to learn more)"),
     cat(CompilerCategory));
 #else
 static constexpr bool Typed = false;
@@ -485,6 +485,17 @@ static opt<bool> LexerOnly(
 
 #endif
 
+static opt<bool> XCompile(
+    "Xcompile",
+    desc(
+        "Resolve the AST for compilation. Pass false to resolve it the way "
+        "a parser embedder does (sema::resolveASTForParser), which skips the "
+        "compile-only errors and AST rewrites. Only valid with a dump target "
+        "at or before sema, since later stages cannot consume the result."),
+    init(true),
+    Hidden,
+    cat(CompilerCategory));
+
 static opt<int> MaxDiagnosticWidth(
     "max-diagnostic-width",
     llvh::cl::desc("Preferred diagnostic maximum width"),
@@ -666,6 +677,12 @@ static opt<unsigned> PadFunctionBodiesPercent(
         "Add this much garbage after each function body (relative to its size)."),
     init(0),
     Hidden,
+    cat(CompilerCategory));
+
+opt<bool> HelpTyped(
+    "help-typed",
+    desc("Print the Typed language documentation and exit"),
+    init(false),
     cat(CompilerCategory));
 
 } // namespace cl
@@ -888,7 +905,8 @@ ESTree::NodePtr parseJS(
   }
 #endif
 
-  parsedAST = hermes::transformASTForCompilation(*context, parsedAST);
+  parsedAST = hermes::transformASTForCompilation(
+      *context, /* typed */ flowContext != nullptr, parsedAST);
   if (!parsedAST)
     return nullptr;
 
@@ -906,7 +924,16 @@ ESTree::NodePtr parseJS(
       if (!preludeOpt) {
         return nullptr;
       }
-      prelude = preludeOpt.getValue();
+      // Apply the same AST transforms (e.g. typed-mode Hermes.decorate
+      // rewriting) to the TypedLib prelude that we applied to user code.
+      auto *transformedPrelude = hermes::transformASTForCompilation(
+          *context,
+          /* typed */ flowContext != nullptr,
+          preludeOpt.getValue());
+      if (!transformedPrelude) {
+        return nullptr;
+      }
+      prelude = llvh::cast<ESTree::ProgramNode>(transformedPrelude);
     }
 
     auto [wrappedAST, innerFunc] = wrapInIIFE(
@@ -921,12 +948,19 @@ ESTree::NodePtr parseJS(
   }
 
   if (!wrapCJSModule) {
-    if (!hermes::sema::resolveAST(
-            *context,
-            semCtx,
-            flowContext,
-            llvh::cast<ESTree::ProgramNode>(parsedAST),
-            ambientDecls)) {
+    if (!cl::XCompile) {
+      // The entry point a parser embedder uses. validateFlags() has already
+      // rejected the dump targets whose stages cannot consume this AST.
+      if (!hermes::sema::resolveASTForParser(
+              *context, semCtx, llvh::cast<ESTree::ProgramNode>(parsedAST))) {
+        return nullptr;
+      }
+    } else if (!hermes::sema::resolveAST(
+                   *context,
+                   semCtx,
+                   flowContext,
+                   llvh::cast<ESTree::ProgramNode>(parsedAST),
+                   ambientDecls)) {
       return nullptr;
     }
   } else {
@@ -1024,6 +1058,17 @@ bool validateFlags() {
 
   if (cl::LazyCompilation && cl::EagerCompilation) {
     err("Can't specify both -lazy and -eager");
+  }
+
+  // -Xcompile=false leaves the AST in the shape a parser embedder sees, which
+  // deliberately keeps constructs the later stages reject or assume rewritten.
+  if (!cl::XCompile) {
+    if (cl::DumpTarget != DumpAST && cl::DumpTarget != DumpTransformedAST &&
+        cl::DumpTarget != DumpSema)
+      err("-Xcompile=false requires -dump-ast, -dump-transformed-ast or "
+          "-dump-sema");
+    if (cl::CommonJS)
+      err("-Xcompile=false does not work with -commonjs");
   }
 
   // Validate lazy compilation flags.
@@ -1860,7 +1905,6 @@ CompileResult generateBytecodeForExecution(
         std::move(BM), std::move(compilationData));
   } else {
     llvm_unreachable("Invalid bytecode kind for execution");
-    result = InvalidFlags;
   }
   return result;
 }

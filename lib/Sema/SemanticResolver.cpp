@@ -9,6 +9,7 @@
 
 #include "ASTEval.h"
 #include "ScopedFunctionPromoter.h"
+#include "hermes/AST/ASTUtils.h"
 #include "hermes/AST/Context.h"
 #include "hermes/Regex/RegexSerialization.h"
 #include "hermes/Sema/SemContext.h"
@@ -689,7 +690,6 @@ static LabelDecorationBase *getLabelDecorationBase(StatementNode *node) {
   if (auto *LabS = llvh::dyn_cast<LabeledStatementNode>(node))
     return LabS;
   llvm_unreachable("invalid node type");
-  return nullptr;
 }
 
 void SemanticResolver::visit(ESTree::BreakStatementNode *node) {
@@ -992,6 +992,11 @@ void SemanticResolver::visit(ClassPrivatePropertyNode *node) {
     // This will insert the `arguments` identifer into the binding table scope
     // which is created by the class declaration / expression node.
     declareArguments();
+    // Make the initializer function's body scope current, so any scopes
+    // created by the initializer expression (e.g. by a class expression) are
+    // parented in it, matching the runtime environment chain.
+    llvh::SaveAndRestore<LexicalScope *> oldScope{
+        curScope_, curFunctionInfo()->getFunctionBodyScope()};
     visitESTreeNode(*this, node->_value, node);
   } else if (!typed_) {
     // Create the these initializers even if no value initializer is present, in
@@ -1037,6 +1042,11 @@ void SemanticResolver::visit(ESTree::ClassPropertyNode *node) {
             ? curClassContext_->getOrCreateStaticElementsInitFunctionInfo()
             : curClassContext_->getOrCreateInstanceElementsInitFunctionInfo());
     declareArguments();
+    // Make the initializer function's body scope current, so any scopes
+    // created by the initializer expression (e.g. by a class expression) are
+    // parented in it, matching the runtime environment chain.
+    llvh::SaveAndRestore<LexicalScope *> oldScope{
+        curScope_, curFunctionInfo()->getFunctionBodyScope()};
     visitESTreeNode(*this, node->_value, node);
   } else if (!typed_) {
     // Create the these initializers even if no value initializer is present, in
@@ -1154,39 +1164,43 @@ void SemanticResolver::visit(ESTree::CallExpressionNode *node) {
   // This allows typechecker/IRGen to simply match on SHBuiltinNode.
   if (auto *methodCallee =
           llvh::dyn_cast<ESTree::MemberExpressionNode>(node->_callee)) {
+    // Note that the property of a non-computed member expression can also be
+    // a PrivateNameNode, not just an identifier. A private property is never
+    // a builtin access, so in that case $SHBuiltin is left alone and is
+    // reported as an invalid use when the identifier itself is visited.
+    auto *propIdent =
+        llvh::dyn_cast<ESTree::IdentifierNode>(methodCallee->_property);
     if (auto *ident =
             llvh::dyn_cast<ESTree::IdentifierNode>(methodCallee->_object)) {
-      if (ident->_name == kw_.identSHBuiltin && !methodCallee->_computed) {
+      if (ident->_name == kw_.identSHBuiltin && !methodCallee->_computed &&
+          propIdent) {
         Decl *decl = resolveIdentifier(ident, false);
         if (decl && decl->kind == sema::Decl::Kind::UndeclaredGlobalProperty) {
           auto *shBuiltin = new (astContext_) ESTree::SHBuiltinNode();
           shBuiltin->copyLocationFrom(methodCallee->_object);
           methodCallee->_object = shBuiltin;
         }
-        if (auto *propIdent =
-                llvh::cast<ESTree::IdentifierNode>(methodCallee->_property)) {
-          if (propIdent->_name == kw_.identModuleFactory) {
-            // This visits its children explicitly (with a module context
-            // set), so we return after it.
-            // The require optimization should only be validated when we are
-            // actually attempting to parse this code for compilation. Before
-            // that point, the SH builtin call may still be incomplete.
-            if (compile_)
-              visitModuleFactory(node);
+        if (propIdent->_name == kw_.identModuleFactory) {
+          // This visits its children explicitly (with a module context
+          // set), so we return after it.
+          // The require optimization should only be validated when we are
+          // actually attempting to parse this code for compilation. Before
+          // that point, the SH builtin call may still be incomplete.
+          if (compile_)
+            visitModuleFactory(node);
+          return;
+        } else if (propIdent->_name == kw_.identExport) {
+          // In this case, we must visit the children first, to ensure that
+          // the exported name is resolved before we call visitModuleExport.
+          // Therefore, we return explicitly after, so we don't visit the
+          // children again below.
+          visitESTreeChildren(*this, node);
+          if (LLVM_UNLIKELY(recursionDepth_ == 0))
             return;
-          } else if (propIdent->_name == kw_.identExport) {
-            // In this case, we must visit the children first, to ensure that
-            // the exported name is resolved before we call visitModuleExport.
-            // Therefore, we return explicitly after, so we don't visit the
-            // children again below.
-            visitESTreeChildren(*this, node);
-            if (LLVM_UNLIKELY(recursionDepth_ == 0))
-              return;
-            visitModuleExport(node);
-            return;
-          } else if (propIdent->_name == kw_.identImport) {
-            visitModuleImport(node);
-          }
+          visitModuleExport(node);
+          return;
+        } else if (propIdent->_name == kw_.identImport) {
+          visitModuleImport(node);
         }
       }
     }
@@ -1535,7 +1549,7 @@ void SemanticResolver::visit(ESTree::ExportDefaultDeclarationNode *node) {
           funcDecl->_returnType,
           funcDecl->_predicate,
           funcDecl->_generator,
-          /* async */ false);
+          funcDecl->_async);
       funcExpr->strictness = funcDecl->strictness;
       funcExpr->copyLocationFrom(funcDecl);
 
@@ -1549,8 +1563,7 @@ void SemanticResolver::visit(ESTree::ExportDefaultDeclarationNode *node) {
 void SemanticResolver::visit(ESTree::ExportAllDeclarationNode *node) {
   if (compile_ && !astContext_.getUseCJSModules()) {
     sm_.error(
-        node->getSourceRange(),
-        "'export' statement requires CommonJS module mode");
+        node->getSourceRange(), "'export' statement requires module mode");
   }
   visitESTreeChildren(*this, node);
 }
@@ -1596,6 +1609,21 @@ void SemanticResolver::visit(TypeCastExpressionNode *node) {
 void SemanticResolver::visit(AsExpressionNode *node) {
   // Visit the expression, but not the type annotation.
   visitESTreeNode(*this, node->_expression, node);
+}
+
+void SemanticResolver::visit(MatchStatementNode *node) {
+  // IRGen cannot lower a match, so reject it here rather than let it reach the
+  // backend and be reported as an unrecognized statement. Parser mode still
+  // resolves it, since an embedder wants the resolved AST.
+  if (compile_)
+    sm_.error(node->getSourceRange(), "match statements are unsupported");
+  visitESTreeChildren(*this, node);
+}
+
+void SemanticResolver::visit(MatchExpressionNode *node) {
+  if (compile_)
+    sm_.error(node->getSourceRange(), "match expressions are unsupported");
+  visitESTreeChildren(*this, node);
 }
 
 /// Process a component declaration by creating a new FunctionContext.
@@ -1931,10 +1959,11 @@ void SemanticResolver::visitFunctionBodyAfterParamsVisited(
   // Check for local eval and run the unresolver pass in non-strict mode.
   // TODO: enable this when non-strict direct eval is supported.
   LexicalScope *lexScope = curFunctionInfo()->getFunctionBodyScope();
-  if (false && lexScope->localEval && !curFunctionInfo()->strict) {
-    uint32_t depth = lexScope->depth;
-    Unresolver::run(semCtx_, depth, node);
-  }
+  if ((false))
+    if (lexScope->localEval && !curFunctionInfo()->strict) {
+      uint32_t depth = lexScope->depth;
+      Unresolver::run(semCtx_, depth, node);
+    }
 
   // Determine whether the function can run the implicit return.
   if (!sm_.getErrorCount()) {
@@ -2105,11 +2134,13 @@ void SemanticResolver::processDeclarations(const ScopeDecls &decls) {
     llvh::SmallVector<ESTree::IdentifierNode *, 4> idents{};
     Decl::Kind kind = extractIdentsFromDecl(decl, idents);
 
-    // In typed mode, ignore function declarations with "builtin" directive.
-    // They're going to be resolved by the FlowChecker.
+    // In typed mode, ignore function declarations marked as builtin (either
+    // via the "builtin" directive or a Hermes.builtin decoration). They're
+    // going to be resolved by the FlowChecker.
     if (typed_) {
       if (auto *funcDecl = llvh::dyn_cast<FunctionDeclarationNode>(decl);
-          funcDecl && hasBuiltinDirective(funcDecl)) {
+          funcDecl &&
+          (hasBuiltinDirective(funcDecl) || hasBuiltinDecoration(funcDecl))) {
         semCtx_.addBuiltinDeclaration(funcDecl);
         Decl *newDecl = semCtx_.newDeclInScope(
             idents.front()->_name, Decl::Kind::TypedBuiltin, curScope_);
@@ -2148,6 +2179,10 @@ void SemanticResolver::collectDeclaredPrivateIdentifiers(
     bool isStatic = false;
     bool isGetter = false;
     bool isSetter = false;
+    /// True if the first declaration was a private method decorated with
+    /// @Hermes.overload. Subsequent overloaded methods with the same name
+    /// are accepted; non-overload duplicates remain an error.
+    bool isOverloadedMethod = false;
     /// In the case of a pair of accessors defined with the same name, we should
     /// reuse the same decl to define the declaration & expression decl of the
     /// second accessor. This field stores that original decl for the second
@@ -2184,10 +2219,24 @@ void SemanticResolver::collectDeclaredPrivateIdentifiers(
       auto id = llvh::cast<IdentifierNode>(privateName->_id);
       UniqueString *methKind = method->_kind;
       if (methKind == kw_.identMethod) {
-        if (!privateDeclarations.try_emplace(id->_name, PrivateAccessorInfo{})
-                 .second) {
-          sm_.error(id->getSourceRange(), defaultDupErrMsg);
+        // Private methods decorated with @Hermes.overload may legally have
+        // duplicate names. The FlowChecker validates that all overloads of a
+        // given name are decorated and merges them into a single Field. The
+        // first overload creates the binding; subsequent overloads share it.
+        bool isOverload =
+            typed_ &&
+            hermes::findDecorator(
+                method->_decorators, {kw_.identHermes, kw_.identOverload});
+        auto [iter, inserted] =
+            privateDeclarations.try_emplace(id->_name, PrivateAccessorInfo{});
+        if (!inserted) {
+          if (!isOverload || !iter->second.isOverloadedMethod) {
+            sm_.error(id->getSourceRange(), defaultDupErrMsg);
+          }
+          // Resolve this private name's identifier to the existing decl.
+          resolvePrivateName(id);
         } else {
+          iter->second.isOverloadedMethod = isOverload;
           declarePrivateName(id, Decl::Kind::PrivateMethod, method->_static);
         }
         continue;
@@ -2197,7 +2246,7 @@ void SemanticResolver::collectDeclaredPrivateIdentifiers(
           "unrecognized method kind.");
       bool isSetter = methKind == kw_.identSet;
       PrivateAccessorInfo curInfo{
-          true, method->_static, !isSetter, isSetter, nullptr};
+          true, method->_static, !isSetter, isSetter, false, nullptr};
       auto [iter, success] = privateDeclarations.insert({id->_name, curInfo});
       // If we successfully inserted, there's no possibility for an error.
       if (success) {
@@ -2401,7 +2450,7 @@ void SemanticResolver::validateAndDeclareIdentifier(
   // I am willing to live with this sacrifice.
   // Aliasing of "arguments" becomes especially iffy when type annotations are
   // added.
-  if (false) {
+  if ((false)) {
     // Redeclaration of `arguments` in non-strict mode is allowed at the
     // function level, so we don't need to declare a new variable.
     if (!curFunctionInfo()->strict && ident->_name == kw_.identArguments &&
@@ -2801,6 +2850,15 @@ bool SemanticResolver::hasBuiltinDirective(
     return directives.builtin;
   }
   return false;
+}
+
+bool SemanticResolver::hasBuiltinDecoration(
+    ESTree::FunctionDeclarationNode *funcDecl) const {
+  auto *deco = ESTree::getDecoration<ESTree::FunctionLikeDecoration>(funcDecl);
+  if (!deco)
+    return false;
+  return findDecorator(
+             deco->decorations, {kw_.identHermes, kw_.identBuiltin}) != nullptr;
 }
 
 /* static */ void SemanticResolver::registerLocalEval(LexicalScope *scope) {

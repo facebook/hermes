@@ -25,7 +25,7 @@ let load  = $SHBuiltin.extern_c({}, function load(addr: c_ptr): c_u8 {throw 0});
 // CHECK-NEXT:extern "C" uint8_t load(void *);
 
 // CHECK:SemContext
-// CHECK-NEXT:Func strict
+// CHECK-NEXT:Func strict mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:        Decl %d.2 'fopen' Let : %native_function.4
@@ -38,17 +38,17 @@ let load  = $SHBuiltin.extern_c({}, function load(addr: c_ptr): c_u8 {throw 0});
 // CHECK-NEXT:            Decl %d.7 'fopen' FunctionExprName : %function.3
 // CHECK-NEXT:        Scope %s.4
 // CHECK-NEXT:            Decl %d.8 'load' FunctionExprName : %function.5
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict noImplicitReturn
 // CHECK-NEXT:        Scope %s.5
 // CHECK-NEXT:            Decl %d.9 'path' Parameter : c_ptr
 // CHECK-NEXT:            Decl %d.10 'mode' Parameter : c_ptr
 // CHECK-NEXT:            Decl %d.11 'arguments' Var Arguments
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict noImplicitReturn
 // CHECK-NEXT:        Scope %s.6
 // CHECK-NEXT:            Decl %d.12 'path' Parameter : c_ptr
 // CHECK-NEXT:            Decl %d.13 'mode' Parameter : c_ptr
 // CHECK-NEXT:            Decl %d.14 'arguments' Var Arguments
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict noImplicitReturn
 // CHECK-NEXT:        Scope %s.7
 // CHECK-NEXT:            Decl %d.15 'addr' Parameter : c_ptr
 // CHECK-NEXT:            Decl %d.16 'arguments' Var Arguments
@@ -69,7 +69,7 @@ let load  = $SHBuiltin.extern_c({}, function load(addr: c_ptr): c_u8 {throw 0});
 // CHECK-NEXT:                        Id 'mode' [D:E:%d.10 'mode']
 // CHECK-NEXT:                        BlockStatement
 // CHECK-NEXT:                            ThrowStatement
-// CHECK-NEXT:                                NumericLiteral
+// CHECK-NEXT:                                NumericLiteral : number
 // CHECK-NEXT:                Id 'fopen' [D:E:%d.2 'fopen']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
@@ -84,7 +84,7 @@ let load  = $SHBuiltin.extern_c({}, function load(addr: c_ptr): c_u8 {throw 0});
 // CHECK-NEXT:                        Id 'mode' [D:E:%d.13 'mode']
 // CHECK-NEXT:                        BlockStatement
 // CHECK-NEXT:                            ThrowStatement
-// CHECK-NEXT:                                NumericLiteral
+// CHECK-NEXT:                                NumericLiteral : number
 // CHECK-NEXT:                Id 'fopen1' [D:E:%d.3 'fopen1']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
@@ -98,5 +98,5 @@ let load  = $SHBuiltin.extern_c({}, function load(addr: c_ptr): c_u8 {throw 0});
 // CHECK-NEXT:                        Id 'addr' [D:E:%d.15 'addr']
 // CHECK-NEXT:                        BlockStatement
 // CHECK-NEXT:                            ThrowStatement
-// CHECK-NEXT:                                NumericLiteral
+// CHECK-NEXT:                                NumericLiteral : number
 // CHECK-NEXT:                Id 'load' [D:E:%d.4 'load']

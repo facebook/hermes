@@ -428,6 +428,9 @@ void CDPAgentImpl::DomainAgentsImpl::handleCommand(
     } else if (method == "setBreakpointByUrl") {
       debuggerAgent_->setBreakpointByUrl(
           static_cast<m::debugger::SetBreakpointByUrlRequest &>(*command));
+    } else if (method == "getPossibleBreakpoints") {
+      debuggerAgent_->getPossibleBreakpoints(
+          static_cast<m::debugger::GetPossibleBreakpointsRequest &>(*command));
     } else if (method == "removeBreakpoint") {
       debuggerAgent_->removeBreakpoint(
           static_cast<m::debugger::RemoveBreakpointRequest &>(*command));

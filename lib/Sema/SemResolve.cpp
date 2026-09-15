@@ -99,7 +99,11 @@ class ASTPrinter {
     os_ << "Id '" << V->_name->str() << '\'';
 
     sema::Decl *declD = semCtx_.getDeclarationDecl(V);
-    sema::Decl *exprD = semCtx_.getExpressionDecl(V);
+    // getExpressionDecl() requires that the identifier is not marked
+    // "unresolvable" (identifiers inside `with` are unresolvable when
+    // resolving on behalf of a parser). The " UNR" flag is printed below.
+    sema::Decl *exprD =
+        V->isUnresolvable() ? nullptr : semCtx_.getExpressionDecl(V);
     if (declD || exprD) {
       os_ << " [";
       if (!declD || declD == exprD) {

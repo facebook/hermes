@@ -30,7 +30,7 @@ var r2: boolean[] = map(arr, elem => !elem);
 // CHECK-NEXT:%function.7 = function(x: %class.2, f: %function.6): %class.3
 
 // CHECK:SemContext
-// CHECK-NEXT:Func strict
+// CHECK-NEXT:Func strict mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:        Decl %d.2 'map' Var
@@ -43,7 +43,7 @@ var r2: boolean[] = map(arr, elem => !elem);
 // CHECK-NEXT:        hoistedFunction map
 // CHECK-NEXT:        hoistedFunction map
 // CHECK-NEXT:        hoistedFunction map
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict noImplicitReturn
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.9 'x' Parameter
 // CHECK-NEXT:            Decl %d.10 'f' Parameter
@@ -52,13 +52,13 @@ var r2: boolean[] = map(arr, elem => !elem);
 // CHECK-NEXT:            Decl %d.13 'arguments' Var Arguments
 // CHECK-NEXT:            Scope %s.3
 // CHECK-NEXT:                Scope %s.4
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict noImplicitReturn
 // CHECK-NEXT:        Scope %s.5
 // CHECK-NEXT:            Decl %d.14 'elem' Parameter : number
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict noImplicitReturn
 // CHECK-NEXT:        Scope %s.6
 // CHECK-NEXT:            Decl %d.15 'elem' Parameter : number
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict noImplicitReturn
 // CHECK-NEXT:        Scope %s.7
 // CHECK-NEXT:            Decl %d.16 'x' Parameter : %class.2
 // CHECK-NEXT:            Decl %d.17 'f' Parameter : %function.4
@@ -67,7 +67,7 @@ var r2: boolean[] = map(arr, elem => !elem);
 // CHECK-NEXT:            Decl %d.20 'arguments' Var Arguments
 // CHECK-NEXT:            Scope %s.8
 // CHECK-NEXT:                Scope %s.9
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict noImplicitReturn
 // CHECK-NEXT:        Scope %s.10
 // CHECK-NEXT:            Decl %d.21 'x' Parameter : %class.2
 // CHECK-NEXT:            Decl %d.22 'f' Parameter : %function.6

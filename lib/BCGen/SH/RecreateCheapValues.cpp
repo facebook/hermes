@@ -30,7 +30,7 @@ static bool recreateCheapValues(Function *F, SHRegisterAllocator &RA) {
         continue;
       Literal *literal = load->getConst();
 
-      if (!literal->getType().isNonPtr())
+      if (!builder.getTypeContext().isNonPtr(literal->getType()))
         continue;
 
       builder.setInsertionPoint(mov);

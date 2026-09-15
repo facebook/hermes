@@ -6,3 +6,6 @@
 add_subdirectory(hermes)
 add_subdirectory(hermes_abi)
 add_subdirectory(hermes_sandbox)
+if(HERMES_ENABLE_NAPI)
+  add_subdirectory(napi)
+endif()

@@ -178,12 +178,16 @@ void _jit_put_by_id(
     bool strictMode,
     bool tryProp);
 
-/// Assumes that \p table is an initialized string switch runtime table.
+/// Assumes that table  at index \p tableIndex is an initialized string switch
+/// runtime table. Pass the runtimeModule+index in order to avoid relying on
+/// potentially reallocating storage in RuntimeModule.
+///
 /// If \p switchValue is found as a case in that table, returns the
 /// corresponding JIT code target for that case.  Otherwise, returns nullptr.
 /// (This assumes that nullptr is not a valid branch target.)
 void *_jit_string_switch_imm_table_lookup(
-    StringSwitchDenseMap *table,
+    RuntimeModule *runtimeModule,
+    uint32_t tableIndex,
     SHLegacyValue *switchValue);
 
 } // namespace hermes::vm

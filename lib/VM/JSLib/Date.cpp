@@ -753,12 +753,16 @@ CallResult<HermesValue> datePrototypeSetMilliseconds_RJS(
   }
   double t = self->getPrimitiveValue();
   auto &localTimeOffsetCache = runtime.getJSLibStorage()->localTimeOffsetCache;
-  if (!isUTC) {
-    t = localTime(t, localTimeOffsetCache);
-  }
   auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
+  }
+  if (std::isnan(t)) {
+    return HermesValue::encodeTrustedNumberValue(
+        std::numeric_limits<double>::quiet_NaN());
+  }
+  if (!isUTC) {
+    t = localTime(t, localTimeOffsetCache);
   }
   double ms = res->getNumber();
   double date = makeDate(
@@ -783,9 +787,6 @@ CallResult<HermesValue> datePrototypeSetSeconds_RJS(
   }
   double t = self->getPrimitiveValue();
   auto &localTimeOffsetCache = runtime.getJSLibStorage()->localTimeOffsetCache;
-  if (!isUTC) {
-    t = localTime(t, localTimeOffsetCache);
-  }
   auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -798,7 +799,15 @@ CallResult<HermesValue> datePrototypeSetSeconds_RJS(
       return ExecutionStatus::EXCEPTION;
     }
     milli = res->getNumber();
-  } else {
+  }
+  if (std::isnan(t)) {
+    return HermesValue::encodeTrustedNumberValue(
+        std::numeric_limits<double>::quiet_NaN());
+  }
+  if (!isUTC) {
+    t = localTime(t, localTimeOffsetCache);
+  }
+  if (args.getArgCount() < 2) {
     milli = msFromTime(t);
   }
 
@@ -824,9 +833,6 @@ CallResult<HermesValue> datePrototypeSetMinutes_RJS(
   }
   double t = self->getPrimitiveValue();
   auto &localTimeOffsetCache = runtime.getJSLibStorage()->localTimeOffsetCache;
-  if (!isUTC) {
-    t = localTime(t, localTimeOffsetCache);
-  }
   auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -839,8 +845,6 @@ CallResult<HermesValue> datePrototypeSetMinutes_RJS(
       return ExecutionStatus::EXCEPTION;
     }
     s = res->getNumber();
-  } else {
-    s = secFromTime(t);
   }
   double milli;
   if (args.getArgCount() >= 3) {
@@ -849,7 +853,18 @@ CallResult<HermesValue> datePrototypeSetMinutes_RJS(
       return ExecutionStatus::EXCEPTION;
     }
     milli = res->getNumber();
-  } else {
+  }
+  if (std::isnan(t)) {
+    return HermesValue::encodeTrustedNumberValue(
+        std::numeric_limits<double>::quiet_NaN());
+  }
+  if (!isUTC) {
+    t = localTime(t, localTimeOffsetCache);
+  }
+  if (args.getArgCount() < 2) {
+    s = secFromTime(t);
+  }
+  if (args.getArgCount() < 3) {
     milli = msFromTime(t);
   }
 
@@ -872,9 +887,6 @@ CallResult<HermesValue> datePrototypeSetHours_RJS(void *ctx, Runtime &runtime) {
   }
   double t = self->getPrimitiveValue();
   auto &localTimeOffsetCache = runtime.getJSLibStorage()->localTimeOffsetCache;
-  if (!isUTC) {
-    t = localTime(t, localTimeOffsetCache);
-  }
   auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -887,8 +899,6 @@ CallResult<HermesValue> datePrototypeSetHours_RJS(void *ctx, Runtime &runtime) {
       return ExecutionStatus::EXCEPTION;
     }
     m = res->getNumber();
-  } else {
-    m = minFromTime(t);
   }
   double s;
   if (args.getArgCount() >= 3) {
@@ -897,8 +907,6 @@ CallResult<HermesValue> datePrototypeSetHours_RJS(void *ctx, Runtime &runtime) {
       return ExecutionStatus::EXCEPTION;
     }
     s = res->getNumber();
-  } else {
-    s = secFromTime(t);
   }
   double milli;
   if (args.getArgCount() >= 4) {
@@ -907,7 +915,21 @@ CallResult<HermesValue> datePrototypeSetHours_RJS(void *ctx, Runtime &runtime) {
       return ExecutionStatus::EXCEPTION;
     }
     milli = res->getNumber();
-  } else {
+  }
+  if (std::isnan(t)) {
+    return HermesValue::encodeTrustedNumberValue(
+        std::numeric_limits<double>::quiet_NaN());
+  }
+  if (!isUTC) {
+    t = localTime(t, localTimeOffsetCache);
+  }
+  if (args.getArgCount() < 2) {
+    m = minFromTime(t);
+  }
+  if (args.getArgCount() < 3) {
+    s = secFromTime(t);
+  }
+  if (args.getArgCount() < 4) {
     milli = msFromTime(t);
   }
 
@@ -929,12 +951,16 @@ CallResult<HermesValue> datePrototypeSetDate_RJS(void *ctx, Runtime &runtime) {
   }
   double t = self->getPrimitiveValue();
   auto &localTimeOffsetCache = runtime.getJSLibStorage()->localTimeOffsetCache;
-  if (!isUTC) {
-    t = localTime(t, localTimeOffsetCache);
-  }
   auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
+  }
+  if (std::isnan(t)) {
+    return HermesValue::encodeTrustedNumberValue(
+        std::numeric_limits<double>::quiet_NaN());
+  }
+  if (!isUTC) {
+    t = localTime(t, localTimeOffsetCache);
   }
   double dt = res->getNumber();
   double newDate = makeDate(
@@ -957,9 +983,6 @@ CallResult<HermesValue> datePrototypeSetMonth_RJS(void *ctx, Runtime &runtime) {
   }
   double t = self->getPrimitiveValue();
   auto &localTimeOffsetCache = runtime.getJSLibStorage()->localTimeOffsetCache;
-  if (!isUTC) {
-    t = localTime(t, localTimeOffsetCache);
-  }
   auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -972,7 +995,15 @@ CallResult<HermesValue> datePrototypeSetMonth_RJS(void *ctx, Runtime &runtime) {
       return ExecutionStatus::EXCEPTION;
     }
     dt = res->getNumber();
-  } else {
+  }
+  if (std::isnan(t)) {
+    return HermesValue::encodeTrustedNumberValue(
+        std::numeric_limits<double>::quiet_NaN());
+  }
+  if (!isUTC) {
+    t = localTime(t, localTimeOffsetCache);
+  }
+  if (args.getArgCount() < 2) {
     dt = dateFromTime(t);
   }
   double newDate = makeDate(makeDay(yearFromTime(t), m, dt), timeWithinDay(t));
@@ -996,12 +1027,6 @@ CallResult<HermesValue> datePrototypeSetFullYear_RJS(
   }
   double t = self->getPrimitiveValue();
   auto &localTimeOffsetCache = runtime.getJSLibStorage()->localTimeOffsetCache;
-  if (!isUTC) {
-    t = localTime(t, localTimeOffsetCache);
-  }
-  if (std::isnan(t)) {
-    t = 0;
-  }
   auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -1014,8 +1039,6 @@ CallResult<HermesValue> datePrototypeSetFullYear_RJS(
       return ExecutionStatus::EXCEPTION;
     }
     m = res->getNumber();
-  } else {
-    m = monthFromTime(t);
   }
   double dt;
   if (args.getArgCount() >= 3) {
@@ -1024,7 +1047,16 @@ CallResult<HermesValue> datePrototypeSetFullYear_RJS(
       return ExecutionStatus::EXCEPTION;
     }
     dt = res->getNumber();
-  } else {
+  }
+  if (std::isnan(t)) {
+    t = 0;
+  } else if (!isUTC) {
+    t = localTime(t, localTimeOffsetCache);
+  }
+  if (args.getArgCount() < 2) {
+    m = monthFromTime(t);
+  }
+  if (args.getArgCount() < 3) {
     dt = dateFromTime(t);
   }
   double newDate = makeDate(makeDay(y, m, dt), timeWithinDay(t));
@@ -1046,10 +1078,6 @@ CallResult<HermesValue> datePrototypeSetYear_RJS(void *ctx, Runtime &runtime) {
   }
   double t = self->getPrimitiveValue();
   auto &localTimeOffsetCache = runtime.getJSLibStorage()->localTimeOffsetCache;
-  t = localTime(t, localTimeOffsetCache);
-  if (std::isnan(t)) {
-    t = 0;
-  }
   auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -1058,6 +1086,11 @@ CallResult<HermesValue> datePrototypeSetYear_RJS(void *ctx, Runtime &runtime) {
   if (std::isnan(y)) {
     self->setPrimitiveValue(std::numeric_limits<double>::quiet_NaN());
     return HermesValue::encodeNaNValue();
+  }
+  if (std::isnan(t)) {
+    t = 0;
+  } else {
+    t = localTime(t, localTimeOffsetCache);
   }
   double yint = std::trunc(y);
   double yr = 0 <= yint && yint <= 99 ? yint + 1900 : y;

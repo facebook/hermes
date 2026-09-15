@@ -56,6 +56,11 @@ class IRBuilder {
     return M;
   }
 
+  /// \return the TypeContext owned by the Module.
+  TypeContext &getTypeContext() {
+    return M->getTypeContext();
+  }
+
   /// Create a new BasicBlock and add it to a function \p Parent.
   BasicBlock *createBasicBlock(Function *Parent);
 

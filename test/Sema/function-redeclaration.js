@@ -23,11 +23,11 @@ function main() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:SemContext
-// CHECK-NEXT:Func loose
+// CHECK-NEXT:Func loose mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'main' GlobalProperty
 // CHECK-NEXT:        hoistedFunction main
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.2 'f1' Var
 // CHECK-NEXT:            Decl %d.3 'f2' Var
@@ -37,13 +37,13 @@ function main() {
 // CHECK-NEXT:            Scope %s.3
 // CHECK-NEXT:                Decl %d.5 'f2' ScopedFunction
 // CHECK-NEXT:                hoistedFunction f2
-// CHECK-NEXT:        Func strict
+// CHECK-NEXT:        Func strict mayReachImplicitReturn
 // CHECK-NEXT:            Scope %s.4
 // CHECK-NEXT:                Decl %d.6 'arguments' Var Arguments
-// CHECK-NEXT:        Func strict
+// CHECK-NEXT:        Func strict mayReachImplicitReturn
 // CHECK-NEXT:            Scope %s.5
 // CHECK-NEXT:                Decl %d.7 'arguments' Var Arguments
-// CHECK-NEXT:        Func strict
+// CHECK-NEXT:        Func strict mayReachImplicitReturn
 // CHECK-NEXT:            Scope %s.6
 // CHECK-NEXT:                Decl %d.8 'arguments' Var Arguments
 

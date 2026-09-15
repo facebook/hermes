@@ -1420,7 +1420,9 @@ HermesABIBoolOrError drain_microtasks(HermesABIRuntime *abiRt, int) {
   runtime.clearKeptObjects();
 
   // Run the callback for dead registered targets.
-  runtime.cleanUpFinalizationCallbacks();
+  auto cleanupRes = runtime.cleanUpFinalizationCallbacks();
+  if (cleanupRes == vm::ExecutionStatus::EXCEPTION)
+    return abi::createBoolOrError(HermesABIErrorCodeJSError);
 
   // drainJobs currently drains the entire queue, unless there is an exception,
   // so always return true.

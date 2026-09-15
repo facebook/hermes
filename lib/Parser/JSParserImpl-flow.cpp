@@ -308,6 +308,7 @@ Optional<ESTree::Node *> JSParserImpl::parseComponentDeclarationFlow(
     return None;
   }
 
+  llvh::SaveAndRestore<bool> saveParamAwait(paramAwait_, isAsync);
   SaveFunctionState saveFunctionState{this};
 
   auto parsedBody = parseFunctionBody(
@@ -950,6 +951,18 @@ Optional<ESTree::Node *> JSParserImpl::tryParseMatchStatementFlow(Param param) {
             caseStartLoc))
       return None;
 
+    // A match *statement* case body must be a block; only a match
+    // *expression* case body may be an arbitrary expression. `parseBlock`
+    // asserts that the current token is '{', so without this check a
+    // non-block body such as `match (x) { _ => 1 };` fails that assertion
+    // in a debug build instead of reporting an error.
+    if (!need(
+            TokenKind::l_brace,
+            "in 'match' statement case body",
+            "location of pattern",
+            caseStartLoc))
+      return None;
+
     auto optBody = parseBlock(param.get(ParamReturn));
     if (!optBody)
       return None;
@@ -1409,6 +1422,7 @@ JSParserImpl::parseMatchBindingPatternFlow() {
         "in match binding pattern",
         "start of binding pattern",
         startLoc);
+    return None;
   }
   auto optIdent = parseMatchBindingIdentifierFlow();
   if (!optIdent)
@@ -1524,6 +1538,8 @@ bool JSParserImpl::parseMatchObjectPatternPropertiesFlow(
               propStartLoc))
         return false;
       auto optPattern = parseMatchPatternFlow();
+      if (!optPattern)
+        return false;
       prop = setLocation(
           propStartLoc,
           getPrevTokenEndLoc(),
@@ -3759,16 +3775,10 @@ Optional<ESTree::Node *> JSParserImpl::parseTupleElementFlow(
             check(TokenKind::plus) ? plusIdent_ : minusIdent_));
     advance(JSLexer::GrammarContext::Type);
   } else if (
-      check(readonlyIdent_) &&
+      checkN(readonlyIdent_, writeonlyIdent_) &&
       canFollowVarianceKeywordFlow(lexer_.lookahead1(llvh::None))) {
     variance = setLocation(
-        tok_, tok_, new (context_) ESTree::VarianceNode(readonlyIdent_));
-    advance(JSLexer::GrammarContext::Type);
-  } else if (
-      check(writeonlyIdent_) &&
-      canFollowVarianceKeywordFlow(lexer_.lookahead1(llvh::None))) {
-    variance = setLocation(
-        tok_, tok_, new (context_) ESTree::VarianceNode(writeonlyIdent_));
+        tok_, tok_, new (context_) ESTree::VarianceNode(tok_->getIdentifier()));
     advance(JSLexer::GrammarContext::Type);
   }
 
@@ -4187,16 +4197,10 @@ bool JSParserImpl::parsePropertyTypeAnnotationFlow(
             check(TokenKind::plus) ? plusIdent_ : minusIdent_));
     advance(JSLexer::GrammarContext::Type);
   } else if (
-      check(readonlyIdent_) &&
+      checkN(readonlyIdent_, writeonlyIdent_) &&
       canFollowVarianceKeywordFlow(lexer_.lookahead1(llvh::None))) {
     variance = setLocation(
-        tok_, tok_, new (context_) ESTree::VarianceNode(readonlyIdent_));
-    advance(JSLexer::GrammarContext::Type);
-  } else if (
-      check(writeonlyIdent_) &&
-      canFollowVarianceKeywordFlow(lexer_.lookahead1(llvh::None))) {
-    variance = setLocation(
-        tok_, tok_, new (context_) ESTree::VarianceNode(writeonlyIdent_));
+        tok_, tok_, new (context_) ESTree::VarianceNode(tok_->getIdentifier()));
     advance(JSLexer::GrammarContext::Type);
   }
 

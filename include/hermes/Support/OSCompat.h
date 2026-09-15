@@ -237,6 +237,16 @@ std::vector<bool> sched_getaffinity();
 /// or -1 on error.
 int sched_getcpu();
 
+/// \return a high-resolution monotonic timestamp suitable for use by the
+/// sampling profiler. On Apple platforms this is sourced from
+/// mach_absolute_time() rather than std::chrono::steady_clock, because
+/// steady_clock on Apple is backed by mach_continuous_time() which advances
+/// during device sleep — using it would shift CPU profile samples out of the
+/// host trace's time window when comparing against other Apple subsystems.
+/// On all other platforms this returns std::chrono::steady_clock::now().
+/// Async-signal-safe.
+std::chrono::steady_clock::time_point sampling_clock_now() noexcept;
+
 #ifdef _WINDOWS
 
 #define STDIN_FILENO 0

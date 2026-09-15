@@ -20,7 +20,7 @@ let zz = foo(function name() {});
 // CHECK-NEXT:%union.2 = union(string | number)
 
 // CHECK:SemContext
-// CHECK-NEXT:Func strict
+// CHECK-NEXT:Func strict mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:        Decl %d.2 'x' Let : number
@@ -30,7 +30,7 @@ let zz = foo(function name() {});
 // CHECK-NEXT:        Decl %d.6 'arguments' Var Arguments
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.7 'name' FunctionExprName : %untyped_function.1
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.3
 // CHECK-NEXT:            Decl %d.8 'arguments' Var Arguments
 

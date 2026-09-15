@@ -110,6 +110,7 @@ extern llvh::cl::opt<bool> BasicBlockProfiling;
 extern llvh::cl::opt<std::string> ProfilingOutFile;
 extern llvh::cl::list<std::string> InputFilenames;
 extern llvh::cl::opt<bool> PrintCompilerTiming;
+extern llvh::cl::opt<bool> HelpTyped;
 extern ::hermes::CompilerRuntimeFlags compilerRuntimeFlags;
 } // namespace cl
 #endif

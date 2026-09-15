@@ -109,6 +109,18 @@ class SamplingProfiler;
 class JSArray;
 #endif
 
+/// Wrap \p code in a source Buffer suitable for compiling with \p compileFlags.
+/// When the resulting module will retain its source buffer -- i.e. lazy or
+/// full-debug-info compilation, matching keepCompilationData in
+/// createBCProviderFromSrc -- the bytes are copied so the buffer owns them.
+/// Otherwise they are borrowed from \p code, which is safe because the buffer
+/// is dropped once compilation finishes. Copying in the retained case avoids a
+/// use-after-free when \p code does not outlive the module (e.g. a transient
+/// eval or debugger command string).
+std::unique_ptr<Buffer> makeCompilationSourceBuffer(
+    llvh::StringRef code,
+    const hbc::CompileFlags &compileFlags);
+
 /// Number of stack words after the top of frame that we always ensure are
 /// available. This is necessary so we can perform native calls with small
 /// number of arguments without checking.
@@ -234,6 +246,28 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// Runtime.
   void addCustomRootsFunction(
       std::function<void(GC *, RootAcceptor &)> markRootsFn);
+
+  /// Register a callback invoked once at the start of drainJobs(),
+  /// before any jobs are executed. Used by embedders (e.g., NAPI) to
+  /// perform housekeeping such as draining deferred finalizers.
+  void addDrainJobsCallback(std::function<void()> callback);
+
+  /// Register a callback invoked from ~Runtime() BEFORE
+  /// getHeap().finalizeAll() runs. At this point the heap is still
+  /// fully functional — callbacks may allocate, call into JS, and
+  /// trigger GC. Used by embedders (e.g., NAPI) to drive substantive
+  /// teardown of their state (running cleanup hooks, finalizing
+  /// persistent references, etc.) while a valid JS execution context
+  /// is still available. Callbacks run in registration order.
+  void addShutdownCallback(std::function<void()> callback);
+
+  /// Register a deleter invoked from ~Runtime() AFTER
+  /// getHeap().finalizeAll() returns. At this point the heap is
+  /// quiesced — do NOT allocate, call into JS, or trigger GC. Used
+  /// to free embedder objects that needed to outlive finalizeAll
+  /// (e.g., a napi_env whose NativeState finalizers were called by
+  /// finalizeAll). Deleters run in registration order.
+  void addPostShutdownDeleter(std::function<void()> deleter);
 
   /// Add a custom function that will be executed sometime during garbage
   /// collection to mark additional weak GC roots that may not be known to the
@@ -435,6 +469,17 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
       BuiltinMethod::Enum builtinIndex,
       Callable *builtin);
 
+  /// Overwrite an already registered builtin callable. This is only used by
+  /// synth tool to wrap Math builtins to provide stable results across libm
+  /// implementations.
+  /// \pre builtinIndex must have already been registered.
+  /// \pre builtinIndex < BuiltinMethod::_count.
+  /// \pre \p builtin is NativeFunction if builtinIndex <
+  /// BuiltinMethod::_firstJS.
+  inline void overwriteBuiltinUnsafe(
+      BuiltinMethod::Enum builtinIndex,
+      Callable *builtin);
+
   /// ES6-ES11 8.4.1 EnqueueJob ( queueName, job, arguments )
   /// See \c jobQueue_ for how the Jobs and Job Queues are set up in Hermes.
   inline void enqueueJob(Callable *job);
@@ -471,7 +516,7 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
 
   /// Call the cleanup callbacks of alive JSFinalizationRegistry, on each dead
   /// registered target, w.r.t. ES16 9.12 CleanupFinalizationRegistry.
-  ExecutionStatus cleanUpFinalizationCallbacks();
+  LLVM_NODISCARD ExecutionStatus cleanUpFinalizationCallbacks();
 
   IdentifierTable &getIdentifierTable() {
     return identifierTable_;
@@ -1216,6 +1261,9 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
       customMarkWeakRootFuncs_;
   std::vector<std::function<void(HeapSnapshot &)>> customSnapshotNodeFuncs_;
   std::vector<std::function<void(HeapSnapshot &)>> customSnapshotEdgeFuncs_;
+  std::vector<std::function<void()>> drainJobsCallbacks_;
+  std::vector<std::function<void()>> shutdownCallbacks_;
+  std::vector<std::function<void()>> postShutdownDeleters_;
 
   /// All state related to JIT compilation.
   JITContext jitContext_;
@@ -2014,6 +2062,14 @@ class NoLeakHandleScope {
   NoLeakHandleScope(NoLeakHandleScope &&) = delete;
   NoLeakHandleScope &operator=(NoLeakHandleScope &&) = delete;
 };
+
+struct NoMutatorScope {
+  explicit NoMutatorScope([[maybe_unused]] vm::Runtime &runtime) {}
+  NoMutatorScope(const NoMutatorScope &) = delete;
+  NoMutatorScope &operator=(const NoMutatorScope &) = delete;
+  NoMutatorScope(NoMutatorScope &&) = delete;
+  NoMutatorScope &operator=(NoMutatorScope &&) = delete;
+};
 #else
 
 /// RAII class to temporarily disallow allocation of something.
@@ -2114,6 +2170,23 @@ class NoLeakHandleScope {
   NoLeakHandleScope(NoLeakHandleScope &&) = delete;
   NoLeakHandleScope &operator=(NoLeakHandleScope &&) = delete;
 };
+
+/// Asserts no allocation or JS execution when this scope is alive.
+class NoMutatorScope {
+ private:
+  vm::NoAllocScope noAlloc_;
+  vm::NoRJSScope noRJS_;
+
+ public:
+  explicit NoMutatorScope(vm::Runtime &runtime)
+      : noAlloc_(runtime), noRJS_(runtime) {}
+  ~NoMutatorScope() = default;
+
+  NoMutatorScope(const NoMutatorScope &) = delete;
+  NoMutatorScope &operator=(const NoMutatorScope &) = delete;
+  NoMutatorScope(NoMutatorScope &&) = delete;
+  NoMutatorScope &operator=(NoMutatorScope &&) = delete;
+};
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -2127,6 +2200,18 @@ inline void Runtime::addCustomRootsFunction(
 inline void Runtime::addCustomWeakRootsFunction(
     std::function<void(GC *, WeakRootAcceptor &)> markRootsFn) {
   customMarkWeakRootFuncs_.emplace_back(std::move(markRootsFn));
+}
+
+inline void Runtime::addDrainJobsCallback(std::function<void()> callback) {
+  drainJobsCallbacks_.emplace_back(std::move(callback));
+}
+
+inline void Runtime::addShutdownCallback(std::function<void()> callback) {
+  shutdownCallbacks_.emplace_back(std::move(callback));
+}
+
+inline void Runtime::addPostShutdownDeleter(std::function<void()> deleter) {
+  postShutdownDeleters_.emplace_back(std::move(deleter));
 }
 
 inline void Runtime::addCustomSnapshotFunction(

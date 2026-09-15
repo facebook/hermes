@@ -111,10 +111,10 @@ jsi::Value textEncoderEncodeInto(
       "The second argument should be a Uint8Array",
       "TextEncoder.prototype.encodeInto called on a detached ArrayBuffer");
 
-  uint8_t *destStart = destInfo.data;
+  uint8_t *destStart = destInfo.data();
   uint32_t numRead = 0;
   uint32_t numWritten = 0;
-  size_t remainingBytes = destInfo.byteLength;
+  size_t remainingBytes = destInfo.byteLength();
 
   // Use getStringData to access internal representation efficiently.
   // ASCII strings can be copied directly (ASCII is a subset of UTF-8).

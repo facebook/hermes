@@ -943,7 +943,6 @@ CallResult<HermesValue> JSArrayIterator::nextElement(
   switch (self->iterationKind_) {
     case IterationKind::Key:
       llvm_unreachable("Early return already occurred in Key case");
-      return HermesValue::encodeEmptyValue();
     case IterationKind::Value:
       // 16. If itemKind is "value", let result be elementValue.
       return createIterResultObject(runtime, lv.value, false).getHermesValue();
@@ -967,11 +966,9 @@ CallResult<HermesValue> JSArrayIterator::nextElement(
     }
     case IterationKind::NumKinds:
       llvm_unreachable("Invalid iteration kind");
-      return HermesValue::encodeEmptyValue();
   }
 
   llvm_unreachable("Invalid iteration kind");
-  return HermesValue::encodeEmptyValue();
 }
 
 } // namespace vm

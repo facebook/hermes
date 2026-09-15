@@ -13,9 +13,24 @@ PACKAGES=(
   hermes-parser
   hermes-eslint
   hermes-transform
-  flow-api-translator
   babel-plugin-syntax-hermes-parser
 )
+
+# Subset of PACKAGES whose dist/ must exist before babel.config.js can enable
+# the `babel-plugin-syntax-hermes-parser` parser override. We strip Flow from
+# their copied dist files before Babel runs, which breaks the parser bootstrap
+# dependency cycle without requiring stock @babel/parser to understand every
+# current Flow syntax form.
+BOOTSTRAP_PACKAGES=(
+  hermes-estree
+  hermes-parser
+  babel-plugin-syntax-hermes-parser
+)
+
+# The parser override in babel.config.js requires the workspace plugin to be
+# built. Disable it for the gen scripts and the bootstrap pass below; we
+# unset just before the final pass when the chain is ready.
+export SKIP_HERMES_PARSER_OVERRIDE=1
 
 # Yarn install all packages
 yarn install
@@ -88,7 +103,30 @@ yarn babel-node "$THIS_DIR/genTransformCloneTypes.js"
 yarn babel-node "$THIS_DIR/genTransformModifyTypes.js"
 yarn babel-node "$THIS_DIR/genTransformReplaceNodeTypes.js"
 
+# Bootstrap pass: strip Flow from the parser-plugin chain first, with the
+# parser override still disabled (SKIP_HERMES_PARSER_OVERRIDE is set above).
+# After this loop their dist/index.js files are valid plain JS, so the
+# override can be re-enabled for the remaining packages.
+for package in "${BOOTSTRAP_PACKAGES[@]}"; do
+  PACKAGE_DIST_DIR="$THIS_DIR/../$package/dist"
+  find "$PACKAGE_DIST_DIR" -type f -name "*.js" | while read -r file; do
+    yarn flow-remove-types --quiet --pretty --remove-empty-imports \
+      --out-file "$file.stripped" \
+      "$file"
+    mv "$file.stripped" "$file"
+  done
+  yarn babel --config-file="$THIS_DIR/../babel.config.js" "$PACKAGE_DIST_DIR" --out-dir="$PACKAGE_DIST_DIR"
+done
+
+# Re-enable the override so the remaining packages can be parsed with
+# hermes-parser (they contain Flow `as` cast syntax).
+unset SKIP_HERMES_PARSER_OVERRIDE
+
 for package in "${PACKAGES[@]}"; do
+  # Skip packages already processed in the bootstrap pass above.
+  case " ${BOOTSTRAP_PACKAGES[*]} " in
+    *" $package "*) continue ;;
+  esac
   PACKAGE_DIST_DIR="$THIS_DIR/../$package/dist"
   yarn babel --config-file="$THIS_DIR/../babel.config.js" "$PACKAGE_DIST_DIR" --out-dir="$PACKAGE_DIST_DIR"
 done

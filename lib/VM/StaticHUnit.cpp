@@ -236,27 +236,20 @@ void hermes::vm::sh_unit_mark_weak_roots(
     for (auto &prop : llvh::makeMutableArrayRef(
              reinterpret_cast<ReadPropertyCacheEntry *>(unit->read_prop_cache),
              unit->num_read_prop_cache_entries)) {
-      if (prop.clazz)
-        acceptor.acceptWeak(prop.clazz);
-      if (prop.negMatchClazz) {
-        acceptor.acceptWeak(prop.negMatchClazz);
-      }
+      acceptor.acceptWeak(prop.clazz);
+      acceptor.acceptWeak(prop.negMatchClazz);
     }
     for (auto &prop : llvh::makeMutableArrayRef(
              reinterpret_cast<WritePropertyCacheEntry *>(
                  unit->write_prop_cache),
              unit->num_write_prop_cache_entries)) {
-      if (prop.clazz) {
-        acceptor.acceptWeak(prop.clazz);
-      }
+      acceptor.acceptWeak(prop.clazz);
     }
     for (auto &prop : llvh::makeMutableArrayRef(
              reinterpret_cast<PrivateNameCacheEntry *>(
                  unit->private_name_cache),
              unit->num_private_name_cache_entries)) {
-      if (prop.clazz) {
-        acceptor.acceptWeak(prop.clazz);
-      }
+      acceptor.acceptWeak(prop.clazz);
       acceptor.acceptWeakSym(prop.nameVal);
     }
 

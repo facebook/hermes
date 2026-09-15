@@ -19,7 +19,6 @@ std::vector<RuntimeFactory> runtimeGenerators() {
       [] {
         return makeHermesRuntime(
             ::hermes::vm::RuntimeConfig::Builder()
-                .withMicrotaskQueue(true)
                 .withEnableHermesInternalTestMethods(true)
                 .build());
       },

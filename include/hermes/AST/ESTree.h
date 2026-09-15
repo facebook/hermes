@@ -296,6 +296,11 @@ class FunctionLikeDecoration : public ScopeDecorationBase {
   /// This is used for lazy reparsing of the function.
   bool isMethodDefinition{false};
 
+  /// Decorations attached to this function via Hermes.decorate(...) calls
+  /// in typed mode. Each entry is a DecoratorNode wrapping the decoration
+  /// expression (e.g. Hermes.builtin).
+  NodeList decorations;
+
   void setSemInfo(sema::FunctionInfo *semInfo) {
     assert(semInfo && "setting semInfo to null");
     assert(!semInfo_ && "semInfo is already set");

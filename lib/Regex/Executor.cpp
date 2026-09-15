@@ -606,6 +606,28 @@ bool matchesRightAnchor(
   return matchesAnchor;
 }
 
+/// \return true if the cursor is at a word boundary, using the given
+/// \p isWordChar predicate to classify characters. The result is xored with
+/// \p invert.
+template <class Traits, typename IsWordCharFn>
+bool matchesWordBoundary(
+    const Cursor<Traits> &c,
+    bool invert,
+    IsWordCharFn isWordChar) {
+  const auto *charPointer = c.currentPointer();
+
+  bool prevIsWordchar = false;
+  if (!c.atLeft())
+    prevIsWordchar = isWordChar(charPointer[-1]);
+
+  bool currentIsWordchar = false;
+  if (!c.atRight())
+    currentIsWordchar = isWordChar(charPointer[0]);
+
+  bool isWordBoundary = (prevIsWordchar != currentIsWordchar);
+  return isWordBoundary != invert;
+}
+
 /// \return true if all chars, stored in contiguous memory after \p insn,
 /// match the chars in state \p s in the same order. Note the count of chars
 /// is given in \p insn.
@@ -1299,22 +1321,26 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
         }
 
         case Opcode::WordBoundary: {
-          const WordBoundaryInsn *insn = llvh::cast<WordBoundaryInsn>(base);
-          const auto *charPointer = c.currentPointer();
-
-          bool prevIsWordchar = false;
-          if (!c.atLeft())
-            prevIsWordchar = traits_.characterHasType(
-                charPointer[-1], CharacterClass::Words);
-
-          bool currentIsWordchar = false;
-          if (!c.atRight())
-            currentIsWordchar =
-                traits_.characterHasType(charPointer[0], CharacterClass::Words);
-
-          bool isWordBoundary = (prevIsWordchar != currentIsWordchar);
-          if (isWordBoundary ^ insn->invert)
+          const auto *insn = llvh::cast<WordBoundaryInsn>(base);
+          if (matchesWordBoundary(c, insn->invert, [&](auto ch) {
+                return traits_.characterHasType(ch, CharacterClass::Words);
+              }))
             s->ip_ += sizeof(WordBoundaryInsn);
+          else
+            BACKTRACK();
+          break;
+        }
+
+        case Opcode::WordBoundaryICase: {
+          const auto *insn = llvh::cast<WordBoundaryICaseInsn>(base);
+          bool unicode = syntaxFlags_.unicode;
+          if (matchesWordBoundary(c, insn->invert, [&](auto ch) {
+                return traits_.characterHasType(ch, CharacterClass::Words) ||
+                    traits_.characterHasType(
+                        Traits::canonicalize(ch, unicode),
+                        CharacterClass::Words);
+              }))
+            s->ip_ += sizeof(WordBoundaryICaseInsn);
           else
             BACKTRACK();
           break;

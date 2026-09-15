@@ -13,7 +13,7 @@ function f(cb: number => string) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:{{.*}}regress-function-param-no-name-error.js:11:6: error: ft: function parameter #1 type mismatch
+// CHECK:{{.*}}regress-function-param-no-name-error.js:11:6: error: ft: function parameter #1 type mismatch: cannot assign string to number
 // CHECK-NEXT:  cb('a');
 // CHECK-NEXT:     ^~~
 // CHECK-NEXT:Emitted 1 errors. exiting.

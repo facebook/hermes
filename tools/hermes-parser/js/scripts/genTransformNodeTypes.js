@@ -9,7 +9,10 @@
  */
 
 import {
-  GetHermesESTreeJSON,
+  GetTransformESTreeJSON,
+  TransformESTreePackage,
+  TransformPackage,
+  TransformReadonly,
   formatAndWriteSrcArtifact,
   LITERAL_TYPES,
   EXCLUDE_PROPERTIES_FROM_NODE,
@@ -41,7 +44,7 @@ const NODES_WITH_SPECIAL_HANDLING = new Set([
   'TemplateElement',
 ]);
 
-for (const node of GetHermesESTreeJSON()) {
+for (const node of GetTransformESTreeJSON()) {
   if (NODES_WITH_SPECIAL_HANDLING.has(node.name)) {
     continue;
   }
@@ -57,9 +60,9 @@ export type ${node.name}Props = {};
     nodeTypeFunctions.push(
       `\
 export function ${node.name}(props: {
-  +parent?: ESNode,
+  ${TransformReadonly}parent?: ESNode,
 } = {...null}): DetachedNode<${node.name}Type> {
-  return detachedProps<${node.name}Type>((props.parent: $FlowFixMe), {
+  return detachedProps<${node.name}Type>(props.parent as $FlowFixMe, {
     type: '${type}',
   });
 }
@@ -79,13 +82,13 @@ export type ${node.name}Props = {
       if (arg.type === 'NodePtr') {
         type = `MaybeDetachedNode<${type}>`;
       } else if (arg.type === 'NodeList') {
-        type = `$ReadOnlyArray<MaybeDetachedNode<${type}[number]>>`;
+        type = `ReadonlyArray<MaybeDetachedNode<${type}[number]>>`;
       }
 
       if (arg.optional) {
-        return `+${arg.name}?: ?${type}`;
+        return `${TransformReadonly}${arg.name}?: ?${type}`;
       }
-      return `+${arg.name}: ${type}`;
+      return `${TransformReadonly}${arg.name}: ${type}`;
     })
     .filter(Boolean)
     .join(',\n')},
@@ -96,9 +99,9 @@ export type ${node.name}Props = {
       `\
 export function ${node.name}(props: {
   ...${node.name}Props,
-  +parent?: ESNode,
+  ${TransformReadonly}parent?: ESNode,
 }): DetachedNode<${node.name}Type> {
-  const node = detachedProps<${node.name}Type>((props.parent: $FlowFixMe), {
+  const node = detachedProps<${node.name}Type>(props.parent as $FlowFixMe, {
     type: '${type}',
     ${node.arguments
       .map(arg => {
@@ -119,7 +122,7 @@ export function ${node.name}(props: {
       .filter(Boolean)
       .join(',\n')},
   });
-  setParentPointersInDirectChildren((node: $FlowFixMe));
+  setParentPointersInDirectChildren(node as $FlowFixMe);
   return node;
 }
 `,
@@ -131,7 +134,7 @@ const fileContents = `\
 import type {
 ESNode,
 ${imports.map(imp => `${imp} as ${imp}Type`).join(',\n')}
-} from 'hermes-estree';
+} from '${TransformESTreePackage}';
 import type {DetachedNode, MaybeDetachedNode} from '../detachedNode';
 
 import {
@@ -149,7 +152,7 @@ export * from './special-case-node-types';
 
 formatAndWriteSrcArtifact({
   code: fileContents,
-  package: 'hermes-transform',
+  package: TransformPackage,
   file: 'generated/node-types.js',
   flow: 'strict-local',
 });

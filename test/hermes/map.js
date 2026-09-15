@@ -19,7 +19,7 @@ print(Map.length);
 //CHECK-NEXT: 0
 
 print(Object.getOwnPropertyNames(Map.prototype));
-//CHECK-NEXT: clear,delete,entries,forEach,get,has,keys,set,size,values,constructor
+//CHECK-NEXT: clear,delete,entries,forEach,get,getOrInsert,getOrInsertComputed,has,keys,set,size,values,constructor
 
 print(new Map());
 //CHECK-NEXT: [object Map]
@@ -370,6 +370,47 @@ function testZero() {
 //CHECK-NEXT: true
 }
 
+function testUpsert() {
+  print("testUpsert");
+//CHECK-LABEL: testUpsert
+  var m = new Map();
+
+  // getOrInsert inserts when absent and returns the value.
+  print(m.getOrInsert("a", 1));
+//CHECK-NEXT: 1
+  // getOrInsert returns the existing value without overwriting.
+  print(m.getOrInsert("a", 99), m.get("a"), m.size);
+//CHECK-NEXT: 1 1 1
+
+  // getOrInsertComputed computes and inserts when absent.
+  print(m.getOrInsertComputed("b", (k) => k + "-val"));
+//CHECK-NEXT: b-val
+  // getOrInsertComputed returns the existing value without invoking callback.
+  print(m.getOrInsertComputed("b", () => { throw "should not run"; }));
+//CHECK-NEXT: b-val
+
+  // The computed value overwrites anything the callback inserts for the key.
+  print(m.getOrInsertComputed("c", (k) => { m.set(k, "mutated"); return "computed"; }));
+//CHECK-NEXT: computed
+  print(m.get("c"));
+//CHECK-NEXT: computed
+
+  // -0 key is normalized to +0.
+  m.getOrInsert(-0, "zero");
+  print(m.has(0), Object.is(0, [...m.keys()].pop()));
+//CHECK-NEXT: true true
+
+  // Non-callable callback throws TypeError.
+  try { m.getOrInsertComputed("d", 5); } catch (e) { print(e.name); }
+//CHECK-NEXT: TypeError
+
+  // Both throw on a non-Map receiver.
+  try { Map.prototype.getOrInsert.call({}, "k", 1); } catch (e) { print(e.name); }
+//CHECK-NEXT: TypeError
+  try { Map.prototype.getOrInsertComputed.call({}, "k", () => 1); } catch (e) { print(e.name); }
+//CHECK-NEXT: TypeError
+}
+
 var o1 = {};
 var o2 = {a: 1};
 var o3 = {a: 1, b: 2};
@@ -381,6 +422,7 @@ testClear(o1, o2, o3);
 testIteration();
 testForEach();
 testZero();
+testUpsert();
 
 print('Map.groupBy');
 // CHECK-LABEL: Map.groupBy

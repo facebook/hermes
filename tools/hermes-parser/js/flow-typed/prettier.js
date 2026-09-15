@@ -223,8 +223,7 @@ declare module 'prettier' {
     locStart: (node: T) => number,
     locEnd: (node: T) => number,
     preprocess?:
-      | ((text: string, options: PrettierParserOptions<T>) => string)
-      | void,
+      ((text: string, options: PrettierParserOptions<T>) => string) | void,
   };
 
   declare export type Printer<T = any> = {
@@ -852,6 +851,25 @@ declare module 'prettier/plugins/flow' {
 
   declare export var parsers: {
     flow: {
+      astFormat: string,
+      parse(text: string, parsers: any, options: any): AST,
+      hasPragma?: ((text: string) => boolean) | void,
+      locStart: (node: AST) => number,
+      locEnd: (node: AST) => number,
+      preprocess?: ((text: string, options: any) => string) | void,
+    },
+  };
+}
+
+declare module 'prettier/plugins/estree' {
+  declare export var printers: {[string]: any};
+}
+
+declare module 'prettier/plugins/typescript' {
+  declare type AST = any;
+
+  declare export var parsers: {
+    typescript: {
       astFormat: string,
       parse(text: string, parsers: any, options: any): AST,
       hasPragma?: ((text: string) => boolean) | void,

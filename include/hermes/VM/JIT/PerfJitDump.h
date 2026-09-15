@@ -52,6 +52,12 @@ class PerfJitDump {
   /// \param offset Current offset of the jitted code.
   void addCodeComment(llvh::StringRef comment, uint32_t offset);
 
+  /// Drop the debug entries accumulated for a function that will not be
+  /// installed. Entries are normally consumed by writeCodeLoadRecord(), which
+  /// a failed compilation never reaches, so without this they would be
+  /// attributed to whichever function is compiled next.
+  void discardPendingCodeComments();
+
  private:
   struct DebugEntry;
 
@@ -91,6 +97,8 @@ class PerfJitDump {
   void writeCodeLoadRecord(const char *, uint32_t, llvh::StringRef) {}
 
   void addCodeComment(llvh::StringRef, uint32_t offset) {}
+
+  void discardPendingCodeComments() {}
 };
 } // namespace hermes::vm
 

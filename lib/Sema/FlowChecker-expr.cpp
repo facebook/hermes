@@ -20,6 +20,14 @@
 /// type of the checked node being equal to the type of the constraint that was
 /// passed in, so the caller still needs to check the type and report errors or
 /// insert its own casts itself.
+///
+/// Write positions of `=` and destructuring patterns are walked through
+/// `ExprVisitor::visitAssignmentTarget`, which recognizes the outermost
+/// MemberExpression at each pattern leaf and tells the member-access path
+/// it is a pure write. Inner subexpressions (`a.b` inside `a.b.c = ...`)
+/// flow through the normal read visit. The other write cases (compound
+/// assignment, `++`/`--`, `delete`, for-in/of LHS) can't destructure, so
+/// `classifyMemberAccess` does a bottom-up parent check on the read path.
 //===----------------------------------------------------------------------===//
 
 #include "FlowChecker.h"
@@ -440,6 +448,37 @@ class FlowChecker::ExprVisitor {
     // The type is either the type of the identifier or "any".
     Type *type = outer_.flowContext_.findDeclType(decl);
 
+    // In typed functions, 'arguments' is only allowed in 'arguments.length'.
+    if (decl->special == sema::Decl::Special::Arguments) {
+      // Get the function that 'arguments' belongs to to determine its type.
+      sema::FunctionInfo *argumentsOwner = decl->scope->parentFunction;
+      FunctionContext *argumentsContext = outer_.curFunctionContext_;
+      // Walk up the stack to find the function that 'arguments' belongs to.
+      // We won't hit the null context because the FunctionContext must exist.
+      while (argumentsContext->semInfo != argumentsOwner)
+        argumentsContext = argumentsContext->getPreviousContext();
+      Type *funcType = argumentsContext->functionType;
+      // For typed functions, ensure that this is arguments.length.
+      if (funcType && llvh::isa<TypedFunctionType>(funcType->info)) {
+        bool isArgumentsLength = false;
+        if (auto *memberParent =
+                llvh::dyn_cast<ESTree::MemberExpressionNode>(parent);
+            memberParent && memberParent->_object == node &&
+            !memberParent->_computed) {
+          if (auto *propId = llvh::dyn_cast<ESTree::IdentifierNode>(
+                  memberParent->_property);
+              propId && propId->_name == outer_.kw_.identLength) {
+            isArgumentsLength = true;
+          }
+        }
+        if (!isArgumentsLength)
+          outer_.sm_.error(
+              node->getSourceRange(),
+              "ft: 'arguments' is only allowed in 'arguments.length'"
+              " in typed functions");
+      }
+    }
+
     // Generic decls don't have types set because they aren't real values.
     // 'arguments' is implicitly typed as 'any' since it's a runtime object.
     if (!type && !sema::Decl::isKindGlobal(decl->kind) && !decl->generic &&
@@ -474,17 +513,434 @@ class FlowChecker::ExprVisitor {
             : outer_.flowContext_.getAny());
   }
 
+  /// Member access on a ClassType. Handles Array<T> length/push/index as
+  /// special cases of class member access, then dispatches to the public or
+  /// private name lookup. \p isWrite is true when the access is a pure write
+  /// target (the leaf of a `=` assignment or destructuring pattern).
+  Type *visitMemberClass(
+      ESTree::MemberExpressionNode *node,
+      ESTree::Node *parent,
+      Type *objType,
+      ClassType *classType,
+      bool isWrite) {
+    // Array<T>: special-case .length / .push / numeric index. Private name
+    // access on an array falls through to the generic class path below.
+    // TODO: This is a HACK, fix it by making Array<T> more expressive.
+    if (outer_.flowContext_.isArrayClassType(objType) &&
+        (node->_computed ||
+         !llvh::isa<ESTree::PrivateNameNode>(node->_property))) {
+      if (node->_computed) {
+        Type *indexType = outer_.getNodeTypeOrAny(node->_property);
+        if (!llvh::isa<NumberType>(indexType->info) &&
+            !llvh::isa<AnyType>(indexType->info)) {
+          outer_.sm_.error(
+              node->_property->getSourceRange(),
+              "ft: array index must be a number");
+        }
+        return outer_.flowContext_.getArrayElementType(objType);
+      }
+      auto *id = llvh::cast<ESTree::IdentifierNode>(node->_property);
+      if (id->_name == outer_.kw_.identPush) {
+        // TODO: Represent .push as a real function.
+        return outer_.flowContext_.getAny();
+      }
+    }
+
+    if (node->_computed) {
+      outer_.sm_.error(
+          node->_property->getSourceRange(),
+          "ft: computed access to class instances not supported");
+      return outer_.flowContext_.getAny();
+    }
+
+    // Read the name of the property.
+    Identifier name;
+    if (auto *privateName =
+            llvh::dyn_cast<ESTree::PrivateNameNode>(node->_property)) {
+      name = outer_.astContext_.getPrivateNameIdentifier(
+          llvh::cast<ESTree::IdentifierNode>(privateName->_id)->_name);
+      if (!outer_.classTypeIsEnclosing(classType)) {
+        outer_.sm_.error(
+            node->_property->getSourceRange(),
+            "ft: private field " + name.str() + " not visible outside class " +
+                classType->getClassNameOrDefault());
+      }
+    } else {
+      auto *id = llvh::cast<ESTree::IdentifierNode>(node->_property);
+      name = Identifier::getFromPointer(id->_name);
+    }
+    // lookupPropertyOnClass returns null `type` (with non-null `field`) for
+    // overloaded methods; resolution happens at the call site.
+    auto [type, field] =
+        outer_.lookupPropertyOnClass(classType, name, node->_property);
+    if (!field) {
+      // TODO: class declaration location.
+      outer_.sm_.error(
+          node->_property->getSourceRange(),
+          "ft: property " + name.str() + " not defined in class " +
+              classType->getClassNameOrDefault());
+      return outer_.flowContext_.getAny();
+    }
+
+    // Setter-only access is only legal as a write target. The write path
+    // for `=` (and destructuring leaves) passes isWrite=true via
+    // visitAssignmentTarget; everything else reads.
+    if (field->isAccessor() && !field->hasGetter() && !isWrite) {
+      outer_.sm_.error(
+          node->_property->getSourceRange(),
+          "ft: cannot read setter-only property");
+    }
+    // Overloaded methods may only be referenced as a direct call target.
+    if (field->isOverloaded()) {
+      auto *callParent = llvh::dyn_cast<ESTree::CallExpressionNode>(parent);
+      if (!callParent || callParent->_callee != node) {
+        outer_.sm_.error(
+            node->_property->getSourceRange(),
+            "ft: overloaded method " + name.str() +
+                " cannot be referenced outside a call expression");
+      }
+    }
+    return type;
+  }
+
+  /// Static member access via ClassName.property or ClassName.#property.
+  Type *visitMemberClassConstructor(
+      ESTree::MemberExpressionNode *node,
+      ESTree::Node *parent,
+      ClassConstructorType *consType,
+      bool isWrite) {
+    if (node->_computed) {
+      outer_.sm_.error(
+          node->_property->getSourceRange(),
+          "ft: computed access to class statics not supported");
+      return outer_.flowContext_.getAny();
+    }
+    auto *classTypeInfo = llvh::cast<ClassType>(consType->getClassType()->info);
+    bool isPrivate = false;
+    Identifier name;
+    ESTree::IdentifierNode *propId;
+    if (auto *privateName =
+            llvh::dyn_cast<ESTree::PrivateNameNode>(node->_property)) {
+      isPrivate = true;
+      propId = llvh::cast<ESTree::IdentifierNode>(privateName->_id);
+      name = outer_.astContext_.getPrivateNameIdentifier(propId->_name);
+      if (!outer_.classTypeIsEnclosing(classTypeInfo)) {
+        outer_.sm_.error(
+            node->_property->getSourceRange(),
+            "ft: private static " + name.str() + " not visible outside class " +
+                classTypeInfo->getClassNameOrDefault());
+      }
+    } else {
+      propId = llvh::cast<ESTree::IdentifierNode>(node->_property);
+      name = Identifier::getFromPointer(propId->_name);
+    }
+    auto *staticInfo = classTypeInfo->getStaticObjectTypeInfo();
+    OptValue<ClassType::FieldLookupEntry> optStaticField;
+    if (staticInfo) {
+      optStaticField = isPrivate ? staticInfo->findPrivateField(name)
+                                 : staticInfo->findPublicField(name);
+    }
+    if (!optStaticField) {
+      outer_.sm_.error(
+          node->_property->getSourceRange(),
+          llvh::Twine("ft: static property ") + name.str() +
+              " not defined in class " +
+              classTypeInfo->getClassNameOrDefault());
+      return outer_.flowContext_.getAny();
+    }
+    const auto *field = optStaticField->getField();
+    if (field->isAccessor()) {
+      // Static accessor: result type is the field type.
+      // Do NOT propagate Decl — IRGen handles the call.
+      if (!field->hasGetter() && !isWrite) {
+        outer_.sm_.error(
+            node->_property->getSourceRange(),
+            "ft: cannot read setter-only property");
+      }
+      return field->type;
+    }
+
+    // Overloaded static methods may only be referenced as a direct call
+    // target.
+    if (field->isOverloaded()) {
+      auto *callParent = llvh::dyn_cast<ESTree::CallExpressionNode>(parent);
+      if (!callParent || callParent->_callee != node) {
+        outer_.sm_.error(
+            node->_property->getSourceRange(),
+            "ft: overloaded method " + name.str() +
+                " cannot be referenced outside a call expression");
+      }
+    }
+
+    // Propagate the Decl from the definition key to the call-site property
+    // so IRGen can look it up.
+    if (ESTree::IdentifierNode *keyNode = field->staticKeyNode) {
+      if (auto *decl = outer_.semContext_.getExpressionDecl(keyNode))
+        outer_.semContext_.setExpressionDecl(propId, decl);
+    }
+    return field->type;
+  }
+
+  /// Classification of a MemberExpression access as a read, write, or both.
+  struct MemberAccessKind {
+    bool read;
+    bool write;
+  };
+
+  /// Classify whether \p node is being read, written, or both. \p isWrite is
+  /// set by visitAssignmentTarget for `=` write targets (including leaves
+  /// buried inside destructuring patterns); in that case the access is a pure
+  /// write. Otherwise, the remaining write cases (compound assignment,
+  /// ++/--, for-in/of LHS) each put the MemberExpression directly under
+  /// the relevant parent, so a bottom-up parent check is sufficient.
+  MemberAccessKind classifyMemberAccess(
+      ESTree::MemberExpressionNode *node,
+      ESTree::Node *parent,
+      bool isWrite) {
+    MemberAccessKind k{!isWrite, isWrite};
+    if (isWrite)
+      return k;
+    if (auto *assign = llvh::dyn_cast<ESTree::AssignmentExpressionNode>(parent);
+        assign && assign->_left == node) {
+      // Compound assignment (+=, -=, etc) reads and writes.
+      // `=` is handled via the isWrite flag set by visitAssignmentTarget.
+      k.write = true;
+    } else if (auto *upd = llvh::dyn_cast<ESTree::UpdateExpressionNode>(parent);
+               upd && upd->_argument == node) {
+      k.write = true;
+    } else if (auto *forIn = llvh::dyn_cast<ESTree::ForInStatementNode>(parent);
+               forIn && forIn->_left == node) {
+      k.write = true;
+      k.read = false;
+    } else if (auto *forOf = llvh::dyn_cast<ESTree::ForOfStatementNode>(parent);
+               forOf && forOf->_left == node) {
+      k.write = true;
+      k.read = false;
+    } else if (auto *un = llvh::dyn_cast<ESTree::UnaryExpressionNode>(parent);
+               un && un->_argument == node &&
+               un->_operator == outer_.kw_.identDelete) {
+      k.read = false;
+      k.write = true;
+    }
+    return k;
+  }
+
+  /// Type a member access that resolves through an object \p indexer. \p
+  /// keyType is the key type being used to index: the property's type for
+  /// computed access, or `string` for dot access (the key is the identifier
+  /// name).
+  Type *visitMemberIndexer(
+      ESTree::MemberExpressionNode *node,
+      ESTree::Node *parent,
+      const ExactObjectType::Indexer &indexer,
+      Type *keyType,
+      bool isWrite) {
+    // Check the key can flow into the indexer's key type.
+    if (!outer_.canAFlowIntoB(keyType, indexer.keyType).canFlow) {
+      outer_.sm_.error(
+          node->_property->getSourceRange(),
+          "ft: object index type " + keyType->messageString() +
+              " incompatible with index signature " +
+              indexer.keyType->messageString());
+    }
+
+    MemberAccessKind access = classifyMemberAccess(node, parent, isWrite);
+    if (indexer.variance == FieldVariance::ReadOnly && access.write) {
+      outer_.sm_.error(
+          node->_property->getSourceRange(),
+          "ft: cannot assign to readonly indexer");
+    } else if (indexer.variance == FieldVariance::WriteOnly && access.read) {
+      outer_.sm_.error(
+          node->_property->getSourceRange(),
+          "ft: cannot read writeonly indexer");
+    }
+
+    // An indexer read resolves to `T`. The underlying load actually yields
+    // `T | void` (a missing key reads as `undefined`), but IRGen emits the
+    // narrowing checked cast from `T | void` to `T` at read time, so a read
+    // of a missing key throws.
+    return indexer.valueType;
+  }
+
+  Type *visitMemberExactObject(
+      ESTree::MemberExpressionNode *node,
+      ESTree::Node *parent,
+      ExactObjectType *exactObjType,
+      bool isWrite) {
+    if (node->_computed) {
+      if (const auto &indexer = exactObjType->getIndexer()) {
+        return visitMemberIndexer(
+            node,
+            parent,
+            *indexer,
+            outer_.getNodeTypeOrAny(node->_property),
+            isWrite);
+      }
+      // TODO: determine what this should do for real.
+      // Flow allows this and just returns 'any' (deliberately unsound).
+      outer_.sm_.error(
+          node->_property->getSourceRange(),
+          "ft: computed access to exact object types not supported");
+      return outer_.flowContext_.getAny();
+    }
+    auto *id = llvh::cast<ESTree::IdentifierNode>(node->_property);
+    auto optFieldIdx =
+        exactObjType->findField(Identifier::getFromPointer(id->_name));
+    if (!optFieldIdx) {
+      // A dot access uses a string key; route it through the indexer if one
+      // exists (indexers and named fields are mutually exclusive).
+      if (const auto &indexer = exactObjType->getIndexer()) {
+        return visitMemberIndexer(
+            node, parent, *indexer, outer_.flowContext_.getString(), isWrite);
+      }
+      outer_.sm_.error(
+          node->_property->getSourceRange(),
+          "ft: property " + id->_name->str() + " not defined in object");
+      return outer_.flowContext_.getAny();
+    }
+    const auto &field = exactObjType->getFields()[*optFieldIdx];
+
+    MemberAccessKind access = classifyMemberAccess(node, parent, isWrite);
+
+    if (field.variance == FieldVariance::ReadOnly && access.write) {
+      outer_.sm_.error(
+          node->_property->getSourceRange(),
+          "ft: cannot assign to readonly property " + id->_name->str());
+    } else if (field.variance == FieldVariance::WriteOnly && access.read) {
+      outer_.sm_.error(
+          node->_property->getSourceRange(),
+          "ft: cannot read writeonly property " + id->_name->str());
+    }
+    return field.type;
+  }
+
+  /// Numeric-literal indexed access or .length on a tuple type.
+  Type *visitMemberTuple(
+      ESTree::MemberExpressionNode *node,
+      TupleType *tupleType) {
+    if (node->_computed) {
+      auto *idx = llvh::dyn_cast<ESTree::NumericLiteralNode>(node->_property);
+      if (!idx) {
+        outer_.sm_.error(
+            node->_property->getSourceRange(),
+            "ft: tuple property access requires an number literal index");
+        return outer_.flowContext_.getAny();
+      }
+      double d = idx->_value;
+      if (d < 0 || d >= tupleType->getTypes().size()) {
+        outer_.sm_.error(
+            node->_property->getSourceRange(), "ft: tuple index out of bounds");
+        return outer_.flowContext_.getAny();
+      }
+      // d is in bounds of the valid integer indices so the cast is safe.
+      if ((uint32_t)d != d) {
+        // ulen can only compare equal to d when d is a valid uint32 integer.
+        outer_.sm_.error(
+            node->_property->getSourceRange(),
+            "ft: tuple index must be a non-negative integer");
+        return outer_.flowContext_.getAny();
+      }
+      return tupleType->getTypes()[(uint32_t)d];
+    }
+    // Named property access to tuple.
+    auto *id = llvh::cast<ESTree::IdentifierNode>(node->_property);
+    // TODO: We may want to allow calling into array functions with tuples
+    // (providing the union of all elements as the generic type of the
+    // array), but that's not supported yet.
+    if (id->_name == outer_.kw_.identLength) {
+      // Tuple .length is a number.
+      return outer_.flowContext_.getNumber();
+    }
+    outer_.sm_.error(
+        node->_property->getSourceRange(), "ft: unknown tuple property");
+    return outer_.flowContext_.getAny();
+  }
+
+  /// Indexed access, .length, or builtin method access on a string.
+  Type *visitMemberString(ESTree::MemberExpressionNode *node) {
+    if (node->_computed) {
+      Type *indexType = outer_.getNodeTypeOrAny(node->_property);
+      if (!llvh::isa<NumberType>(indexType->info) &&
+          !llvh::isa<AnyType>(indexType->info)) {
+        outer_.sm_.error(
+            node->_property->getSourceRange(),
+            "ft: string index must be a number");
+      }
+      return outer_.flowContext_.getString();
+    }
+    auto *id = llvh::cast<ESTree::IdentifierNode>(node->_property);
+    if (id->_name == outer_.kw_.identLength)
+      return outer_.flowContext_.getNumber();
+    if (auto *builtinDecl = outer_.flowContext_.findBuiltinMethod(
+            {TypeKind::String, id->_name, /* isStatic */ false})) {
+      // Found a builtin method - store for CallExpression to use.
+      // The actual type will be determined by CallExpression.
+      // For now, use any.
+      outer_.setBuiltinMethodDecl(node, builtinDecl);
+      return outer_.flowContext_.getAny();
+    }
+    outer_.sm_.error(
+        node->_property->getSourceRange(), "ft: unknown string property");
+    return outer_.flowContext_.getAny();
+  }
+
   void visit(
       ESTree::MemberExpressionNode *node,
       ESTree::Node *parent,
       Type *constraint) {
     // TODO: types
+    // Encountered through the normal expression visit, so this access is a
+    // read. The write path goes through visitAssignmentTarget.
     visitESTreeNode(*this, node->_object, node, nullptr);
     if (node->_computed)
       visitESTreeNode(*this, node->_property, node, nullptr);
+    resolveMemberExpressionType(node, parent, /*isWrite*/ false);
+  }
 
+  /// Walk \p target which sits in the write position of a `=` assignment or
+  /// destructuring pattern. Identifier and (Optional)MemberExpression are
+  /// handled directly; pattern nodes are dispatched to their visitor, which
+  /// recurses via this function for nested write positions. Only the
+  /// outermost MemberExpression at each pattern leaf is a write — its inner
+  /// `_object` (e.g. `a.b` inside `a.b.c`) is just a read of the container
+  /// whose slot is being written.
+  void visitAssignmentTarget(
+      ESTree::Node *target,
+      ESTree::Node *parent,
+      Type *constraint) {
+    if (auto *mem = llvh::dyn_cast<ESTree::MemberExpressionNode>(target)) {
+      visitESTreeNode(*this, mem->_object, mem, nullptr);
+      if (mem->_computed)
+        visitESTreeNode(*this, mem->_property, mem, nullptr);
+      resolveMemberExpressionType(mem, parent, /*isWrite*/ true);
+      return;
+    }
+    visitESTreeNode(*this, target, parent, constraint);
+  }
+
+  /// Compute and set the type of \p node, assuming its \c _object (and
+  /// \c _property when computed) have already been visited. \p isWrite is
+  /// true when called from visitAssignmentTarget for a write-target leaf.
+  void resolveMemberExpressionType(
+      ESTree::MemberExpressionNode *node,
+      ESTree::Node *parent,
+      bool isWrite) {
     Type *objType = outer_.getNodeTypeOrAny(node->_object);
     Type *resType = outer_.flowContext_.getAny();
+
+    // 'arguments.length' is always typed as number.
+    if (auto *objId = llvh::dyn_cast<ESTree::IdentifierNode>(node->_object);
+        objId && !node->_computed) {
+      auto *objDecl = outer_.getDecl(objId);
+      if (objDecl && objDecl->special == sema::Decl::Special::Arguments) {
+        if (auto *propId =
+                llvh::dyn_cast<ESTree::IdentifierNode>(node->_property);
+            propId && propId->_name == outer_.kw_.identLength) {
+          outer_.setNodeType(node, outer_.flowContext_.getNumber());
+          return;
+        }
+      }
+    }
 
     // Attempt to narrow object type if it doesn't currently support member
     // access.
@@ -496,306 +952,18 @@ class FlowChecker::ExprVisitor {
           {.canFlow = true, .needCheckedCast = true});
     }
 
-    if (outer_.flowContext_.isArrayClassType(objType) &&
-        (node->_computed ||
-         !llvh::isa<ESTree::PrivateNameNode>(node->_property))) {
-      if (node->_computed) {
-        resType = outer_.flowContext_.getArrayElementType(objType);
-        Type *indexType = outer_.getNodeTypeOrAny(node->_property);
-        if (!llvh::isa<NumberType>(indexType->info) &&
-            !llvh::isa<AnyType>(indexType->info)) {
-          outer_.sm_.error(
-              node->_property->getSourceRange(),
-              "ft: array index must be a number");
-        }
-      } else {
-        auto *id = llvh::cast<ESTree::IdentifierNode>(node->_property);
-        if (id->_name == outer_.kw_.identLength) {
-          resType = outer_.flowContext_.getNumber();
-        } else if (id->_name == outer_.kw_.identPush) {
-          // TODO: Represent .push as a real function.
-          resType = outer_.flowContext_.getAny();
-        } else {
-          // Look up the property on the Array<T> class.
-          auto *classInfo = llvh::cast<ClassType>(objType->info);
-          resType =
-              outer_
-                  .lookupPropertyOnClass(
-                      classInfo, Identifier::getFromPointer(id->_name), id)
-                  .first;
-          if (!resType) {
-            outer_.sm_.error(
-                node->_property->getSourceRange(),
-                "ft: property " + id->_name->str() + " not defined on Array");
-          }
-        }
-      }
-    } else if (auto *classType = llvh::dyn_cast<ClassType>(objType->info)) {
-      if (node->_computed) {
-        outer_.sm_.error(
-            node->_property->getSourceRange(),
-            "ft: computed access to class instances not supported");
-      } else if (
-          auto *privateName =
-              llvh::dyn_cast<ESTree::PrivateNameNode>(node->_property)) {
-        // Private field/method access.
-        Identifier name = outer_.astContext_.getPrivateNameIdentifier(
-            llvh::cast<ESTree::IdentifierNode>(privateName->_id)->_name);
-        if (!outer_.classTypeIsEnclosing(classType)) {
-          outer_.sm_.error(
-              node->_property->getSourceRange(),
-              "ft: private field " + name.str() +
-                  " not visible outside class " +
-                  classType->getClassNameOrDefault());
-        }
-        auto optField = classType->findPrivateField(name);
-        if (optField) {
-          resType = optField->getField()->type;
-        } else {
-          auto *homeObj = classType->getHomeObjectTypeInfo();
-          OptValue<ClassType::FieldLookupEntry> optMethod;
-          if (homeObj)
-            optMethod = homeObj->findPrivateField(name);
-          if (optMethod) {
-            const auto *field = optMethod->getField();
-            resType = field->type;
-
-            if (field->isAccessor()) {
-              // Accessor: result type is still the field type (getter return
-              // type if it exists).
-              // Do NOT propagate the Decl — IRGen handles the call
-              // via the Field.
-              if (!field->hasGetter()) {
-                // Setter-only: error unless this is the LHS of an assignment
-                // using '='.
-                if (auto *assignParent =
-                        llvh::dyn_cast<ESTree::AssignmentExpressionNode>(
-                            parent);
-                    !assignParent || node != assignParent->_left ||
-                    assignParent->_operator != outer_.kw_.identEqual) {
-                  outer_.sm_.error(
-                      node->_property->getSourceRange(),
-                      "ft: cannot read setter-only property");
-                }
-              }
-            } else {
-              // For non-generic final methods, propagate the Decl from the
-              // method definition key to the call-site property so IRGen
-              // can look it up.
-              // Generic final methods get their Decls set through
-              // specializedMethodDecls_.
-              if (field->finalMethod &&
-                  !llvh::isa<GenericType>(resType->info)) {
-                auto *methodKey =
-                    ESTree::getPropertyIdentifier(field->method->_key);
-                if (auto *decl =
-                        outer_.semContext_.getExpressionDecl(methodKey)) {
-                  auto *propId = ESTree::getPropertyIdentifier(node->_property);
-                  outer_.semContext_.setExpressionDecl(propId, decl);
-                }
-              }
-              assert(
-                  (llvh::isa<BaseFunctionType>(resType->info) ||
-                   llvh::isa<GenericType>(resType->info)) &&
-                  "methods must be functions or generic");
-            }
-          } else {
-            // TODO: class declaration location.
-            outer_.sm_.error(
-                node->_property->getSourceRange(),
-                "ft: property " + name.str() + " not defined in class " +
-                    classType->getClassNameOrDefault());
-          }
-        }
-      } else {
-        // Public field/method access.
-        auto *id = llvh::cast<ESTree::IdentifierNode>(node->_property);
-        Identifier name = Identifier::getFromPointer(id->_name);
-        auto [type, field] = outer_.lookupPropertyOnClass(classType, name, id);
-        resType = type;
-        if (!resType) {
-          // TODO: class declaration location.
-          outer_.sm_.error(
-              node->_property->getSourceRange(),
-              "ft: property " + name.str() + " not defined in class " +
-                  classType->getClassNameOrDefault());
-        } else if (field && field->isAccessor() && !field->hasGetter()) {
-          // Setter-only: error unless this is the LHS of a simple
-          // assignment.
-          if (auto *assignParent =
-                  llvh::dyn_cast<ESTree::AssignmentExpressionNode>(parent);
-              !assignParent || node != assignParent->_left ||
-              assignParent->_operator != outer_.kw_.identEqual) {
-            outer_.sm_.error(
-                node->_property->getSourceRange(),
-                "ft: cannot read setter-only property");
-          }
-        }
-      }
+    if (auto *classType = llvh::dyn_cast<ClassType>(objType->info)) {
+      resType = visitMemberClass(node, parent, objType, classType, isWrite);
     } else if (
         auto *consType = llvh::dyn_cast<ClassConstructorType>(objType->info)) {
-      // Static member access via ClassName.property or ClassName.#property.
-      if (node->_computed) {
-        outer_.sm_.error(
-            node->_property->getSourceRange(),
-            "ft: computed access to class statics not supported");
-        return;
-      }
-      auto *classTypeInfo =
-          llvh::cast<ClassType>(consType->getClassType()->info);
-      bool isPrivate = false;
-      Identifier name;
-      ESTree::IdentifierNode *propId;
-      if (auto *privateName =
-              llvh::dyn_cast<ESTree::PrivateNameNode>(node->_property)) {
-        isPrivate = true;
-        propId = llvh::cast<ESTree::IdentifierNode>(privateName->_id);
-        name = outer_.astContext_.getPrivateNameIdentifier(propId->_name);
-        if (!outer_.classTypeIsEnclosing(classTypeInfo)) {
-          outer_.sm_.error(
-              node->_property->getSourceRange(),
-              "ft: private static " + name.str() +
-                  " not visible outside class " +
-                  classTypeInfo->getClassNameOrDefault());
-        }
-      } else {
-        propId = llvh::cast<ESTree::IdentifierNode>(node->_property);
-        name = Identifier::getFromPointer(propId->_name);
-      }
-      bool found = false;
-      if (auto *staticInfo = classTypeInfo->getStaticObjectTypeInfo()) {
-        if (auto optStaticField = isPrivate
-                ? staticInfo->findPrivateField(name)
-                : staticInfo->findPublicField(name)) {
-          const auto *field = optStaticField->getField();
-          found = true;
-          if (field->isAccessor()) {
-            // Static accessor: result type is the field type.
-            // Do NOT propagate Decl — IRGen handles the call.
-            if (!field->hasGetter()) {
-              bool isSimpleAssignTarget = false;
-              if (auto *assign =
-                      llvh::dyn_cast<ESTree::AssignmentExpressionNode>(parent))
-                isSimpleAssignTarget =
-                    (assign->_left == node &&
-                     assign->_operator == outer_.kw_.identEqual);
-              if (!isSimpleAssignTarget) {
-                outer_.sm_.error(
-                    node->_property->getSourceRange(),
-                    "ft: cannot read setter-only property");
-              }
-            }
-            resType = field->type;
-          } else {
-            resType = field->type;
-            // Propagate the Decl from the definition key to the
-            // call-site property so IRGen can look it up.
-            if (ESTree::IdentifierNode *keyNode = field->staticKeyNode) {
-              if (auto *decl = outer_.semContext_.getExpressionDecl(keyNode))
-                outer_.semContext_.setExpressionDecl(propId, decl);
-            }
-          }
-        }
-      }
-      if (!found) {
-        outer_.sm_.error(
-            node->_property->getSourceRange(),
-            llvh::Twine("ft: static property ") + name.str() +
-                " not defined in class " +
-                classTypeInfo->getClassNameOrDefault());
-      }
+      resType = visitMemberClassConstructor(node, parent, consType, isWrite);
     } else if (
         auto *exactObjType = llvh::dyn_cast<ExactObjectType>(objType->info)) {
-      if (node->_computed) {
-        // TODO: determine what this should do for real.
-        // Flow allows this and just returns 'any' (deliberately unsound).
-        outer_.sm_.error(
-            node->_property->getSourceRange(),
-            "ft: computed access to exact object types not supported");
-        resType = outer_.flowContext_.getAny();
-      } else {
-        auto id = llvh::cast<ESTree::IdentifierNode>(node->_property);
-        auto optFieldIdx =
-            exactObjType->findField(Identifier::getFromPointer(id->_name));
-        if (optFieldIdx) {
-          const auto &field = exactObjType->getFields()[*optFieldIdx];
-          resType = field.type;
-        } else {
-          outer_.sm_.error(
-              node->_property->getSourceRange(),
-              "ft: property " + id->_name->str() + " not defined in object");
-          resType = outer_.flowContext_.getAny();
-        }
-      }
+      resType = visitMemberExactObject(node, parent, exactObjType, isWrite);
     } else if (auto *tupleType = llvh::dyn_cast<TupleType>(objType->info)) {
-      if (node->_computed) {
-        if (auto *idx =
-                llvh::dyn_cast<ESTree::NumericLiteralNode>(node->_property)) {
-          double d = idx->_value;
-          if (0 <= d && d < tupleType->getTypes().size()) {
-            // d is in bounds of the valid integer indices so the cast is safe.
-            if ((uint32_t)d == d) {
-              // ulen can only compare equal to d when d is a valid uint32
-              // integer.
-              resType = tupleType->getTypes()[(uint32_t)d];
-            } else {
-              outer_.sm_.error(
-                  node->_property->getSourceRange(),
-                  "ft: tuple index must be a non-negative integer");
-            }
-          } else {
-            outer_.sm_.error(
-                node->_property->getSourceRange(),
-                "ft: tuple index out of bounds");
-          }
-        } else {
-          outer_.sm_.error(
-              node->_property->getSourceRange(),
-              "ft: tuple property access requires an number literal index");
-        }
-      } else {
-        // Named property access to tuple.
-        auto *id = llvh::cast<ESTree::IdentifierNode>(node->_property);
-        // TODO: We may want to allow calling into array functions with tuples
-        // (providing the union of all elements as the generic type of the
-        // array), but that's not supported yet.
-        if (id->_name == outer_.kw_.identLength) {
-          // Tuple .length is a number.
-          resType = outer_.flowContext_.getNumber();
-        } else {
-          outer_.sm_.error(
-              node->_property->getSourceRange(), "ft: unknown tuple property");
-        }
-      }
+      resType = visitMemberTuple(node, tupleType);
     } else if (llvh::isa<StringType>(objType->info)) {
-      if (node->_computed) {
-        resType = outer_.flowContext_.getString();
-        Type *indexType = outer_.getNodeTypeOrAny(node->_property);
-        if (!llvh::isa<NumberType>(indexType->info) &&
-            !llvh::isa<AnyType>(indexType->info)) {
-          outer_.sm_.error(
-              node->_property->getSourceRange(),
-              "ft: string index must be a number");
-        }
-      } else {
-        auto *id = llvh::cast<ESTree::IdentifierNode>(node->_property);
-        if (id->_name == outer_.kw_.identLength) {
-          resType = outer_.flowContext_.getNumber();
-        } else if (
-            auto *builtinDecl = outer_.flowContext_.findBuiltinMethod(
-                {TypeKind::String,
-                 id->_name,
-                 /* isStatic */ false})) {
-          // Found a builtin method - store for CallExpression to use.
-          outer_.setBuiltinMethodDecl(node, builtinDecl);
-          // The actual type will be determined by CallExpression.
-          // For now, use any.
-          resType = outer_.flowContext_.getAny();
-        } else {
-          outer_.sm_.error(
-              node->_property->getSourceRange(), "ft: unknown string property");
-        }
-      }
+      resType = visitMemberString(node);
     } else if (!llvh::isa<AnyType>(objType->info)) {
       if (node->_computed) {
         outer_.sm_.error(
@@ -840,7 +1008,7 @@ class FlowChecker::ExprVisitor {
     visitESTreeNode(*this, expression, node, resTy);
 
     auto *expTy = outer_.getNodeTypeOrAny(expression);
-    auto cf = canAFlowIntoB(expTy->info, resTy->info);
+    auto cf = outer_.canAFlowIntoB(expTy->info, resTy->info);
     if (!cf.canFlow) {
       outer_.sm_.error(
           node->getSourceRange(), "ft: cast from incompatible type");
@@ -895,7 +1063,7 @@ class FlowChecker::ExprVisitor {
       }
       // Check that the actual type is compatible with the constraint.
       Type *actualElemTy = outer_.getNodeTypeOrAny(elem);
-      CanFlowResult cf = canAFlowIntoB(actualElemTy, constraintElemTy);
+      CanFlowResult cf = outer_.canAFlowIntoB(actualElemTy, constraintElemTy);
       if (!cf.canFlow) {
         outer_.sm_.error(
             elem->getSourceRange(),
@@ -977,7 +1145,7 @@ class FlowChecker::ExprVisitor {
       if (constraintElemTy) {
         // If there's a constraint on the element type, check that each
         // element conforms and insert implicit casts when necessary.
-        CanFlowResult cf = canAFlowIntoB(actualElemTy, constraintElemTy);
+        CanFlowResult cf = outer_.canAFlowIntoB(actualElemTy, constraintElemTy);
         if (!cf.canFlow) {
           outer_.sm_.error(
               elem->getSourceRange(),
@@ -1004,19 +1172,22 @@ class FlowChecker::ExprVisitor {
       }
     }
 
-    if (constraint &&
-        !llvh::isa<InferencePlaceholderArrayType>(constraint->info)) {
+    if (outer_.flowContext_.isArrayClassType(constraint)) {
       outer_.setNodeType(node, constraint);
-    } else if (elTypes.empty()) {
-      // If there's no elements in the union, then just use 'any'.
-      outer_.sm_.warning(
-          node->getSourceRange(),
-          "ft: empty array with no context, assuming 'any' array");
-      outer_.setNodeType(node, outer_.flowContext_.getAny());
     } else {
-      // Otherwise, construct a union of all the element types.
-      Type *elemUnion = outer_.flowContext_.createType(
-          outer_.flowContext_.maybeCreateUnion(elTypes.getArrayRef()));
+      // Construct the element type. If there are no elements and no context,
+      // infer an 'any' element type, producing an 'any[]' array.
+      Type *elemUnion;
+      if (elTypes.empty()) {
+        outer_.sm_.warning(
+            node->getSourceRange(),
+            "ft: empty array with no context, assuming 'any' array");
+        elemUnion = outer_.flowContext_.getAny();
+      } else {
+        // Otherwise, construct a union of all the element types.
+        elemUnion = outer_.flowContext_.createType(
+            outer_.flowContext_.maybeCreateUnion(elTypes.getArrayRef()));
+      }
       Type *arrType = outer_.getSpecializedArrayClassType(
           elemUnion, node->getSourceRange());
       if (arrType) {
@@ -1056,10 +1227,75 @@ class FlowChecker::ExprVisitor {
     // Name of the key, mapping to index in the fields vector.
     llvh::SmallDenseMap<UniqueString *, size_t> names;
 
+    // If any spread source has an indexer, the result is an indexer object
+    // (indexers and named fields are mutually exclusive). These accumulate the
+    // common key type and all the value types contributed by spread indexers.
+    Type *indexerKeyType = nullptr;
+    llvh::SmallSetVector<Type *, 4> indexerValueTypes{};
+
     auto *constraintObjectType = llvh::dyn_cast_or_null<ExactObjectType>(
         constraint ? constraint->info : nullptr);
 
     for (ESTree::Node &node : node->_properties) {
+      // Spread element: merge fields from an exact-object source.
+      if (auto *spread = llvh::dyn_cast<ESTree::SpreadElementNode>(&node)) {
+        visitESTreeNodeNoReplace(*this, spread->_argument, spread, nullptr);
+        Type *spreadTy = outer_.getNodeTypeOrAny(spread->_argument);
+        if (llvh::isa<AnyType>(spreadTy->info)) {
+          outer_.sm_.warning(
+              node.getSourceRange(),
+              "ft: unsupported property for typed object, assuming 'any'");
+          assumeAny = true;
+        } else if (
+            auto *spreadObjTy =
+                llvh::dyn_cast<ExactObjectType>(spreadTy->info)) {
+          for (const auto &srcField : spreadObjTy->getFields()) {
+            // Spread reads every source field; writeonly fields are not
+            // readable.
+            if (srcField.variance == FieldVariance::WriteOnly) {
+              outer_.sm_.error(
+                  spread->getSourceRange(),
+                  "ft: cannot read writeonly property " +
+                      srcField.name.getUnderlyingPointer()->str());
+            }
+            // The spread's destination is a fresh object literal, so its
+            // fields are always invariant regardless of the source's
+            // variance.
+            auto [it, inserted] = names.try_emplace(
+                srcField.name.getUnderlyingPointer(), fields.size());
+            if (inserted) {
+              fields.emplace_back(srcField.name, srcField.type);
+            } else {
+              fields[it->second].type = srcField.type;
+              fields[it->second].variance = FieldVariance::None;
+            }
+          }
+          // A source with an indexer contributes its indexer to the result.
+          // Such a source has no named fields, so the loop above did nothing.
+          if (const auto &srcIndexer = spreadObjTy->getIndexer()) {
+            if (srcIndexer->variance == FieldVariance::WriteOnly) {
+              outer_.sm_.error(
+                  spread->getSourceRange(),
+                  "ft: cannot read writeonly indexer");
+            }
+            if (!indexerKeyType) {
+              indexerKeyType = srcIndexer->keyType;
+            } else if (!indexerKeyType->info->equals(
+                           srcIndexer->keyType->info)) {
+              outer_.sm_.error(
+                  spread->getSourceRange(),
+                  "ft: incompatible indexer key types in spread");
+            }
+            indexerValueTypes.insert(srcIndexer->valueType);
+          }
+        } else {
+          outer_.sm_.error(
+              spread->getSourceRange(),
+              "ft: spread argument must be an exact object type");
+        }
+        continue;
+      }
+
       auto *prop = llvh::dyn_cast<ESTree::PropertyNode>(&node);
       // prop->_kind being "init" makes sure this isn't a getter/setter.
       if (!prop || prop->_computed || prop->_kind != outer_.kw_.identInit ||
@@ -1089,6 +1325,10 @@ class FlowChecker::ExprVisitor {
                 Identifier::getFromPointer(name))) {
           constraintValueType =
               constraintObjectType->getFields()[*optField].type;
+        } else if (const auto &indexer = constraintObjectType->getIndexer()) {
+          // Constructing an indexer object: every value is checked against the
+          // indexer's value type.
+          constraintValueType = indexer->valueType;
         }
       }
 
@@ -1098,7 +1338,7 @@ class FlowChecker::ExprVisitor {
       Type *valueType = outer_.getNodeTypeOrAny(prop->_value);
 
       if (constraintValueType) {
-        auto cf = canAFlowIntoB(valueType, constraintValueType);
+        auto cf = outer_.canAFlowIntoB(valueType, constraintValueType);
         if (!cf.canFlow) {
           outer_.sm_.error(
               prop->_value->getSourceRange(),
@@ -1126,6 +1366,36 @@ class FlowChecker::ExprVisitor {
     if (assumeAny) {
       // Failed to make an object type that matches the properties.
       outer_.flowContext_.setNodeType(node, outer_.flowContext_.getAny());
+      return;
+    }
+
+    // A spread source had an indexer: the result is an indexer object whose
+    // value type is the union of every named field type and every spread
+    // indexer value type.
+    if (!indexerValueTypes.empty()) {
+      // Named properties use string keys, so they require a string-keyed
+      // indexer (field names cannot index a number-keyed indexer).
+      if (!fields.empty() &&
+          !outer_.canAFlowIntoB(outer_.flowContext_.getString(), indexerKeyType)
+               .canFlow) {
+        outer_.sm_.error(
+            node->getSourceRange(),
+            "ft: object index type string incompatible with index signature " +
+                indexerKeyType->messageString());
+      }
+      llvh::SmallSetVector<Type *, 4> valueTypes{};
+      for (const auto &f : fields)
+        valueTypes.insert(f.type);
+      for (Type *vt : indexerValueTypes)
+        valueTypes.insert(vt);
+      Type *valueType = outer_.flowContext_.createType(
+          outer_.flowContext_.maybeCreateUnion(valueTypes.getArrayRef()));
+      ExactObjectType::Indexer indexer{
+          indexerKeyType, valueType, FieldVariance::None};
+      outer_.setNodeType(
+          node,
+          outer_.flowContext_.createType(
+              outer_.flowContext_.createExactObject({}, indexer), node));
       return;
     }
 
@@ -1304,10 +1574,7 @@ class FlowChecker::ExprVisitor {
 
     static const BinTypes s_types[] = {
         // clang-format off
-        {BinopKind::eq, TypeKind::Boolean, llvh::None, llvh::None},
-        {BinopKind::ne, TypeKind::Boolean, llvh::None, llvh::None},
-        {BinopKind::strictEq, TypeKind::Boolean, llvh::None, llvh::None},
-        {BinopKind::strictNe, TypeKind::Boolean, llvh::None, llvh::None},
+        // eq, ne, strictEq, and strictNe are handled specially.
 
         {BinopKind::lt, TypeKind::Boolean, TypeKind::Number, TypeKind::Number},
         {BinopKind::lt, TypeKind::Boolean, TypeKind::BigInt, TypeKind::BigInt},
@@ -1433,13 +1700,64 @@ class FlowChecker::ExprVisitor {
     Type *lt = outer_.getNodeTypeOrAny(node->_left);
     Type *rt = outer_.getNodeTypeOrAny(node->_right);
 
-    Type *res;
-    if (Type *t = determineBinopType(
-            binopKind(node->_operator->str()),
-            lt->info->getKind(),
-            rt->info->getKind())) {
-      res = t;
-    } else {
+    BinopKind op = binopKind(node->_operator->str());
+
+    // `===` and `!==` are handled specially.
+    // They are only legal when one operand's type flows into the other's
+    // without a checked cast. This is a conservative check: it rejects most
+    // comparisons that are always false, but may also reject overlapping types
+    // (e.g. unions sharing an arm) whose values could still be equal at
+    // runtime. Still allows `?Foo === null`, subclass vs superclass, etc.
+    if (op == BinopKind::strictEq || op == BinopKind::strictNe) {
+      if (!outer_.canAFlowIntoB(lt->info, rt->info).canFlowWithoutCast() &&
+          !outer_.canAFlowIntoB(rt->info, lt->info).canFlowWithoutCast()) {
+        outer_.sm_.error(
+            node->getSourceRange(),
+            llvh::Twine("ft: ") + node->_operator->str() +
+                " cannot be applied to " + lt->messageString() + " and " +
+                rt->messageString());
+      }
+      outer_.setNodeType(node, outer_.flowContext_.getBoolean());
+      return;
+    }
+
+    // `==` and `!=` are handled specially and are generally disallowed.
+    // They are legal when either operand has type `any`, or when one operand
+    // has type `null` or `void` and the other operand can hold `null` or
+    // `void` without a checked cast. This permits `x == null` /
+    // `x == undefined` on any nullable type.
+    if (op == BinopKind::eq || op == BinopKind::ne) {
+      auto *li = lt->info;
+      auto *ri = rt->info;
+      auto acceptsNullOrVoid = [this](TypeInfo *t) {
+        return outer_.canAFlowIntoB(outer_.flowContext_.getNullInfo(), t)
+                   .canFlowWithoutCast() ||
+            outer_.canAFlowIntoB(outer_.flowContext_.getVoidInfo(), t)
+                .canFlowWithoutCast();
+      };
+      bool ok = false;
+      if (llvh::isa<AnyType>(li) || llvh::isa<AnyType>(ri)) {
+        ok = true;
+      } else if (llvh::isa<NullType>(li) || llvh::isa<VoidType>(li)) {
+        ok = acceptsNullOrVoid(ri);
+      } else if (llvh::isa<NullType>(ri) || llvh::isa<VoidType>(ri)) {
+        ok = acceptsNullOrVoid(li);
+      }
+      if (!ok) {
+        outer_.sm_.error(
+            node->getSourceRange(),
+            llvh::Twine("ft: ") + node->_operator->str() +
+                " cannot be applied to " + lt->messageString() + " and " +
+                rt->messageString() +
+                " (use === / !== for general comparisons)");
+      }
+      outer_.setNodeType(node, outer_.flowContext_.getBoolean());
+      return;
+    }
+
+    Type *res =
+        determineBinopType(op, lt->info->getKind(), rt->info->getKind());
+    if (!res) {
       outer_.sm_.error(
           node->getSourceRange(),
           llvh::Twine("ft: incompatible binary operation: ") +
@@ -1464,7 +1782,6 @@ class FlowChecker::ExprVisitor {
 
     static const UnTypes s_types[] = {
         // clang-format off
-        {UnopKind::del, TypeKind::Boolean, llvh::None},
         {UnopKind::voidOp, TypeKind::Void, llvh::None},
         {UnopKind::typeOf, TypeKind::String, llvh::None},
         {UnopKind::plus, TypeKind::Number, TypeKind::Number},
@@ -1509,6 +1826,34 @@ class FlowChecker::ExprVisitor {
       Type *constraint) {
     visitESTreeNode(*this, node->_argument, node, nullptr);
     Type *argType = outer_.getNodeTypeOrAny(node->_argument);
+
+    // Handle `delete` specially.
+    if (node->_operator == outer_.kw_.identDelete) {
+      outer_.setNodeType(node, outer_.flowContext_.getBoolean());
+
+      if (auto *mem = llvh::dyn_cast<ESTree::MemberExpressionLikeNode>(
+              node->_argument)) {
+        Type *objType = outer_.getNodeTypeOrAny(ESTree::getObject(mem));
+        // `delete` on an object with an indexer removes a key from the
+        // dictionary without violating its uniform value type, so it is
+        // allowed.
+        bool hasIndexer = false;
+        if (auto *exactObj = llvh::dyn_cast<ExactObjectType>(objType->info))
+          hasIndexer = exactObj->hasIndexer();
+        if (!hasIndexer && !llvh::isa<AnyType>(objType->info)) {
+          // `delete` removes a property and so violates any non-`any` object's
+          // declared shape.
+          outer_.sm_.error(
+              node->getSourceRange(),
+              "ft: cannot delete property of typed object");
+        }
+      } else {
+        outer_.sm_.error(
+            node->getSourceRange(),
+            "ft: 'delete' can only be applied to member expressions");
+      }
+      return;
+    }
 
     Type *res;
     if (Type *t = determineUnopType(
@@ -1596,13 +1941,41 @@ class FlowChecker::ExprVisitor {
       return;
     }
 
-    // No constraint provided for the LHS.
-    visitESTreeNode(*this, node->_left, node, nullptr);
+    // For a plain '=' assignment whose LHS is an ArrayPattern, visit the
+    // RHS first so its type can be used as the constraint when typing the
+    // pattern. We don't pass a constraint back to the RHS — destructuring
+    // from an array literal isn't useful in practice, so we don't bother
+    // preserving the legacy LHS-first walk for that case.
+    bool arrayPatternLHS = node->_operator == outer_.kw_.identEqual &&
+        llvh::isa<ESTree::ArrayPatternNode>(node->_left);
+
+    Type *lhsConstraint = nullptr;
+    if (arrayPatternLHS) {
+      visitESTreeNode(*this, node->_right, node, nullptr);
+      lhsConstraint = outer_.getNodeTypeOrAny(node->_right);
+    }
+    // For `=`, route through
+    // visitAssignmentTarget so MemberExpression are classified as writes while
+    // their inner _object subexpressions are still classified as reads.
+    if (node->_operator == outer_.kw_.identEqual)
+      visitAssignmentTarget(node->_left, node, lhsConstraint);
+    else
+      visitESTreeNode(*this, node->_left, node, lhsConstraint);
 
     // Check if the LHS is an accessor property.
     if (auto *mem = llvh::dyn_cast<ESTree::MemberExpressionNode>(node->_left)) {
       if (!mem->_computed) {
         auto *objType = outer_.getNodeTypeOrAny(mem->_object);
+        // Handle the assignment side of the fact that we specially handle
+        // 'length' for FastArrays.
+        if (outer_.flowContext_.isArrayClassType(objType)) {
+          auto *id = llvh::cast<ESTree::IdentifierNode>(mem->_property);
+          outer_.sm_.error(
+              node->getSourceRange(),
+              "ft: cannot assign to property '" + id->_name->str() +
+                  "' of typed Array");
+          return;
+        }
         const ClassType::Field *accessorField = nullptr;
         if (auto *classType = llvh::dyn_cast<ClassType>(objType->info)) {
           accessorField = findAccessorField(
@@ -1638,11 +2011,13 @@ class FlowChecker::ExprVisitor {
 
     Type *res;
     if (node->_operator->str() == "=") {
-      // Use the type of the LHS as the constraint for the RHS for '='.
-      visitESTreeNode(*this, node->_right, node, lt);
+      if (!arrayPatternLHS) {
+        // Use the type of the LHS as the constraint for the RHS for '='.
+        visitESTreeNode(*this, node->_right, node, lt);
+      }
       Type *rt = outer_.getNodeTypeOrAny(node->_right);
 
-      auto [rtNarrow, cf] = tryNarrowType(rt, lt);
+      auto [rtNarrow, cf] = outer_.tryNarrowType(rt, lt);
       if (!cf.canFlow) {
         outer_.sm_.error(
             node->getSourceRange(),
@@ -1682,7 +2057,7 @@ class FlowChecker::ExprVisitor {
         res = opResType;
       } else {
         // We are modifying a typed target. The type has to be compatible.
-        CanFlowResult cf = canAFlowIntoB(opResType, lt);
+        CanFlowResult cf = outer_.canAFlowIntoB(opResType, lt);
         if (!cf.canFlow) {
           outer_.sm_.error(
               node->getSourceRange(),
@@ -1711,25 +2086,136 @@ class FlowChecker::ExprVisitor {
       ESTree::ArrayPatternNode *node,
       ESTree::Node *parent,
       Type *constraint) {
-    // For now, this just marks the array pattern (used on the LHS of assignment
-    // expressions) as a tuple, so that it can be used with destructuring.
-    // This isn't called from variable declaration nodes here, because
-    // AnnotateScopeDecls handles variable declarations directly.
-    // The tuple type is then read by, e.g., visit(AssignmentExpressionNode *),
-    // which will use the tuple type to typecheck the assignment itself.
-    // TODO: Determine how to destructure from arrays.
+    // This is only invoked for the LHS of an AssignmentExpression — variable
+    // declaration patterns are handled directly by AnnotateScopeDecls.
+    assert(
+        !llvh::isa<ESTree::VariableDeclaratorNode>(parent) &&
+        "use AnnotateScopeDecls for declarations");
 
-    // Annotate the children of the array pattern.
-    visitESTreeChildren(*this, node, nullptr);
+    /// Verify that an already-visited non-pattern child's type is compatible
+    /// with the expected element type of the destructuring.
+    auto checkChild = [this](ESTree::Node *target, Type *expected) {
+      Type *ct = outer_.getNodeTypeOrAny(target);
+      CanFlowResult cf = outer_.canAFlowIntoB(expected, ct);
+      if (!cf.canFlow || cf.needCheckedCast) {
+        outer_.sm_.error(
+            target->getSourceRange(),
+            "ft: incompatible element type in array destructuring");
+      }
+    };
+
+    // When the parent assignment knows the RHS type, it forwards it as
+    // \p constraint. We use it to type the pattern correctly in a single
+    // pass: an Array<T> constraint flows T into each element (and Array<T>
+    // into a trailing rest binding), so IRGen dispatches to
+    // emitDestructuringTypedArray. Other constraints (or no constraint) fall
+    // through to the legacy tuple-of-children-types behavior, which lets
+    // the assignment's tryNarrowType check element compatibility.
+    if (outer_.flowContext_.isArrayClassType(constraint)) {
+      // Default values aren't supported in typed array destructuring yet.
+      // Emit a clear Sema error here so users don't get IRGen's generic
+      // "unsupported destructuring target" message.
+      for (ESTree::Node &child : node->_elements) {
+        if (llvh::isa<ESTree::AssignmentPatternNode>(&child)) {
+          outer_.sm_.error(
+              child.getSourceRange(),
+              "ft: default values are not yet supported "
+              "in typed array destructuring");
+          outer_.setNodeType(node, outer_.flowContext_.getAny());
+          return;
+        }
+      }
+
+      outer_.setNodeType(node, constraint);
+      Type *elemType = outer_.flowContext_.getArrayElementType(constraint);
+
+      for (ESTree::Node &child : node->_elements) {
+        if (llvh::isa<ESTree::EmptyNode>(&child))
+          continue;
+        if (auto *rest = llvh::dyn_cast<ESTree::RestElementNode>(&child)) {
+          // Rest binding receives the array type itself.
+          visitAssignmentTarget(rest->_argument, &child, constraint);
+          if (!llvh::isa<ESTree::ArrayPatternNode>(rest->_argument)) {
+            checkChild(rest->_argument, constraint);
+          }
+          break;
+        }
+        visitAssignmentTarget(&child, node, elemType);
+        if (!llvh::isa<ESTree::ArrayPatternNode>(&child)) {
+          checkChild(&child, elemType);
+        }
+      }
+      return;
+    }
+
+    // For tuple constraints, rest elements are not permitted. The parser
+    // guarantees rest, if present, is the last element. Setting the node
+    // type to any short-circuits the assignment-level narrow check so the
+    // user only sees the actionable rest-rejection error.
+    if (constraint && llvh::isa<TupleType>(constraint->info) &&
+        !node->_elements.empty()) {
+      if (auto *rest = llvh::dyn_cast<ESTree::RestElementNode>(
+              &node->_elements.back())) {
+        outer_.sm_.error(
+            rest->getSourceRange(),
+            "ft: rest element not allowed when destructuring a tuple");
+        outer_.setNodeType(node, outer_.flowContext_.getAny());
+        return;
+      }
+    }
+
+    // Annotate the children of the array pattern. All slots are write
+    // bindings; route each through visitAssignmentTarget.
+    for (ESTree::Node &child : node->_elements)
+      visitAssignmentTarget(&child, node, nullptr);
 
     llvh::SmallVector<Type *, 4> types;
-    for (ESTree::Node &elem : node->_elements) {
+    for (ESTree::Node &elem : node->_elements)
       types.push_back(outer_.getNodeTypeOrAny(&elem));
-    }
+
     outer_.setNodeType(
         node,
         outer_.flowContext_.createType(
             outer_.flowContext_.createTuple(types), node));
+  }
+
+  /// Object destructuring LHS (`({x: a.b} = src)`). The parser converts an
+  /// object literal in an assignment LHS into an ObjectPatternNode. Each
+  /// property's `_value` is a write target; a trailing `RestElement`
+  /// argument is also a write binding.
+  void visit(
+      ESTree::ObjectPatternNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
+    for (ESTree::Node &child : node->_properties) {
+      if (auto *prop = llvh::dyn_cast<ESTree::PropertyNode>(&child)) {
+        // The key is read as a property name; not a value position.
+        visitESTreeNodeNoReplace(*this, prop->_key, prop, nullptr);
+        visitAssignmentTarget(prop->_value, prop, nullptr);
+      } else if (auto *rest = llvh::dyn_cast<ESTree::RestElementNode>(&child)) {
+        visitAssignmentTarget(rest->_argument, rest, nullptr);
+      } else {
+        visitAssignmentTarget(&child, node, nullptr);
+      }
+    }
+  }
+
+  /// Default-value pattern (`{a = 1} = obj`, `[a = 1] = arr`). Always
+  /// invoked inside a destructuring write position, so `_left` is a write
+  /// target and `_right` is a read.
+  void visit(
+      ESTree::AssignmentPatternNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
+    visitAssignmentTarget(node->_left, node, constraint);
+    visitESTreeNode(*this, node->_right, node, nullptr);
+  }
+
+  /// Rest binding (`[...rest]` or `{...rest}` LHS). The argument is a
+  /// write target.
+  void
+  visit(ESTree::RestElementNode *node, ESTree::Node *parent, Type *constraint) {
+    visitAssignmentTarget(node->_argument, node, constraint);
   }
 
   void visit(
@@ -1776,9 +2262,41 @@ class FlowChecker::ExprVisitor {
     // Whether we have to visit the arguments or not depends on whether we
     // visited them during generic type argument inference.
     bool shouldVisitArguments = true;
-    // Whether we need to visit the callee. Set to false for generic method
-    // calls where we've already set the type.
+    // Whether we need to visit the callee. Set to false when the callee has
+    // already been visited above.
     bool shouldVisitCallee = true;
+    // Whether overload resolution was already performed (e.g. via explicit
+    // type arguments). Skip the later overloaded method check if true.
+    bool overloadResolved = false;
+
+    // Check for fn.call(thisArg, args...) on a function-typed receiver.
+    if (auto *methodCallee =
+            llvh::dyn_cast<ESTree::MemberExpressionNode>(node->_callee);
+        methodCallee && !methodCallee->_computed &&
+        !llvh::isa<ESTree::SuperNode>(methodCallee->_object)) {
+      if (auto *propId =
+              llvh::dyn_cast<ESTree::IdentifierNode>(methodCallee->_property);
+          propId && propId->_name == outer_.kw_.identCall) {
+        // Visit just the object so we can inspect its type.
+        visitESTreeNode(*this, methodCallee->_object, methodCallee, nullptr);
+        Type *objType = outer_.getNodeTypeOrAny(methodCallee->_object);
+        if (llvh::isa<BaseFunctionType>(objType->info)) {
+          if (node->_typeArguments) {
+            outer_.sm_.error(
+                node->_typeArguments->getSourceRange(),
+                "ft: type arguments not allowed on function.call");
+            return;
+          }
+          checkFunctionPrototypeCall(node, methodCallee->_object, objType);
+          return;
+        }
+        // Receiver isn't a function: finish resolving the member expression
+        // (without re-visiting the object) and let the regular path emit the
+        // appropriate diagnostic.
+        resolveMemberExpressionType(methodCallee, node, /*isWrite*/ false);
+        shouldVisitCallee = false;
+      }
+    }
 
     // Handle generic calls and method calls.
 
@@ -1810,8 +2328,11 @@ class FlowChecker::ExprVisitor {
                    llvh::dyn_cast<ESTree::MemberExpressionNode>(node->_callee);
                memCallee && node->_typeArguments && !memCallee->_computed) {
       // Handle explicit type arguments on generic method calls.
-      // Visit the object early to determine the class type.
-      visitESTreeNode(*this, memCallee->_object, memCallee, nullptr);
+      // Visit the object early to determine the class type, unless the
+      // callee has already been visited above (in which case its object
+      // has been too).
+      if (shouldVisitCallee)
+        visitESTreeNode(*this, memCallee->_object, memCallee, nullptr);
       shouldVisitCallee = false;
       Type *objType = outer_.getNodeTypeOrAny(memCallee->_object);
 
@@ -1830,32 +2351,43 @@ class FlowChecker::ExprVisitor {
       }
 
       // Look up the method in the appropriate type.
-      OptValue<ClassType::FieldLookupEntry> optMethod;
+      const ClassType::Field *field = nullptr;
       if (auto *classType = llvh::dyn_cast<ClassType>(objType->info)) {
-        auto *homeObj = classType->getHomeObjectTypeInfo();
-        optMethod = isPrivate ? homeObj->findPrivateField(name)
-                              : homeObj->findPublicField(name);
+        field =
+            outer_.lookupPropertyOnClass(classType, name, memCallee->_property)
+                .second;
       } else if (
           auto *consType =
               llvh::dyn_cast<ClassConstructorType>(objType->info)) {
         auto *classTypeInfo =
             llvh::cast<ClassType>(consType->getClassType()->info);
         if (auto *staticInfo = classTypeInfo->getStaticObjectTypeInfo()) {
-          optMethod = isPrivate ? staticInfo->findPrivateField(name)
-                                : staticInfo->findPublicField(name);
+          auto optMethod = isPrivate ? staticInfo->findPrivateField(name)
+                                     : staticInfo->findPublicField(name);
+          if (optMethod)
+            field = optMethod->getField();
         }
       }
 
-      if (optMethod &&
-          llvh::isa<GenericType>(optMethod->getField()->type->info)) {
-        outer_.resolveCallToGenericMethodSpecialization(
-            node, memCallee, optMethod->getField()->method);
-      } else {
-        // Method is not generic but type arguments were provided.
-        outer_.sm_.error(
-            node->_typeArguments->getSourceRange(),
-            "ft: type arguments provided for non-generic method");
-        return;
+      if (field) {
+        if (field->isOverloaded()) {
+          auto *typeArgsNode =
+              llvh::cast<ESTree::TypeParameterInstantiationNode>(
+                  node->_typeArguments);
+          if (!resolveOverloadedMethodCall(
+                  node, memCallee, field, typeArgsNode))
+            return;
+          shouldVisitArguments = false;
+          overloadResolved = true;
+        } else if (llvh::isa<GenericType>(field->type->info)) {
+          outer_.resolveCallToGenericMethodSpecialization(
+              node, memCallee, field->method);
+        } else {
+          outer_.sm_.error(
+              node->_typeArguments->getSourceRange(),
+              "ft: type arguments provided for non-generic method");
+          return;
+        }
       }
     } else if (node->_typeArguments) {
       // Generics handled above.
@@ -1870,6 +2402,52 @@ class FlowChecker::ExprVisitor {
       visitESTreeNode(*this, node->_callee, node, nullptr);
     }
     Type *calleeType = outer_.getNodeTypeOrAny(node->_callee);
+
+    // Handle overloaded method calls if they haven't been resolved based on
+    // explicit type arguments.
+    // Check before generic inference since some overloads may be generic.
+    if (auto *methodCallee =
+            llvh::dyn_cast<ESTree::MemberExpressionNode>(node->_callee);
+        !overloadResolved && methodCallee && !methodCallee->_computed) {
+      Type *objType = outer_.getNodeTypeOrAny(methodCallee->_object);
+      const flow::ClassType::Field *field = nullptr;
+
+      Identifier name;
+      bool isPrivate = false;
+      if (auto *pn = llvh::dyn_cast<ESTree::PrivateNameNode>(
+              methodCallee->_property)) {
+        name = outer_.astContext_.getPrivateNameIdentifier(
+            llvh::cast<ESTree::IdentifierNode>(pn->_id)->_name);
+        isPrivate = true;
+      } else {
+        auto *id = llvh::cast<ESTree::IdentifierNode>(methodCallee->_property);
+        name = Identifier::getFromPointer(id->_name);
+      }
+
+      if (auto *classType = llvh::dyn_cast<flow::ClassType>(objType->info)) {
+        field =
+            outer_
+                .lookupPropertyOnClass(classType, name, methodCallee->_property)
+                .second;
+      } else if (
+          auto *consType =
+              llvh::dyn_cast<flow::ClassConstructorType>(objType->info)) {
+        auto *classTypeInfo =
+            llvh::cast<flow::ClassType>(consType->getClassType()->info);
+        if (auto *staticInfo = classTypeInfo->getStaticObjectTypeInfo()) {
+          auto optMethod = isPrivate ? staticInfo->findPrivateField(name)
+                                     : staticInfo->findPublicField(name);
+          if (optMethod)
+            field = optMethod->getField();
+        }
+      }
+      if (field && field->isOverloaded()) {
+        if (!resolveOverloadedMethodCall(node, methodCallee, field))
+          return;
+        shouldVisitArguments = false;
+        calleeType = outer_.getNodeTypeOrAny(node->_callee);
+      }
+    }
 
     // Handle generic method inference (no explicit type arguments).
     // After visiting the callee, if the type is GenericType, attempt to
@@ -2006,7 +2584,8 @@ class FlowChecker::ExprVisitor {
           thisArgType = outer_.getNodeTypeOrAny(methodCallee->_object);
         }
 
-        if (!canAFlowIntoB(thisArgType->info, expectedThisType->info).canFlow) {
+        if (!outer_.canAFlowIntoB(thisArgType->info, expectedThisType->info)
+                 .canFlow) {
           outer_.sm_.error(
               methodCallee->getSourceRange(), "ft: 'this' type mismatch");
           return;
@@ -2019,17 +2598,20 @@ class FlowChecker::ExprVisitor {
               "ft: 'super' call outside class");
           return;
         }
-        if (!canAFlowIntoB(
-                 outer_.curClassContext_->classType->info,
-                 expectedThisType->info)
+        if (!outer_
+                 .canAFlowIntoB(
+                     outer_.curClassContext_->classType->info,
+                     expectedThisType->info)
                  .canFlow) {
           outer_.sm_.error(
               node->_callee->getSourceRange(), "ft: 'this' type mismatch");
           return;
         }
       } else {
-        if (!canAFlowIntoB(
-                 outer_.flowContext_.getVoid()->info, expectedThisType->info)
+        if (!outer_
+                 .canAFlowIntoB(
+                     outer_.flowContext_.getVoid()->info,
+                     expectedThisType->info)
                  .canFlow) {
           outer_.sm_.error(
               node->_callee->getSourceRange(), "ft: 'this' type mismatch");
@@ -2039,7 +2621,7 @@ class FlowChecker::ExprVisitor {
     }
 
     outer_.setNodeType(node, returnType);
-    checkArgumentTypes(params, node, node->_arguments, "function");
+    checkCallArgumentTypes(params, node, node->_arguments, "function");
   }
 
   void checkSHBuiltin(
@@ -2074,7 +2656,71 @@ class FlowChecker::ExprVisitor {
       return;
     }
 
+    if (builtin->_name == outer_.kw_.identFastArrayPop) {
+      checkSHBuiltinFastArrayPop(call);
+      return;
+    }
+
+    if (builtin->_name == outer_.kw_.identFastArrayLength) {
+      checkSHBuiltinFastArrayLength(call);
+      return;
+    }
+
     outer_.sm_.error(call->getSourceRange(), "unknown SH builtin call");
+  }
+
+  /// $SHBuiltin.fastArrayLength(arr: Array<T>): number.
+  void checkSHBuiltinFastArrayLength(ESTree::CallExpressionNode *call) {
+    visitESTreeChildren(*this, call, nullptr);
+    if (call->_arguments.size() != 1) {
+      outer_.sm_.error(
+          call->getSourceRange(),
+          "ft: fastArrayLength requires exactly one argument");
+      return;
+    }
+    ESTree::Node *arrArg = &call->_arguments.front();
+    Type *argType = outer_.getNodeTypeOrAny(arrArg);
+    if (!outer_.flowContext_.isArrayClassType(argType)) {
+      outer_.sm_.error(
+          arrArg->getSourceRange(),
+          "ft: fastArrayLength argument must be an array");
+      return;
+    }
+    outer_.setNodeType(call, outer_.flowContext_.getNumber());
+  }
+
+  /// $SHBuiltin.fastArrayPop(arr: Array<T>, n: number): T | void.
+  void checkSHBuiltinFastArrayPop(ESTree::CallExpressionNode *call) {
+    visitESTreeChildren(*this, call, nullptr);
+    if (call->_arguments.size() != 2) {
+      outer_.sm_.error(
+          call->getSourceRange(),
+          "ft: fastArrayPop requires exactly two arguments");
+      return;
+    }
+    auto it = call->_arguments.begin();
+    ESTree::Node *arrArg = &*it++;
+    ESTree::Node *countArg = &*it;
+    Type *argType = outer_.getNodeTypeOrAny(arrArg);
+    if (!outer_.flowContext_.isArrayClassType(argType)) {
+      outer_.sm_.error(
+          arrArg->getSourceRange(),
+          "ft: fastArrayPop argument must be an array");
+      return;
+    }
+    Type *countType = outer_.getNodeTypeOrAny(countArg);
+    if (!llvh::isa<NumberType>(countType->info) &&
+        !llvh::isa<AnyType>(countType->info)) {
+      outer_.sm_.error(
+          countArg->getSourceRange(),
+          "ft: fastArrayPop count argument must be a number");
+      return;
+    }
+    Type *elemType = outer_.flowContext_.getArrayElementType(argType);
+    Type *voidType = outer_.flowContext_.getVoid();
+    Type *resType = outer_.flowContext_.createType(
+        outer_.flowContext_.maybeCreateUnion({elemType, voidType}));
+    outer_.setNodeType(call, resType);
   }
 
   /// $SHBuiltin.call(fn, this, arg1, ...)
@@ -2153,13 +2799,91 @@ class FlowChecker::ExprVisitor {
         : outer_.flowContext_.getAny();
     ESTree::Node *thisArg = &*it;
     Type *thisArgType = outer_.getNodeTypeOrAny(thisArg);
-    if (!canAFlowIntoB(thisArgType->info, expectedThisType->info).canFlow) {
+    if (!outer_.canAFlowIntoB(thisArgType->info, expectedThisType->info)
+             .canFlow) {
       outer_.sm_.error(thisArg->getSourceRange(), "ft: 'this' type mismatch");
       return;
     }
 
-    checkArgumentTypes(
+    checkCallArgumentTypes(
         ftype->getParams(), call, call->_arguments, "function", 2);
+    return;
+  }
+
+  /// Typecheck \c fn.call(thisArg, args...) on a function-typed receiver.
+  /// Precondition: \p fn has been visited and \p fnType is its resolved
+  /// BaseFunctionType.
+  void checkFunctionPrototypeCall(
+      ESTree::CallExpressionNode *call,
+      ESTree::Node *fn,
+      Type *fnType) {
+    auto it = call->_arguments.begin();
+
+    /// Visit the rest of the arguments without any constraints,
+    /// starting at \c it.
+    auto visitRemainingArgumentsWithoutConstraint =
+        [this, &it, call]() -> void {
+      for (auto e = call->_arguments.end(); it != e; ++it) {
+        ESTree::Node *arg = &*it;
+        visitESTreeNode(*this, arg, call, nullptr);
+      }
+    };
+
+    assert(
+        llvh::isa<BaseFunctionType>(fnType->info) &&
+        "checkFunctionPrototypeCall requires a BaseFunctionType receiver");
+    if (llvh::isa<NativeFunctionType>(fnType->info)) {
+      visitRemainingArgumentsWithoutConstraint();
+      outer_.sm_.error(
+          fn->getSourceRange(),
+          "ft: callee is a native function, cannot use function.call");
+      return;
+    }
+    auto *ftype = llvh::dyn_cast<TypedFunctionType>(fnType->info);
+
+    // If the receiver is an untyped function, we have nothing to check.
+    if (!ftype) {
+      visitRemainingArgumentsWithoutConstraint();
+      outer_.setNodeType(call, outer_.flowContext_.getAny());
+      return;
+    }
+
+    outer_.setNodeType(call, ftype->getReturnType());
+
+    if (it == call->_arguments.end()) {
+      outer_.sm_.error(
+          call->getSourceRange(),
+          "ft: function.call requires a 'this' argument");
+      return;
+    }
+
+    // Visit thisArg with no parameter constraint (it is bound to 'this',
+    // not to a regular parameter).
+    ESTree::Node *thisArg = &*it;
+    visitESTreeNodeNoReplace(*this, thisArg, call, nullptr);
+    ++it;
+
+    // Visit remaining args with constraints from the function's parameters.
+    size_t i = 0;
+    for (auto e = call->_arguments.end(); it != e; ++it) {
+      Type *constraint =
+          i < ftype->getParams().size() ? ftype->getParams()[i].type : nullptr;
+      visitESTreeNodeNoReplace(*this, &*it, call, constraint);
+      ++i;
+    }
+
+    Type *expectedThisType = ftype->getThisParam()
+        ? ftype->getThisParam()
+        : outer_.flowContext_.getAny();
+    Type *thisArgType = outer_.getNodeTypeOrAny(thisArg);
+    if (!outer_.canAFlowIntoB(thisArgType->info, expectedThisType->info)
+             .canFlow) {
+      outer_.sm_.error(thisArg->getSourceRange(), "ft: 'this' type mismatch");
+      return;
+    }
+
+    checkCallArgumentTypes(
+        ftype->getParams(), call, call->_arguments, "function.call", 1);
     return;
   }
 
@@ -2577,7 +3301,7 @@ class FlowChecker::ExprVisitor {
         break;
     }
     if (consFType) {
-      checkArgumentTypes(
+      checkCallArgumentTypes(
           llvh::cast<TypedFunctionType>(consFType->info)->getParams(),
           node,
           node->_arguments,
@@ -2620,25 +3344,63 @@ class FlowChecker::ExprVisitor {
     }
   }
 
-  /// Check the types of the supplies arguments, adding checked casts if needed.
+  /// Check the types of the supplied arguments, adding checked casts if
+  /// needed. If \p reportErrors is false, silently check without emitting
+  /// errors or inserting casts.
   /// \param offset the number of arguments to ignore at the front of \p
   ///   arguments. Used for $SHBuiltin.call, which has extra args at the front.
-  bool checkArgumentTypes(
+  bool checkCallArgumentTypes(
       llvh::ArrayRef<TypedFunctionType::Param> params,
       ESTree::Node *callNode,
       ESTree::NodeList &arguments,
       const llvh::Twine &calleeName,
-      uint32_t offset = 0) {
+      uint32_t offset = 0,
+      bool reportErrors = true) {
     size_t numArgs = arguments.size() - offset;
-    if (params.size() != numArgs) {
-      // Allow fewer arguments when trailing params are optional.
-      if (numArgs < params.size() && params[numArgs].optional) {
-        // OK: all remaining params starting from numArgs are optional
-        // (the parser enforces optional params come last).
-      } else {
+    bool hasRest = !params.empty() && params.back().rest;
+    size_t numNonRestParams = hasRest ? params.size() - 1 : params.size();
+
+    // \return whether the param may be omitted at the call site if it is
+    // explicitly optional or if `void` flows into its type.
+    auto paramOmittable = [this](const TypedFunctionType::Param &p) -> bool {
+      return p.optional ||
+          outer_.canAFlowIntoB(outer_.flowContext_.getVoid(), p.type).canFlow;
+    };
+
+    // Extract element type for rest param if present.
+    Type *restElementType = nullptr;
+    if (hasRest) {
+      Type *restParamType = params.back().type;
+      if (outer_.flowContext_.isArrayClassType(restParamType)) {
+        restElementType =
+            outer_.flowContext_.getArrayElementType(restParamType);
+      }
+    }
+
+    if (hasRest) {
+      // With rest param, need at least the required non-rest params.
+      size_t numRequired = numNonRestParams;
+      while (numRequired > 0 && paramOmittable(params[numRequired - 1]))
+        --numRequired;
+      if (numArgs < numRequired) {
+        if (reportErrors) {
+          outer_.sm_.error(
+              callNode->getSourceRange(),
+              "ft: " + calleeName + " expects at least " +
+                  llvh::Twine(numRequired) + " arguments, but " +
+                  llvh::Twine(numArgs) + " supplied");
+        }
+        return false;
+      }
+    } else if (
+        numArgs > params.size() ||
+        !llvh::all_of(params.drop_front(numArgs), paramOmittable)) {
+      // Reject extra args, or fewer args when some trailing missing param
+      // is not omittable.
+      if (reportErrors) {
         // Count the number of required parameters.
         size_t numRequired = params.size();
-        while (numRequired > 0 && params[numRequired - 1].optional)
+        while (numRequired > 0 && paramOmittable(params[numRequired - 1]))
           --numRequired;
         outer_.sm_.error(
             callNode->getSourceRange(),
@@ -2649,8 +3411,8 @@ class FlowChecker::ExprVisitor {
                             ? "at least " + llvh::Twine(numRequired)
                             : llvh::Twine(params.size()))) +
                 " arguments, but " + llvh::Twine(numArgs) + " supplied");
-        return false;
       }
+      return false;
     }
 
     auto begin = arguments.begin();
@@ -2662,34 +3424,52 @@ class FlowChecker::ExprVisitor {
       ESTree::Node *arg = &*it;
 
       if (llvh::isa<ESTree::SpreadElementNode>(arg)) {
-        outer_.sm_.error(
-            arg->getSourceRange(), "ft: argument spread is not supported");
+        if (reportErrors) {
+          outer_.sm_.error(
+              arg->getSourceRange(), "ft: argument spread is not supported");
+        }
         return false;
       }
 
-      const TypedFunctionType::Param &param = params[argIndex];
-      Type *expectedType = param.type;
+      Type *expectedType;
+      if (argIndex < numNonRestParams) {
+        expectedType = params[argIndex].type;
+      } else if (restElementType) {
+        expectedType = restElementType;
+      } else {
+        // Rest param without Array<T> type, skip checking.
+        continue;
+      }
+
       Type *argType = outer_.getNodeTypeOrAny(arg);
-      auto [argTypeNarrow, cf] = tryNarrowType(argType, expectedType);
+      auto [argTypeNarrow, cf] = outer_.tryNarrowType(argType, expectedType);
 
       if (!cf.canFlow) {
-        if (param.name.isValid()) {
-          outer_.sm_.error(
-              arg->getSourceRange(),
-              "ft: " + calleeName + " parameter '" + param.name.str() +
-                  "' type mismatch");
-        } else {
-          outer_.sm_.error(
-              arg->getSourceRange(),
-              "ft: " + calleeName + " parameter #" + llvh::Twine(argIndex + 1) +
-                  " type mismatch");
+        if (reportErrors) {
+          std::string argTypeStr = argType->messageString();
+          std::string expectedTypeStr = expectedType->messageString();
+          if (argIndex < numNonRestParams && params[argIndex].name.isValid()) {
+            outer_.sm_.error(
+                arg->getSourceRange(),
+                "ft: " + calleeName + " parameter '" +
+                    params[argIndex].name.str() +
+                    "' type mismatch: cannot assign " + argTypeStr + " to " +
+                    expectedTypeStr);
+          } else {
+            outer_.sm_.error(
+                arg->getSourceRange(),
+                "ft: " + calleeName + " parameter #" +
+                    llvh::Twine(argIndex + 1) +
+                    " type mismatch: cannot assign " + argTypeStr + " to " +
+                    expectedTypeStr);
+          }
         }
         return false;
       }
       // If a cast is needed, replace the argument with the cast.
-      if (cf.needCheckedCast && outer_.compile_) {
-        // Insert the new node before the current node and erase the current
-        // one.
+      if (reportErrors && cf.needCheckedCast && outer_.compile_) {
+        // Insert the new node before the current node and erase the
+        // current one.
         auto newIt = arguments.insert(
             it, *outer_.implicitCheckedCast(arg, argTypeNarrow, cf));
         arguments.erase(it);
@@ -2697,6 +3477,124 @@ class FlowChecker::ExprVisitor {
       }
     }
 
+    return true;
+  }
+
+  /// Resolve a call to an overloaded method by selecting the matching
+  /// overload and setting the callee type. Does not set the return type
+  /// on the call node — the caller should fall through to the normal
+  /// call checking path for argument type checking and return type.
+  /// On success, the call's arguments have already been visited.
+  /// \param explicitTypeArgs optional explicit type arguments node from the
+  ///   call expression. If non-null, only generic overloads with matching
+  ///   type-parameter count are considered, and the explicit types are used
+  ///   directly instead of inference; non-generic overloads are skipped.
+  /// \return false on error (already reported), true on success.
+  LLVM_NODISCARD bool resolveOverloadedMethodCall(
+      ESTree::CallExpressionNode *node,
+      ESTree::MemberExpressionNode *callee,
+      const ClassType::Field *field,
+      ESTree::TypeParameterInstantiationNode *explicitTypeArgs = nullptr) {
+    assert(field->isOverloaded() && "field must be overloaded");
+
+    Type *objType = outer_.getNodeTypeOrAny(callee->_object);
+
+    // Pre-parse explicit type arguments if provided.
+    llvh::SmallVector<Type *, 2> explicitTypeArgTypes;
+    if (explicitTypeArgs) {
+      for (ESTree::Node &arg : explicitTypeArgs->_params) {
+        explicitTypeArgTypes.push_back(outer_.parseTypeAnnotation(&arg));
+      }
+    }
+
+    // Visit arguments without constraints to determine their types.
+    for (ESTree::Node &arg : node->_arguments) {
+      outer_.visitExpression(&arg, node, nullptr);
+    }
+
+    // Check each overload for type compatibility with the
+    // arguments, selecting the unique match.
+    // If there's two matches, it's an ambiguous callsite.
+    // If there's no matches it doesn't typecheck.
+    Type *matchedType = nullptr;
+    sema::Decl *matchedDecl = nullptr;
+
+    for (const auto &[overloadMethod, originalOverloadType] :
+         field->overloads) {
+      Type *overloadType = originalOverloadType;
+      sema::Decl *overloadDecl = nullptr;
+
+      if (llvh::isa<GenericType>(originalOverloadType->info)) {
+        llvh::SmallVector<Type *, 2> typeArgs;
+        if (explicitTypeArgs) {
+          // Only consider generic overloads whose type-parameter count
+          // matches the number of explicit type arguments.
+          auto *fe = llvh::cast<ESTree::FunctionExpressionNode>(
+              overloadMethod->_value);
+          auto *typeParams = llvh::cast<ESTree::TypeParameterDeclarationNode>(
+              fe->_typeParameters);
+          if (typeParams->_params.size() != explicitTypeArgTypes.size())
+            continue;
+          typeArgs.assign(
+              explicitTypeArgTypes.begin(), explicitTypeArgTypes.end());
+        } else {
+          // Infer type arguments and specialize.
+          auto [didVisitArgs, inferred] =
+              outer_.inferTypeArgumentsForGenericMethodCall(
+                  node, callee, overloadMethod);
+          if (inferred.empty())
+            continue;
+          typeArgs = std::move(inferred);
+        }
+        auto result = outer_.specializeGenericMethodWithParsedTypes(
+            overloadMethod, node->getSourceRange(), typeArgs, objType);
+        if (!result.type)
+          continue;
+        overloadType = result.type;
+        overloadDecl = result.decl;
+      } else {
+        // Non-generic overload: explicit type arguments don't apply.
+        if (explicitTypeArgs)
+          continue;
+        overloadDecl = outer_.semContext_.getExpressionDecl(
+            ESTree::getPropertyIdentifier(overloadMethod->_key));
+      }
+
+      auto *fnType = llvh::dyn_cast<TypedFunctionType>(overloadType->info);
+      if (!fnType)
+        continue;
+
+      // Check arity and argument types (silent — no error reporting).
+      if (!checkCallArgumentTypes(
+              fnType->getParams(),
+              node,
+              node->_arguments,
+              /* calleeName */ "",
+              /* offset */ 0,
+              /* reportErrors */ false))
+        continue;
+
+      if (matchedType) {
+        outer_.sm_.error(
+            node->getSourceRange(),
+            "ft: ambiguous call: multiple overloads match");
+        return false;
+      }
+      matchedType = overloadType;
+      matchedDecl = overloadDecl;
+    }
+
+    if (!matchedType) {
+      outer_.sm_.error(
+          node->getSourceRange(), "ft: no matching overload for call");
+      return false;
+    }
+
+    assert(matchedDecl && "overloaded methods have a Decl (they are final)");
+    outer_.semContext_.setExpressionDecl(
+        ESTree::getPropertyIdentifier(callee->_property), matchedDecl);
+
+    outer_.setNodeType(callee, matchedType);
     return true;
   }
 };

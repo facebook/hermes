@@ -15,11 +15,24 @@ static const unsigned char typedLibSource[] = {
     ,
     0x00};
 
+static const unsigned char typedLanguageDoc[] = {
+#include "TypedLanguage.inc"
+    // Add null terminator for safety.
+    ,
+    0x00};
+
 llvh::StringRef getTypedLibSource() {
   // Return size without the null terminator.
   return llvh::StringRef(
       reinterpret_cast<const char *>(typedLibSource),
       sizeof(typedLibSource) - 1);
+}
+
+llvh::StringRef getTypedLanguageDoc() {
+  // Return size without the null terminator.
+  return llvh::StringRef(
+      reinterpret_cast<const char *>(typedLanguageDoc),
+      sizeof(typedLanguageDoc) - 1);
 }
 
 } // namespace hermes

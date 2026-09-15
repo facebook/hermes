@@ -1018,9 +1018,6 @@ bool JSLexer::isCurrentTokenADirective() {
       }
     }
   }
-
-  // We arrive here if we matched a directive. 'ptr' is the final character.
-  return true;
 }
 
 const Token *JSLexer::rescanRBraceInTemplateLiteral() {

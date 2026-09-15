@@ -18,6 +18,8 @@
 namespace hermes {
 namespace vm {
 
+class Callable;
+
 struct HashSetEntry {
   static constexpr uint8_t kElementsPerEntry = 1;
 };
@@ -161,6 +163,25 @@ class OrderedHashMapBase {
   static ExecutionStatus
   insert(Handle<Derived> self, Runtime &runtime, Handle<> key);
 
+  /// If \p key already exists, \return its current value without overwriting
+  /// it. Otherwise insert \p key -> \p value and \return \p value.
+  template <typename = std::enable_if<std::is_same_v<BucketType, HashMapEntry>>>
+  static CallResult<HermesValue> getOrInsert(
+      Handle<Derived> self,
+      Runtime &runtime,
+      Handle<> key,
+      Handle<> value);
+
+  /// If \p key already exists, \return its current value (without invoking \p
+  /// callback). Otherwise call \p callback with the key to produce the value,
+  /// then store key -> value and \return that value.
+  template <typename = std::enable_if<std::is_same_v<BucketType, HashMapEntry>>>
+  static CallResult<HermesValue> getOrInsertComputed(
+      Handle<Derived> self,
+      Runtime &runtime,
+      Handle<> key,
+      Handle<Callable> callback);
+
   /// Erase a HermesValue from the map, \return true if succeed.
   static bool erase(Handle<Derived> self, Runtime &runtime, Handle<> key);
 
@@ -294,6 +315,9 @@ class OrderedHashMapBase {
   static constexpr uint32_t kHashTableElementUnused = kMaxCapacity + 1;
   /// For epresenting when the hash table element is deleted.
   static constexpr uint32_t kHashTableElementDeleted = kMaxCapacity + 2;
+  static_assert(
+      kHashTableElementDeleted > kMaxCapacity,
+      "kHashTableElementDeleted overflows.");
 
   /// Capacity of the hash table.
   uint32_t capacity_{kInitialCapacity};
@@ -304,6 +328,13 @@ class OrderedHashMapBase {
   /// Number of deleted entries in the storage. The count will be reset during
   /// rehash and clear.
   uint32_t deletedCount_{0};
+
+  /// Set to true by every structural modification of the table — i.e. any
+  /// operation that can relocate entries and so make a previously-resolved
+  /// bucket index stale.
+  /// Placed here to reuse the tail padding after the three
+  /// uint32_t fields.
+  bool cachedBucketInvalidated_{false};
 
   /// \param hashTableCapacity hash table's capacity in number of elements
   /// \return the actual number of elements to allocate for data table based on
@@ -351,7 +382,10 @@ class OrderedHashMapBase {
   /// after a rehash. A rehash will remove any deleted entries of the
   /// OrderedHashMap, so indices need to be adjusted to account for those
   /// removed entries.
-  void updateIteratorIndicesForRehash(Runtime &runtime);
+  /// \param deletedEntryIndices the entry index of every deleted entry, in
+  /// ascending order.
+  void updateIteratorIndicesForRehash(
+      llvh::ArrayRef<uint32_t> deletedEntryIndices);
 
   /// Calculate the next capacity based on the current capacity and key count.
   /// If there are enough unused capacity, then the next capacity will shrink.
@@ -381,11 +415,6 @@ class OrderedHashMapBase {
       }
     }
     return capacity * kGrowOrShrinkFactor;
-  }
-
-  /// Check if the bucket is deleted or not.
-  static bool isDeleted(SmallHermesValue bucket) {
-    return bucket.isNull();
   }
 
   /// Mark the bucket as deleted.

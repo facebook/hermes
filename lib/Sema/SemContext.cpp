@@ -451,7 +451,10 @@ void SemContextDumper::printFunction(
     const FunctionInfo &f,
     unsigned level) {
   os << ind(level) << (f.isStaticBlock ? "StaticBlock " : "Func ")
-     << (f.strict ? "strict" : "loose") << "\n";
+     << (f.strict ? "strict" : "loose")
+     << (f.mayReachImplicitReturn ? " mayReachImplicitReturn"
+                                  : " noImplicitReturn")
+     << "\n";
   std::map<const LexicalScope *, llvh::SmallVector<const LexicalScope *, 2>>
       children;
 
@@ -490,8 +493,15 @@ void SemContextDumper::printScope(
     os << '\n';
   }
   for (const auto *fd : s->hoistedFunctions) {
-    os << ind(level + 1) << "hoistedFunction "
-       << llvh::cast<ESTree::IdentifierNode>(fd->_id)->_name->str() << "\n";
+    os << ind(level + 1) << "hoistedFunction ";
+    // An anonymous `export default function` is only rewritten to a
+    // FunctionExpression when compiling, so when resolving on behalf of a
+    // parser (resolveASTForParser) a hoisted function may have no name.
+    if (fd->_id)
+      os << llvh::cast<ESTree::IdentifierNode>(fd->_id)->_name->str();
+    else
+      os << "*default*";
+    os << "\n";
   }
 }
 

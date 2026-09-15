@@ -10,6 +10,7 @@
 #include "Object.h"
 
 #include "hermes/Support/BuildTable256.h"
+#include "hermes/Support/FastArraySearch.h"
 #include "hermes/VM/ArrayLike.h"
 #include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/Callable.h"
@@ -619,6 +620,15 @@ void quoteStringForJSON(Output &output, llvh::ArrayRef<CharT> view) {
   const CharT *beginUnescPtr = begin;
   // Quote.2.
   while (cursor < end) {
+    // SIMD fast skip: advance cursor past normal characters in bulk.
+    // Only for ASCII — UTF-16 needs surrogate handling that scanJsonEscapeU16
+    // does not cover.
+    if constexpr (sizeof(CharT) == 1) {
+      const CharT *scanEnd = scanJsonEscapeU8(cursor, end);
+      cursor = scanEnd;
+      if (cursor >= end)
+        break;
+    }
     CharT ch = *cursor;
     if constexpr (sizeof(CharT) > 1) {
       if (ch >= UNICODE_SURROGATE_FIRST && ch <= UNICODE_SURROGATE_LAST) {

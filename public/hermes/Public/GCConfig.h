@@ -108,7 +108,7 @@ struct GCAnalyticsEvent {
     nullptr)                                                                   \
   /* GC_TRIPWIRE_FIELDS END */
 
-_HERMES_CTORCONFIG_STRUCT(GCTripwireConfig, GC_TRIPWIRE_FIELDS, {})
+_HERMES_CTORCONFIG_STRUCT(GCTripwireConfig, 1, GC_TRIPWIRE_FIELDS, {})
 
 #undef HEAP_TRIPWIRE_FIELDS
 
@@ -122,7 +122,7 @@ _HERMES_CTORCONFIG_STRUCT(GCTripwireConfig, GC_TRIPWIRE_FIELDS, {})
   F(constexpr, int64_t, RandomSeed, -1)                               \
   /* GC_HANDLESAN_FIELDS END */
 
-_HERMES_CTORCONFIG_STRUCT(GCSanitizeConfig, GC_HANDLESAN_FIELDS, {})
+_HERMES_CTORCONFIG_STRUCT(GCSanitizeConfig, 1, GC_HANDLESAN_FIELDS, {})
 
 #undef GC_HANDLESAN_FIELDS
 
@@ -200,7 +200,13 @@ enum class GCEventKind {
     nullptr)                                                             \
   /* GC_FIELDS END */
 
-_HERMES_CTORCONFIG_STRUCT(GCConfig, GC_FIELDS, {
+/// Version of GCConfig.
+/// Changing this struct in a non-compatible way (e.g., adding new field in the
+/// middle or changing field types) requires bumping the version.
+/// Date: Aug 10, 2026
+#define HERMES_GCCONFIG_VERSION 1
+
+_HERMES_CTORCONFIG_STRUCT(GCConfig, HERMES_GCCONFIG_VERSION, GC_FIELDS, {
   // Make sure the max is at least the Init.
   MaxHeapSize_ = std::max(InitHeapSize_, MaxHeapSize_);
 })

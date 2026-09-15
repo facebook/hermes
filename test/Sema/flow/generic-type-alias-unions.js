@@ -33,7 +33,7 @@ var c2: C_crazy;
 // CHECK-NEXT:})
 
 // CHECK:SemContext
-// CHECK-NEXT:Func strict
+// CHECK-NEXT:Func strict mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:        Decl %d.2 'Foo' Class : %class_constructor.2
@@ -42,9 +42,9 @@ var c2: C_crazy;
 // CHECK-NEXT:        Decl %d.5 'arguments' Var Arguments
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:        Scope %s.3
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.4
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.5
 
 // CHECK:FunctionExpression : %untyped_function.1

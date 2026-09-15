@@ -13,4 +13,4 @@ func();
 // CHECK: {{.*}}:[[@LINE-1]]:1: error: ft: function expects 1 arguments, but 0 supplied
 
 func("foo");
-// CHECK: {{.*}}:[[@LINE-1]]:6: error: ft: function parameter 'x' type mismatch
+// CHECK: {{.*}}:[[@LINE-1]]:6: error: ft: function parameter 'x' type mismatch: cannot assign string to number

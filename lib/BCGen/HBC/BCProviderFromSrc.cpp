@@ -104,6 +104,7 @@ BCProviderFromSrc::create(
 
   CodeGenerationSettings codeGenOpts{};
   codeGenOpts.test262 = compileFlags.test262;
+  codeGenOpts.enableTDZ = compileFlags.enableTDZ;
 
   OptimizationSettings optSettings;
   // If the optional value is not set, the parser will automatically detect
@@ -217,8 +218,8 @@ BCProviderFromSrc::create(
   if (!parsed)
     return {nullptr, getErrorString()};
 
-  parsed = llvh::cast<ESTree::ProgramNode>(
-      hermes::transformASTForCompilation(*context, *parsed));
+  parsed = llvh::cast_or_null<ESTree::ProgramNode>(
+      hermes::transformASTForCompilation(*context, /* typed */ false, *parsed));
 
   if (!parsed ||
       !hermes::sema::resolveAST(*context, *semCtx, *parsed, declFileList)) {
@@ -252,8 +253,15 @@ BCProviderFromSrc::create(
   if (context->getSourceErrorManager().getErrorCount() > 0) {
     return {nullptr, getErrorString()};
   }
-  auto result =
-      createFromBytecodeModule(std::move(BM), CompilationData{opts, M, semCtx});
+  bool keepCompilationData =
+      context->getDebugInfoSetting() == DebugInfoSetting::ALL ||
+      context->isLazyCompilation();
+  auto result = createFromBytecodeModule(
+      std::move(BM),
+      CompilationData{
+          opts,
+          keepCompilationData ? M : nullptr,
+          keepCompilationData ? semCtx : nullptr});
   if (compileFlags.requireSingleFunction &&
       !isSingleFunctionExpression(parsed.getValue())) {
     return {nullptr, "Invalid function expression"};

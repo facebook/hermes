@@ -501,12 +501,18 @@ class WordBoundaryNode final : public Node {
   /// Whether the boundary is inverted (\B instead of \b).
   bool invert_;
 
+  /// Whether the ignoreCase flag is set.
+  bool icase_;
+
  public:
-  WordBoundaryNode(bool invert) : invert_(invert) {}
+  WordBoundaryNode(bool invert, bool icase) : invert_(invert), icase_(icase) {}
 
  private:
   virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
-    bcs.emit<WordBoundaryInsn>()->invert = invert_;
+    if (icase_)
+      bcs.emit<WordBoundaryICaseInsn>()->invert = invert_;
+    else
+      bcs.emit<WordBoundaryInsn>()->invert = invert_;
     return nullptr;
   }
 };

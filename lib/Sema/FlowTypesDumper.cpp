@@ -12,6 +12,19 @@
 namespace hermes {
 namespace flow {
 
+/// \return the prefix string denoting a field's variance, if any.
+static llvh::StringRef getVariancePrefix(FieldVariance variance) {
+  switch (variance) {
+    case FieldVariance::None:
+      return "";
+    case FieldVariance::ReadOnly:
+      return "+";
+    case FieldVariance::WriteOnly:
+      return "-";
+  }
+  llvm_unreachable("invalid FieldVariance");
+}
+
 /// Get the type name formatted as a variable identifier.
 static llvh::StringRef getTypeAsVarName(const TypeInfo *type) {
   switch (type->getKind()) {
@@ -99,8 +112,12 @@ void FlowTypesDumper::printTypeDescription(
         if (!first)
           os << ", ";
         first = false;
+        if (param.rest)
+          os << "...";
         if (param.name.isValid()) {
           os << param.name;
+          if (param.optional)
+            os << '?';
           os << ": ";
         }
         printTypeRef(os, param.type);
@@ -118,8 +135,13 @@ void FlowTypesDumper::printTypeDescription(
         if (!first)
           os << ", ";
         first = false;
-        if (param.name.isValid())
+        if (param.rest)
+          os << "...";
+        if (param.name.isValid()) {
           os << param.name;
+          if (param.optional)
+            os << '?';
+        }
         os << ": ";
         printTypeRef(os, param.type);
       }
@@ -176,9 +198,18 @@ void FlowTypesDumper::printTypeDescription(
         os << "  " << field.name;
         if (field.isMethod())
           os << (field.overridden ? " [overridden]" : " [final]");
-        os << ": ";
-        printTypeRef(os, field.type);
-        os << '\n';
+        if (field.isOverloaded()) {
+          os << " [overloaded]:";
+          for (const auto &[overloadMethod, overloadType] : field.overloads) {
+            os << ' ';
+            printTypeRef(os, overloadType);
+          }
+          os << '\n';
+        } else {
+          os << ": ";
+          printTypeRef(os, field.type);
+          os << '\n';
+        }
       }
       os << "})";
     } break;
@@ -216,10 +247,18 @@ void FlowTypesDumper::printTypeDescription(
     }
 
     case TypeKind::ExactObject: {
+      auto *exactObj = llvh::cast<ExactObjectType>(type);
       os << "({\n";
-      for (const auto &field : llvh::cast<ExactObjectType>(type)->getFields()) {
-        os << "  " << field.name << ": ";
+      for (const auto &field : exactObj->getFields()) {
+        os << "  " << getVariancePrefix(field.variance) << field.name << ": ";
         printTypeRef(os, field.type);
+        os << '\n';
+      }
+      if (const auto &indexer = exactObj->getIndexer()) {
+        os << "  " << getVariancePrefix(indexer->variance) << '[';
+        printTypeRef(os, indexer->keyType);
+        os << "]: ";
+        printTypeRef(os, indexer->valueType);
         os << '\n';
       }
       os << "})";

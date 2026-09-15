@@ -15,6 +15,7 @@
 
 #include <cstdint>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace facebook {
@@ -65,12 +66,13 @@ inline TextDecoderNativeState *getTextDecoderState(
 }
 
 /// Get input bytes from a value that can be ArrayBuffer, TypedArray, or
-/// DataView. Returns {nullptr, 0} for undefined/null.
+/// DataView. Returns an empty view for undefined/null. The result roots the
+/// backing ArrayBuffer, so it must outlive the use of its bytes.
 /// Throws JSError if the value is not a valid buffer type.
 /// Throws JSINativeException (to be caught by caller) if buffer is detached.
 TypedArrayBufferInfo getInputBytes(jsi::Runtime &rt, const jsi::Value &val) {
   if (val.isUndefined() || val.isNull()) {
-    return {nullptr, 0};
+    return TypedArrayBufferInfo();
   }
 
   if (!val.isObject()) {
@@ -85,7 +87,9 @@ TypedArrayBufferInfo getInputBytes(jsi::Runtime &rt, const jsi::Value &val) {
   if (obj.isArrayBuffer(rt)) {
     jsi::ArrayBuffer ab = obj.getArrayBuffer(rt);
     // data(rt) throws JSINativeException if detached
-    return {ab.data(rt), ab.size(rt)};
+    uint8_t *data = ab.data(rt);
+    size_t size = ab.size(rt);
+    return TypedArrayBufferInfo(jsi::Value(std::move(ab)), data, size);
   }
 
   // Check for TypedArray or DataView using shared utility
@@ -160,19 +164,22 @@ jsi::Value textDecoderDecode(
     }
   }
 
-  // Get input bytes
+  // Get input bytes. inputInfo roots the backing ArrayBuffer, so it has to
+  // outlive every use of 'bytes': building the result string allocates, and a
+  // GC in that window would otherwise run the buffer's finalizer and free the
+  // storage 'bytes' points into.
+  TypedArrayBufferInfo inputInfo;
   const uint8_t *bytes = nullptr;
   size_t length = 0;
   if (count > 0 && !args[0].isUndefined()) {
-    TypedArrayBufferInfo inputInfo;
     try {
       inputInfo = getInputBytes(rt, args[0]);
     } catch (const jsi::JSINativeException &) {
       throwTypeError(
           rt, "TextDecoder.prototype.decode called on a detached ArrayBuffer");
     }
-    bytes = inputInfo.data;
-    length = inputInfo.byteLength;
+    bytes = inputInfo.data();
+    length = inputInfo.byteLength();
   }
 
   // Fast path for single-byte encodings: single-pass decode with ASCII

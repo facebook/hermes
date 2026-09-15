@@ -1112,6 +1112,7 @@ static CallResult<std::pair<Callable *, JSObject *>> createClass(
     PinnedValue<JSObject> homeObject;
   } lv;
   LocalsRAII lraii(runtime, &lv);
+  GCScopeMarkerRAII marker{runtime};
 
   // ES2023 15.7.14 RS: ClassDefinitionEvaluation
   // 7. If ClassHeritageopt is not present, then

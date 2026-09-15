@@ -4229,6 +4229,29 @@ TEST_F(CDPAgentTest, RuntimeEvaluateReturnByValue) {
       jsonScope_.parseObject(object)));
 }
 
+TEST_F(CDPAgentTest, RuntimeEvaluateUncaughtReferenceError) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Runtime.enable", msgId++);
+
+  sendRequest("Runtime.evaluate", msgId, [](::hermes::JSONEmitter &params) {
+    params.emitKeyValue("expression", "missingIdentifier");
+  });
+  auto resp = expectResponse(std::nullopt, msgId++);
+
+  EXPECT_EQ(
+      jsonScope_.getString(resp, {"result", "exceptionDetails", "text"}),
+      "Uncaught");
+  auto description = jsonScope_.getString(
+      resp, {"result", "exceptionDetails", "exception", "description"});
+  const std::string errorDescription =
+      "ReferenceError: Property 'missingIdentifier' doesn't exist";
+  EXPECT_EQ(description.find(errorDescription), 0);
+  EXPECT_EQ(
+      description.find(errorDescription, errorDescription.size()),
+      std::string::npos);
+}
+
 TEST_F(CDPAgentTest, RuntimeEvaluateException) {
   int msgId = 1;
 

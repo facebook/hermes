@@ -1,15 +1,16 @@
 {
   "name": "hermes-parser",
-  "version": "0.36.0",
+  "version": "0.37.0",
   "description": "A JavaScript parser built from the Hermes engine",
   "main": "dist/index.js",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git@github.com:facebook/hermes.git"
+    "url": "git+https://github.com/facebook/hermes.git",
+    "directory": "tools/hermes-parser/js/hermes-parser"
   },
   "dependencies": {
-    "hermes-estree": "0.36.0"
+    "hermes-estree": "0.37.0"
   },
   "devDependencies": {
     "@babel/parser": "7.7.4",

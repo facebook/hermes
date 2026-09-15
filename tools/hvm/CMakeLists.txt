@@ -8,6 +8,10 @@ add_hermes_tool(hvm
   LINK_OBJLIBS hermesConsoleHost_obj
   LINK_LIBS hermesvm_a)
 
+if(HERMES_ENABLE_NAPI)
+  target_link_libraries(hvm hermesNapi)
+endif()
+
 install(TARGETS hvm
   RUNTIME DESTINATION bin
 )

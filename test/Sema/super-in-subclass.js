@@ -22,7 +22,7 @@ class B extends A {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:SemContext
-// CHECK-NEXT:Func loose
+// CHECK-NEXT:Func loose mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'A' Class
 // CHECK-NEXT:        Decl %d.2 'B' Class
@@ -30,16 +30,16 @@ class B extends A {
 // CHECK-NEXT:            Decl %d.3 'A' ClassExprName
 // CHECK-NEXT:        Scope %s.3
 // CHECK-NEXT:            Decl %d.4 'B' ClassExprName
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.4
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.5
 // CHECK-NEXT:            Decl %d.5 'arrow1' Let
 // CHECK-NEXT:            Decl %d.6 'arguments' Var Arguments
-// CHECK-NEXT:        Func strict
+// CHECK-NEXT:        Func strict mayReachImplicitReturn
 // CHECK-NEXT:            Scope %s.6
 // CHECK-NEXT:                Decl %d.7 'arrow2' Let
-// CHECK-NEXT:            Func strict
+// CHECK-NEXT:            Func strict mayReachImplicitReturn
 // CHECK-NEXT:                Scope %s.7
 
 // CHECK:Program Scope %s.1

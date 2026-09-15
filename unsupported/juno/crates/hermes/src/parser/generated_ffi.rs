@@ -90,8 +90,11 @@ pub enum NodeKind {
     TaggedTemplateExpression,
     TemplateElement,
     Property,
+    Decorator,
+    _ClassLikeFirst,
     ClassDeclaration,
     ClassExpression,
+    _ClassLikeLast,
     ClassBody,
     ClassProperty,
     ClassPrivateProperty,
@@ -126,8 +129,10 @@ pub enum NodeKind {
     MatchOrPattern,
     MatchAsPattern,
     MatchMemberPattern,
+    MatchInstancePattern,
     _MatchPatternLast,
     MatchObjectPatternProperty,
+    MatchInstanceObjectPattern,
     MatchRestPattern,
     _JSXFirst,
     JSXIdentifier,
@@ -163,6 +168,9 @@ pub enum NodeKind {
     MixedTypeAnnotation,
     BigIntTypeAnnotation,
     VoidTypeAnnotation,
+    NeverTypeAnnotation,
+    UnknownTypeAnnotation,
+    UndefinedTypeAnnotation,
     FunctionTypeAnnotation,
     HookTypeAnnotation,
     FunctionTypeParam,
@@ -235,6 +243,13 @@ pub enum NodeKind {
     EnumBigIntMember,
     EnumBooleanMember,
     ComponentParameter,
+    RecordDeclaration,
+    RecordDeclarationImplements,
+    RecordDeclarationBody,
+    RecordDeclarationProperty,
+    RecordDeclarationStaticProperty,
+    RecordExpression,
+    RecordExpressionProperties,
     _FlowLast,
     _TSFirst,
     TSTypeAnnotation,
@@ -291,6 +306,8 @@ pub enum NodeKind {
     CoverRestElement,
     CoverTypedIdentifier,
     _CoverLast,
+    SHBuiltin,
+    ImplicitCheckedCast,
 }
 
 extern "C" {
@@ -306,7 +323,6 @@ extern "C" {
     pub fn hermes_get_FunctionExpression_generator(node: NodePtr) -> bool;
     pub fn hermes_get_FunctionExpression_async(node: NodePtr) -> bool;
     // ArrowFunctionExpression
-    pub fn hermes_get_ArrowFunctionExpression_id(node: NodePtr) -> NodePtrOpt;
     pub fn hermes_get_ArrowFunctionExpression_params(node: NodePtr) -> NodeListRef;
     pub fn hermes_get_ArrowFunctionExpression_body(node: NodePtr) -> NodePtr;
     pub fn hermes_get_ArrowFunctionExpression_typeParameters(node: NodePtr) -> NodePtrOpt;
@@ -722,7 +738,7 @@ extern "C" {
     pub fn hermes_get_QualifiedTypeofIdentifier_qualification(node: NodePtr) -> NodePtr;
     pub fn hermes_get_QualifiedTypeofIdentifier_id(node: NodePtr) -> NodePtr;
     // TupleTypeAnnotation
-    pub fn hermes_get_TupleTypeAnnotation_types(node: NodePtr) -> NodeListRef;
+    pub fn hermes_get_TupleTypeAnnotation_elementTypes(node: NodePtr) -> NodeListRef;
     pub fn hermes_get_TupleTypeAnnotation_inexact(node: NodePtr) -> bool;
     // TupleTypeSpreadElement
     pub fn hermes_get_TupleTypeSpreadElement_label(node: NodePtr) -> NodePtrOpt;
@@ -1059,4 +1075,9 @@ extern "C" {
     pub fn hermes_get_CoverTypedIdentifier_left(node: NodePtr) -> NodePtr;
     pub fn hermes_get_CoverTypedIdentifier_right(node: NodePtr) -> NodePtrOpt;
     pub fn hermes_get_CoverTypedIdentifier_optional(node: NodePtr) -> bool;
+}
+
+#[allow(non_snake_case)]
+pub fn hermes_get_TupleTypeAnnotation_types(node: NodePtr) -> NodeListRef {
+    unsafe { hermes_get_TupleTypeAnnotation_elementTypes(node) }
 }

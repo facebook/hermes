@@ -17,17 +17,24 @@ Hermes is a JavaScript engine optimized for fast start-up of React Native apps. 
 
 ## Build Commands
 
-Build directories are typically `cmake-build-debug` and `cmake-build-release` in the source directory, but can be configured elsewhere.
+### Default Build: ASan+Debug with -O1
 
-### Configuring the Build
-
-If a build directory is missing, or if requested by the user, configure a new build:
+Always build and test with AddressSanitizer enabled unless the user explicitly asks otherwise or there is a specific reason not to (e.g., performance benchmarking, testing release behavior). The ASan build catches memory bugs that are otherwise silent or non-deterministic.
 
 ```bash
-# Configure Debug build
+# Configure ASan+Debug build (the default for development)
+cmake -B cmake-build-asan -G Ninja -DCMAKE_BUILD_TYPE=Debug \
+  -DHERMES_ENABLE_ADDRESS_SANITIZER=ON \
+  -DCMAKE_CXX_FLAGS="-O1" -DCMAKE_C_FLAGS="-O1"
+```
+
+### Other Build Configurations
+
+```bash
+# Plain Debug build (no sanitizer, for debugging with full symbols)
 cmake -B cmake-build-debug -G Ninja -DCMAKE_BUILD_TYPE=Debug
 
-# Configure Release build
+# Release build
 cmake -B cmake-build-release -G Ninja -DCMAKE_BUILD_TYPE=Release
 ```
 
@@ -68,27 +75,21 @@ Pass these with `-D` when configuring, e.g., `cmake -B build -DCMAKE_BUILD_TYPE=
 ### Building
 
 ```bash
-# Build (Debug)
-cmake --build cmake-build-debug --target hermes
-
-# Build (Release)
-cmake --build cmake-build-release --target hermes
+# Build
+cmake --build cmake-build-asan --target hermes
 
 # Run all tests
-cmake --build cmake-build-debug --target check-hermes
+cmake --build cmake-build-asan --target check-hermes
 
 # Run single test
-cmake-build-debug/bin/hermes path/to/test.js
-
-# Run tests with sanitizers (requires separate sanitizer build)
-cmake --build cmake-build-test --target check-hermes
+cmake-build-asan/bin/hermes path/to/test.js
 
 # Run test262 testsuite (ONLY run it when user asks for it)
-python3 utils/test_runner.py path/to/test262/test -b cmake-build-debug/bin
+python3 utils/test_runner.py path/to/test262/test -b cmake-build-asan/bin
 
 # Generate the preprocessed JS file from a single test262 test.
 # Then you can run the <output_file> with hermes.
-python3 utils/test_runner.py <path_to_single_test262_test> -b cmake-build-debug/bin -d > <output_file>
+python3 utils/test_runner.py <path_to_single_test262_test> -b cmake-build-asan/bin -d > <output_file>
 ```
 
 ### Running Tests in Claude Code on macOS
@@ -96,17 +97,17 @@ python3 utils/test_runner.py <path_to_single_test262_test> -b cmake-build-debug/
 Due to a sandbox limitation in Claude Code on macOS, Python's multiprocessing module cannot create semaphores, causing the lit test runner to fail. This is a bug in the Claude Code sandbox, not in Hermes. To work around this, run tests in single-process mode:
 
 ```bash
-LIT_OPTS="-j1" cmake --build cmake-build-debug --target check-hermes
+LIT_OPTS="-j1" cmake --build cmake-build-asan --target check-hermes
 ```
 
 Since single-process mode is slow (~5 minutes for all tests), use the `LIT_FILTER` environment variable to run only specific tests matching a regex:
 
 ```bash
 # Run only tests matching "Array" in their path
-LIT_OPTS="-j1" LIT_FILTER="Array" cmake --build cmake-build-debug --target check-hermes
+LIT_OPTS="-j1" LIT_FILTER="Array" cmake --build cmake-build-asan --target check-hermes
 
 # Run only tests in a specific directory
-LIT_OPTS="-j1" LIT_FILTER="BCGen" cmake --build cmake-build-debug --target check-hermes
+LIT_OPTS="-j1" LIT_FILTER="BCGen" cmake --build cmake-build-asan --target check-hermes
 ```
 
 This workaround is only needed for Claude Code on macOS. Normal users and CI systems do not need these flags.
@@ -117,10 +118,10 @@ For faster iteration when modifying a single file `dir1/dir2/file.cpp`:
 
 ```bash
 # Find the target the file belongs to
-find cmake-build-debug/ -name file.cpp.o
+find cmake-build-asan/ -name file.cpp.o
 
 # Build just that file (example for VM files)
-cmake --build cmake-build-debug --target lib/VM/CMakeFiles/hermesVMRuntime_obj.dir/file.cpp.o
+cmake --build cmake-build-asan --target lib/VM/CMakeFiles/hermesVMRuntime_obj.dir/file.cpp.o
 ```
 
 ### Inspecting C++ File Structure
@@ -171,7 +172,7 @@ If such a test fails due to intentional changes (e.g., changed output format, ad
 
 ```bash
 # Regenerate expected output for all auto-updating tests
-cmake --build cmake-build-debug --target update-lit
+cmake --build cmake-build-asan --target update-lit
 ```
 
 **Important:** Only use `update-lit` when you understand the cause of the failure. Review the changes to verify they match your expectations. Do not blindly regenerate tests to make them pass.
@@ -303,6 +304,29 @@ Community contributions go in `extensions/contrib/`. These are:
 - May be promoted to core if widely adopted
 
 See `API/hermes/extensions/contrib/README.md` for contributor guidelines.
+
+## Issue Tracking
+
+Bugs and follow-ups that outlive a session live in `dz/`, a
+[ditz2](https://github.com/tmikov/ditz2) project: one markdown file per
+issue, committed alongside the code. Use it for what a commit message or
+progress note cannot hold — a defect nobody is working on yet, a
+limitation recorded rather than fixed, a follow-up that would otherwise
+be forgotten.
+
+Run the `dz` command from `PATH`. **If `dz` is not available, ask the
+user how to proceed** — do not install it, build it, or substitute
+another tool.
+
+- `dz help agents` is the contract for programmatic use: every command
+  takes `--json`, exit 0 means stdout parses, errors go to stderr as one
+  object.
+- The component list starts empty and `--component` rejects every value
+  until it is populated. Add one when an issue needs it:
+  `dz component add <name>`.
+- `dz/config.local.yaml` (author identity) and `dz/.lock` are gitignored
+  (by `dz/.gitignore`); `dz/config.yaml` and `dz/issues/*.md` are
+  committed.
 
 ## Environment-Specific Instructions
 

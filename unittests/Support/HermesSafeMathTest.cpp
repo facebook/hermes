@@ -34,6 +34,20 @@ TEST(HermesSafeMathTest, narrowCastSuccess) {
   EXPECT_EQ(
       std::numeric_limits<int32_t>::min(),
       hermes::safePossiblyNarrowingCast<int32_t>(minI32, "overflow"));
+
+  // Signed/unsigned conversions that fit.
+  EXPECT_EQ(
+      42u,
+      hermes::safePossiblyNarrowingCast<uint32_t>(int64_t{42}, "overflow"));
+  EXPECT_EQ(
+      42, hermes::safePossiblyNarrowingCast<int32_t>(uint64_t{42}, "overflow"));
+  // Same-size signed to unsigned.
+  EXPECT_EQ(
+      0u, hermes::safePossiblyNarrowingCast<uint32_t>(int32_t{0}, "overflow"));
+  // Same-size unsigned to signed.
+  EXPECT_EQ(
+      100,
+      hermes::safePossiblyNarrowingCast<int32_t>(uint32_t{100}, "overflow"));
 }
 
 // Only do death tests if they're supported.
@@ -81,6 +95,21 @@ TEST(HermesSafeMathDeathTest, narrowCastFailureInt32Neg) {
       static_cast<int64_t>(std::numeric_limits<int32_t>::min()) - 1;
   ASSERT_DEATH(
       hermes::safePossiblyNarrowingCast<int32_t>(minI32Minus1, "overflowxxx"),
+      "overflowxxx");
+}
+
+TEST(HermesSafeMathDeathTest, narrowCastFailureNegToUnsigned) {
+  // Negative signed value cannot fit in unsigned.
+  ASSERT_DEATH(
+      hermes::safePossiblyNarrowingCast<uint32_t>(int64_t{-1}, "overflowxxx"),
+      "overflowxxx");
+}
+
+TEST(HermesSafeMathDeathTest, narrowCastFailureLargeUnsignedToSigned) {
+  // Large unsigned value that doesn't fit in same-size signed type.
+  uint32_t big = std::numeric_limits<uint32_t>::max();
+  ASSERT_DEATH(
+      hermes::safePossiblyNarrowingCast<int32_t>(big, "overflowxxx"),
       "overflowxxx");
 }
 

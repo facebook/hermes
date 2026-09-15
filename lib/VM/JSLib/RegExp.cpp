@@ -19,6 +19,8 @@
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/StringView.h"
 
+#include "llvh/ADT/StringExtras.h"
+
 namespace hermes {
 namespace vm {
 
@@ -67,6 +69,15 @@ HermesValue createRegExpConstructor(Runtime &runtime) {
       proto,
       2,
       lv.cons);
+
+  // ES2025 22.2.5.2.1 RegExp.escape ( S )
+  defineMethod(
+      runtime,
+      lv.cons,
+      Predefined::getSymbolID(Predefined::escape),
+      nullptr,
+      regExpEscape,
+      1);
 
   defineMethod(
       runtime,
@@ -190,6 +201,206 @@ HermesValue createRegExpConstructor(Runtime &runtime) {
   defineGetter(proto, Predefined::flags, regExpFlagsGetter);
 
   return lv.cons.getHermesValue();
+}
+
+/// \return true if \p cp is a RegExp SyntaxCharacter:
+/// one of ^ $ \ . * + ? ( ) [ ] { } |.
+static bool isRegExpSyntaxChar(uint32_t cp) {
+  switch (cp) {
+    case u'^':
+    case u'$':
+    case u'\\':
+    case u'.':
+    case u'*':
+    case u'+':
+    case u'?':
+    case u'(':
+    case u')':
+    case u'[':
+    case u']':
+    case u'{':
+    case u'}':
+    case u'|':
+      return true;
+    default:
+      return false;
+  }
+}
+
+/// \return true if \p cp is one of the "other punctuators" that
+/// EncodeForRegExpEscape escapes.
+static bool isOtherPunctuator(uint32_t cp) {
+  switch (cp) {
+    case u',':
+    case u'-':
+    case u'=':
+    case u'<':
+    case u'>':
+    case u'#':
+    case u'&':
+    case u'!':
+    case u'%':
+    case u':':
+    case u';':
+    case u'@':
+    case u'~':
+    case u'\'':
+    case u'`':
+    case u'"':
+      return true;
+    default:
+      return false;
+  }
+}
+
+/// Append "\xNN" (lowercase hex) to \p R for \p c, which must be <= 0xFF.
+static void appendHexEscape(llvh::SmallVectorImpl<char16_t> &R, uint32_t c) {
+  assert(c <= 0xFF && "appendHexEscape argument out of bounds");
+  R.append(
+      {u'\\',
+       u'x',
+       static_cast<char16_t>(
+           llvh::hexdigit((c >> 4) & 0xf, /* LowerCase */ true)),
+       static_cast<char16_t>(llvh::hexdigit(c & 0xf, /* LowerCase */ true))});
+}
+
+/// Append "\uNNNN" (lowercase hex) to \p R for code unit \p cu.
+static void appendUnicodeEscape(
+    llvh::SmallVectorImpl<char16_t> &R,
+    char16_t cu) {
+  R.append(
+      {u'\\',
+       u'u',
+       static_cast<char16_t>(
+           llvh::hexdigit((cu >> 12) & 0xf, /* LowerCase */ true)),
+       static_cast<char16_t>(
+           llvh::hexdigit((cu >> 8) & 0xf, /* LowerCase */ true)),
+       static_cast<char16_t>(
+           llvh::hexdigit((cu >> 4) & 0xf, /* LowerCase */ true)),
+       static_cast<char16_t>(llvh::hexdigit(cu & 0xf, /* LowerCase */ true))});
+}
+
+/// ES2026 22.2.5.1.1 EncodeForRegExpEscape ( c )
+/// Append the encoding of code point \p cp to \p R.
+static void encodeForRegExpEscape(
+    llvh::SmallVectorImpl<char16_t> &R,
+    uint32_t cp) {
+  // 1. If cp is matched by SyntaxCharacter or cp is U+002F (SOLIDUS), then
+  if (cp == u'/' || isRegExpSyntaxChar(cp)) {
+    // a. Return the string-concatenation of 0x005C (REVERSE SOLIDUS) and
+    // UTF16EncodeCodePoint(cp)
+    R.push_back(u'\\');
+    R.push_back(static_cast<char16_t>(cp));
+    return;
+  }
+  // 2. If cp is a code point listed in the “Code Point” column of Table 62,
+  // then
+  switch (cp) {
+    // a. Return the string-concatenation of 0x005C (REVERSE SOLIDUS) and the
+    // string in the “ControlEscape” column of the row whose “Code Point” column
+    // contains cp.
+    case 0x09:
+      R.push_back(u'\\');
+      R.push_back(u't');
+      return;
+    case 0x0A:
+      R.push_back(u'\\');
+      R.push_back(u'n');
+      return;
+    case 0x0B:
+      R.push_back(u'\\');
+      R.push_back(u'v');
+      return;
+    case 0x0C:
+      R.push_back(u'\\');
+      R.push_back(u'f');
+      return;
+    case 0x0D:
+      R.push_back(u'\\');
+      R.push_back(u'r');
+      return;
+    default:
+      break;
+  }
+  // 3. Let otherPunctuators be the string-concatenation of ",-=<>#&!%:;@~'`"
+  // and the code unit 0x0022 (QUOTATION MARK).
+  // 4. Let toEscape be StringToCodePoints(otherPunctuators).
+  bool needsEscape = isOtherPunctuator(cp);
+  if (!needsEscape && cp <= 0xFFFF) {
+    char16_t c16 = static_cast<char16_t>(cp);
+    needsEscape = isWhiteSpaceChar(c16) || isLineTerminatorChar(c16) ||
+        isHighSurrogate(cp) || isLowSurrogate(cp);
+  }
+  // 5. If toEscape contains cp, cp is matched by either WhiteSpace or
+  // LineTerminator, or cp has the same numeric value as a leading surrogate or
+  // trailing surrogate, then
+  if (needsEscape) {
+    // a. Let cpNum be the numeric value of cp.
+    // b. If cpNum ≤ 0xFF, then
+    if (cp <= 0xFF) {
+      // i. Let hex be Number::toString((cpNum), 16).
+      // ii. Return the string-concatenation of the code unit 0x005C (REVERSE
+      // SOLIDUS), "x", and StringPad(hex, 2, "0", start).
+      appendHexEscape(R, cp);
+      return;
+    }
+    // c. Let escaped be the empty String.
+    // d. Let codeUnits be UTF16EncodeCodePoint(cp).
+    // e. For each code unit cu of codeUnits, do
+    // i. Set escaped to the string-concatenation of escaped and
+    // UnicodeEscape(cu).
+    // f. Return escaped.
+    appendUnicodeEscape(R, static_cast<char16_t>(cp));
+    return;
+  }
+  // 6. Return UTF16EncodeCodePoint(cp).
+  utf16Encoding(cp, R);
+}
+
+/// ES2026 22.2.5.1 RegExp.escape ( S )
+CallResult<HermesValue> regExpEscape(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  // 1. If S is not a String, throw a TypeError exception.
+  if (LLVM_UNLIKELY(!args.getArg(0).isString())) {
+    return runtime.raiseTypeError("RegExp.escape() argument must be a string");
+  }
+
+  struct : public Locals {
+    PinnedValue<StringPrimitive> string;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.string.castAndSetHermesValue<StringPrimitive>(args.getArg(0));
+
+  // 2. Let escaped be the empty String.
+  uint32_t len = lv.string->getStringLength();
+  SmallU16String<16> escaped{};
+  escaped.reserve(len);
+
+  auto view = StringPrimitive::createStringView(runtime, lv.string);
+  // 3. Let cpList be StringToCodePoints(S).
+  // 4. For each code point c of cpList, do
+  for (uint32_t i = 0; i < len;) {
+    char16_t first = view[i];
+    uint32_t cp = first;
+    if (isHighSurrogate(first) && i + 1 < len && isLowSurrogate(view[i + 1])) {
+      cp = utf16SurrogatePairToCodePoint(first, view[i + 1]);
+      i += 2;
+    } else {
+      ++i;
+    }
+    // 4a. If escaped is the empty String and c is matched by DecimalDigit or
+    // AsciiLetter, escape the leading character as "\xNN". The hex of an ASCII
+    // digit or letter is always exactly 2 digits.
+    if (escaped.empty() && cp < 128 && llvh::isAlnum(static_cast<char>(cp))) {
+      appendHexEscape(escaped, cp);
+    } else {
+      // 4b. Else, append EncodeForRegExpEscape(c).
+      encodeForRegExpEscape(escaped, cp);
+    }
+  }
+
+  // 5. Return escaped.
+  return StringPrimitive::create(runtime, escaped);
 }
 
 /// ES2022 22.2.5.2.4 GetStringIndex ( S, e )
@@ -477,16 +688,84 @@ static ExecutionStatus regExpConstructorFastCopy(
   return ExecutionStatus::RETURNED;
 }
 
-static void createGroupsObject(
+/// Build an object whose property keys are identical to \p mappingObj. Each
+/// value for a given property key `k` in this object is
+/// `source[mappingObj[k]]`. The result has a null prototype.
+static CallResult<PseudoHandle<JSObject>> buildGroupsObject(
     Runtime &runtime,
-    Handle<JSArray> matchObj,
-    Handle<JSObject> mappingObj) {
+    Handle<JSObject> mappingObj,
+    Handle<JSArray> source) {
   struct : public Locals {
-    PinnedValue<HiddenClass> clazzHandle;
+    PinnedValue<HiddenClass> clazz;
     PinnedValue<JSObject> groupsObj;
+    PinnedValue<> tmpVal;
   } lv;
   LocalsRAII lraii(runtime, &lv);
 
+  lv.clazz = mappingObj->getClass(runtime);
+
+  if (LLVM_LIKELY(!lv.clazz->isDictionary())) {
+    // Fast path: non-dictionary class is safe to share between groupsObj and
+    // mappingObj.
+    lv.groupsObj =
+        JSObject::create(runtime, Runtime::makeNullHandle<JSObject>(), lv.clazz)
+            .get();
+    HiddenClass::forEachProperty(
+        lv.clazz, runtime, [&](SymbolID, NamedPropertyDescriptor desc) {
+          assert(
+              !desc.flags.privateName &&
+              "private name not expected in regex mapping object");
+          auto idx =
+              JSObject::getNamedSlotValueUnsafe(*mappingObj, runtime, desc.slot)
+                  .getNumber(runtime);
+          JSObject::setNamedSlotValueUnsafe(
+              lv.groupsObj.get(), runtime, desc.slot, source->at(runtime, idx));
+        });
+    return PseudoHandle<JSObject>::create(lv.groupsObj.get());
+  }
+
+  // Slow path: mappingObj's class is in dictionary mode. Dictionary classes
+  // are owned by a single object and mutated in place; sharing one with
+  // groupsObj would let a later mutation on this `groups` grow the shared
+  // class past the underlying propStorage of any sibling (out-of-bounds
+  // read/write). Build groupsObj with its own fresh class instead.
+  //
+  // Calling defineNewOwnProperty inside HiddenClass::forEachPropertyWhile is
+  // safe: it only touches groupsObj's class chain (independent from
+  // lv.clazz), and forEachPropertyWhile flushes the GCScope after each
+  // callback so handle counts stay bounded.
+  lv.groupsObj =
+      JSObject::create(runtime, Runtime::makeNullHandle<JSObject>()).get();
+  ExecutionStatus status = ExecutionStatus::RETURNED;
+  HiddenClass::forEachPropertyWhile(
+      lv.clazz,
+      runtime,
+      [&](Runtime &, SymbolID id, NamedPropertyDescriptor desc) -> bool {
+        auto idx =
+            JSObject::getNamedSlotValueUnsafe(*mappingObj, runtime, desc.slot)
+                .getNumber(runtime);
+        lv.tmpVal = source->at(runtime, idx).unboxToHV(runtime);
+        if (LLVM_UNLIKELY(
+                JSObject::defineNewOwnProperty(
+                    lv.groupsObj,
+                    runtime,
+                    id,
+                    PropertyFlags::defaultNewNamedPropertyFlags(),
+                    lv.tmpVal) == ExecutionStatus::EXCEPTION)) {
+          status = ExecutionStatus::EXCEPTION;
+          return false;
+        }
+        return true;
+      });
+  if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+  return PseudoHandle<JSObject>::create(lv.groupsObj.get());
+}
+
+static ExecutionStatus setMatchGroups(
+    Runtime &runtime,
+    Handle<JSArray> matchObj,
+    Handle<JSObject> mappingObj) {
   // matchObj is created with a HiddenClass that already has the groups
   // property.
   NamedPropertyDescriptor groupsDesc;
@@ -502,34 +781,19 @@ static void createGroupsObject(
   if (!mappingObj) {
     auto shv = SmallHermesValue::encodeUndefinedValue();
     JSObject::setNamedSlotValueUnsafe(matchObj.get(), runtime, groupsDesc, shv);
-    return;
+    return ExecutionStatus::RETURNED;
   }
 
   // The `__proto__` property on the groups object is not special,
   // and does not affect the [[Prototype]] of the resulting groups object.
   // This means that the prototype of the resulting groups object is null.
-  lv.clazzHandle = mappingObj->getClass(runtime);
-  auto groupsObjRes = JSObject::create(
-      runtime, Runtime::makeNullHandle<JSObject>(), lv.clazzHandle);
-  lv.groupsObj = groupsObjRes.get();
+  auto groupsRes = buildGroupsObject(runtime, mappingObj, matchObj);
+  if (LLVM_UNLIKELY(groupsRes == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
 
-  HiddenClass::forEachProperty(
-      lv.clazzHandle, runtime, [&](SymbolID id, NamedPropertyDescriptor desc) {
-        assert(
-            !desc.flags.privateName &&
-            "private name not expected in regex mapping object");
-        auto groupIdx =
-            JSObject::getNamedSlotValueUnsafe(*mappingObj, runtime, desc.slot)
-                .getNumber(runtime);
-        JSObject::setNamedSlotValueUnsafe(
-            lv.groupsObj.get(),
-            runtime,
-            desc.slot,
-            matchObj->at(runtime, groupIdx));
-      });
-
-  auto shv = SmallHermesValue::encodeObjectValue(lv.groupsObj.get(), runtime);
+  auto shv = SmallHermesValue::encodeObjectValue(groupsRes->get(), runtime);
   JSObject::setNamedSlotValueUnsafe(matchObj.get(), runtime, groupsDesc, shv);
+  return ExecutionStatus::RETURNED;
 }
 
 /// ES2022 22.2.7.8 MakeMatchIndicesIndexPairArray
@@ -545,7 +809,6 @@ static ExecutionStatus makeMatchIndicesIndexPairArray(
     PinnedValue<> groups;
     PinnedValue<JSArray> A;
     PinnedValue<JSArray> pair;
-    PinnedValue<HiddenClass> mappingObjClazz;
     PinnedValue<JSObject> groupsObj;
   } lv;
   LocalsRAII lraii(runtime, &lv);
@@ -602,29 +865,13 @@ static ExecutionStatus makeMatchIndicesIndexPairArray(
   // 6. If hasGroups is true, then
   if (hasGroups) {
     // a. Let groups be OrdinaryObjectCreate(null).
-    lv.mappingObjClazz = mappingObj->getClass(runtime);
-    auto groupsRes = JSObject::create(
-        runtime, Runtime::makeNullHandle<JSObject>(), lv.mappingObjClazz);
-    lv.groupsObj = groupsRes.get();
-    HiddenClass::forEachProperty(
-        lv.mappingObjClazz,
-        runtime,
-        [&](SymbolID id, NamedPropertyDescriptor desc) {
-          assert(
-              !desc.flags.privateName &&
-              "private name not expected in regex mapping object");
-          auto groupIdx =
-              JSObject::getNamedSlotValueUnsafe(*mappingObj, runtime, desc.slot)
-                  .getNumber(runtime);
-          // 9.e. If i > 0 and groupNames[i - 1] is not undefined, then
-          // ii. Perform ! CreateDataPropertyOrThrow(groups, groupNames[i-1],
-          // matchIndexPair).
-          JSObject::setNamedSlotValueUnsafe(
-              lv.groupsObj.get(),
-              runtime,
-              desc.slot,
-              lv.A.get()->at(runtime, groupIdx));
-        });
+    // 9.e. If i > 0 and groupNames[i - 1] is not undefined, then
+    // ii. Perform ! CreateDataPropertyOrThrow(groups, groupNames[i-1],
+    // matchIndexPair).
+    auto groupsRes = buildGroupsObject(runtime, mappingObj, lv.A);
+    if (LLVM_UNLIKELY(groupsRes == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    lv.groupsObj = groupsRes->get();
     lv.groups = lv.groupsObj.getHermesValue();
   } else {
     // 7. Else,
@@ -855,7 +1102,10 @@ ExecutionStatus directRegExpExec(
     }
   }
 
-  createGroupsObject(runtime, lv.A, groupNames);
+  if (LLVM_UNLIKELY(
+          setMatchGroups(runtime, lv.A, groupNames) ==
+          ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
   resultOut.castAndSetHermesValue<JSArray>(lv.A.getHermesValue());
   return ExecutionStatus::RETURNED;
 }
@@ -1097,7 +1347,6 @@ CallResult<HermesValue> regExpFlagPropertyGetter(void *ctx, Runtime &runtime) {
       return HermesValue::encodeBoolValue(syntaxFlags.hasIndices);
     default:
       llvm_unreachable("Invalid flag passed to regExpFlagPropertyGetter");
-      return HermesValue::encodeEmptyValue();
   }
 }
 
@@ -1226,6 +1475,22 @@ CallResult<HermesValue> getSubstitution(
   // Don't use a StringView iterator, as any calls to createStringView can
   // allocate and move the underlying char storage.
   for (size_t i = 0, e = replacementView.length(); i < e;) {
+    // A single $ substitution can expand to the whole input string, so result
+    // can grow past MAX_STRING_LENGTH before the bounds check in
+    // StringPrimitive::create() below runs. Bail out early with a RangeError
+    // instead, as overflowing the intermediate SmallVector would crash.
+    //
+    // Checking once per iteration is enough to prevent that overflow:
+    // everything an iteration can append ($&, $`, $', $n, and $<name> via
+    // toString_RJS) is a StringPrimitive and so is at most MAX_STRING_LENGTH
+    // long, which bounds result at 2 * MAX_STRING_LENGTH. SmallVector's
+    // capacity is an unsigned whose doubling wraps above 2^31 elements, and
+    // that bound has to stay clear of it.
+    static_assert(
+        2ull * StringPrimitive::MAX_STRING_LENGTH < (1ull << 31),
+        "result can overflow SmallVector's capacity");
+    if (LLVM_UNLIKELY(result.size() > StringPrimitive::MAX_STRING_LENGTH))
+      return runtime.raiseRangeError("String length exceeds limit");
     // Go character by character and account for $ replacement strings.
     char16_t c0 = replacementView[i];
     if (c0 != u'$' || i + 1 == e) {

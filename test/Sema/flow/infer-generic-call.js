@@ -37,7 +37,7 @@ let v5 = first(c);
 // CHECK-NEXT:%function.11 = function(x: %tuple.3): boolean
 
 // CHECK:SemContext
-// CHECK-NEXT:Func strict
+// CHECK-NEXT:Func strict mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:        Decl %d.2 'head' Var
@@ -62,31 +62,31 @@ let v5 = first(c);
 // CHECK-NEXT:        hoistedFunction head
 // CHECK-NEXT:        hoistedFunction first
 // CHECK-NEXT:        hoistedFunction first
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict noImplicitReturn
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.17 'x' Parameter
 // CHECK-NEXT:            Decl %d.18 'arguments' Var Arguments
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict noImplicitReturn
 // CHECK-NEXT:        Scope %s.3
 // CHECK-NEXT:            Decl %d.19 'x' Parameter
 // CHECK-NEXT:            Decl %d.20 'arguments' Var Arguments
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict noImplicitReturn
 // CHECK-NEXT:        Scope %s.4
 // CHECK-NEXT:            Decl %d.21 'x' Parameter : %class.4
 // CHECK-NEXT:            Decl %d.22 'arguments' Var Arguments
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict noImplicitReturn
 // CHECK-NEXT:        Scope %s.5
 // CHECK-NEXT:            Decl %d.23 'x' Parameter : %class.6
 // CHECK-NEXT:            Decl %d.24 'arguments' Var Arguments
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict noImplicitReturn
 // CHECK-NEXT:        Scope %s.6
 // CHECK-NEXT:            Decl %d.25 'x' Parameter : %class.2
 // CHECK-NEXT:            Decl %d.26 'arguments' Var Arguments
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict noImplicitReturn
 // CHECK-NEXT:        Scope %s.7
 // CHECK-NEXT:            Decl %d.27 'x' Parameter : %tuple.9
 // CHECK-NEXT:            Decl %d.28 'arguments' Var Arguments
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict noImplicitReturn
 // CHECK-NEXT:        Scope %s.8
 // CHECK-NEXT:            Decl %d.29 'x' Parameter : %tuple.3
 // CHECK-NEXT:            Decl %d.30 'arguments' Var Arguments

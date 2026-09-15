@@ -74,7 +74,7 @@ class StackExecutor {
 
 std::shared_ptr<StackExecutor> newStackExecutor(
     size_t stackSize,
-    std::chrono::milliseconds /*timeout*/) {
+    std::chrono::nanoseconds /*timeout*/) {
   return std::make_shared<StackExecutor>(stackSize);
 }
 
@@ -95,7 +95,7 @@ class StackExecutor {
 
 std::shared_ptr<StackExecutor> newStackExecutor(
     size_t stackSize,
-    std::chrono::milliseconds) {
+    std::chrono::nanoseconds) {
   return std::make_shared<StackExecutor>();
 }
 
@@ -117,13 +117,13 @@ class StackExecutor {
  public:
   SerialExecutor executor;
 
-  explicit StackExecutor(size_t stackSize, std::chrono::milliseconds timeout)
+  explicit StackExecutor(size_t stackSize, std::chrono::nanoseconds timeout)
       : executor(stackSize, timeout) {}
 };
 
 std::shared_ptr<StackExecutor> newStackExecutor(
     size_t stackSize,
-    std::chrono::milliseconds timeout) {
+    std::chrono::nanoseconds timeout) {
   return std::make_shared<StackExecutor>(stackSize, timeout);
 }
 

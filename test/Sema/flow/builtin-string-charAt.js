@@ -20,13 +20,13 @@ function test(s: string): string {
 // CHECK-NEXT:%function.3 = function(this: string, pos: number): string
 
 // CHECK:SemContext
-// CHECK-NEXT:Func strict
+// CHECK-NEXT:Func strict mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:        Decl %d.2 'test' Var : %function.2
 // CHECK-NEXT:        Decl %d.3 'arguments' Var Arguments
 // CHECK-NEXT:        hoistedFunction test
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict noImplicitReturn
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.4 's' Parameter : string
 // CHECK-NEXT:            Decl %d.5 'arguments' Var Arguments

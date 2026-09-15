@@ -355,7 +355,7 @@ cl::opt<bool> MetroRequireOpt(
 
 cl::opt<bool> Typed(
     "typed",
-    cl::desc("Enable typed mode"),
+    cl::desc("Enable typed mode (use -help-typed to learn more)"),
     cl::init(false),
     cl::cat(CompilerCategory));
 
@@ -518,6 +518,12 @@ cl::opt<std::string> XNativeTarget(
     "Xnative-target",
     cl::desc("Specify the native target triple"),
     cl::Hidden,
+    cl::cat(CompilerCategory));
+
+cl::opt<bool> HelpTyped(
+    "help-typed",
+    cl::desc("Print the Typed language documentation and exit"),
+    cl::init(false),
     cl::cat(CompilerCategory));
 
 } // namespace cli
@@ -819,8 +825,9 @@ ESTree::NodePtr parseJS(
   }
 #endif
 
-  parsedAST = llvh::cast<ESTree::ProgramNode>(
-      hermes::transformASTForCompilation(*context, parsedAST));
+  parsedAST = llvh::cast_or_null<ESTree::ProgramNode>(
+      hermes::transformASTForCompilation(
+          *context, /* typed */ flowContext != nullptr, parsedAST));
   if (!parsedAST)
     return nullptr;
 
@@ -835,7 +842,14 @@ ESTree::NodePtr parseJS(
     if (!optPrelude) {
       return nullptr;
     }
-    prelude = optPrelude.getValue();
+    // Apply the same AST transforms (e.g. typed-mode Hermes.decorate
+    // rewriting) to the TypedLib prelude that we applied to user code.
+    auto *transformedPrelude = hermes::transformASTForCompilation(
+        *context, /* typed */ flowContext != nullptr, optPrelude.getValue());
+    if (!transformedPrelude) {
+      return nullptr;
+    }
+    prelude = llvh::cast<ESTree::ProgramNode>(transformedPrelude);
   }
 
   // If we are executing in typed mode and not script, then wrap the program.
@@ -1101,6 +1115,11 @@ int main(int argc, char **argv) {
   llvh::cl::AddExtraVersionPrinter(
       [](llvh::raw_ostream &OS) { OS << "Static Hermes JS Compiler v0.0\n"; });
   llvh::cl::ParseCommandLineOptions(argc, argv, "Static Hermes\n");
+
+  if (cli::HelpTyped) {
+    llvh::outs() << getTypedLanguageDoc();
+    return 0;
+  }
 
   if (!compileFromCommandLineOptions())
     return 1;

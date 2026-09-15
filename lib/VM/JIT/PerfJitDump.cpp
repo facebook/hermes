@@ -239,6 +239,14 @@ void PerfJitDump::writeCommentLine(llvh::StringRef comment) {
   commentFileOS_ << comment;
 }
 
+void PerfJitDump::discardPendingCodeComments() {
+  // The comment lines themselves have already been written to commentFile_
+  // and cannot be taken back, but they are only ever referenced by debug
+  // entries, so dropping the entries is enough to keep the next function's
+  // line attribution correct.
+  debugEntries_.clear();
+}
+
 void PerfJitDump::addCodeComment(llvh::StringRef comment, uint32_t offset) {
   // Note: currently there is an issue that if this is the first comment to
   // current jitted function, but not the first line in the comment file, when

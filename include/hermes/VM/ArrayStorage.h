@@ -255,23 +255,29 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
     return val;
   }
 
-  /// Append the contents of the given ArrayStorage \p other to this
-  /// ArrayStorage, where we know that there is no need to allocate additional
-  /// capacity. This is more efficient than append, since the caller does not
-  /// need to allocate a handle for the ArrayStorage, check for exceptions, or
-  /// write back the resulting pointer in case it moves.
-  void appendWithinCapacity(Runtime &runtime, ArrayStorageBase *other) {
+  /// Append the contents of the given ArrayStorage \p other starting at
+  /// index \p fromIndex to this ArrayStorage, where we know that there is no
+  /// need to allocate additional capacity. This is more efficient than
+  /// append, since the caller does not need to allocate a handle for the
+  /// ArrayStorage, check for exceptions, or write back the resulting pointer
+  /// in case it moves.
+  void appendWithinCapacity(
+      Runtime &runtime,
+      ArrayStorageBase *other,
+      size_type fromIndex = 0) {
     size_t sz = size(), otherSz = other->size();
-    assert(sz + otherSz <= capacity() && "Insufficient capacity");
-    auto *fromStart = other->data();
-    auto *fromEnd = fromStart + otherSz;
+    assert(fromIndex <= otherSz && "fromIndex out of range");
+    size_t copyLen = otherSz - fromIndex;
+    assert(sz + copyLen <= capacity() && "Insufficient capacity");
+    auto *fromStart = other->data() + fromIndex;
+    auto *fromEnd = other->data() + otherSz;
     GCHVType::uninitialized_copy(
         fromStart, fromEnd, data() + sz, this, runtime.getHeap());
-    size_.store(sz + otherSz, std::memory_order_release);
+    size_.store(sz + copyLen, std::memory_order_release);
   }
 
-  /// Append the contents of the given ArrayStorage \p other to this
-  /// ArrayStorage.
+  /// Append the contents of the given ArrayStorage \p other starting at
+  /// index \p fromIndex to this ArrayStorage.
   ///
   /// \param[in,out] selfHandle The ArrayStorageBase to be modified. Note the
   /// MutableHandle will be updated to point to a new allocated ArrayStorageBase
@@ -279,16 +285,20 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
   /// after the call to update their own pointers.
   /// \param runtime The Runtime.
   /// \param other The ArrayStorage to append.
+  /// \param fromIndex The starting index in \p other from which to copy.
   static ExecutionStatus append(
       MutableHandle<ArrayStorageBase> selfHandle,
       Runtime &runtime,
-      Handle<ArrayStorageBase> other) {
+      Handle<ArrayStorageBase> other,
+      size_type fromIndex = 0) {
     auto *self = selfHandle.get();
-    if (LLVM_LIKELY(self->size() + other->size() < self->capacity())) {
-      self->appendWithinCapacity(runtime, *other);
+    assert(fromIndex <= other->size() && "fromIndex out of range");
+    size_t copyLen = other->size() - fromIndex;
+    if (LLVM_LIKELY(self->size() + copyLen <= self->capacity())) {
+      self->appendWithinCapacity(runtime, *other, fromIndex);
       return ExecutionStatus::RETURNED;
     }
-    return appendSlowPath(selfHandle, runtime, other);
+    return appendSlowPath(selfHandle, runtime, other, fromIndex);
   }
 
   /// Ensure that the capacity of the array is at least \p capacity,
@@ -434,10 +444,12 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
   /// after the call to update their own pointers.
   /// \param runtime The Runtime.
   /// \param other The ArrayStorage to append.
+  /// \param fromIndex The starting index in \p other from which to copy.
   static ExecutionStatus appendSlowPath(
       MutableHandle<ArrayStorageBase<HVType>> selfHandle,
       Runtime &runtime,
-      Handle<ArrayStorageBase> other);
+      Handle<ArrayStorageBase> other,
+      size_type fromIndex = 0);
 
   /// Shrinks \p self during GC compaction, so that it's capacity is equal to
   /// its size.

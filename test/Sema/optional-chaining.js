@@ -15,11 +15,11 @@ function foo(x) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:SemContext
-// CHECK-NEXT:Func loose
+// CHECK-NEXT:Func loose mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'foo' GlobalProperty
 // CHECK-NEXT:        hoistedFunction foo
-// CHECK-NEXT:    Func loose
+// CHECK-NEXT:    Func loose noImplicitReturn
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.2 'x' Parameter
 // CHECK-NEXT:            Decl %d.3 'arguments' Var Arguments

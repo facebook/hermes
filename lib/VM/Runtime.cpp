@@ -326,6 +326,9 @@ Runtime::Runtime(
           crashMgr_->registerCallback([this](int fd) { crashCallback(fd); })),
       codeCoverageProfiler_(std::make_unique<CodeCoverageProfiler>(*this)),
       gcEventCallback_(runtimeConfig.getGCConfig().getCallback()) {
+  hermes_assert(
+      runtimeConfig.getMicrotaskQueue(),
+      "MicrotaskQueue must be enabled. Setting it to false is no longer supported.");
   assert(
       (void *)this == (void *)(PointerBase *)this &&
       "cast to PointerBase should be no-op");
@@ -501,7 +504,20 @@ Runtime::~Runtime() {
   samplingProfiler.reset();
 #endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 
+  // Run embedder shutdown callbacks while the heap is still functional.
+  // Callbacks may allocate, call into JS, and trigger GC.
+  for (auto &cb : shutdownCallbacks_)
+    cb();
+  shutdownCallbacks_.clear();
+
   getHeap().finalizeAll();
+
+  // Heap is now quiesced; run deleters for embedder objects that had to
+  // outlive finalizeAll (e.g., napi_env whose NativeState finalizers
+  // were invoked above and called env->queuePendingFinalizer).
+  for (auto &d : postShutdownDeleters_)
+    d();
+  postShutdownDeleters_.clear();
   // Remove inter-module dependencies so we can delete them in any order.
   for (auto &module : runtimeModuleList_) {
     module.prepareForDestruction();
@@ -776,6 +792,9 @@ void Runtime::markWeakRoots(WeakRootAcceptor &acceptor, bool markLongLived) {
       acceptor.acceptWeak(entry.clazz);
     }
     for (auto &entry : fixedReadPropCache_) {
+      assert(
+          !entry.negMatchClazz &&
+          "negMatchClazz is always zero for non-JS code property cache");
       acceptor.acceptWeak(entry.clazz);
     }
   }
@@ -1069,18 +1088,28 @@ static CallResult<HermesValue> interpretFunctionWithRandomStack(
   return runtime.interpretFunction(globalCode);
 }
 
+std::unique_ptr<Buffer> makeCompilationSourceBuffer(
+    llvh::StringRef code,
+    const hbc::CompileFlags &compileFlags) {
+  // The compiled module retains its source buffer when compiling lazily or with
+  // full debug info (see keepCompilationData in BCProviderFromSrc), so in those
+  // cases the buffer must own its bytes: `code` may not outlive the module (for
+  // example a transient eval or debugger command string). Otherwise the buffer
+  // is dropped after compilation, so borrowing `code` is safe.
+  if (compileFlags.lazy || compileFlags.debug) {
+    return std::make_unique<OwnedMemoryBuffer>(
+        llvh::MemoryBuffer::getMemBufferCopy(code));
+  }
+  return std::make_unique<OwnedMemoryBuffer>(
+      llvh::MemoryBuffer::getMemBuffer(code));
+}
+
 CallResult<HermesValue> Runtime::run(
     llvh::StringRef code,
     llvh::StringRef sourceURL,
     const hbc::CompileFlags &compileFlags) {
-  std::unique_ptr<hermes::Buffer> buffer;
-  if (compileFlags.lazy) {
-    buffer.reset(new hermes::OwnedMemoryBuffer(
-        llvh::MemoryBuffer::getMemBufferCopy(code)));
-  } else {
-    buffer.reset(
-        new hermes::OwnedMemoryBuffer(llvh::MemoryBuffer::getMemBuffer(code)));
-  }
+  std::unique_ptr<hermes::Buffer> buffer =
+      makeCompilationSourceBuffer(code, compileFlags);
   return run(std::move(buffer), sourceURL, compileFlags);
 }
 
@@ -2000,6 +2029,11 @@ void Runtime::freezeBuiltins() {
 }
 
 ExecutionStatus Runtime::drainJobs() {
+  // Invoke registered callbacks before draining (e.g., NAPI
+  // finalizer draining).
+  for (auto &cb : drainJobsCallbacks_)
+    cb();
+
   GCScope gcScope{*this};
   MutableHandle<Callable> job{*this};
   // Note that new jobs can be enqueued during the draining.

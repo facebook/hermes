@@ -178,3 +178,15 @@ print(/[\p{Lu}]+/ui.exec("aBc"));
 // just the base Script.
 print(/\p{Script_Extensions=Lao}/u.exec("\u{0E81}") !== null);
 // CHECK-NEXT: true
+
+// U+10FFFF must be included in inverted property ranges inside a bracket.
+print(/[\P{ASCII}]/u.test(String.fromCodePoint(0x10FFFF)));
+// CHECK-NEXT: true
+
+// We must handle unsorted, overlapping pool data (coming from Script_Extensions) correctly.
+print(/[\P{Script_Extensions=Arabic}]/u.test('a'));
+// CHECK-NEXT: true
+
+// \P with case-insensitive matching in a modifier group.
+print(/(?i:\P{Lu})/u.test("A"));
+// CHECK-NEXT: true

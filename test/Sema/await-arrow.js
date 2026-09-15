@@ -14,14 +14,14 @@ async (x = () => { return await; }) => {}
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:SemContext
-// CHECK-NEXT:Func loose
+// CHECK-NEXT:Func loose mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'await' Let
-// CHECK-NEXT:    Func loose
+// CHECK-NEXT:    Func loose mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.2 'x' Parameter
 // CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:        Func loose
+// CHECK-NEXT:        Func loose noImplicitReturn
 // CHECK-NEXT:            Scope %s.4
 
 // CHECK:Program Scope %s.1

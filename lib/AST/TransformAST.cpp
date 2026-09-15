@@ -7,13 +7,15 @@
 
 #include "hermes/AST/TransformAST.h"
 #include "hermes/AST/AsyncGenerator.h"
+#include "hermes/AST/TransformDecorate.h"
 #if HERMES_PARSE_TS
 #include "hermes/AST/StripTS.h"
 #endif
 
 namespace hermes {
 
-ESTree::Node *transformASTForCompilation(Context &context, ESTree::Node *root) {
+ESTree::Node *
+transformASTForCompilation(Context &context, bool typed, ESTree::Node *root) {
 #if HERMES_PARSE_TS
   if (context.getTransformTS()) {
     root = stripTS(context, root);
@@ -23,6 +25,11 @@ ESTree::Node *transformASTForCompilation(Context &context, ESTree::Node *root) {
 #endif
   if (context.getEnableAsyncGenerators()) {
     root = transformAsyncGenerators(context, root);
+  }
+  if (typed) {
+    root = transformDecorate(context, root);
+    if (!root)
+      return nullptr;
   }
   return root;
 }

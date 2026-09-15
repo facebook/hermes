@@ -9,15 +9,16 @@
 
 'use strict';
 
-// Should just assume 'any'.
+// Empty array with no context: infer 'any[]' (Array<any>).
 s = [];
 
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
+// CHECK-NEXT:%class.2 = class(Array<any>)
 
 // CHECK:SemContext
-// CHECK-NEXT:Func strict
+// CHECK-NEXT:Func strict mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:        Decl %d.2 'arguments' Var Arguments
@@ -28,6 +29,6 @@ s = [];
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            StringLiteral : string
 // CHECK-NEXT:        ExpressionStatement
-// CHECK-NEXT:            AssignmentExpression : any
+// CHECK-NEXT:            AssignmentExpression : %class.2
 // CHECK-NEXT:                Id 's' [D:E:%d.3 's'] : any
-// CHECK-NEXT:                ArrayExpression : any
+// CHECK-NEXT:                ArrayExpression : %class.2

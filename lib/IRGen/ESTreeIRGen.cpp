@@ -9,6 +9,7 @@
 
 #include "hermes/IR/IRUtils.h"
 
+#include "llvh/ADT/BitVector.h"
 #include "llvh/ADT/ScopeExit.h"
 #include "llvh/ADT/SetVector.h"
 #include "llvh/ADT/StringSet.h"
@@ -158,7 +159,6 @@ llvh::StringRef ESTreeIRGen::propertyKeyAsString(
   }
 
   llvm_unreachable("Don't know this kind of property key");
-  return llvh::StringRef();
 }
 
 void ESTreeIRGen::doIt(llvh::StringRef topLevelFunctionName) {
@@ -673,26 +673,18 @@ void ESTreeIRGen::_emitIteratorCloseImpl(
   auto *haveReturn = Builder.createBasicBlock(Builder.getFunction());
   auto *noReturn = Builder.createBasicBlock(Builder.getFunction());
 
-  auto *returnMethod = genBuiltinCall(
-      BuiltinMethod::HermesBuiltin_getMethod,
-      {iteratorRecord.iterator, Builder.getLiteralString("return")});
-  auto *returnIsUndefined = Builder.createBinaryOperatorInst(
-      returnMethod,
-      Builder.getLiteralUndefined(),
-      ValueKind::BinaryStrictlyEqualInstKind);
-  Builder.createCondBranchInst(returnIsUndefined, noReturn, haveReturn);
-
-  Builder.setInsertionBlock(haveReturn);
   if (ignoreInnerException) {
+    // Per spec §7.4.11 IteratorClose step 5 / §7.4.13 AsyncIteratorClose
+    // step 5 ("If completion is a throw completion, return ? completion"):
+    // if the original completion is already a throw, any error from
+    // GetMethod or from calling return() must be suppressed in favor of the
+    // original. Wrap the entire getMethod + call sequence in the try/catch
+    // so that a throw from the return getter is also caught and discarded.
     emitTryCatchScaffolding(
         noReturn,
         // emitBody.
-        [this,
-         returnMethod,
-         &iteratorRecord,
-         isAsyncIterator,
-         astNode,
-         needsOverloadYield](BasicBlock *catchBlock) {
+        [this, &iteratorRecord, isAsyncIterator, astNode, needsOverloadYield](
+            BasicBlock *catchBlock) {
           SurroundingTry thisTry{
               curFunction(),
               astNode,
@@ -702,15 +694,32 @@ void ESTreeIRGen::_emitIteratorCloseImpl(
                  ControlFlowChange cfc,
                  BasicBlock *continueTarget) {}};
 
+          auto *haveReturn = Builder.createBasicBlock(Builder.getFunction());
+          auto *noReturn = Builder.createBasicBlock(Builder.getFunction());
+
+          auto *returnMethod = genBuiltinCall(
+              BuiltinMethod::HermesBuiltin_getMethod,
+              {iteratorRecord.iterator, Builder.getLiteralString("return")});
+          auto *returnIsUndefined = Builder.createBinaryOperatorInst(
+              returnMethod,
+              Builder.getLiteralUndefined(),
+              ValueKind::BinaryStrictlyEqualInstKind);
+          Builder.createCondBranchInst(returnIsUndefined, noReturn, haveReturn);
+
+          Builder.setInsertionBlock(haveReturn);
           auto *callResult = Builder.createCallInst(
               returnMethod,
               /* newTarget */ Builder.getLiteralUndefined(),
               iteratorRecord.iterator,
               {});
-          if (isAsyncIterator)
+          if (isAsyncIterator) {
             genYieldOrAwaitExpr(
                 needsOverloadYield ? emitAwaitAsyncGenerator(callResult)
                                    : callResult);
+          }
+          Builder.createBranchInst(noReturn);
+
+          Builder.setInsertionBlock(noReturn);
         },
         // emitNormalCleanup.
         []() {},
@@ -721,6 +730,16 @@ void ESTreeIRGen::_emitIteratorCloseImpl(
           Builder.createBranchInst(nextBlock);
         });
   } else {
+    auto *returnMethod = genBuiltinCall(
+        BuiltinMethod::HermesBuiltin_getMethod,
+        {iteratorRecord.iterator, Builder.getLiteralString("return")});
+    auto *returnIsUndefined = Builder.createBinaryOperatorInst(
+        returnMethod,
+        Builder.getLiteralUndefined(),
+        ValueKind::BinaryStrictlyEqualInstKind);
+    Builder.createCondBranchInst(returnIsUndefined, noReturn, haveReturn);
+
+    Builder.setInsertionBlock(haveReturn);
     auto *callResult = Builder.createCallInst(
         returnMethod,
         /* newTarget */ Builder.getLiteralUndefined(),
@@ -771,9 +790,12 @@ void ESTreeIRGen::emitDestructuringAssignment(
     Value *source) {
   if (auto *APN = llvh::dyn_cast<ESTree::ArrayPatternNode>(target))
     return emitDestructuringArray(declInit, APN, source);
-  else if (auto *OPN = llvh::dyn_cast<ESTree::ObjectPatternNode>(target))
+  else if (auto *OPN = llvh::dyn_cast<ESTree::ObjectPatternNode>(target)) {
+    flow::Type *patType = flowContext_.getNodeTypeOrAny(OPN);
+    if (auto *exact = llvh::dyn_cast<flow::ExactObjectType>(patType->info))
+      return emitDestructuringTypedObject(declInit, OPN, exact, source);
     return emitDestructuringObject(declInit, OPN, source);
-  else {
+  } else {
     Mod->getContext().getSourceErrorManager().error(
         target->getSourceRange(), "unsupported destructuring target");
   }
@@ -783,9 +805,13 @@ void ESTreeIRGen::emitDestructuringArray(
     bool declInit,
     ESTree::ArrayPatternNode *targetPat,
     Value *source) {
-  if (auto *tuple = llvh::dyn_cast<flow::TupleType>(
-          flowContext_.getNodeTypeOrAny(targetPat)->info)) {
+  flow::Type *patType = flowContext_.getNodeTypeOrAny(targetPat);
+  if (auto *tuple = llvh::dyn_cast<flow::TupleType>(patType->info)) {
     emitDestructuringTypedTuple(declInit, targetPat, tuple, source);
+    return;
+  }
+  if (flowContext_.isArrayClassType(patType)) {
+    emitDestructuringTypedArray(declInit, targetPat, patType, source);
     return;
   }
 
@@ -1088,6 +1114,44 @@ void ESTreeIRGen::emitDestructuringTypedTuple(
   }
 }
 
+void ESTreeIRGen::emitDestructuringTypedArray(
+    bool declInit,
+    ESTree::ArrayPatternNode *targetPat,
+    flow::Type *arrayClassType,
+    Value *source) {
+  assert(
+      flowContext_.isArrayClassType(arrayClassType) &&
+      "emitDestructuringTypedArray requires Array<T>");
+  flow::Type *elemType = flowContext_.getArrayElementType(arrayClassType);
+  Type irElemType = flowTypeToIRType(elemType);
+
+  size_t i = 0;
+  for (auto it = targetPat->_elements.begin(), end = targetPat->_elements.end();
+       it != end;
+       ++it, ++i) {
+    ESTree::Node &elem = *it;
+
+    if (llvh::isa<ESTree::EmptyNode>(&elem))
+      continue;
+
+    if (auto *rest = llvh::dyn_cast<ESTree::RestElementNode>(&elem)) {
+      assert(std::next(it) == end && "rest element must be the last element");
+      // Delegate to fastArraySlice, which copies the tail [i, length) into a
+      // fresh FastArray.
+      LReference restLRef = createLRef(rest->_argument, declInit);
+      auto *newArr = genBuiltinCall(
+          BuiltinMethod::HermesBuiltin_fastArraySlice,
+          {source, Builder.getLiteralNumber(i)});
+      restLRef.emitStore(newArr);
+    } else {
+      LReference lref = createLRef(&elem, declInit);
+      Value *val = Builder.createFastArrayLoadInst(
+          source, Builder.getLiteralNumber(i), irElemType);
+      lref.emitStore(val);
+    }
+  }
+}
+
 void ESTreeIRGen::emitRestElement(
     bool declInit,
     ESTree::RestElementNode *rest,
@@ -1305,6 +1369,134 @@ void ESTreeIRGen::emitRestProperty(
   lref.emitStore(restValue);
 }
 
+void ESTreeIRGen::emitDestructuringTypedObject(
+    bool declInit,
+    ESTree::ObjectPatternNode *target,
+    flow::ExactObjectType *srcType,
+    Value *source) {
+  // An indexer object has no fixed-slot named fields, so the slot-based PrLoad
+  // path below cannot serve it. Lower it dynamically: each named property is a
+  // by-name load narrowed to the indexer value type (a missing key throws),
+  // and the rest binding copies the remaining keys via copyDataProperties.
+  if (const auto &indexer = srcType->getIndexer()) {
+    Type valueIRType = flowTypeToIRType(indexer->valueType);
+    llvh::SmallVector<Value *, 4> excludedItems{};
+    for (auto &elem : target->_properties) {
+      if (auto *rest = llvh::dyn_cast<ESTree::RestElementNode>(&elem)) {
+        emitRestProperty(declInit, rest, excludedItems, source);
+        break;
+      }
+      auto *propNode = cast<ESTree::PropertyNode>(&elem);
+
+      ESTree::Node *valueNode = propNode->_value;
+      ESTree::Node *init = nullptr;
+      if (auto *assign =
+              llvh::dyn_cast<ESTree::AssignmentPatternNode>(valueNode)) {
+        valueNode = assign->_left;
+        init = assign->_right;
+      }
+
+      Identifier nameHint = llvh::isa<ESTree::IdentifierNode>(valueNode)
+          ? getNameFieldFromID(valueNode)
+          : Identifier{};
+
+      // FlowChecker validated the key is a non-computed identifier.
+      Identifier key = getNameFieldFromID(
+          llvh::cast<ESTree::IdentifierNode>(propNode->_key));
+      excludedItems.push_back(Builder.getLiteralString(key));
+      Value *loaded = Builder.createLoadPropertyInst(source, key);
+      // Apply the default (if any) before narrowing: a missing key reads as
+      // `undefined`, which selects the initializer rather than throwing. With
+      // no initializer the cast narrows `T | void` to `T`, so a missing key
+      // throws.
+      Value *optInit = emitOptionalInitialization(loaded, init, nameHint);
+      Value *cast = Builder.createCheckedTypeCastInst(optInit, valueIRType);
+      createLRef(valueNode, declInit).emitStore(cast);
+    }
+    return;
+  }
+
+  // Track which fields of \p srcType the named properties have consumed,
+  // so a trailing rest element can be built from the remaining fields.
+  llvh::BitVector consumed(srcType->getFields().size());
+
+  for (auto &elem : target->_properties) {
+    if (auto *rest = llvh::dyn_cast<ESTree::RestElementNode>(&elem)) {
+      // Allocate a new exact object containing the remaining fields, in the
+      // same order as srcType. The order matches the rest binding's
+      // ExactObjectType that FlowChecker constructed.
+      AllocObjectLiteralInst::ObjectPropertyMap propMap{};
+      llvh::SmallVector<size_t, 4> remainingSrcIdx{};
+      for (size_t i = 0, e = srcType->getFields().size(); i < e; ++i) {
+        if (consumed.test(i))
+          continue;
+        const auto &field = srcType->getFields()[i];
+        propMap.emplace_back(
+            Builder.getLiteralString(field.name),
+            getDefaultInitValue(field.type));
+        remainingSrcIdx.push_back(i);
+      }
+
+      Value *restObj = propMap.empty()
+          ? Builder.createAllocObjectLiteralInst()
+          : Builder.createAllocObjectLiteralInst(propMap);
+
+      for (size_t destIdx = 0, n = remainingSrcIdx.size(); destIdx < n;
+           ++destIdx) {
+        size_t srcIdx = remainingSrcIdx[destIdx];
+        const auto &field = srcType->getFields()[srcIdx];
+        auto *nameLit = Builder.getLiteralString(field.name);
+        Type irType = flowTypeToIRType(field.type);
+        Value *loaded =
+            Builder.createPrLoadInst(source, srcIdx, nameLit, irType);
+        Builder.createPrStoreInst(
+            loaded,
+            restObj,
+            destIdx,
+            nameLit,
+            getTypeContext().isNonPtr(irType));
+      }
+
+      LReference lref = createLRef(rest->_argument, declInit);
+      lref.emitStore(restObj);
+      break;
+    }
+
+    auto *propNode = cast<ESTree::PropertyNode>(&elem);
+
+    ESTree::Node *valueNode = propNode->_value;
+    ESTree::Node *init = nullptr;
+    if (auto *assign =
+            llvh::dyn_cast<ESTree::AssignmentPatternNode>(valueNode)) {
+      valueNode = assign->_left;
+      init = assign->_right;
+    }
+
+    Identifier nameHint = llvh::isa<ESTree::IdentifierNode>(valueNode)
+        ? getNameFieldFromID(valueNode)
+        : Identifier{};
+
+    // FlowChecker already validated that the key is a non-computed identifier
+    // and that the field exists in srcType.
+    auto *keyId = llvh::cast<ESTree::IdentifierNode>(propNode->_key);
+    Identifier key = getNameFieldFromID(keyId);
+    auto optIdx = srcType->findField(key);
+    assert(optIdx.hasValue() && "FlowChecker should have rejected this");
+    size_t srcIdx = *optIdx;
+    consumed.set(srcIdx);
+
+    const auto &field = srcType->getFields()[srcIdx];
+    Value *loaded = Builder.createPrLoadInst(
+        source,
+        srcIdx,
+        Builder.getLiteralString(field.name),
+        flowTypeToIRType(field.type));
+    Value *optInit = emitOptionalInitialization(loaded, init, nameHint);
+    LReference lref = createLRef(valueNode, declInit);
+    lref.emitStore(optInit);
+  }
+}
+
 Value *ESTreeIRGen::emitOptionalInitialization(
     Value *value,
     ESTree::Node *init,
@@ -1369,13 +1561,14 @@ Instruction *ESTreeIRGen::emitLoad(Value *from, bool inhibitThrow) {
               Builder.getLiteralEmpty(), Type::createEmpty());
           // Pretend that the instruction, which always throws, returns a
           // value with the correct type.
-          thr->setType(Type::subtractTy(var->getType(), Type::createEmpty()));
+          thr->setType(
+              getTypeContext().subtractTy(var->getType(), Type::createEmpty()));
           thr->updateSavedResultType();
           res = thr;
         } else {
           res = Builder.createUnionNarrowTrustedInst(
               Builder.createLoadFrameInst(RSI, var),
-              Type::subtractTy(var->getType(), Type::createEmpty()));
+              getTypeContext().subtractTy(var->getType(), Type::createEmpty()));
         }
       } else {
         res = Builder.createThrowIfInst(
@@ -1398,8 +1591,7 @@ Instruction *ESTreeIRGen::emitLoad(Value *from, bool inhibitThrow) {
   }
 }
 
-Instruction *
-ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
+void ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
   if (auto *var = llvh::dyn_cast<Variable>(ptr)) {
     auto *RSI = emitResolveScopeInstIfNeeded(var->getParent());
     // TODO(T182345760): Move the TDZ tracking and checking into the resolver.
@@ -1451,23 +1643,30 @@ ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
       if (constness == sema::Decl::Constness::Always ||
           (Builder.getFunction()->isStrictMode() &&
            constness == sema::Decl::Constness::StrictModeOnly)) {
-        // If this is a const variable being reassigned, throw a TypeError.
+        // Strict mode or always-const: throw TypeError at runtime.
         Builder.createThrowTypeErrorInst(Builder.getLiteralString(
             "assignment to constant variable '" + var->getName().str() + "'"));
         // Create a new block, since ThrowTypeError is a terminator.
         Builder.setInsertionBlock(
             Builder.createBasicBlock(Builder.getFunction()));
+      } else if (constness == sema::Decl::Constness::StrictModeOnly) {
+        // Per ES2025 §9.1.1.1.5 step 5.b: immutable-binding assignment
+        // throws only if S=true; in sloppy mode (S=false) it's a no-op
+        // and the binding keeps its initialized value.
+        return;
       }
     }
 
-    return Builder.createStoreFrameInst(RSI, storedValue, var);
+    Builder.createStoreFrameInst(RSI, storedValue, var);
+    return;
   } else if (auto *globalProp = llvh::dyn_cast<GlobalObjectProperty>(ptr)) {
     if (globalProp->isDeclared() || !Builder.getFunction()->isStrictMode()) {
-      return Builder.createStorePropertyInst(
+      Builder.createStorePropertyInst(
           storedValue, Builder.getGlobalObject(), globalProp->getName());
     } else {
-      return Builder.createTryStoreGlobalPropertyInst(storedValue, globalProp);
+      Builder.createTryStoreGlobalPropertyInst(storedValue, globalProp);
     }
+    return;
   } else {
     llvm_unreachable("invalid value to load from");
   }

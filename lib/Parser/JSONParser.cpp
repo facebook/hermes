@@ -200,6 +200,17 @@ llvh::Optional<JSONValue *> JSONParser::parse() {
 }
 
 llvh::Optional<JSONValue *> JSONParser::parseValue() {
+  if (LLVM_UNLIKELY(recursionDepth_ >= MAX_RECURSION_DEPTH)) {
+    error("Too many nested JSON values");
+    return llvh::None;
+  }
+  ++recursionDepth_;
+  auto res = parseValueImpl();
+  --recursionDepth_;
+  return res;
+}
+
+llvh::Optional<JSONValue *> JSONParser::parseValueImpl() {
   bool needsNegation = false;
   switch (lexer_.getCurToken()->getKind()) {
     case TokenKind::string_literal: {

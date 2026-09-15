@@ -490,7 +490,7 @@ Optional<ESTree::Node *> JSParserImpl::parseJSXElementName(
         new (context_) ESTree::JSXMemberExpressionNode(name, child));
   }
 
-  if (isa<ESTree::MemberExpressionNode>(name) &&
+  if (isa<ESTree::JSXMemberExpressionNode>(name) &&
       allowJSXMemberExpression == AllowJSXMemberExpression::No) {
     error(name->getSourceRange(), "unexpected member expression");
   }

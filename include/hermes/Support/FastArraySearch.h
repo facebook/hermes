@@ -83,4 +83,16 @@ int64_t searchReverseU64(
     size_t end,
     uint64_t target);
 
+/// Scan [start, end) for the first byte that requires escaping in a JSON
+/// string per ECMA-404: '"' (0x22), '\\' (0x5C), or any control character
+/// (<= 0x1F).
+/// \return pointer to the first such character, or \p end if none found.
+const char *scanJsonEscapeU8(const char *start, const char *end);
+
+/// Scan [start, end) for the first char16_t that requires escaping in a JSON
+/// string per ECMA-404: '"' (0x22), '\\' (0x5C), or any control character
+/// (<= 0x1F).
+/// \return pointer to the first such character, or \p end if none found.
+const char16_t *scanJsonEscapeU16(const char16_t *start, const char16_t *end);
+
 } // namespace hermes

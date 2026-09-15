@@ -1,0 +1,19 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+// REQUIRES: napi, jsi_unstable
+// UNSUPPORTED: windows
+
+// Proves the full async-work pipeline: napi_queue_async_work hands off
+// to the host adapter's worker thread (execute runs off-JS), then
+// schedules the completion callback back onto the JS thread via
+// EventLoopControl, where the addon's JS callback fires with the
+// computed value and thread-residency flags.
+
+// RUN: echo 'var a = loadNativeModule("%napi_addon_dir/napi_async_work_addon.node"); a.doWork(21, function(r, off, onJS) { print("r=" + r + " off=" + off + " onJS=" + onJS); });' > %t.js && %hermes %t.js | %FileCheck --match-full-lines %s
+
+// CHECK: r=42 off=true onJS=true

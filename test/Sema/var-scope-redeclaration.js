@@ -15,11 +15,11 @@ function main() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:SemContext
-// CHECK-NEXT:Func loose
+// CHECK-NEXT:Func loose mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'main' GlobalProperty
 // CHECK-NEXT:        hoistedFunction main
-// CHECK-NEXT:    Func loose
+// CHECK-NEXT:    Func loose mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.2 'a1' Var
 // CHECK-NEXT:            Decl %d.3 'arguments' Var Arguments

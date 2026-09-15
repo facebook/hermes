@@ -121,7 +121,6 @@ new C(1, 2);
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS5: any, %1: environment
 // CHECK-NEXT:  %3 = LoadFrameInst (:object) %1: environment, [%VS1.#privateMethod]: object
-// CHECK-NEXT:  %4 = CallInst [njsf] (:any) %3: object, empty: any, false: boolean, empty: any, undefined: undefined, %0: object
-// CHECK-NEXT:  %5 = CheckedTypeCastInst (:number) %4: any, type(number)
-// CHECK-NEXT:       ReturnInst %5: number
+// CHECK-NEXT:  %4 = CallInst [njsf] (:number) %3: object, empty: any, false: boolean, empty: any, undefined: undefined, %0: object
+// CHECK-NEXT:       ReturnInst %4: number
 // CHECK-NEXT:function_end

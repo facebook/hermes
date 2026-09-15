@@ -17,7 +17,7 @@ import {
 } from './utils/scriptUtils';
 import tempCustomASTDefs from './utils/tempCustomASTDefs';
 
-const visitorKeys: {[string]: $ReadOnly<{[string]: 'Node' | 'NodeList'}>} =
+const visitorKeys: {[string]: Readonly<{[string]: 'Node' | 'NodeList'}>} =
   // $FlowExpectedError[incompatible-type]
   Object.create(null);
 for (const node of GetHermesESTreeJSON()) {

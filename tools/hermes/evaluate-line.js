@@ -230,7 +230,7 @@ C_STRING((function() {
 
     function isPromise(val) {
       // HermesPromise is "undefined" if Hermes is not ran with `-Xes6-promise`.
-      return HermesInternal.hasPromise() && value instanceof HermesPromise;
+      return HermesInternal.hasPromise() && val instanceof HermesPromise;
     }
 
     if (isPromise(value)) {

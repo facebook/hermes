@@ -1063,6 +1063,10 @@ class JSObject : public GCCell {
         selfHandle, runtime, index, value);
   }
 
+  /// Calls ObjectVTable::haveOwnIndexed.
+  static bool
+  haveOwnIndexed(Handle<JSObject> selfHandle, Runtime &runtime, uint32_t index);
+
   /// Calls ObjectVTable::deleteOwnIndexed.
   static bool deleteOwnIndexed(
       Handle<JSObject> selfHandle,
@@ -2146,6 +2150,13 @@ inline std::pair<uint32_t, uint32_t> JSObject::getOwnIndexedRange(
     PointerBase &runtime) {
   return self->getVT()->getOwnIndexedRange(self, runtime);
 };
+
+inline bool JSObject::haveOwnIndexed(
+    Handle<JSObject> selfHandle,
+    Runtime &runtime,
+    uint32_t index) {
+  return haveOwnIndexed(selfHandle.get(), runtime, index);
+}
 
 inline bool
 JSObject::haveOwnIndexed(JSObject *self, Runtime &runtime, uint32_t index) {

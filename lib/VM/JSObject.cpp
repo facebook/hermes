@@ -2936,10 +2936,16 @@ void JSObject::tryCacheAddProperty(
   // If any parents are dictionaries, they won't have their HiddenClass change
   // when properties are modified. Parent cache epoch is incremented when the
   // HiddenClass changes, so we can't cache this add.
-  // Perform this check up here to avoid allocating an unused add cache entry if
-  // the check fails.
+  // Proxies and HostObjects are excluded for the same reason: what they hold
+  // is not described by their HiddenClass, so the epoch cannot track them. A
+  // Proxy also cannot be traversed with getParent() at all, since its
+  // prototype is given by its target and traps.
+  // Perform these checks up here to avoid allocating an unused add cache entry
+  // if they fail.
   for (JSObject *cur = self->getParent(runtime); cur != nullptr;
        cur = cur->getParent(runtime)) {
+    if (LLVM_UNLIKELY(cur->isProxyObject() || cur->isHostObject()))
+      return;
     if (cur->getClass(runtime)->isDictionary())
       return;
   }

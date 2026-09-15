@@ -18,11 +18,11 @@ import {isValidModuleDeclarationParent} from './utils/isValidModuleDeclarationPa
 import {InvalidInsertionError} from '../Errors';
 import * as t from '../../generated/node-types';
 
-export type InsertStatementMutation = $ReadOnly<{
+export type InsertStatementMutation = Readonly<{
   type: 'insertStatement',
   side: 'before' | 'after',
   target: ModuleDeclaration | Statement,
-  nodesToInsert: $ReadOnlyArray<DetachedNode<Statement | ModuleDeclaration>>,
+  nodesToInsert: ReadonlyArray<DetachedNode<Statement | ModuleDeclaration>>,
 }>;
 
 export function createInsertStatementMutation(
@@ -69,7 +69,7 @@ export function performInsertStatementMutation(
 
   if (insertionParent.type === 'array') {
     const parent: interface {
-      [string]: $ReadOnlyArray<DetachedNode<Statement | ModuleDeclaration>>,
+      [string]: ReadonlyArray<DetachedNode<Statement | ModuleDeclaration>>,
     } = insertionParent.parent;
     switch (mutation.side) {
       case 'before': {
@@ -96,7 +96,7 @@ export function performInsertStatementMutation(
 
   const statementsToInsert =
     // $FlowExpectedError[incompatible-type] -- this is enforced by isValidModuleDeclarationParent above
-    (mutation.nodesToInsert: $ReadOnlyArray<DetachedNode<Statement>>);
+    mutation.nodesToInsert as ReadonlyArray<DetachedNode<Statement>>;
 
   const {parent, key} = insertionParent;
 
@@ -111,8 +111,9 @@ export function performInsertStatementMutation(
     parent: insertionParent.parent,
   });
 
-  (insertionParent.parent: interface {[string]: mixed})[insertionParent.key] =
-    blockStatement;
+  (insertionParent.parent as interface {[string]: unknown})[
+    insertionParent.key
+  ] = blockStatement;
   statementToWrap.parent = blockStatement;
 
   return insertionParent.parent;

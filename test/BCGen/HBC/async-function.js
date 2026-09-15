@@ -273,7 +273,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:2: start = L3, end = L5, target = L5
 
 // CHECK:Function<?anon_0_simpleAwait>(1 params, 21 registers, 0 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x003d
+// CHECK-NEXT:Offset in debug table: source 0x0045
 // CHECK-NEXT:    LoadParam         r3, 2
 // CHECK-NEXT:    LoadParam         r4, 1
 // CHECK-NEXT:    GetParentEnvironment r2, 0
@@ -403,7 +403,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:4: start = L6, end = L8, target = L8
 
 // CHECK:Function<?anon_0_simpleAsyncFE>(1 params, 21 registers, 0 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x005c
+// CHECK-NEXT:Offset in debug table: source 0x0064
 // CHECK-NEXT:    LoadParam         r3, 2
 // CHECK-NEXT:    LoadParam         r4, 1
 // CHECK-NEXT:    GetParentEnvironment r2, 0
@@ -553,23 +553,27 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:  0x0028  function idx 3, starts at line 19 col 21
 // CHECK-NEXT:    bc 33: line 19 col 21
 // CHECK-NEXT:  0x0030  function idx 7, starts at line 10 col 1
+// CHECK-NEXT:    bc 43: line 10 col 1
 // CHECK-NEXT:    bc 121: line 11 col 3
-// CHECK-NEXT:  0x003d  function idx 8, starts at line 14 col 1
-// CHECK-NEXT:    bc 43: line 15 col 11
+// CHECK-NEXT:    bc 157: line 10 col 1
+// CHECK-NEXT:    bc 178: line 10 col 1
+// CHECK-NEXT:    bc 220: line 10 col 1
+// CHECK-NEXT:  0x0045  function idx 8, starts at line 14 col 1
+// CHECK-NEXT:    bc 43: line 14 col 1
 // CHECK-NEXT:    bc 131: line 16 col 3
 // CHECK-NEXT:    bc 150: line 15 col 11
 // CHECK-NEXT:    bc 169: line 15 col 11
 // CHECK-NEXT:    bc 255: line 15 col 11
-// CHECK-NEXT:    bc 291: line 15 col 11
-// CHECK-NEXT:    bc 312: line 15 col 11
-// CHECK-NEXT:    bc 354: line 15 col 11
-// CHECK-NEXT:  0x005c  function idx 9, starts at line 19 col 21
-// CHECK-NEXT:    bc 43: line 20 col 11
+// CHECK-NEXT:    bc 291: line 14 col 1
+// CHECK-NEXT:    bc 312: line 14 col 1
+// CHECK-NEXT:    bc 354: line 14 col 1
+// CHECK-NEXT:  0x0064  function idx 9, starts at line 19 col 21
+// CHECK-NEXT:    bc 43: line 19 col 21
 // CHECK-NEXT:    bc 131: line 21 col 3
 // CHECK-NEXT:    bc 150: line 20 col 11
 // CHECK-NEXT:    bc 169: line 20 col 11
 // CHECK-NEXT:    bc 255: line 20 col 11
-// CHECK-NEXT:    bc 291: line 20 col 11
-// CHECK-NEXT:    bc 312: line 20 col 11
-// CHECK-NEXT:    bc 354: line 20 col 11
-// CHECK-NEXT:  0x007b  end of debug source table
+// CHECK-NEXT:    bc 291: line 19 col 21
+// CHECK-NEXT:    bc 312: line 19 col 21
+// CHECK-NEXT:    bc 354: line 19 col 21
+// CHECK-NEXT:  0x0083  end of debug source table

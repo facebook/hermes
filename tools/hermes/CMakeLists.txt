@@ -26,6 +26,29 @@ add_hermes_tool(hermes
   LINK_LIBS hermesvm_a ${LIBREADLINE}
   )
 
+# NAPI module loading support: dlopen'd addons need to resolve NAPI API
+# symbols (napi_create_string_utf8, etc.) from the host binary. Since the
+# hermes binary doesn't directly call most NAPI functions, the linker
+# would normally discard them from hermesvm_a. Force-loading the NAPI
+# static library ensures all NAPI symbols are present. Additionally,
+# -export_dynamic / -rdynamic makes them visible to dlopen'd libraries.
+if(HERMES_ENABLE_NAPI)
+  if(APPLE)
+    target_link_libraries(hermes -force_load hermesNapi)
+    target_link_options(hermes PRIVATE -Wl,-export_dynamic)
+  elseif(MSVC)
+    target_link_libraries(hermes hermesNapi)
+    target_link_options(hermes PRIVATE /WHOLEARCHIVE:hermesNapi)
+  else()
+    target_link_libraries(hermes
+      -Wl,--whole-archive
+      hermesNapi
+      -Wl,--no-whole-archive
+    )
+    target_link_options(hermes PRIVATE -rdynamic)
+  endif()
+endif()
+
 if(HAVE_LIBREADLINE)
   target_compile_definitions(hermes PRIVATE HAVE_LIBREADLINE)
   set_target_properties(hermes PROPERTIES UNITY_BUILD false)

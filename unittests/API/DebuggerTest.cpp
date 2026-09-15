@@ -447,6 +447,47 @@ TEST_F(DebuggerAPITest, GetLoadedScriptsTest) {
   EXPECT_TRUE(foundAfterGC);
 }
 
+// Regression test: the source passed to Runtime::run must not be borrowed when
+// the compiled module retains its source buffer, which it does under the
+// debugger (full debug info). Here the source string is destroyed right after
+// debugJavaScript returns. A later by-line breakpoint resolution walks every
+// runtime module's source; with eager compilation this used to borrow the
+// source string, so the read hit freed memory (ASan: heap-use-after-free in
+// SourceErrorManager::findForCoordsImpl). The buffer must own its bytes.
+TEST_F(DebuggerAPITest, RunDoesNotBorrowTransientSourceTest) {
+  // Force eager compilation so Runtime::run takes the (previously) borrowing
+  // path; lazy compilation already copied the source.
+  std::unique_ptr<HermesRuntime> runtime = makeHermesRuntime(
+      hermes::vm::RuntimeConfig::Builder()
+          .withCompilationMode(
+              hermes::vm::CompilationMode::ForceEagerCompilation)
+          .build());
+
+  {
+    // Heap-allocated (non-SSO) source that is freed at the end of this scope,
+    // immediately after compilation completes.
+    std::string transientSource =
+        "function foo() {\n  var x = 1;\n  return x;\n}\nfoo();\n";
+    runtime->debugJavaScript(transientSource, "transient.js", {});
+  }
+
+  // Resolving a by-line breakpoint (no column) walks each module's source via
+  // findSMRangeForLine; if the module borrowed the now-freed source, this reads
+  // freed memory. With the fix the buffer is owned, so this is safe.
+  SourceLocation loc;
+  loc.line = 3; // 'return x;'
+  runtime->getDebugger().setBreakpoint(loc);
+
+  // Reaching here without an ASan failure is the assertion; also confirm the
+  // runtime is still usable.
+  EXPECT_EQ(
+      7,
+      runtime->global()
+          .getPropertyAsFunction(*runtime, "eval")
+          .call(*runtime, "3 + 4")
+          .asNumber());
+}
+
 TEST_F(DebuggerAPITest, ImplicitAsyncPauseTest) {
   rt->getDebugger().triggerAsyncPause(AsyncPauseKind::Implicit);
   eval("var x = 5;");
@@ -555,6 +596,43 @@ static std::unique_ptr<hermes::Buffer> makeAsyncBreakCode() {
   return builder.generateBytecodeBuffer();
 };
 
+/// \return the bytecode buffer for a module in which no instruction has a
+/// source location, so that servicing an async break has to walk all the way
+/// to the Ret to look for a valid pause location.
+static std::unique_ptr<hermes::Buffer> makeAsyncBreakAtRetCode() {
+  using Loc = hermes::hbc::DebugSourceLocation;
+  hermes::hbc::SimpleBytecodeBuilder builder;
+  hermes::hbc::BytecodeInstructionGenerator instGen;
+
+  hermes::hbc::DebugInfo debugInfo{};
+  hermes::hbc::DebugInfoGenerator debugGen{debugInfo};
+  debugGen.addFilename("ret.js");
+
+  instGen.emitAsyncBreakCheck();
+  uint32_t addOffset = instGen.getCurrentLocation();
+  instGen.emitAddEmptyString(0, 0);
+  uint32_t retOffset = instGen.getCurrentLocation();
+  instGen.emitRet(0);
+
+  debugGen.appendSourceLocations(
+      Loc{0, 1, 0, 0, 0}, // Use filename 1 to generate a region.
+      0,
+      {
+          // AsyncBreakCheck, offset 0 has no source location.
+          Loc{0, 0, 0, 0, 0},
+      });
+  std::move(debugGen).generate();
+  builder.setDebugInfo(&debugInfo);
+
+  EXPECT_FALSE(debugInfo.getLocationForAddress(0, 0).hasValue());
+  EXPECT_FALSE(debugInfo.getLocationForAddress(0, addOffset).hasValue());
+  EXPECT_FALSE(debugInfo.getLocationForAddress(0, retOffset).hasValue());
+
+  builder.addFunction(1, 1, instGen.acquireBytecode());
+
+  return builder.generateBytecodeBuffer();
+};
+
 } // namespace
 
 TEST_F(DebuggerAPITest, ExplicitAsyncBreakLocationTest) {
@@ -581,6 +659,25 @@ TEST_F(DebuggerAPITest, ImplicitAsyncBreakLocationTest) {
       observer.pauseReasons);
   ASSERT_EQ(observer.stackTraces.size(), 1);
   EXPECT_EQ(observer.stackTraces.front().callFrameForIndex(0).location.line, 1);
+}
+
+TEST_F(DebuggerAPITest, ImplicitAsyncBreakAtRetTest) {
+  // Looking for a valid pause location walks to a Ret, which must not
+  // synthesize a step out: there is no step in progress, so preStepState_
+  // holds no meaningful value and the pending implicit trigger, not
+  // StepFinish, is the reason for the pause that eventually happens.
+  auto buffer = makeAsyncBreakAtRetCode();
+  rt->getDebugger().triggerAsyncPause(AsyncPauseKind::Implicit);
+  rt->evaluateJavaScript(
+      std::make_shared<BufferAdapter>(std::move(buffer)), "ret.js");
+
+  // Walking to the Ret leaves every code block breakpointed, so the next
+  // script pauses on entry. That is where the trigger gets delivered.
+  eval("var x = 5;");
+
+  EXPECT_EQ(
+      std::vector<PauseReason>({PauseReason::AsyncTriggerImplicit}),
+      observer.pauseReasons);
 }
 
 #endif

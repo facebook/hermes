@@ -69,6 +69,22 @@ HermesValue createMapConstructor(Runtime &runtime) {
   defineMethod(
       runtime,
       mapPrototype,
+      Predefined::getSymbolID(Predefined::getOrInsert),
+      nullptr,
+      mapPrototypeGetOrInsert,
+      2);
+
+  defineMethod(
+      runtime,
+      mapPrototype,
+      Predefined::getSymbolID(Predefined::getOrInsertComputed),
+      nullptr,
+      mapPrototypeGetOrInsertComputed,
+      2);
+
+  defineMethod(
+      runtime,
+      mapPrototype,
       Predefined::getSymbolID(Predefined::has),
       nullptr,
       mapPrototypeHas,
@@ -353,6 +369,54 @@ CallResult<HermesValue> mapPrototypeGet(void *, Runtime &runtime) {
     return runtime.raiseTypeError("Non-Map object called on Map.prototype.get");
   }
   return self->get(runtime, args.getArg(0)).unboxToHV(runtime);
+}
+
+/// ES2026 24.1.3.7 Map.prototype.getOrInsert(key, value)
+CallResult<HermesValue> mapPrototypeGetOrInsert(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  // 1. Let M be the this value.
+  auto M = args.dyncastThis<JSMap>();
+  // 2. Perform ? RequireInternalSlot(M, [[MapData]]).
+  if (LLVM_UNLIKELY(!M)) {
+    return runtime.raiseTypeError(
+        "Non-Map object called on Map.prototype.getOrInsert");
+  }
+  struct : public Locals {
+    PinnedValue<> key;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  // 3. Set key to CanonicalizeKeyedCollectionKey(key).
+  lv.key = canonicalizeKeyedCollectionKey(args.getArg(0));
+  // 4-7 handled in the following call.
+  return JSMap::getOrInsert(M, runtime, lv.key, args.getArgHandle(1));
+}
+
+/// ES2026 24.1.3.8 Map.prototype.getOrInsertComputed(key, callback)
+CallResult<HermesValue> mapPrototypeGetOrInsertComputed(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  // 1. Let M be the this value.
+  auto M = args.dyncastThis<JSMap>();
+  // 2. Perform ? RequireInternalSlot(M, [[MapData]]).
+  if (LLVM_UNLIKELY(!M)) {
+    return runtime.raiseTypeError(
+        "Non-Map object called on Map.prototype.getOrInsertComputed");
+  }
+  auto callback = args.dyncastArg<Callable>(1);
+  // 3. If IsCallable(callback) is false, throw a TypeError exception.
+  if (LLVM_UNLIKELY(!callback)) {
+    return runtime.raiseTypeError(
+        "callback must be Callable in Map.prototype.getOrInsertComputed");
+  }
+  struct : public Locals {
+    PinnedValue<> key;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  // 4. Set key to CanonicalizeKeyedCollectionKey(key).
+  lv.key = canonicalizeKeyedCollectionKey(args.getArg(0));
+  // 5-11 handled in the following call.
+  return JSMap::getOrInsertComputed(M, runtime, lv.key, callback);
 }
 
 CallResult<HermesValue> mapPrototypeHas(void *, Runtime &runtime) {

@@ -10,7 +10,67 @@
 
 #include "gtest/gtest.h"
 
+#include <atomic>
+#include <future>
+#include <memory>
+#include <thread>
+
 namespace {
+
+/// Captured state that enqueues a follow-up task when it is destroyed.
+class EnqueueOnDestruction {
+ public:
+  EnqueueOnDestruction(
+      hermes::SerialExecutor &executor,
+      std::atomic<bool> &followUpRan)
+      : executor_(executor), followUpRan_(followUpRan) {}
+
+  ~EnqueueOnDestruction() {
+    executor_.add([&followUpRan = followUpRan_] { followUpRan = true; });
+  }
+
+ private:
+  hermes::SerialExecutor &executor_;
+  std::atomic<bool> &followUpRan_;
+};
+
+/// Destroy \p executor on another thread, giving up after \p limit. Returns
+/// false if the destructor is still running by then, which means it
+/// deadlocked. The caller must not touch \p executor afterwards: the wedged
+/// thread is detached and the executor leaked, because joining either one
+/// would hang the whole test binary instead of reporting a failure.
+bool destroyWithin(
+    hermes::SerialExecutor *executor,
+    std::chrono::seconds limit) {
+  auto destroyed = std::make_shared<std::promise<void>>();
+  auto finished = destroyed->get_future();
+  std::thread destroyer([executor, destroyed] {
+    delete executor;
+    destroyed->set_value();
+  });
+  if (finished.wait_for(limit) == std::future_status::timeout) {
+    destroyer.detach();
+    return false;
+  }
+  destroyer.join();
+  return true;
+}
+
+/// Wait until \p predicate holds, giving up after a deadline so that a broken
+/// executor fails the test instead of hanging it.
+template <typename Predicate>
+bool waitFor(Predicate predicate) {
+  const auto giveUpAt =
+      std::chrono::steady_clock::now() + std::chrono::seconds(30);
+  while (!predicate()) {
+    if (std::chrono::steady_clock::now() > giveUpAt)
+      return false;
+    // Yield rather than spin: on a single-core host a tight loop here can
+    // starve the worker thread we are waiting on.
+    std::this_thread::yield();
+  }
+  return true;
+}
 
 TEST(SerialExecutorTest, TestBasic) {
   hermes::SerialExecutor executor;
@@ -57,6 +117,184 @@ TEST(SerialExecutorTest, TestTimeout) {
     auto t1 = std::chrono::steady_clock::now();
     ASSERT_GE(t1 - t0, timeout);
   }
+}
+
+TEST(SerialExecutorTest, ThreadRunnerWrapsEachWorker) {
+  constexpr std::chrono::milliseconds timeout{10};
+  std::atomic<int> starts{0};
+  std::atomic<int> exits{0};
+  std::atomic<int> tasks{0};
+  hermes::SerialExecutor executor{0, timeout, [&](std::function<void()> run) {
+                                    ++starts;
+                                    run();
+                                    ++exits;
+                                  }};
+
+  EXPECT_EQ(starts, 0);
+  for (int i = 1; i <= 5; ++i) {
+    executor.add([&tasks] { ++tasks; });
+
+    ASSERT_TRUE(waitFor([&tasks, i] { return tasks >= i; }))
+        << "task " << i << " never ran";
+    // The worker has to time out and exit before the next add() can create a
+    // new one, which is what makes starts/exits countable below.
+    ASSERT_TRUE(waitFor([&exits, i] { return exits >= i; }))
+        << "worker " << i << " never returned from its runner";
+  }
+
+  EXPECT_EQ(starts, 5);
+  EXPECT_EQ(exits, 5);
+}
+
+TEST(SerialExecutorTest, DefaultTimeoutKeepsOneWorker) {
+  // The default timeout means "outlive any realistic gap between tasks", so a
+  // run of sequential tasks must be served by a single worker. Spelling it
+  // milliseconds::max() did not do that: wait_for is specified as
+  // wait_until(now() + rel_time), which overflowed and returned immediately,
+  // so the worker exited after every task and each add() created a new one.
+  std::atomic<int> starts{0};
+  std::atomic<int> done{0};
+  hermes::SerialExecutor executor{
+      0,
+      hermes::SerialExecutor::kDefaultTimeout,
+      [&starts](std::function<void()> run) {
+        ++starts;
+        run();
+      }};
+
+  for (int i = 1; i <= 10; ++i) {
+    executor.add([&done] { ++done; });
+    ASSERT_TRUE(waitFor([&done, i] { return done >= i; }))
+        << "task " << i << " never ran";
+    // Leave a gap for a worker that wrongly considers its timeout expired to
+    // notice and exit.
+    std::this_thread::sleep_for(std::chrono::milliseconds(2));
+  }
+
+  EXPECT_EQ(starts, 1) << "the worker did not survive between tasks";
+}
+
+TEST(SerialExecutorTest, TaskDestructorCanEnqueue) {
+  // A task's captured state belongs to the caller, so destroying a finished
+  // task runs caller code that may enqueue more work -- a JSI finalizer that
+  // releases another host object does exactly this. The worker must therefore
+  // drop the task before re-acquiring mutex_, which is not recursive.
+  auto executor = std::make_unique<hermes::SerialExecutor>();
+  std::atomic<bool> releaseTask{false};
+  std::atomic<bool> followUpRan{false};
+
+  // The state is held through a shared_ptr so that its destructor runs exactly
+  // once, when the last copy dies.
+  auto owner = std::make_shared<EnqueueOnDestruction>(*executor, followUpRan);
+  executor->add([owner, &releaseTask] {
+    // Stay in the task body until the test has dropped its own reference, so
+    // that the worker is the one holding the last one.
+    while (!releaseTask)
+      std::this_thread::yield();
+  });
+  owner.reset();
+  releaseTask = true;
+
+  const bool ranFollowUp =
+      waitFor([&followUpRan] { return followUpRan.load(); });
+  if (!ranFollowUp) {
+    // The worker is wedged waiting on a mutex it already holds, so joining it
+    // would hang the whole binary. Leak the executor so the failure is
+    // reported instead.
+    (void)executor.release();
+  }
+  ASSERT_TRUE(ranFollowUp) << "a task destructor could not call add()";
+}
+
+TEST(SerialExecutorTest, TaskDestructorCanEnqueueWhileDraining) {
+  // ~SerialExecutor sets Terminating before the worker drains, so tasks
+  // destroyed during the drain enqueue their follow-up work with teardown
+  // already under way. That is legal from the worker itself, because the drain
+  // loop runs until the queue is empty.
+  //
+  // Whether the drain or the worker wins the race is not controlled here, so
+  // this only sometimes exercises the Terminating branch. It never reports a
+  // false failure: the follow-up has to run either way.
+  std::atomic<bool> followUpRan{false};
+  {
+    hermes::SerialExecutor executor;
+    auto owner = std::make_shared<EnqueueOnDestruction>(executor, followUpRan);
+    executor.add([owner] {});
+    owner.reset();
+  }
+  EXPECT_TRUE(followUpRan) << "a follow-up enqueued while draining never ran";
+}
+
+TEST(SerialExecutorTest, TaskCanEnqueueWhileDraining) {
+  // The general form of the case above, with no destructors involved: a task
+  // that is still running when ~SerialExecutor begins enqueues its follow-up
+  // with threadState_ already Terminating. add() must not read that as "the
+  // worker is gone" and spawn a second one. Doing so overwrites tid_ out from
+  // under the join, and resets threadState_ so the drain loop never sees
+  // Terminating, leaving both workers parked on the condition variable.
+  std::atomic<bool> release{false};
+  std::atomic<bool> followUpRan{false};
+  auto *executor = new hermes::SerialExecutor();
+
+  executor->add([executor, &release, &followUpRan] {
+    // Stay in the body until teardown has plausibly begun, so the add() below
+    // runs while Terminating. Losing that race only costs coverage; it cannot
+    // produce a false failure.
+    while (!release)
+      std::this_thread::yield();
+    executor->add([&followUpRan] { followUpRan = true; });
+  });
+
+  std::thread releaser([&release] {
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    release = true;
+  });
+
+  const bool destroyed = destroyWithin(executor, std::chrono::seconds(10));
+  releaser.join();
+  ASSERT_TRUE(destroyed) << "~SerialExecutor deadlocked while draining";
+  EXPECT_TRUE(followUpRan) << "a follow-up enqueued while draining never ran";
+}
+
+TEST(SerialExecutorTest, TaskDestroyedOnWorkerThread) {
+  // add() must leave the queue as the sole owner of the task, so that the
+  // task's captured state is destroyed on the worker rather than on whichever
+  // thread called add(). JSI finalizers depend on this: keeping clean-up off
+  // the calling thread is the entire point of the executor.
+  //
+  // The capture below is move-only, which is what makes the transfer
+  // structural. Copying the task, or going back to std::function, would stop
+  // compiling rather than silently reintroduce the race.
+  std::atomic<std::thread::id> ranOn{std::thread::id{}};
+  std::atomic<std::thread::id> destroyedOn{std::thread::id{}};
+
+  /// Records the thread that destroys it.
+  class RecordDestroyingThread {
+   public:
+    explicit RecordDestroyingThread(std::atomic<std::thread::id> &destroyedOn)
+        : destroyedOn_(destroyedOn) {}
+
+    ~RecordDestroyingThread() {
+      destroyedOn_ = std::this_thread::get_id();
+    }
+
+   private:
+    std::atomic<std::thread::id> &destroyedOn_;
+  };
+
+  {
+    hermes::SerialExecutor executor;
+    executor.add([&ranOn,
+                  recorder = std::make_unique<RecordDestroyingThread>(
+                      destroyedOn)] { ranOn = std::this_thread::get_id(); });
+    // ~SerialExecutor drains and joins, so both ids are set once it returns.
+  }
+
+  ASSERT_NE(ranOn.load(), std::thread::id{}) << "the task never ran";
+  EXPECT_EQ(destroyedOn.load(), ranOn.load())
+      << "the task was destroyed off the worker thread";
+  EXPECT_NE(destroyedOn.load(), std::this_thread::get_id())
+      << "the task was destroyed on the thread that called add()";
 }
 
 } // end anonymous namespace

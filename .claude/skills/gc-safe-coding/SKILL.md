@@ -6,8 +6,8 @@ description: >
   internal Hermes VM APIs (as opposed to code using JSI). This includes working
   with GC-managed types (HermesValue, Handle, PinnedValue, JSObject,
   StringPrimitive, etc.), Locals, GCScope, PseudoHandle, CallResult, or any
-  function with _RJS suffix. Typically in lib/VM/, include/hermes/VM/, or
-  API/hermes/.
+  function with _RJS suffix. Typically in lib/VM/, include/hermes/VM/,
+  API/hermes/, or API/napi/.
 ---
 
 For the full explanation and rationale, see [doc/GCSafeCoding.md](doc/GCSafeCoding.md).
@@ -23,7 +23,12 @@ GC.
 
 **All raw pointers and PseudoHandles to GC objects must be rooted before any
 GC safepoint.** `PseudoHandle<T>` is *not* a root — it is just as dangerous as
-a raw pointer across a safepoint.
+a raw pointer across a safepoint. The same applies to bare `SymbolID` values
+extracted from a non-uniqued source (e.g., the `SymbolID` pulled out of the
+`Handle<SymbolID>` returned by `getSymbolHandleFromPrimitive` for a
+freshly-allocated `StringPrimitive`): once nothing roots it, the lookup-table
+slot is reclaimed by `freeUnmarkedSymbols` during sweep. Pin via
+`PinnedValue<SymbolID>`.
 
 ## Rooting local values: use Locals + PinnedValue (required for new code)
 
@@ -34,6 +39,7 @@ All new code must use `Locals` + `PinnedValue<T>`. Do not introduce new
 struct : public Locals {
   PinnedValue<JSObject> obj;
   PinnedValue<StringPrimitive> str;
+  PinnedValue<SymbolID> sym;
   PinnedValue<> genericValue;
 } lv;
 LocalsRAII lraii(runtime, &lv);
@@ -91,6 +97,10 @@ allocated (via `makeHandle()`, `makeMutableHandle()`, or `Handle<>`/
    Watch for multi-step creation patterns: if `Foo::create()` returns a
    `PseudoHandle` and the next line calls `Bar::create(runtime)`, the first
    `PseudoHandle` is stale after the second allocation.
+   Equally watch for capture-via-deref: `auto *x = vmcast<T>(*pinned)` extracts
+   a raw pointer from a pinned location (e.g., a `PinnedHermesValue *` such as
+   a `napi_value`). The pinned slot stays GC-safe, but the local raw pointer
+   does not. Re-deref `*pinned` at each use site, or pin via `PinnedValue<T>`.
 2. **Use Locals, not GCScope.** New code must not introduce `GCScope` or
    `makeHandle()`. Declare a `struct : public Locals` with `PinnedValue` fields
    and a `LocalsRAII`.
@@ -112,3 +122,14 @@ allocated (via `makeHandle()`, `makeMutableHandle()`, or `Handle<>`/
    `GCScopeMarkerRAII` (preferred for one or two handles). Functions like
    `vmcast<>` that do not take `Runtime &` just cast existing handles without
    allocating.
+8. **`flushToMarker` invalidates handles allocated after the marker.** Any
+   value extracted from such a Handle (raw pointer, bare `SymbolID`) is
+   unrooted after the flush. Pin into a `PinnedValue` *before* the flush if
+   the value is needed later.
+
+## Debugging tips
+
+- If `IdentifierTable::materializeLazyIdentifier` asserts
+  `(entry.isLazyASCII() || entry.isLazyUTF16()) && "identifier is not lazy"`,
+  the entry is most often a free-list slot — look up the call stack for an
+  unrooted `SymbolID` held across an allocation.

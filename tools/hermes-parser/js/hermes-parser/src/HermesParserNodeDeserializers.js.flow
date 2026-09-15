@@ -11,6 +11,6 @@
 import type {HermesNode} from './HermesAST';
 import type HermesParserDeserializer from './HermesParserDeserializer';
 
-declare module.exports: $ReadOnlyArray<
+declare module.exports: ReadonlyArray<
   (this: HermesParserDeserializer) => HermesNode,
 >;

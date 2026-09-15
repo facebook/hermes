@@ -6,7 +6,7 @@
  */
 
 // Ensure debug info level is high enough to trigger stack traces with lines
-// RUN: %shermes -exec %s -g1 | %FileCheck --match-full-lines %s
+// RUN: %shermes -fno-inline -exec %s -g1 | %FileCheck --match-full-lines %s
 
 print('error');
 // CHECK-LABEL: error

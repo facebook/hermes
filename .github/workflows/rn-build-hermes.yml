@@ -14,10 +14,16 @@ on:
   pull_request:
     branches:
       - static_h
+      - '*-stable'
+      - '*-staging'
   push:
     branches:
-      - 250829098.0.0-stable
       - static_h
+      - '*-stable'
+      - '*-staging'
+
+permissions:
+  contents: read
 
 jobs:
   set_release_type:
@@ -36,26 +42,13 @@ jobs:
         uses: ./.github/actions/setup-node
       - name: Install node dependencies
         uses: ./.github/actions/yarn-install
-      - name: Verify NPM token
-        run: |
-          if [[ -z "$GHA_NPM_TOKEN" ]]; then
-            echo "⚠️ No NPM token found. Skipping validation."
-            exit 0
-          fi
-          echo "//registry.npmjs.org/:_authToken=$GHA_NPM_TOKEN" > ~/.npmrc
-          if ! npm whoami > /dev/null 2>&1; then
-            echo "❌ NPM token is invalid or expired. Aborting release."
-            exit 1
-          fi
-          echo "✅ NPM token is valid ($(npm whoami))"
-          rm -f ~/.npmrc
-        env:
-          GHA_NPM_TOKEN: ${{ secrets.GHA_NPM_TOKEN }}
       - id: set_release_type
         run: |
-          # Guard: never allow release mode on static_h branch
-          if [[ $REF == "refs/heads/static_h" ]]; then
-            echo "Branch is static_h, forcing dry-run mode"
+          # Guard: never allow release mode on non-releasing branches:
+          # static_h and any branch whose name ends in `-staging`, even via
+          # workflow_dispatch.
+          if [[ $REF == "refs/heads/static_h" || $REF == refs/heads/*-staging ]]; then
+            echo "Branch is a non-releasing branch, forcing dry-run mode"
             echo "RELEASE_TYPE=dry-run" >> $GITHUB_OUTPUT
           elif [[ $EVENT_NAME == "workflow_dispatch" ]]; then
             echo "Setting release type to ${{ github.event.inputs.release-type }}"
@@ -88,8 +81,7 @@ jobs:
     with:
       release-type: ${{ needs.set_release_type.outputs.RELEASE_TYPE }}
   publish:
-    uses: ./.github/workflows/publish.yml
-    secrets: inherit
+    runs-on: 8-core-ubuntu
     needs:
       [
         set_release_type,
@@ -97,8 +89,104 @@ jobs:
         build_hermesc_linux,
         build_hermesc_windows,
       ]
-    with:
-      release-type: ${{ needs.set_release_type.outputs.RELEASE_TYPE }}
+    # `id-token: write` lets the npm CLI mint the OIDC token that npm Trusted
+    # Publishing exchanges for a short-lived publish token. Scoped to this job;
+    # the top-level `permissions` stays `contents: read`.
+    permissions:
+      contents: read
+      id-token: write
+    environment: npm-publish
+    container:
+      image: reactnativecommunity/react-native-android:latest
+      env:
+        TERM: "dumb"
+        GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+    env:
+      HERMES_WS_DIR: /tmp/hermes
+      ORG_GRADLE_PROJECT_SIGNING_PWD: ${{ secrets.ORG_GRADLE_PROJECT_SIGNING_PWD }}
+      ORG_GRADLE_PROJECT_SIGNING_KEY: ${{ secrets.ORG_GRADLE_PROJECT_SIGNING_KEY }}
+      ORG_GRADLE_PROJECT_SONATYPE_USERNAME: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPE_USERNAME }}
+      ORG_GRADLE_PROJECT_SONATYPE_PASSWORD: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPE_PASSWORD }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup git safe folders
+        shell: bash
+        run: git config --global --add safe.directory '*'
+      - name: Create /tmp/hermes/osx-bin directory
+        shell: bash
+        run: mkdir -p /tmp/hermes/osx-bin
+      - name: Download osx-bin release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: hermes-osx-bin-Release
+          path: /tmp/hermes/osx-bin/Release
+      - name: Download osx-bin debug artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: hermes-osx-bin-Debug
+          path: /tmp/hermes/osx-bin/Debug
+      - name: Download darwin-bin release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: hermes-darwin-bin-Release
+          path: /tmp/hermes/hermes-runtime-darwin
+      - name: Download darwin-bin debug artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: hermes-darwin-bin-Debug
+          path: /tmp/hermes/hermes-runtime-darwin
+      - name: Download hermes dSYM debug artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: hermes-dSYM-Debug
+          path: /tmp/hermes/dSYM/Debug
+      - name: Download hermes dSYM release vartifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: hermes-dSYM-Release
+          path: /tmp/hermes/dSYM/Release
+      - name: Download linux-bin artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: hermes-linux-bin
+          path: /tmp/hermes/linux64-bin
+      - name: Download windows-bin artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: hermes-win64-bin
+          path: /tmp/hermes/win64-bin
+      - name: Show /tmp/hermes directory
+        shell: bash
+        run: ls -lR /tmp/hermes
+      - name: Setup node.js
+        uses: ./.github/actions/setup-node
+      - name: Install dependencies
+        uses: ./.github/actions/yarn-install
+      - name: Copy Hermes binaries
+        shell: bash
+        run: |
+          node ./utils/scripts/hermes/prepare-artifacts.js
+      - name: Print Artifacts Directory
+        shell: bash
+        run: ls -lR ./android/ios-artifacts/artifacts/
+      - name: Publish artifacts
+        shell: bash
+        run: |
+          node ./utils/scripts/hermes/publish-artifacts.js -t ${{ needs.set_release_type.outputs.RELEASE_TYPE }}
+      - name: Publish to npm
+        shell: bash
+        # NB: The top-level workflow file that invokes this command
+        # (rn-build-hermes.yml) must have its file name configured under
+        # trusted publish settings for each package on npmjs.com - so this code
+        # should not be moved around or re-used.
+        run: |
+          node ./utils/scripts/hermes/publish-npm.js -t ${{ needs.set_release_type.outputs.RELEASE_TYPE }}
+      - name: Upload npm logs
+        uses: actions/upload-artifact@v4.3.4
+        with:
+          name: npm-logs
+          path: ~/.npm/_logs
   create-tag:
     uses: ./.github/workflows/create-tag.yml
     needs: set_release_type

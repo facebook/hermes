@@ -55,76 +55,76 @@ var obj = {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:SemContext
-// CHECK-NEXT:Func loose
+// CHECK-NEXT:Func loose mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'obj' GlobalProperty
-// CHECK-NEXT:    Func loose
+// CHECK-NEXT:    Func loose noImplicitReturn
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.2 'x' Let
 // CHECK-NEXT:            Decl %d.3 'arguments' Var Arguments
-// CHECK-NEXT:        Func loose
+// CHECK-NEXT:        Func loose noImplicitReturn
 // CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:    Func loose
+// CHECK-NEXT:    Func loose mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.4
 // CHECK-NEXT:            Decl %d.4 'A' Class
 // CHECK-NEXT:            Decl %d.5 'arguments' Var Arguments
 // CHECK-NEXT:            Scope %s.5
 // CHECK-NEXT:                Decl %d.6 'A' ClassExprName
-// CHECK-NEXT:        Func strict
+// CHECK-NEXT:        Func strict noImplicitReturn
 // CHECK-NEXT:            Scope %s.6
 // CHECK-NEXT:                Decl %d.7 'x' Let
 // CHECK-NEXT:                Decl %d.8 'arguments' Var Arguments
-// CHECK-NEXT:            Func strict
+// CHECK-NEXT:            Func strict noImplicitReturn
 // CHECK-NEXT:                Scope %s.7
-// CHECK-NEXT:        Func strict
+// CHECK-NEXT:        Func strict noImplicitReturn
 // CHECK-NEXT:            Scope %s.8
 // CHECK-NEXT:                Decl %d.9 'x' Let
 // CHECK-NEXT:                Decl %d.10 'arguments' Var Arguments
-// CHECK-NEXT:            Func strict
+// CHECK-NEXT:            Func strict noImplicitReturn
 // CHECK-NEXT:                Scope %s.9
-// CHECK-NEXT:        Func strict
+// CHECK-NEXT:        Func strict noImplicitReturn
 // CHECK-NEXT:            Scope %s.10
 // CHECK-NEXT:                Decl %d.11 'x' Let
 // CHECK-NEXT:                Decl %d.12 'arguments' Var Arguments
-// CHECK-NEXT:            Func strict
+// CHECK-NEXT:            Func strict noImplicitReturn
 // CHECK-NEXT:                Scope %s.11
-// CHECK-NEXT:        Func strict
+// CHECK-NEXT:        Func strict noImplicitReturn
 // CHECK-NEXT:            Scope %s.12
 // CHECK-NEXT:                Decl %d.13 'x' Let
 // CHECK-NEXT:                Decl %d.14 'arguments' Var Arguments
-// CHECK-NEXT:            Func strict
+// CHECK-NEXT:            Func strict noImplicitReturn
 // CHECK-NEXT:                Scope %s.13
-// CHECK-NEXT:        Func strict
+// CHECK-NEXT:        Func strict noImplicitReturn
 // CHECK-NEXT:            Scope %s.14
 // CHECK-NEXT:                Decl %d.15 'x' Let
 // CHECK-NEXT:                Decl %d.16 'arguments' Var Arguments
-// CHECK-NEXT:            Func strict
+// CHECK-NEXT:            Func strict noImplicitReturn
 // CHECK-NEXT:                Scope %s.15
-// CHECK-NEXT:        Func strict
+// CHECK-NEXT:        Func strict noImplicitReturn
 // CHECK-NEXT:            Scope %s.16
 // CHECK-NEXT:                Decl %d.17 'x' Let
 // CHECK-NEXT:                Decl %d.18 'arguments' Var Arguments
-// CHECK-NEXT:            Func strict
+// CHECK-NEXT:            Func strict noImplicitReturn
 // CHECK-NEXT:                Scope %s.17
-// CHECK-NEXT:        Func strict
+// CHECK-NEXT:        Func strict mayReachImplicitReturn
 // CHECK-NEXT:            Scope %s.18
-// CHECK-NEXT:    Func loose
+// CHECK-NEXT:    Func loose mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.19
 // CHECK-NEXT:            Decl %d.19 'A' Class
 // CHECK-NEXT:            Decl %d.20 'arguments' Var Arguments
 // CHECK-NEXT:            Scope %s.20
 // CHECK-NEXT:                Decl %d.21 'A' ClassExprName
-// CHECK-NEXT:        Func strict
+// CHECK-NEXT:        Func strict mayReachImplicitReturn
 // CHECK-NEXT:            Scope %s.21
 // CHECK-NEXT:                Decl %d.22 'arguments' Var Arguments
-// CHECK-NEXT:            Func strict
+// CHECK-NEXT:            Func strict noImplicitReturn
 // CHECK-NEXT:                Scope %s.22
-// CHECK-NEXT:        Func strict
+// CHECK-NEXT:        Func strict mayReachImplicitReturn
 // CHECK-NEXT:            Scope %s.23
 // CHECK-NEXT:                Decl %d.23 'arguments' Var Arguments
-// CHECK-NEXT:            Func strict
+// CHECK-NEXT:            Func strict noImplicitReturn
 // CHECK-NEXT:                Scope %s.24
-// CHECK-NEXT:        Func strict
+// CHECK-NEXT:        Func strict mayReachImplicitReturn
 // CHECK-NEXT:            Scope %s.25
 
 // CHECK:Program Scope %s.1

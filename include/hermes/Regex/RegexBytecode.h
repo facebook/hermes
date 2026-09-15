@@ -171,6 +171,14 @@ struct WordBoundaryInsn : public Insn {
   bool invert;
 };
 
+/// WordBoundaryICaseInsn is a variant of WordBoundaryInsn used when the
+/// ignoreCase flag is set. The word character set is expanded to include
+/// characters whose canonical form is a word character.
+struct WordBoundaryICaseInsn : public Insn {
+  /// Whether the boundary is inverted (\B instead of \b).
+  bool invert;
+};
+
 /// Begin/EndMarkedSubexpression stores the index of the marked subexpression.
 /// Note that the first marked subexpression has index 1 (0 is reserved for
 /// the entire match).

@@ -7,14 +7,20 @@
 
 #pragma once
 
+#include <cstdint>
 #include <utility>
 
 /// Defines a new class, called \p NAME representing a constructor config, and
 /// an associated builder class.
 ///
-/// The fields of the class (along with their types and default values) are
-/// encoded in the \p FIELDS parameter, and any logic to be run whilst building
-/// the config can be passed as a code block in \p BUILD_BODY.
+/// The ABI version is encoded in \p VERSION. The fields of the class (along
+/// with their types and default values) are encoded in the \p FIELDS parameter,
+/// and any logic to be run whilst building the config can be passed as a code
+/// block in \p BUILD_BODY.
+///
+/// Fields may be appended without changing \p VERSION. Any other change that
+/// affects the layout, including changing the layout of a field stored by
+/// value, requires a new version.
 ///
 /// Example:
 ///
@@ -34,7 +40,7 @@
 ///   "      F(int, B, 42)                       \  "
 ///   "      F(std::string, C, "hello")             "
 ///   "                                             "
-///   "    _HERMES_CTORCONFIG_STRUCT(Foo, FIELDS, { "
+///   "    _HERMES_CTORCONFIG_STRUCT(Foo, 1, FIELDS, { "
 ///   "        A_ = std::min(A_, C_.length());      "
 ///   "      });                                    "
 ///
@@ -44,13 +50,83 @@
 ///     - References to the fields in the validation logic have a trailling
 ///       underscore.
 ///
-#define _HERMES_CTORCONFIG_STRUCT(NAME, FIELDS, BUILD_BODY)             \
+#define _HERMES_CTORCONFIG_STRUCT(NAME, VERSION, FIELDS, BUILD_BODY)    \
   class NAME {                                                          \
+    enum class FieldIndex : uint32_t {                                  \
+      FIELDS(_HERMES_CTORCONFIG_FIELD_INDEX) count,                     \
+    };                                                                  \
+                                                                        \
+    static constexpr uint32_t kVersion = VERSION;                       \
+    static constexpr uint32_t kNumFields =                              \
+        static_cast<uint32_t>(FieldIndex::count);                       \
+                                                                        \
+    uint32_t version_{kVersion};                                        \
+    uint32_t numFields_{kNumFields};                                    \
     FIELDS(_HERMES_CTORCONFIG_FIELD_DECL)                               \
                                                                         \
+    bool containsField(FieldIndex field) const {                        \
+      return version_ == kVersion &&                                    \
+          numFields_ > static_cast<uint32_t>(field);                    \
+    }                                                                   \
+                                                                        \
+    void copyFieldsFrom(const NAME &other) {                            \
+      FIELDS(_HERMES_CTORCONFIG_COPY_FIELD)                             \
+    }                                                                   \
+                                                                        \
+    void moveFieldsFrom(NAME &other) {                                  \
+      FIELDS(_HERMES_CTORCONFIG_MOVE_FIELD)                             \
+    }                                                                   \
+                                                                        \
    public:                                                              \
+    NAME() = default;                                                   \
+                                                                        \
+    NAME(const NAME &other) {                                           \
+      copyFieldsFrom(other);                                            \
+    }                                                                   \
+                                                                        \
+    NAME &operator=(const NAME &other) {                                \
+      copyFieldsFrom(other);                                            \
+      version_ = kVersion;                                              \
+      numFields_ = kNumFields;                                          \
+      return *this;                                                     \
+    }                                                                   \
+                                                                        \
+    NAME(NAME &&other) {                                                \
+      moveFieldsFrom(other);                                            \
+    }                                                                   \
+                                                                        \
+    NAME &operator=(NAME &&other) {                                     \
+      if (this != &other) {                                             \
+        moveFieldsFrom(other);                                          \
+      }                                                                 \
+      version_ = kVersion;                                              \
+      numFields_ = kNumFields;                                          \
+      return *this;                                                     \
+    }                                                                   \
+                                                                        \
     class Builder;                                                      \
     friend Builder;                                                     \
+                                                                        \
+    /** Return the ABI version recorded in this config. */              \
+    uint32_t getVersion() const {                                       \
+      return version_;                                                  \
+    }                                                                   \
+                                                                        \
+    /** Return the recorded field count, excluding metadata. */         \
+    uint32_t getNumFields() const {                                     \
+      return numFields_;                                                \
+    }                                                                   \
+                                                                        \
+    /** Return the ABI version expected by this definition. */          \
+    static constexpr uint32_t getCurrentVersion() {                     \
+      return kVersion;                                                  \
+    }                                                                   \
+                                                                        \
+    /** Return the declared field count, excluding metadata. */         \
+    static constexpr uint32_t getCurrentNumFields() {                   \
+      return kNumFields;                                                \
+    }                                                                   \
+                                                                        \
     FIELDS(_HERMES_CTORCONFIG_GETTER)                                   \
                                                                         \
     /* returns a Builder that starts with the current config. */        \
@@ -99,8 +175,20 @@
 
 /// Helper Macros
 
+#define _HERMES_CTORCONFIG_FIELD_INDEX(CX, TYPE, NAME, ...) NAME,
+
 #define _HERMES_CTORCONFIG_FIELD_DECL(CX, TYPE, NAME, ...) \
   TYPE NAME##_{__VA_ARGS__};
+
+#define _HERMES_CTORCONFIG_COPY_FIELD(CX, TYPE, NAME, ...) \
+  NAME##_ = other.get##NAME();
+
+#define _HERMES_CTORCONFIG_MOVE_FIELD(CX, TYPE, NAME, ...) \
+  if (other.containsField(FieldIndex::NAME)) {             \
+    NAME##_ = std::move(other.NAME##_);                    \
+  } else {                                                 \
+    NAME##_ = getDefault##NAME();                          \
+  }
 
 /// This ignores the first and trailing arguments, and defines a member
 /// indicating whether field NAME was set explicitly.
@@ -119,6 +207,9 @@
 
 #define _HERMES_CTORCONFIG_GETTER(CX, TYPE, NAME, ...) \
   inline TYPE get##NAME() const {                      \
+    if (!containsField(FieldIndex::NAME)) {            \
+      return getDefault##NAME();                       \
+    }                                                  \
     return NAME##_;                                    \
   }                                                    \
   static CX TYPE getDefault##NAME() {                  \

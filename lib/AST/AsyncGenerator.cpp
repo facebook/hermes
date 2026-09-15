@@ -83,7 +83,7 @@ class AsyncGenerator : public TransformationsBase {
 
       *ppNode = createTransformedNode<ESTree::FunctionExpressionNode>(
           funcExpr,
-          nullptr,
+          funcExpr->_id,
           std::move(funcExpr->_params),
           refFunc,
           nullptr,

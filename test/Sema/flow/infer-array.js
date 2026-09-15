@@ -18,7 +18,7 @@ let a: number[][] = [[1, 2], [3, 4], [], ...[[10, 11], [12, 13]]];
 // CHECK-NEXT:%class.3 = class(Array<%class.2>)
 
 // CHECK:SemContext
-// CHECK-NEXT:Func strict
+// CHECK-NEXT:Func strict mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:        Decl %d.2 'a' Let : %class.3

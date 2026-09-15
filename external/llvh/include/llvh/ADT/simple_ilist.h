@@ -75,8 +75,15 @@ namespace llvh {
 /// equivalent to the last.
 ///
 /// See \a is_valid_option for steps on adding a new option.
+///
+/// `simple_ilist` inherits from two empty helpers (`list_base_type` and
+/// `SpecificNodeAccess`). Without `LLVM_DECLARE_EMPTY_BASES` MSVC fails to
+/// collapse them and shifts the embedded `Sentinel` from offset 0 to offset
+/// 8, breaking callers that rely on `&list == &Sentinel` — most visibly FFI
+/// consumers and any code comparing an iterator's stored node pointer
+/// against `&list` rather than against an iterator from `list.end()`.
 template <typename T, class... Options>
-class simple_ilist
+class LLVM_DECLARE_EMPTY_BASES simple_ilist
     : ilist_detail::compute_node_options<T, Options...>::type::list_base_type,
       ilist_detail::SpecificNodeAccess<
           typename ilist_detail::compute_node_options<T, Options...>::type> {
@@ -345,6 +352,23 @@ void simple_ilist<T, Options...>::sort(Compare comp) {
   RHS.sort(comp);
   merge(RHS, comp);
 }
+
+namespace ilist_detail {
+// EBO compile-time invariant for simple_ilist. Its two empty bases
+// (the configured list_base_type and SpecificNodeAccess) must collapse via
+// Empty Base Optimization, otherwise the embedded Sentinel shifts away from
+// offset 0 and FFI consumers that rely on `&list == &Sentinel` break.
+// On MSVC this requires LLVM_DECLARE_EMPTY_BASES applied to the class
+// template (defined in llvh/Support/Compiler.h). Catches accidental removal
+// of the macro, ABI-flag drift, or future MSVC layout changes.
+struct ebo_check_node : ilist_node<ebo_check_node> {};
+static_assert(
+    sizeof(simple_ilist<ebo_check_node>) ==
+        sizeof(ilist_sentinel<compute_node_options<ebo_check_node>::type>),
+    "simple_ilist must use Empty Base Optimization. If this fires on MSVC, "
+    "ensure LLVM_DECLARE_EMPTY_BASES is applied to the class template "
+    "(see external/llvh/patches/simple-ilist-msvc-empty-bases.patch).");
+} // end namespace ilist_detail
 
 } // end namespace llvh
 

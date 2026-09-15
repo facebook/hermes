@@ -1,0 +1,68 @@
+diff --git a/include/llvh/ADT/simple_ilist.h b/include/llvh/ADT/simple_ilist.h
+index 6a59ddc7..8c1bc68d 100644
+--- a/include/llvh/ADT/simple_ilist.h
++++ b/include/llvh/ADT/simple_ilist.h
+@@ -75,8 +75,15 @@ namespace llvh {
+ /// equivalent to the last.
+ ///
+ /// See \a is_valid_option for steps on adding a new option.
++///
++/// `simple_ilist` inherits from two empty helpers (`list_base_type` and
++/// `SpecificNodeAccess`). Without `LLVM_DECLARE_EMPTY_BASES` MSVC fails to
++/// collapse them and shifts the embedded `Sentinel` from offset 0 to offset
++/// 8, breaking callers that rely on `&list == &Sentinel` — most visibly FFI
++/// consumers and any code comparing an iterator's stored node pointer
++/// against `&list` rather than against an iterator from `list.end()`.
+ template <typename T, class... Options>
+-class simple_ilist
++class LLVM_DECLARE_EMPTY_BASES simple_ilist
+     : ilist_detail::compute_node_options<T, Options...>::type::list_base_type,
+       ilist_detail::SpecificNodeAccess<
+           typename ilist_detail::compute_node_options<T, Options...>::type> {
+@@ -346,6 +353,23 @@ void simple_ilist<T, Options...>::sort(Compare comp) {
+   merge(RHS, comp);
+ }
+ 
++namespace ilist_detail {
++// EBO compile-time invariant for simple_ilist. Its two empty bases
++// (the configured list_base_type and SpecificNodeAccess) must collapse via
++// Empty Base Optimization, otherwise the embedded Sentinel shifts away from
++// offset 0 and FFI consumers that rely on `&list == &Sentinel` break.
++// On MSVC this requires LLVM_DECLARE_EMPTY_BASES applied to the class
++// template (defined in llvh/Support/Compiler.h). Catches accidental removal
++// of the macro, ABI-flag drift, or future MSVC layout changes.
++struct ebo_check_node : ilist_node<ebo_check_node> {};
++static_assert(
++    sizeof(simple_ilist<ebo_check_node>) ==
++        sizeof(ilist_sentinel<compute_node_options<ebo_check_node>::type>),
++    "simple_ilist must use Empty Base Optimization. If this fires on MSVC, "
++    "ensure LLVM_DECLARE_EMPTY_BASES is applied to the class template "
++    "(see external/llvh/patches/simple-ilist-msvc-empty-bases.patch).");
++} // end namespace ilist_detail
++
+ } // end namespace llvh
+ 
+ #endif // LLVM_ADT_SIMPLE_ILIST_H
+diff --git a/include/llvh/Support/Compiler.h b/include/llvh/Support/Compiler.h
+index 34173110..1dc671e5 100644
+--- a/include/llvh/Support/Compiler.h
++++ b/include/llvh/Support/Compiler.h
+@@ -108,6 +108,18 @@
+ #define LLVM_LIBRARY_VISIBILITY
+ #endif
+ 
++/// LLVM_DECLARE_EMPTY_BASES - Force MSVC to apply Empty Base Optimization
++/// across multiple empty bases. By default MSVC pads each empty base with
++/// one byte and pointer-aligns the result, which shifts member offsets and
++/// breaks any code that relies on a derived object's address coinciding
++/// with the address of its first member (e.g. layout-sensitive containers
++/// and FFI consumers).
++#ifdef _MSC_VER
++#define LLVM_DECLARE_EMPTY_BASES __declspec(empty_bases)
++#else
++#define LLVM_DECLARE_EMPTY_BASES
++#endif
++
+ #if defined(__GNUC__)
+ #define LLVM_PREFETCH(addr, rw, locality) __builtin_prefetch(addr, rw, locality)
+ #else

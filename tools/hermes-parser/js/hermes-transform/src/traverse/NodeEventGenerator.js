@@ -17,7 +17,7 @@ import type {SafeEmitter} from './SafeEmitter';
 import {FlowVisitorKeys} from 'hermes-parser';
 import * as esquery from './esquery';
 
-type ParsedSelector = $ReadOnly<{
+type ParsedSelector = Readonly<{
   /** The string that was parsed into this selector */
   rawSelector: string,
   /** `true` if this should be emitted when exiting the node rather than when entering */
@@ -272,14 +272,18 @@ function parseSelector(rawSelector: string): ParsedSelector {
  * The event generator for AST nodes.
  */
 export class NodeEventGenerator {
-  +emitter: SafeEmitter;
-  +_currentAncestry: Array<ESNode> = [];
-  +_enterSelectorsByNodeType: Map<ESNode['type'], Array<ParsedSelector>> =
-    new Map();
-  +_exitSelectorsByNodeType: Map<ESNode['type'], Array<ParsedSelector>> =
-    new Map();
-  +_anyTypeEnterSelectors: Array<ParsedSelector> = [];
-  +_anyTypeExitSelectors: Array<ParsedSelector> = [];
+  readonly emitter: SafeEmitter;
+  readonly _currentAncestry: Array<ESNode> = [];
+  readonly _enterSelectorsByNodeType: Map<
+    ESNode['type'],
+    Array<ParsedSelector>,
+  > = new Map();
+  readonly _exitSelectorsByNodeType: Map<
+    ESNode['type'],
+    Array<ParsedSelector>,
+  > = new Map();
+  readonly _anyTypeEnterSelectors: Array<ParsedSelector> = [];
+  readonly _anyTypeExitSelectors: Array<ParsedSelector> = [];
 
   /**
    * @param emitter

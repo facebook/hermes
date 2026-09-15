@@ -12,6 +12,7 @@
 #include "hermes/ADT/DenseUInt64.h"
 #include "hermes/ADT/SimpleLRU.h"
 #include "hermes/Support/OptValue.h"
+#include "hermes/VM/CellKind.h"
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/JIT/JIT.h"
 #include "hermes/VM/JIT/PerfJitDump.h"
@@ -22,6 +23,7 @@
 
 #include "llvh/ADT/DenseMap.h"
 
+#include <cstdarg>
 #include <deque>
 
 namespace hermes::vm::arm64 {
@@ -194,6 +196,11 @@ struct HWRegState {
 static constexpr auto xRuntime = a64::x19;
 // x20 is frame
 static constexpr auto xFrame = a64::x20;
+
+/// Scratch register. x16/x17 sit outside the register allocator and are used
+/// as scratch (thunk targets, IP materialization); nothing holds a value in
+/// them across an emitter call.
+static constexpr auto xScratch = a64::x16;
 
 /// GP arg registers (inclusive).
 // static constexpr std::pair<uint8_t, uint8_t> kGPArgs(0, 7);
@@ -441,7 +448,13 @@ class Emitter {
 
   /// Log a comment.
   /// Annotated with printf-style format.
+  /// Defined inline below the class so the logger check is visible in every
+  /// translation unit; the formatting itself is out of line in commentV().
   void comment(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
+
+  /// Format \p fmt with \p args and pass the result to the assembler. Out of
+  /// line so that vsnprintf is not duplicated into every caller.
+  void commentV(const char *fmt, va_list args);
 
   /// Emit the catch table, slow paths, thunks and RO data,
   /// then reset the stack, end any try, and return.
@@ -715,9 +728,14 @@ class Emitter {
         : caseLabelStringId(caseLabelStringId), target(target) {}
   };
 
+  /// Emit a string switch. The lookup table is identified at runtime by
+  /// (\p runtimeModule, \p tableIndex) rather than by baking its address into
+  /// the code, since the module's table vector may be reallocated after this
+  /// code is compiled (e.g. by lazy compilation).
   void stringSwitchImm(
       FR frInput,
-      const StringSwitchDenseMap &table,
+      RuntimeModule *runtimeModule,
+      uint32_t tableIndex,
       const asmjit::Label &defaultLabel,
       llvh::ArrayRef<StringSwitchCase> cases);
 
@@ -910,12 +928,22 @@ class Emitter {
   void typedLoadParent(FR frRes, FR frObj);
 
  private:
+  /// \return the byte offset of \p fr's slot from xFrame.
+  static constexpr inline uint32_t frByteOffset(FR fr) {
+    return (fr.index() + hbc::StackFrameLayout::FirstLocal) *
+        sizeof(SHLegacyValue);
+  }
+
+  /// \return true if \p ofs encodes as the scaled immediate of an LDR/STR
+  /// of a 64-bit register. The immediate is 12 bits scaled by 8, and frame
+  /// offsets are always multiples of 8, so only the upper bound can fail.
+  static constexpr inline bool isFrameImmOffset(uint32_t ofs) {
+    return ofs <= 4095 * 8;
+  }
+
   /// Create an a64::Mem to a specifc frame register.
   static constexpr inline a64::Mem frA64Mem(FR fr) {
-    // FIXME: check if the offset fits
-    auto ofs = (fr.index() + hbc::StackFrameLayout::FirstLocal) *
-        sizeof(SHLegacyValue);
-    return a64::Mem(xFrame, ofs);
+    return a64::Mem(xFrame, frByteOffset(fr));
   }
 
   /// Return true if we are logging, false otherwise.
@@ -948,18 +976,34 @@ class Emitter {
       const a64::GpX &xTemp);
 
   void _loadFrame(HWReg dest, FR rFrom) {
-    // FIXME: check if the offset fits
+    uint32_t ofs = frByteOffset(rFrom);
+    if (LLVM_LIKELY(isFrameImmOffset(ofs))) {
+      if (dest.isGpX())
+        a.ldr(dest.a64GpX(), a64::Mem(xFrame, ofs));
+      else
+        a.ldr(dest.a64VecD(), a64::Mem(xFrame, ofs));
+      return;
+    }
+    a.mov(xScratch, ofs);
     if (dest.isGpX())
-      a.ldr(dest.a64GpX(), frA64Mem(rFrom));
+      a.ldr(dest.a64GpX(), a64::Mem(xFrame, xScratch));
     else
-      a.ldr(dest.a64VecD(), frA64Mem(rFrom));
+      a.ldr(dest.a64VecD(), a64::Mem(xFrame, xScratch));
   }
   void _storeFrame(HWReg src, FR rFrom) {
-    // FIXME: check if the offset fits
+    uint32_t ofs = frByteOffset(rFrom);
+    if (LLVM_LIKELY(isFrameImmOffset(ofs))) {
+      if (src.isGpX())
+        a.str(src.a64GpX(), a64::Mem(xFrame, ofs));
+      else
+        a.str(src.a64VecD(), a64::Mem(xFrame, ofs));
+      return;
+    }
+    a.mov(xScratch, ofs);
     if (src.isGpX())
-      a.str(src.a64GpX(), frA64Mem(rFrom));
+      a.str(src.a64GpX(), a64::Mem(xFrame, xScratch));
     else
-      a.str(src.a64VecD(), frA64Mem(rFrom));
+      a.str(src.a64VecD(), a64::Mem(xFrame, xScratch));
   }
 
   bool isTempGpX(HWReg hwReg) const {
@@ -1386,5 +1430,79 @@ class Emitter {
   /// \return 0 if too many IDs have been assigned.
   uint16_t initHCLazyIDMayAlloc(HiddenClass *hc);
 }; // class Emitter
+
+/// Only the logger check lives here; the formatting is out of line in
+/// commentV(). The check has to be visible to every emitter translation unit:
+/// when ASMJIT_NO_LOGGING is defined hasLogger() folds to a constant false, so
+/// the compiler can drop the call and dead-strip the format string. With the
+/// whole body in JitEmitter.cpp, callers in other translation units had to
+/// materialise and pass every string, which cost ~4KB of .cstring. Keeping
+/// vsnprintf out of line means enabling logging does not duplicate the
+/// formatting code into each caller.
+inline void Emitter::comment(const char *fmt, ...) {
+  if (!hasLogger())
+    return;
+  va_list args;
+  va_start(args, fmt);
+  commentV(fmt, args);
+  va_end(args);
+}
+
+/// Return true if the specified 64-bit value can be efficiently loaded on
+/// Arm64 with up to two integer instructions. In other words, it has at most
+/// two non-zero 16-bit words.
+inline bool isCheapConst(uint64_t k) {
+  unsigned count = 0;
+  for (uint64_t mask = 0xFFFF; mask != 0; mask <<= 16) {
+    if (k & mask)
+      ++count;
+  }
+  return count <= 2;
+}
+
+template <bool use>
+void Emitter::movHWFromHW(HWReg dst, HWReg src) {
+  if (dst != src) {
+    if (dst.isVecD() && src.isVecD())
+      a.fmov(dst.a64VecD(), src.a64VecD());
+    else if (dst.isVecD())
+      a.fmov(dst.a64VecD(), src.a64GpX());
+    else if (src.isVecD())
+      a.fmov(dst.a64GpX(), src.a64VecD());
+    else
+      a.mov(dst.a64GpX(), src.a64GpX());
+  }
+  if constexpr (use) {
+    useReg(src);
+    useReg(dst);
+  }
+}
+
+template <class TAG>
+HWReg Emitter::_allocTemp(TempRegAlloc &ra, llvh::Optional<HWReg> preferred) {
+  llvh::Optional<unsigned> pr{};
+  if (preferred)
+    pr = preferred->indexInClass();
+  if (auto optReg = ra.alloc(pr); optReg)
+    return HWReg(*optReg, TAG{});
+  // Spill one register.
+  unsigned index = pr ? *pr : ra.leastRecentlyUsed();
+  _spillTempForFR(HWReg(index, TAG{}));
+  ra.free(index);
+  // Allocate again. This must succeed.
+  return HWReg(*ra.alloc(), TAG{});
+}
+
+template <typename REG>
+void Emitter::loadBits64InGp(
+    const REG &dest,
+    uint64_t bits,
+    const char *constName) {
+  if (isCheapConst(bits)) {
+    a.mov(dest, bits);
+  } else {
+    a.ldr(dest, a64::Mem(roDataLabel_, uint64Const(bits, constName)));
+  }
+}
 
 } // namespace hermes::vm::arm64

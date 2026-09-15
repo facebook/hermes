@@ -222,7 +222,7 @@ class ToPropertyKeyInst : public SingleOperandInst {
  public:
   explicit ToPropertyKeyInst(Value *value)
       : SingleOperandInst(ValueKind::ToPropertyKeyInstKind, value) {
-    setType(Type::unionTy(Type::createString(), Type::createSymbol()));
+    setType(Type::createStringOrSymbol());
   }
   explicit ToPropertyKeyInst(
       const ToPropertyKeyInst *src,
@@ -3280,7 +3280,10 @@ class BinaryOperatorInst : public Instruction {
 
   SideEffect getSideEffectImpl() const {
     return getBinarySideEffect(
-        getLeftHandSide()->getType(), getRightHandSide()->getType(), getKind());
+        getModule()->getTypeContext(),
+        getLeftHandSide()->getType(),
+        getRightHandSide()->getType(),
+        getKind());
   }
 
   static bool classof(const Value *V) {
@@ -3290,7 +3293,7 @@ class BinaryOperatorInst : public Instruction {
   /// Calculate the side effect of a binary operator, given inferred types of
   /// its arguments.
   static SideEffect
-  getBinarySideEffect(Type leftTy, Type rightTy, ValueKind op);
+  getBinarySideEffect(TypeContext &tc, Type leftTy, Type rightTy, ValueKind op);
 };
 
 class CatchInst : public Instruction {
@@ -3897,12 +3900,14 @@ class PhiInst : public Instruction {
     return kind == ValueKind::PhiInstKind;
   }
 
+  /// Calculate the result type as a union of all incoming types and update it.
+  /// Must be called only after the inst is inserted into a basic block, since
+  /// it goes through getModule() to reach the TypeContext.
+  void recalculateResultType();
+
  private:
   /// Remove an entry without recalculating the result type.
   void removeEntryHelper(unsigned index);
-
-  /// Calculate the result type as a union of all incoming types and update it.
-  void recalculateResultType();
 };
 
 class MovInst : public SingleOperandInst {
@@ -4090,20 +4095,21 @@ class ThrowIfInst : public Instruction {
  public:
   enum { CheckedValueIdx, InvalidTypesIdx };
 
-  explicit ThrowIfInst(Value *checkedValue, LiteralIRType *invalidTypes)
+  /// Precondition (enforced by IRBuilder::createThrowIfInst):
+  /// invalidTypes->getData() is non-empty and a subset of `Empty | Uninit`.
+  /// \p resultType must equal `subtractTy(checkedValue->getType(),
+  /// invalidTypes->getData())`.
+  explicit ThrowIfInst(
+      Value *checkedValue,
+      LiteralIRType *invalidTypes,
+      Type resultType)
       : Instruction(ValueKind::ThrowIfInstKind),
         savedResultType_(Type::createAnyType()) {
-    assert(
-        !invalidTypes->getData().isNoType() &&
-        invalidTypes->getData().isSubsetOf(
-            Type::unionTy(Type::createEmpty(), Type::createUninit())) &&
-        "invalidTypes set can only contain Empty or Uninit");
     pushOperand(checkedValue);
     pushOperand(invalidTypes);
 
-    // Calculate the correct result type, to preserve invariants for
-    // instructions that use this result.
-    setType(Type::subtractTy(checkedValue->getType(), invalidTypes->getData()));
+    // Result type was computed by the builder, where TypeContext is available.
+    setType(resultType);
     updateSavedResultType();
   }
   explicit ThrowIfInst(const ThrowIfInst *src, llvh::ArrayRef<Value *> operands)
@@ -4131,12 +4137,11 @@ class ThrowIfInst : public Instruction {
   LiteralIRType *getInvalidTypes() const {
     return cast<LiteralIRType>(getOperand(InvalidTypesIdx));
   }
+  /// Update the invalid types set. The new set must satisfy the same
+  /// precondition as at construction (non-empty subset of `Empty | Uninit`).
+  /// The invariant is enforced by the only caller (InstSimplify), which
+  /// derives the new set via intersection with the original.
   void setInvalidTypes(LiteralIRType *invalidTypes) {
-    assert(
-        !invalidTypes->getData().isNoType() &&
-        invalidTypes->getData().isSubsetOf(
-            Type::unionTy(Type::createEmpty(), Type::createUninit())) &&
-        "invalidTypes set can only contain Empty or Uninit");
     setOperand(invalidTypes, InvalidTypesIdx);
   }
 
@@ -5264,6 +5269,7 @@ class HBCCompareBranchInst : public TerminatorInst {
 
   SideEffect getSideEffectImpl() const {
     return BinaryOperatorInst::getBinarySideEffect(
+        getModule()->getTypeContext(),
         getLeftHandSide()->getType(),
         getRightHandSide()->getType(),
         toBinaryOperatorValueKind());
@@ -5872,7 +5878,7 @@ class LoadParentNoTrapsInst : public Instruction {
 
   static llvh::Optional<Type> getInherentTypeImpl() {
     // The parent of an object is either another object or null.
-    return Type::unionTy(Type::createObject(), Type::createNull());
+    return Type::createObjectOrNull();
   }
 
   Value *getObject() {

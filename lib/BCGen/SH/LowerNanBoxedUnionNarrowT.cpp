@@ -34,7 +34,8 @@ static bool lowerNanBoxedUnionNarrowTrusted(Function *F) {
       // Note that ordinarily the UNT result type is narrower than the input
       // type, but we might already have narrowed the input type from a
       // different UNT.
-      Type t = Type::intersectTy(UNT->getType(), input->getType());
+      Type t = builder.getTypeContext().intersectTy(
+          UNT->getType(), input->getType());
       if (!t.isNoType()) {
         // This is the normal path were we simply narrow the input type.
         input->setType(t);

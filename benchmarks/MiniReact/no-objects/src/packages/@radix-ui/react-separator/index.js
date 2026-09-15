@@ -10,7 +10,6 @@
 
 import type {Props, React$MixedElement} from 'react';
 
-import {includes} from 'sh/fastarray';
 import * as React from 'react';
 import {Primitive} from '@radix-ui/react-primitive';
 
@@ -61,7 +60,7 @@ const Separator = React.forwardRef(
     return (
       <Primitive.div
         data-orientation={orientation}
-        {...semanticProps}
+        {...(semanticProps: Props)}
         {...domProps}
         ref={forwardedRef}
       />
@@ -70,7 +69,7 @@ const Separator = React.forwardRef(
 );
 
 function isValidOrientation(orientation: string): boolean {
-  return includes<string>(ORIENTATIONS, orientation);
+  return ORIENTATIONS.includes(orientation);
 }
 
 const Root = Separator;

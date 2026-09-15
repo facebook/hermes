@@ -1,0 +1,18 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+// REQUIRES: napi, jsi_unstable
+// UNSUPPORTED: windows
+
+// Queues 10 concurrent async-works and only prints "all done" after the
+// last completion fires. Without proper task-queue source counting in
+// the host adapter, drainTasks would return as soon as the script
+// finished and the print would never happen.
+
+// RUN: echo 'var a = loadNativeModule("%napi_addon_dir/napi_async_work_addon.node"); a.doManyWorks(10, function() { print("all done"); });' > %t.js && %hermes %t.js | %FileCheck --match-full-lines %s
+
+// CHECK: all done

@@ -57,8 +57,9 @@ void SourceErrorManager::disableBuffering() {
   if (--bufferingEnabled_ != 0)
     return;
 
-  // Sort all messages.
-  std::sort(
+  // Sort all messages. The sort must be stable, so that messages emitted at
+  // the same location keep their emission order.
+  std::stable_sort(
       bufferedMessages_.begin(),
       bufferedMessages_.end(),
       [](const BufferedMessage &a, const BufferedMessage &b) {

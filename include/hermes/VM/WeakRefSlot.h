@@ -14,6 +14,8 @@
 #include "hermes/VM/RootAcceptor.h"
 #include "hermes/VM/WeakRoot.h"
 
+#include <new>
+
 namespace hermes {
 namespace vm {
 
@@ -62,6 +64,9 @@ class WeakRefSlot {
     assert(hasValue() && "tried to access collected referent");
     return value_.root.getObjectNoBarrierUnsafe();
   }
+
+  /// Return the SymbolID, with a read barrier.
+  inline SymbolID getSymbol(GC &gc) const;
 
   /// Return the symbol, without a read barrier.
   SymbolID getSymbolNoBarrierUnsafe() const {
@@ -120,7 +125,9 @@ class WeakRefSlot {
   /// Emplace new value to this slot.
   void emplace(SmallHermesValue target) {
     assert(isFree() && "Slot must be free.");
-    value_.root.set(target);
+    // value_.root is inactive on a freed slot (nextFree is set), so calling
+    // `set()` on it is an UB. Use placement new instead.
+    ::new (&value_.root) WeakSmallHermesValue(target);
     free_.store(false, std::memory_order_relaxed);
   }
 
@@ -203,10 +210,13 @@ class WeakMapEntrySlot {
       SmallHermesValue keyPtr,
       HermesValue value,
       CompressedPointer ownerPtr) {
-    freed_.store(false, std::memory_order_relaxed);
-    key.set(keyPtr);
+    assert(isFree() && "Slot must be free");
+    // key is inactive on a freed slot (nextFree is set), so calling `set()` on
+    // it is an UB. Use placement new instead.
+    ::new (&key) WeakSmallHermesValue(keyPtr);
     mappedValue = value;
     owner = ownerPtr;
+    freed_.store(false, std::memory_order_relaxed);
   }
 };
 

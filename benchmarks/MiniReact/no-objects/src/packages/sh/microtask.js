@@ -8,12 +8,15 @@
  * @format
  */
 
-let microtaskQueue = [];
+let microtaskQueue: (()=>void)[] = [];
+
+// Use a stub to avoid having a union in the array.
+function stub(): void {}
 
 export function drainMicrotaskQueue(): void {
   for (let i = 0; i < microtaskQueue.length; i++) {
     microtaskQueue[i]();
-    microtaskQueue[i] = undefined;
+    microtaskQueue[i] = stub;
   }
   microtaskQueue = [];
 }

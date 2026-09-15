@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  *
  * @flow strict
- * @format
+ * @noformat
  */
 
 import type {Expression} from 'hermes-estree';
@@ -22,14 +22,14 @@ export type ParserOptions = {
   sourceType?: 'module' | 'script' | 'unambiguous',
   tokens?: boolean,
   transformOptions?: {
-    +TransformEnumSyntax?: {
-      +enable: boolean,
-      +getRuntime?: () => Expression,
+    readonly TransformEnumSyntax?: {
+      readonly enable: boolean,
+      readonly getRuntime?: () => Expression,
     },
   },
 };
 
-export const ParserOptionsKeys: $ReadOnlySet<$Keys<ParserOptions>> = new Set([
+export const ParserOptionsKeys /*: ReadonlySet<keyof ParserOptions> */ = new Set([
   'allowReturnOutsideFunction',
   'babel',
   'flow',

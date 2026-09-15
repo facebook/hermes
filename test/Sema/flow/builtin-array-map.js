@@ -23,17 +23,17 @@ function test(arr: number[]): number[] {
 // CHECK-NEXT:%function.6 = function(this: void, t: number, i: number, array: %class.2): number
 
 // CHECK:SemContext
-// CHECK-NEXT:Func strict
+// CHECK-NEXT:Func strict mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:        Decl %d.2 'test' Var : %function.3
 // CHECK-NEXT:        Decl %d.3 'arguments' Var Arguments
 // CHECK-NEXT:        hoistedFunction test
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict noImplicitReturn
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.4 'arr' Parameter : %class.2
 // CHECK-NEXT:            Decl %d.5 'arguments' Var Arguments
-// CHECK-NEXT:        Func strict
+// CHECK-NEXT:        Func strict noImplicitReturn
 // CHECK-NEXT:            Scope %s.3
 // CHECK-NEXT:                Decl %d.6 'n' Parameter : number
 // CHECK-NEXT:                Decl %d.7 'i' Parameter : number

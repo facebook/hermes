@@ -24,8 +24,6 @@ print(('a' + 'bc': string) === ('abc': string | null));
 var obj = {};
 print(obj === obj);
 // CHECK-NEXT: true
-print(obj === undefined, obj !== undefined);
-// CHECK-NEXT: false true
 var nul = (() => null)();
 print(nul === null, nul !== null);
 // CHECK-NEXT: true false

@@ -60,7 +60,7 @@ class Identifier {
  public:
   using PtrType = UniqueString *;
 
-  explicit Identifier() = default;
+  Identifier() = default;
 
  private:
   PtrType ptr_{nullptr};

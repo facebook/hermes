@@ -7,6 +7,8 @@
 
 #include "JSIUtils.h"
 
+#include <utility>
+
 namespace facebook {
 namespace hermes {
 
@@ -45,7 +47,17 @@ TypedArrayBufferInfo getTypedArrayBuffer(
     throwTypeError(rt, detachedErrorMessage);
   }
 
-  return {bufferData + *byteOffset, *byteLength};
+  // byteOffset and byteLength come from a caller-supplied object, so they must
+  // be validated.
+  size_t bufferSize = arrayBuffer.size(rt);
+  if (*byteOffset > bufferSize || *byteLength > bufferSize - *byteOffset) {
+    throw jsi::JSError(rt, errorMessage);
+  }
+
+  return TypedArrayBufferInfo(
+      jsi::Value(std::move(arrayBuffer)),
+      bufferData + *byteOffset,
+      *byteLength);
 }
 
 } // namespace hermes

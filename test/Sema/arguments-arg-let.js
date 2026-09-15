@@ -18,12 +18,12 @@ function foo(a=arguments[1]) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:SemContext
-// CHECK-NEXT:Func loose
+// CHECK-NEXT:Func loose mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'foo' GlobalProperty
 // CHECK-NEXT:        Decl %d.2 'print' UndeclaredGlobalProperty
 // CHECK-NEXT:        hoistedFunction foo
-// CHECK-NEXT:    Func loose
+// CHECK-NEXT:    Func loose mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.3 'a' Parameter
 // CHECK-NEXT:            Decl %d.4 'arguments' Var Arguments

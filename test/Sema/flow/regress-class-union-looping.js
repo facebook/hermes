@@ -22,7 +22,7 @@ type D = [B<D>] | C<number>;
 // CHECK-NEXT:})
 
 // CHECK:SemContext
-// CHECK-NEXT:Func strict
+// CHECK-NEXT:Func strict mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:        Decl %d.2 'B' Class
@@ -30,9 +30,9 @@ type D = [B<D>] | C<number>;
 // CHECK-NEXT:        Decl %d.4 'B' Class : %class_constructor.2
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:        Scope %s.3
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.4
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.5
 
 // CHECK:FunctionExpression : %untyped_function.1

@@ -559,7 +559,8 @@ class Parser {
             setError(constants::ErrorType::EscapeIncomplete);
             return;
           } else if (*current_ == 'b' || *current_ == 'B') {
-            re_->pushWordBoundary(*current_ == 'B' /* invert */);
+            re_->pushWordBoundary(
+                *current_ == 'B' /* invert */, curFlags_.ignoreCase);
             consume(*current_);
             quantifierAllowed = false;
           } else {
@@ -1354,15 +1355,14 @@ class Parser {
             setError(constants::ErrorType::InvalidPropertyName);
             return;
           }
-          auto bracket = re_->startBracketList(
-              c == 'P' /* invert */, curFlags_.ignoreCase);
+          auto bracket = re_->startBracketList(false, curFlags_.ignoreCase);
           auto codePointRanges =
               unicodePropertyRanges(propertyName, propertyValue);
           if (codePointRanges.empty()) {
             setError(constants::ErrorType::InvalidPropertyName);
             return;
           }
-          bracket->addCodePointRanges(codePointRanges);
+          bracket->addCodePointRanges(codePointRanges, c == 'P');
           break;
         } else {
           // When not in Unicode mode, this is just a regular `p` or `P`

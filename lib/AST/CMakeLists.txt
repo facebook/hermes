@@ -13,6 +13,7 @@ add_hermes_library(hermesAST
     StripTS.cpp
     TS2Flow.cpp
     TransformAST.cpp
+    TransformDecorate.cpp
     Context.cpp
     NativeContext.cpp
     LINK_OBJLIBS

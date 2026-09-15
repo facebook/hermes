@@ -16,7 +16,7 @@ import {astArrayMutationHelpers} from 'hermes-parser';
 import {getStatementParent} from './utils/getStatementParent';
 import * as t from '../../generated/node-types';
 
-export type RemoveStatementMutation = $ReadOnly<{
+export type RemoveStatementMutation = Readonly<{
   type: 'removeStatement',
   node: ModuleDeclaration | Statement,
 }>;
@@ -41,7 +41,7 @@ export function performRemoveStatementMutation(
 
   if (removalParent.type === 'array') {
     const parent: interface {
-      [string]: $ReadOnlyArray<DetachedNode<Statement | ModuleDeclaration>>,
+      [string]: ReadonlyArray<DetachedNode<Statement | ModuleDeclaration>>,
     } = removalParent.parent;
     parent[removalParent.key] = astArrayMutationHelpers.removeFromArray(
       parent[removalParent.key],
@@ -60,7 +60,7 @@ export function performRemoveStatementMutation(
       parent: removalParent.parent,
     });
 
-    (removalParent.parent: interface {[string]: mixed})[removalParent.key] =
+    (removalParent.parent as interface {[string]: unknown})[removalParent.key] =
       blockStatement;
   }
 

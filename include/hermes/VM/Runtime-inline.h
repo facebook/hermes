@@ -9,6 +9,7 @@
 #define HERMES_VM_RUNTIME_INLINE_H
 
 #include "hermes/FrontEndDefs/Builtins.h"
+#include "hermes/VM/Callable.h"
 #include "hermes/VM/Runtime.h"
 
 namespace hermes {
@@ -25,6 +26,20 @@ void Runtime::registerBuiltin(
     BuiltinMethod::Enum builtinIndex,
     Callable *builtin) {
   assert(builtins_[(size_t)builtinIndex] == nullptr && "Builtin already set");
+  builtins_[(size_t)builtinIndex] = builtin;
+}
+
+void Runtime::overwriteBuiltinUnsafe(
+    BuiltinMethod::Enum builtinIndex,
+    Callable *builtin) {
+  assert(builtin && "Builtin must be non-null");
+  assert(
+      builtinIndex < BuiltinMethod::_count && "out of bound BuiltinMethod ID");
+  assert(builtins_[(size_t)builtinIndex] && "Builtin is not set");
+  // All builtins invoked by CallBuiltin are NativeFunction.
+  if (builtinIndex < BuiltinMethod::_firstJS) {
+    assert(vmisa<NativeFunction>(builtin) && "NativeFunction expected");
+  }
   builtins_[(size_t)builtinIndex] = builtin;
 }
 

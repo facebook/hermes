@@ -1133,9 +1133,7 @@ cons.forEach(function(ta) {
     x.sort({});
   }, TypeError);
 
-  // Sorting a TypedArray allocates handles linearly with respect to the size
-  // of the buffer. Sorting a larger array will ensure that we clean those up
-  // periodically.
+  // Exercise the comparator path with a larger captured list.
   x = new ta(104);
   x.sort(function(unused1, unused2) {
     return true;
@@ -1144,18 +1142,68 @@ cons.forEach(function(ta) {
     assert.equal(x[i], 0);
   }
 
-  // Check that detaching in the middle of sorting will cause a TypeError.
-  x = new ta([1, 2, 3]);
-  assert.throws(function() {
-    x.sort(function f(unused1, unused2) {
-      var a = {};
-      a.valueOf = function() {
-        HermesInternal.detachArrayBuffer(x.buffer);
-      };
-      return a;
-    });
-  }, TypeError);
+  // Sort the captured values even if the comparator changes the receiver.
+  x = new ta([3, 2, 1]);
+  var calls = 0;
+  x.sort(function(a, b) {
+    if (calls++ === 0) {
+      x.fill(0);
+    }
+    return a - b;
+  });
+  assert.equal(x[0], 1);
+  assert.equal(x[1], 2);
+  assert.equal(x[2], 3);
+
+  // Detaching does not change the values passed to later comparator calls.
+  x = new ta([3, 2, 1]);
+  calls = 0;
+  var result = x.sort(function(a, b) {
+    assert.notEqual(a, undefined);
+    assert.notEqual(b, undefined);
+    if (calls++ === 0) {
+      HermesInternal.detachArrayBuffer(x.buffer);
+    }
+    return a - b;
+  });
+  assert.equal(result, x);
+  assert.ok(calls > 1);
 });
+
+/// Bigint are represented as a heap object when encoded to HermesValue. This
+/// tests that they remain alive across GC.
+(function bigintSortSnapshotSurvivesGC() {
+  var x = new BigInt64Array([3n, 2n, 1n]);
+  x.sort(function(a, b) {
+    gc();
+    return a < b ? -1 : a > b ? 1 : 0;
+  });
+  assert.equal(x[0], 1n);
+  assert.equal(x[1], 2n);
+  assert.equal(x[2], 3n);
+})();
+
+(function bigintElementWrites() {
+  var int64MinBit = 9223372036854775808n; // 2^63
+  var uint64Max = 18446744073709551615n;  // 2^64 - 1
+  var uint64Mod = 18446744073709551616n;  // 2^64
+
+  var u = new BigUint64Array(3);
+  u[0] = int64MinBit;
+  u[1] = uint64Max;
+  u[2] = uint64Mod;
+  assert.equal(u[0], int64MinBit);
+  assert.equal(u[1], uint64Max);
+  assert.equal(u[2], 0n);
+
+  var s = new BigInt64Array(3);
+  s[0] = int64MinBit;
+  s[1] = uint64Max;
+  s[2] = uint64Mod;
+  assert.equal(s[0], -int64MinBit);
+  assert.equal(s[1], -1n);
+  assert.equal(s[2], 0n);
+})();
 
 (function negativeZeroSort() {
   var x = new Float64Array([+0, -0]);

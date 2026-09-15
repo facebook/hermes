@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -Xmicrotask-queue=0 %s | %FileCheck --match-full-lines --check-prefix=TASK %s
-// RUN: %hermes -Xmicrotask-queue=1 %s | %FileCheck --match-full-lines --check-prefix=MICROTASK %s
+// RUN: %hermes %s | %FileCheck --match-full-lines %s
 
 print('promise jobs scheduled in tasks');
 // CHECK-LABEL: promise jobs scheduled in tasks
@@ -23,16 +22,9 @@ setTimeout(_ => {
   Promise.resolve().then(_ => print('promise in task2'))
 }, 0);
 
-// TASK: task1
-// TASK-NEXT: task2
-// TASK-NEXT: promise in task1
-// TASK-NEXT: task3
-// TASK-NEXT: task4
-// TASK-NEXT: promise in task2
-
-// MICROTASK: task1
-// MICROTASK-NEXT: promise in task1
-// MICROTASK-NEXT: task2
-// MICROTASK-NEXT: promise in task2
-// MICROTASK-NEXT: task3
-// MICROTASK-NEXT: task4
+// CHECK: task1
+// CHECK-NEXT: promise in task1
+// CHECK-NEXT: task2
+// CHECK-NEXT: promise in task2
+// CHECK-NEXT: task3
+// CHECK-NEXT: task4

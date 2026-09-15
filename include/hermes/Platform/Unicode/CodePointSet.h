@@ -110,6 +110,21 @@ class CodePointSet {
     return ranges_;
   }
 
+  /// Replace the contents with the complement over [0, maxCodePoint].
+  void invert(uint32_t maxCodePoint) {
+    assert(maxCodePoint < UINT32_MAX && "maxCodePoint would overflow");
+    llvh::SmallVector<CodePointRange, 4> inverted;
+    uint32_t last = 0;
+    for (const auto &range : ranges_) {
+      if (range.first > last)
+        inverted.push_back(CodePointRange{last, range.first - last});
+      last = range.end();
+    }
+    if (last <= maxCodePoint)
+      inverted.push_back(CodePointRange{last, maxCodePoint - last + 1});
+    ranges_ = std::move(inverted);
+  }
+
   /// \return whether a code point \p cp is contained within this set.
   bool contains(uint32_t cp) const {
     auto cmp = [](CodePointRange left, uint32_t cp) {

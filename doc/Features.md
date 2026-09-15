@@ -38,7 +38,12 @@ Hermes provides broad support for ECMAScript features, including:
 
 *   **Key Library Features:**
     *   ES2015 standard built-ins (`Promise`, `Set`, `Map`, `WeakSet`, `WeakMap`, TypedArrays, `Reflect`, `Proxy`, updated methods on `Array`, `String`, `Object`, etc.)
-    *   `Promise.prototype.finally` (ES2018)
+    *   **Extended `Promise` API** (see "Known Deviations" for the limits of `Symbol.species` and microtask timing):
+        *   `Promise.prototype.finally` (ES2018)
+        *   `Promise.allSettled` (ES2020)
+        *   `Promise.any` (ES2021)
+        *   `Promise.withResolvers` (ES2024)
+        *   `Promise.try` (ES2025)
     *   `Symbol.prototype.description` (ES2019 - see "Known Deviations")
     *   `WeakRef` (ES2021 - see "Planned Features" regarding `FinalizationRegistry`)
     *   [`Intl` API](IntlAPIs.md) (Basic `DateTimeFormat`, `NumberFormat` support; see "Planned Features")
@@ -77,6 +82,11 @@ Specific behaviors where Hermes differs from the ECMAScript specification or has
 
 *   **`Function.prototype.toString()`:** Due to AOT compilation to bytecode, this method does not return the original JavaScript source code. It typically returns a placeholder like `"[native code]"` or `"[bytecode]"`.
 
-*   **`Promise` Implementation:** Promises are implemented using an internally bundled polyfill compiled to bytecode. While generally conformant, microtask timing or specific edge cases might differ slightly from other engines or the exact specification. See the [polyfill source](https://github.com/facebook/hermes/blob/HEAD/utils/promise/index.js).
+*   **`Promise` Implementation:** Promises are implemented using an internally bundled polyfill compiled to bytecode rather than as a native intrinsic. The polyfill covers the full ES2025 surface (`then`, `catch`, `finally`, `all`, `allSettled`, `any`, `race`, `resolve`, `reject`, `try`, `withResolvers`, `Symbol.toStringTag`), but the following corners differ from the spec:
+    *   **No `Symbol.species` dispatch.** Per spec, the prototype methods `Promise.prototype.then`, `Promise.prototype.catch`, and `Promise.prototype.finally` use `SpeciesConstructor(this, %Promise%)` to determine the constructor of the chained promise. The polyfill substitutes `this.constructor` (and takes the built-in `Promise` directly on the common-case `this.constructor === Promise` fast path), so a subclass that overrides `Symbol.species` will not see its override applied (consistent with the engine-wide "Symbol.species not supported" stance noted above). The static methods (`all`, `allSettled`, `any`, `race`, `resolve`, `reject`) use `this` via `NewPromiseCapability` per spec — `Symbol.species` is not involved there.
+    *   **Extra microtask hop on subclass `.then`.** When `this.constructor !== Promise`, the polyfill bridges the user's reaction to the subclass capability through an intermediate core `Promise`, costing one additional microtask hop compared to spec's `PerformPromiseThen`, which attaches the reaction directly to the capability. The fast path (`this.constructor === Promise`) is unaffected.
+    *   **`Promise.all` 1-microtask fast path (non-spec, default).** When an input is an already-fulfilled core `Promise`, the polyfill synchronously invokes the resolve element and collapses the spec-mandated `PerformPromiseAll` step 8.e microtask hop. This is a deliberate performance default; the spec-compliant `.then`-only dispatch is enabled under the `--test262` runtime flag.
+    *   **Microtask timing in `await`.** Hermes' `async function` machinery lowers to a generator wrapped with the polyfill's `then`, and a few test262 tick-counting tests (e.g. `await-non-promise-thenable`, the `for-await-of/ticks-with-…-constructor-lookup` family) observe a different microtask sequence than spec because the polyfill does one fewer `.constructor` read on each await hop.
+    *   See the [polyfill source](https://github.com/facebook/hermes/blob/static_h/lib/InternalJavaScript/01-Promise.js).
 
 *   **`Symbol.prototype.description` Conformance:** While `Symbol('desc').description` works as expected, `Symbol().description` currently returns `''` (empty string) instead of the spec-compliant `undefined`.

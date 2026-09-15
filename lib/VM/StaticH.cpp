@@ -529,17 +529,25 @@ extern "C" SHLegacyValue _sh_ljs_call_builtin(
     uint32_t builtinMethodID) {
   auto res = [&]() {
     Runtime &runtime = getRuntime(shr);
-    StackFramePtr newFrame(runtime.getStackPointer());
-    newFrame.getPreviousFrameRef() = HermesValue::encodeNativePointer(frame);
-    newFrame.getSavedIPRef() = HermesValue::encodeNativePointer(nullptr);
-    newFrame.getSavedCodeBlockRef() = HermesValue::encodeNativePointer(nullptr);
-    newFrame.getSHLocalsRef() = HermesValue::encodeNativePointer(nullptr);
-    newFrame.getArgCountRef() = HermesValue::encodeNativeUInt32(argCount);
-    newFrame.getNewTargetRef() = HermesValue::encodeUndefinedValue();
-
+    // Non-allocating, so it is safe to resolve the callee before the frame
+    // exists.
     auto callee =
         vmcast<NativeFunction>(runtime.getBuiltinCallable(builtinMethodID));
-    newFrame.getCalleeClosureOrCBRef() = HermesValue::encodeObjectValue(callee);
+    auto newFrame = StackFramePtr::initFrame(
+        runtime.getStackPointer(),
+        StackFramePtr(toPHV(frame)),
+        /* savedIP */ nullptr,
+        /* savedCodeBlock */ nullptr,
+        /* locals */ nullptr,
+        argCount,
+        HermesValue::encodeObjectValue(callee),
+        HermesValue::encodeUndefinedValue());
+    // "thisArg" is implicitly assumed to be "undefined": the compiler never
+    // populates the slot (CallBuiltin's `this` is lowered to an
+    // ImplicitMovInst, which emits no code), and initFrame writes only the
+    // seven metadata slots, so it must be set here, the same way the
+    // interpreter's implCallBuiltin does.
+    newFrame.getThisArgRef() = HermesValue::encodeUndefinedValue();
 
     GCScopeMarkerRAII marker{runtime};
     return NativeFunction::_nativeCall(callee, runtime);
@@ -668,7 +676,6 @@ extern "C" SHLegacyValue _sh_ljs_create_class(
     SHLegacyValue *homeObjectOut,
     SHLegacyValue *superClass) {
   Runtime &runtime = getRuntime(shr);
-  GCScopeMarkerRAII marker{runtime};
   auto classRes = createClass(
       runtime,
       superClass ? Handle{toPHV(superClass)} : Runtime::getEmptyValue(),
@@ -949,6 +956,33 @@ static inline void putByValWithReceiver_RJS(
       valueHandle{toPHV(value)}, receiverHandle{toPHV(receiver)};
   Runtime &runtime = getRuntime(shr);
   if (LLVM_LIKELY(targetHandle->isObject())) {
+    // Fast path for array writes with numeric index when self == receiver.
+    // Uses hasFastIndexProperties + haveOwnIndexed + setOwnIndexed, matching
+    // the canonical write fast path in JSObject::putComputedWithReceiver_RJS.
+    // `haveOwnIndexed` checks whether an indexed element exists without
+    // relying on read-side value semantics like `undefined` vs `empty`.
+    static_assert(
+        HERMESVALUE_VERSION == 2,
+        "HermesValue must use NaN-encoding for non-numbers");
+    uint32_t index;
+    if (sh_tryfast_f64_to_u32(key->f64, index) && index != 0xFFFFFFFFu &&
+        targetHandle.getHermesValue().getRaw() ==
+            receiverHandle.getHermesValue().getRaw()) {
+      auto objHandle = Handle<JSObject>::vmcast(targetHandle);
+      if (objHandle->hasFastIndexProperties()) {
+        if (LLVM_LIKELY(JSObject::haveOwnIndexed(objHandle, runtime, index))) {
+          GCScopeMarkerRAII marker{runtime};
+          auto result =
+              JSObject::setOwnIndexed(objHandle, runtime, index, valueHandle);
+          if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION))
+            _sh_throw_current(shr);
+          if (LLVM_LIKELY(*result))
+            return;
+          // Read-only property, fall through to generic path.
+        }
+      }
+    }
+
     const PropOpFlags defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(strictMode);
     CallResult<bool> res{false};
     {
@@ -1002,6 +1036,89 @@ extern "C" void _sh_ljs_put_by_val_strict_rjs(
     SHLegacyValue *value) {
   putByVal_RJS(shr, target, key, value, true);
 }
+
+static inline void putByIndex_RJS(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    uint32_t index,
+    SHLegacyValue *value,
+    bool strictMode) {
+  Runtime &runtime = getRuntime(shr);
+  Handle<> targetHandle{toPHV(target)};
+  Handle<> valueHandle{toPHV(value)};
+
+  if (LLVM_LIKELY(targetHandle->isObject())) {
+    // Fast path: if the object has fast indexed properties and the element
+    // exists in own indexed storage, write directly via setOwnIndexed,
+    // bypassing the full putComputed property resolution. Uses haveOwnIndexed
+    // (not getOwnIndexed) so the existence check does not depend on read-side
+    // value semantics like `undefined` vs `empty`.
+    auto objHandle = Handle<JSObject>::vmcast(targetHandle);
+    if (objHandle->hasFastIndexProperties() && index != 0xFFFFFFFFu) {
+      if (LLVM_LIKELY(JSObject::haveOwnIndexed(objHandle, runtime, index))) {
+        GCScopeMarkerRAII marker{runtime};
+        auto result =
+            JSObject::setOwnIndexed(objHandle, runtime, index, valueHandle);
+        if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
+          marker.flush();
+          _sh_throw_current(shr);
+        }
+        if (LLVM_LIKELY(*result))
+          return;
+        // Read-only property, fall through to generic path.
+      }
+    }
+    // Generic path.
+    {
+      GCScopeMarkerRAII marker{runtime};
+      const PropOpFlags defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(strictMode);
+      auto putRes = JSObject::putComputed_RJS(
+          objHandle,
+          runtime,
+          runtime.makeHandle(HermesValue::encodeTrustedNumberValue(index)),
+          valueHandle,
+          defaultPropOpFlags);
+      if (LLVM_UNLIKELY(putRes == ExecutionStatus::EXCEPTION)) {
+        marker.flush();
+        _sh_throw_current(shr);
+      }
+    }
+    return;
+  }
+
+  // Non-object (transient).
+  {
+    GCScopeMarkerRAII marker{runtime};
+    auto retStatus = Interpreter::putByValTransient_RJS(
+        runtime,
+        targetHandle,
+        runtime.makeHandle(HermesValue::encodeTrustedNumberValue(index)),
+        valueHandle,
+        strictMode);
+    if (LLVM_UNLIKELY(retStatus == ExecutionStatus::EXCEPTION)) {
+      marker.flush();
+      _sh_throw_current(shr);
+    }
+  }
+}
+
+LLVM_ATTRIBUTE_NOINLINE
+extern "C" void _sh_ljs_put_by_index_loose_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    uint32_t index,
+    SHLegacyValue *value) {
+  putByIndex_RJS(shr, target, index, value, false);
+}
+LLVM_ATTRIBUTE_NOINLINE
+extern "C" void _sh_ljs_put_by_index_strict_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    uint32_t index,
+    SHLegacyValue *value) {
+  putByIndex_RJS(shr, target, index, value, true);
+}
+
 LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_ljs_put_by_val_with_receiver_rjs(
     SHRuntime *shr,

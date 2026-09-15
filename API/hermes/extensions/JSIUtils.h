@@ -16,14 +16,46 @@
 #include <limits>
 #include <string>
 #include <type_traits>
+#include <utility>
 
 namespace facebook {
 namespace hermes {
 
-/// Result of getTypedArrayBuffer - the destination buffer info.
-struct TypedArrayBufferInfo {
-  uint8_t *data;
-  size_t byteLength;
+/// A view into an ArrayBuffer's storage, together with the ArrayBuffer itself.
+/// Holding the ArrayBuffer is what keeps the storage alive: nothing else may
+/// reference the buffer (it can come from a 'buffer' getter), and collecting
+/// it runs the finalizer that frees the storage. Callers must therefore keep
+/// this object alive for as long as they use data(), in particular across any
+/// operation that can allocate and trigger a GC.
+class TypedArrayBufferInfo {
+ public:
+  /// Construct an empty view: no bytes and no buffer.
+  TypedArrayBufferInfo() = default;
+
+  /// \param buffer the ArrayBuffer owning the storage, kept alive by this
+  ///   object.
+  /// \param data the first byte of the view into \p buffer.
+  /// \param byteLength the number of bytes in the view.
+  TypedArrayBufferInfo(jsi::Value &&buffer, uint8_t *data, size_t byteLength)
+      : buffer_(std::move(buffer)), data_(data), byteLength_(byteLength) {}
+
+  TypedArrayBufferInfo(TypedArrayBufferInfo &&) = default;
+  TypedArrayBufferInfo &operator=(TypedArrayBufferInfo &&) = default;
+
+  /// \return the first byte of the view, or nullptr if it is empty.
+  uint8_t *data() const {
+    return data_;
+  }
+
+  /// \return the number of bytes in the view.
+  size_t byteLength() const {
+    return byteLength_;
+  }
+
+ private:
+  jsi::Value buffer_;
+  uint8_t *data_{nullptr};
+  size_t byteLength_{0};
 };
 
 /// MutableBuffer implementation that owns a std::string of UTF-8 data.
@@ -76,6 +108,8 @@ inline llvh::Optional<T> valueToUnsigned(const jsi::Value &val) {
 /// handles cross-realm Uint8Arrays and is consistent with JSI's portable
 /// design. The original VM implementation used internal type checks.
 /// Throws JSError if the object is not a valid TypedArray or is detached.
+/// The returned object keeps the backing ArrayBuffer alive; it must outlive
+/// every use of its data().
 /// \param errorMessage The error message to use if the object is invalid.
 /// \param detachedErrorMessage The error message to use if the buffer is
 ///   detached.

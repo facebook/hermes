@@ -369,10 +369,13 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   void visit(ESTree::ArrowFunctionExpressionNode *node);
 
   /// Run typechecking on the body of a class that we already have the type for.
+  /// \param classConsType the ClassConstructorType wrapping \p classType, used
+  ///   as the new.target type inside the constructor.
   void visitClassNode(
       ESTree::ClassLikeNode *classNode,
       ESTree::ClassBodyNode *body,
-      Type *classType);
+      Type *classType,
+      Type *classConsType);
 
   void visit(ESTree::ClassExpressionNode *node);
   void visit(ESTree::ClassDeclarationNode *node);
@@ -402,6 +405,7 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   void visit(ESTree::ForInStatementNode *node);
   void visit(ESTree::ForStatementNode *node);
   void visit(ESTree::ReturnStatementNode *node);
+  void visit(ESTree::ThrowStatementNode *node);
   void visit(ESTree::BlockStatementNode *node);
   void visit(ESTree::VariableDeclarationNode *node);
   void visit(ESTree::ClassPropertyNode *node);
@@ -490,12 +494,20 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
 
   /// Walk a destructuring pattern for a function parameter, assigning types
   /// to each leaf identifier and recording them in declTypes_.
-  /// \param funcNode the enclosing function (unused for now, but ensures the
-  ///     caller passes the right context).
-  void assignDestructuringParamTypes(
-      ESTree::FunctionLikeNode *funcNode,
+  void assignDestructuringParamTypes(ESTree::Node *pattern, Type *paramType);
+
+  /// Walk a destructuring \p pattern, annotating every nested pattern node and
+  /// leaf binding identifier with the type derived from \p patternType. For
+  /// each leaf binding identifier, \p recordLeaf is invoked with its decl, its
+  /// resolved type, and the identifier node, allowing the caller to record the
+  /// binding in the way appropriate to its context (function parameter, var
+  /// declaration, etc.).
+  /// May report errors.
+  template <typename RecordLeafCB>
+  void resolveDestructuringTypes(
       ESTree::Node *pattern,
-      Type *paramType);
+      Type *patternType,
+      RecordLeafCB recordLeaf);
 
   /// Expand a tuple destructuring pattern: validate element count and call
   /// \p onChild for each (element, type) pair.
@@ -504,6 +516,16 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   LLVM_NODISCARD bool expandTupleDestructuring(
       ESTree::ArrayPatternNode *arr,
       TupleType *tuple,
+      OnChildCB onChild);
+
+  /// Expand an Array<T> destructuring pattern: every non-rest element gets
+  /// type T, and a trailing RestElement (if any) gets the array type itself.
+  /// \p arrayClassType must satisfy flowContext_.isArrayClassType().
+  /// \return false on error.
+  template <typename OnChildCB>
+  LLVM_NODISCARD bool expandArrayDestructuring(
+      ESTree::ArrayPatternNode *arr,
+      Type *arrayClassType,
       OnChildCB onChild);
 
   /// Expand an object destructuring pattern: resolve field types and call
@@ -576,13 +598,16 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// \param classConsType the ClassConstructorType wrapping classType, used as
   ///   the 'this' type for static methods. May be nullptr if the constructor
   ///   type is not yet available (e.g., for class expressions).
+  /// \param classTypeParameters the TypeParameterDeclaration node for the
+  ///   class, used to shadow type params with empty for static members.
   void parseClassType(
       ESTree::Node *superClass,
       ESTree::Node *superTypeParameters,
       ESTree::Node *body,
       Type *classType,
       sema::LexicalScope *classScope,
-      Type *classConsType = nullptr);
+      Type *classConsType = nullptr,
+      ESTree::Node *classTypeParameters = nullptr);
 
   /// Visit the \p node for either resolution or parsing and call \p cb on each
   /// of the type annotations in it.
@@ -615,18 +640,23 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
     /// When the type can flow, this field indicates whether a checked cast is
     /// needed.
     bool needCheckedCast = false;
+
+    /// \return true if the type can flow without requiring a checked cast.
+    bool canFlowWithoutCast() const {
+      return canFlow && !needCheckedCast;
+    }
   };
 
   /// Return true if type \p a can "flow" into type \p b.
   /// TODO: generate message explaining why not.
-  static CanFlowResult canAFlowIntoB(Type *a, Type *b) {
+  CanFlowResult canAFlowIntoB(Type *a, Type *b) {
     assert(a->info && b->info && "types haven't been populated yet");
     return canAFlowIntoB(a->info, b->info);
   }
-  static CanFlowResult canAFlowIntoB(TypeInfo *a, TypeInfo *b);
-  static CanFlowResult canAFlowIntoB(ClassType *a, ClassType *b);
-  static CanFlowResult canAFlowIntoB(TupleType *a, TupleType *b);
-  static CanFlowResult canAFlowIntoB(ExactObjectType *a, ExactObjectType *b);
+  CanFlowResult canAFlowIntoB(TypeInfo *a, TypeInfo *b);
+  CanFlowResult canAFlowIntoB(ClassType *a, ClassType *b);
+  CanFlowResult canAFlowIntoB(TupleType *a, TupleType *b);
+  CanFlowResult canAFlowIntoB(ExactObjectType *a, ExactObjectType *b);
 
   /// How to handle 'this' parameters when checking if function types can flow.
   enum class ThisFlowDirection {
@@ -637,7 +667,7 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   };
 
   /// \param thisFlow how to handle 'this' parameter.
-  static CanFlowResult canAFlowIntoB(
+  CanFlowResult canAFlowIntoB(
       BaseFunctionType *a,
       BaseFunctionType *b,
       ThisFlowDirection thisFlow = ThisFlowDirection::Default);
@@ -648,7 +678,7 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// In canAFlowIntoB, having a parameter in \p a that is a subtype of \p b
   /// would fail to typecheck.
   /// \return whether \p a can be a method override for \p b.
-  static bool canAOverrideB(BaseFunctionType *a, BaseFunctionType *b) {
+  bool canAOverrideB(BaseFunctionType *a, BaseFunctionType *b) {
     return canAFlowIntoB(a, b, ThisFlowDirection::MethodOverride).canFlow;
   }
 
@@ -671,7 +701,7 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// exprType has been narrowed to resType, then cf.needCheckedCast is true,
   /// and the caller needs to insert the implicit checked cast.
   /// resType may be targetType if the checked cast should cast to targetType.
-  static std::pair<Type *, CanFlowResult> tryNarrowType(
+  std::pair<Type *, CanFlowResult> tryNarrowType(
       Type *exprType,
       Type *targetType);
 
@@ -793,14 +823,17 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   Type *getSpecializedArrayClassType(Type *elementType, SMRange errorRange);
 
   /// Look up a named property on a ClassType (fields + home object methods).
-  /// If \p propNode is provided, propagate the Decl from final method
-  /// definitions to the property node for IRGen.
+  /// \p propNode is the property node from the MemberExpression; if it is
+  /// a PrivateNameNode, looks up private fields/methods, otherwise public.
+  /// Propagates the Decl from final method definitions to the property's
+  /// identifier for IRGen.
   /// \return a pair of (type, field) for the found property, or (nullptr,
-  /// nullptr) if not found.
+  /// nullptr) if not found. If the method is overloaded, return nullptr for the
+  /// type because we can't determine it uniquely.
   std::pair<Type *, const flow::ClassType::Field *> lookupPropertyOnClass(
       flow::ClassType *classType,
       Identifier propName,
-      ESTree::Node *propNode = nullptr);
+      ESTree::Node *propNode);
 
   /// Resolve a call to a builtin method.
   /// Sets the MemberExpression callee type and registers for IRGen.
@@ -990,6 +1023,12 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   ///   the key cannot be converted.
   UniqueString *propertyKeyAsIdentifier(ESTree::Node *Key);
 
+  /// Convert a Flow VarianceNode AST node to a FieldVariance.
+  /// "plus"/"readonly" -> ReadOnly, "minus"/"writeonly" -> WriteOnly.
+  /// "in"/"out" are type-parameter variances and are not valid on fields:
+  /// emit an error and return None. nullptr returns None (invariant).
+  FieldVariance parseVariance(ESTree::VarianceNode *varianceNode);
+
   /// Try to find a an enclosing class.
   /// Private names can only be used in lexical descendants of the class
   /// in which they are declared, so this function lets us check that the
@@ -1015,6 +1054,10 @@ class FlowChecker::FunctionContext {
   /// The external signature of the current function. If nullptr, this is the
   /// global function.
   Type *const functionType;
+
+  /// Semantic information for this function. Null for synthetic contexts that
+  /// do not correspond to a function-like AST node.
+  sema::FunctionInfo *const semInfo;
 
   /// The type of the "this" parameter. If nullptr, this is a global function
   /// with an implicit "this" paramater. Depending on the compilation mode,
@@ -1045,6 +1088,7 @@ class FlowChecker::FunctionContext {
                 ? outer.declCollectorMap_.find(declCollectorNode)->second.get()
                 : nullptr),
         functionType(functionType),
+        semInfo(declCollectorNode ? declCollectorNode->getSemInfo() : nullptr),
         thisParamType(thisParamType),
         newTargetType(newTargetType) {
     assert(
@@ -1078,6 +1122,9 @@ class FlowChecker::ClassContext {
  public:
   Type *const classType;
 
+  /// The type of new.target inside the class, i.e. the class constructor type.
+  Type *const newTargetType;
+
   ESTree::ClassLikeNode *const node;
 
   ClassContext(const ClassContext &) = delete;
@@ -1086,10 +1133,12 @@ class FlowChecker::ClassContext {
   ClassContext(
       FlowChecker &outer,
       Type *const classType,
+      Type *const newTargetType,
       ESTree::ClassLikeNode *node)
       : outer_(outer),
         prevContext_(outer.curClassContext_),
         classType(classType),
+        newTargetType(newTargetType),
         node(node) {
     outer.curClassContext_ = this;
   }
@@ -1122,7 +1171,7 @@ template <typename AnnotationCB>
 Type *FlowChecker::processFunctionTypeAnnotation(
     ESTree::FunctionTypeAnnotationNode *node,
     AnnotationCB cb) {
-  if (node->_rest || node->_typeParameters) {
+  if (node->_typeParameters) {
     sm_.error(node->getSourceRange(), "unsupported function type params");
   }
 
@@ -1160,6 +1209,21 @@ Type *FlowChecker::processFunctionTypeAnnotation(
     }
   }
 
+  // Handle the rest parameter if present.
+  if (node->_rest) {
+    auto *restParam = llvh::cast<ESTree::FunctionTypeParamNode>(node->_rest);
+    if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(restParam->_name)) {
+      paramsList.push_back(
+          {Identifier::getFromPointer(id->_name),
+           restParam->_typeAnnotation ? cb(restParam->_typeAnnotation)
+                                      : nullptr,
+           /*optional=*/false,
+           /*rest=*/true});
+    } else {
+      sm_.error(restParam->getSourceRange(), "unsupported rest param");
+    }
+  }
+
   return flowContext_.createType(
       flowContext_.createFunction(
           returnType,
@@ -1193,12 +1257,6 @@ template <typename AnnotationCB>
 Type *FlowChecker::processObjectTypeAnnotation(
     ESTree::ObjectTypeAnnotationNode *node,
     AnnotationCB cb) {
-  if (!node->_indexers.empty()) {
-    sm_.error(
-        node->_indexers.front().getStartLoc(),
-        "ft: indexers are not supported in object types");
-    return flowContext_.getAny();
-  }
   if (!node->_callProperties.empty()) {
     sm_.error(
         node->_callProperties.front().getStartLoc(),
@@ -1224,11 +1282,6 @@ Type *FlowChecker::processObjectTypeAnnotation(
     auto *prop = llvh::dyn_cast<ESTree::ObjectTypePropertyNode>(&n);
     if (!prop) {
       sm_.error(n.getSourceRange(), "ft: unsupported object type property");
-      continue;
-    }
-    if (prop->_variance) {
-      sm_.error(
-          n.getSourceRange(), "ft: object type variance is not supported");
       continue;
     }
     if (prop->_static) {
@@ -1277,12 +1330,40 @@ Type *FlowChecker::processObjectTypeAnnotation(
     }
 
     // Found a property we support, add it to the list.
-    fields.emplace_back(Identifier::getFromPointer(name), cb(prop->_value));
+    FieldVariance variance = parseVariance(
+        llvh::cast_or_null<ESTree::VarianceNode>(prop->_variance));
+    fields.emplace_back(
+        Identifier::getFromPointer(name), cb(prop->_value), variance);
+  }
+
+  // Parse the optional index signature.
+  OptValue<ExactObjectType::Indexer> indexer{};
+  if (!node->_indexers.empty()) {
+    auto it = node->_indexers.begin();
+    auto *indexerNode = llvh::cast<ESTree::ObjectTypeIndexerNode>(&*it);
+    // At most one indexer is allowed.
+    if (std::next(it) != node->_indexers.end()) {
+      sm_.error(
+          std::next(it)->getStartLoc(),
+          "ft: at most one indexer is allowed in an object type");
+    }
+    // An indexer can't be combined with named properties.
+    if (!fields.empty()) {
+      sm_.error(
+          indexerNode->getStartLoc(),
+          "ft: indexers cannot be combined with named properties");
+    } else {
+      FieldVariance variance = parseVariance(
+          llvh::cast_or_null<ESTree::VarianceNode>(indexerNode->_variance));
+      indexer = ExactObjectType::Indexer{
+          cb(indexerNode->_key), cb(indexerNode->_value), variance};
+    }
   }
 
   // It's possible we've failed on one of the properties, just continue
   // with an empty object type because we're going to fail anyway.
-  return flowContext_.createType(flowContext_.createExactObject(fields), node);
+  return flowContext_.createType(
+      flowContext_.createExactObject(fields, indexer), node);
 }
 
 } // namespace flow

@@ -145,29 +145,29 @@ type SubjectSelector =
   | AttributeAtom;
 type Literal = StringLiteralAtom | NumericLiteralAtom;
 
-export type ESQueryOptions = $ReadOnly<{
-  visitorKeys?: $ReadOnly<{[string]: $ReadOnlyArray<string>}>,
-  fallback?: (node: ESNode) => $ReadOnlyArray<string>,
+export type ESQueryOptions = Readonly<{
+  visitorKeys?: Readonly<{[string]: ReadonlyArray<string>}>,
+  fallback?: (node: ESNode) => ReadonlyArray<string>,
 }>;
 
 /** Parse a selector and return its AST. */
-export const parse = (esquery.parse: (selector: string) => Selector);
+export const parse = esquery.parse as (selector: string) => Selector;
 /** From a JS AST and a selector AST, collect all JS AST nodes that match the selector. */
-export const match = (esquery.match: (
+export const match = esquery.match as (
   ast: ESNode,
   selector: ?Selector,
   options?: ESQueryOptions,
-) => Array<ESNode>);
+) => Array<ESNode>;
 /** Given a `node` and its ancestors, determine if `node` is matched by `selector`. */
-export const matches = (esquery.matches: (
+export const matches = esquery.matches as (
   node: ?ESNode,
   selector: ?Selector,
   ancestry?: Array<ESNode>,
   options?: ESQueryOptions,
-) => boolean);
+) => boolean;
 /** Query the code AST using the selector string. */
-export const query = (esquery.query: (
+export const query = esquery.query as (
   ast: ESNode,
   selector: string,
   options?: ESQueryOptions,
-) => Array<ESNode>);
+) => Array<ESNode>;

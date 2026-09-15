@@ -882,6 +882,7 @@ void GCBase::printStats(JSONEmitter &json) {
   json.emitKeyValue("Heap size", info.heapSize);
   json.emitKeyValue("Allocated bytes", info.allocatedBytes);
   json.emitKeyValue("Num collections", info.numCollections);
+  json.emitKeyValue("External bytes", info.externalBytes);
   json.emitKeyValue("Malloc size", info.mallocSizeEstimate);
   json.closeDict();
 

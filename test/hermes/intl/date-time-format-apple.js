@@ -61,7 +61,7 @@ print(new Intl.DateTimeFormat('en-US', { dateStyle: 'short', timeStyle: 'medium'
 // CHECK-NEXT: 1/9/52, 8:04:03{{.+}}AM
 
 print(new Intl.DateTimeFormat('de-DE', { dateStyle: 'full', timeStyle: 'long' }).format(oldDate));
-// CHECK-NEXT: Mittwoch, 9. Januar 1952 um 08:04:03 GMT
+// CHECK-NEXT: Mittwoch, 9. Januar 1952 um 08:04:03 GMT{{([+]0)?}}
 
 print(new Intl.DateTimeFormat('it-IT', { dateStyle: 'long', timeStyle: 'short' }).format(oldDate))
 // CHECK-NEXT: 9 gennaio 1952{{.+}}08:04

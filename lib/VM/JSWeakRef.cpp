@@ -85,7 +85,7 @@ void JSWeakRef::setTarget(Runtime &runtime, SmallHermesValue target) {
 }
 
 HermesValue JSWeakRef::deref(Runtime &runtime) const {
-  return ref_.isValid() ? ref_.getNoBarrierUnsafe(runtime)
+  return ref_.isValid() ? ref_.get(runtime)
                         : HermesValue::encodeUndefinedValue();
 }
 

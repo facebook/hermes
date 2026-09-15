@@ -448,23 +448,23 @@ struct ModuleGen {
 
 /// \return true if the SHLegacyValue representations of values \p a and \p b
 /// can be compared directly (bitwise).
-static bool canCompareStrictEqualityRaw(Value *a, Value *b) {
+static bool canCompareStrictEqualityRaw(TypeContext &tc, Value *a, Value *b) {
   Type aType = a->getType();
   Type bType = b->getType();
 
   // If both can be numbers, then we can't compare because `-0` and `0` have
   // different bitwise representations.
-  if (aType.canBeNumber() && bType.canBeNumber())
+  if (tc.canBeNumber(aType) && tc.canBeNumber(bType))
     return false;
 
   // If both can be bigint, then we can't compare because BigInts are compared
   // by values which are stored on the heap.
-  if (aType.canBeBigInt() && bType.canBeBigInt())
+  if (tc.canBeBigInt(aType) && tc.canBeBigInt(bType))
     return false;
 
   // If both can be strings, then we can't compare because strings are compared
   // by their contents which are stored on the heap.
-  if (aType.canBeString() && bType.canBeString())
+  if (tc.canBeString(aType) && tc.canBeString(bType))
     return false;
 
   // Otherwise, we can compare.
@@ -534,6 +534,9 @@ class InstrGen {
 
   // The function being compiled.
   Function &F_;
+
+  /// IR type context for the module being compiled.
+  TypeContext &typeCtx_{F_.getParent()->getTypeContext()};
 
   // Info related to native compilation.
   NativeContext &nativeContext_;
@@ -1104,10 +1107,13 @@ class InstrGen {
         if (bothDouble) {
           infixDoubleOp = "!=";
         } else if (canCompareStrictEqualityRaw(
-                       inst.getLeftHandSide(), inst.getRightHandSide())) {
+                       typeCtx_,
+                       inst.getLeftHandSide(),
+                       inst.getRightHandSide())) {
           infixRawOp = "!=";
         } else {
-          funcUntypedOp = "!_sh_ljs_strict_equal";
+          funcUntypedOp = options_.smallC ? "!_sh_ljs_strict_equal"
+                                          : "!_sh_ljs_strict_equal_inline";
           passByValue = true;
         }
         boolConv = true;
@@ -1116,10 +1122,13 @@ class InstrGen {
         if (bothDouble) {
           infixDoubleOp = "==";
         } else if (canCompareStrictEqualityRaw(
-                       inst.getLeftHandSide(), inst.getRightHandSide())) {
+                       typeCtx_,
+                       inst.getLeftHandSide(),
+                       inst.getRightHandSide())) {
           infixRawOp = "==";
         } else {
-          funcUntypedOp = "_sh_ljs_strict_equal";
+          funcUntypedOp = options_.smallC ? "_sh_ljs_strict_equal"
+                                          : "_sh_ljs_strict_equal_inline";
           passByValue = true;
         }
         boolConv = true;
@@ -1259,6 +1268,37 @@ class InstrGen {
       generateRegister(*inst.getObject());
       os_ << ", ";
       genStringConstWriteIC(LS, inst.getStoredValue()) << ");\n";
+      return;
+    }
+    // If the prop is an index-like constant, use put_by_index directly.
+    if (auto *litNum = llvh::dyn_cast<LiteralNumber>(inst.getProperty())) {
+      if (auto idxOpt = doubleToArrayIndex(litNum->getValue())) {
+        if (strictMode)
+          os_ << "_sh_ljs_put_by_index_strict_rjs";
+        else
+          os_ << "_sh_ljs_put_by_index_loose_rjs";
+        os_ << "(shr,&";
+        generateRegister(*inst.getObject());
+        os_ << ", " << *idxOpt << "u, &";
+        generateRegister(*inst.getStoredValue());
+        os_ << ");\n";
+        return;
+      }
+    }
+    // If the key is known to be a number, use the optimized numeric path
+    // which tries sh_tryfast_f64_to_u32 inline before falling back.
+    else if (inst.getProperty()->getType().isNumberType()) {
+      if (strictMode)
+        os_ << "_sh_ljs_put_by_val_numeric_strict_rjs";
+      else
+        os_ << "_sh_ljs_put_by_val_numeric_loose_rjs";
+      os_ << "(shr,&";
+      generateRegister(*inst.getObject());
+      os_ << ", ";
+      generateRegister(*inst.getProperty());
+      os_ << ", &";
+      generateRegister(*inst.getStoredValue());
+      os_ << ");\n";
       return;
     }
 
@@ -2275,35 +2315,41 @@ class InstrGen {
 
   /// \return the name of the SH function for checking whether a value is of
   /// a specific type.
-  static llvh::StringLiteral nameOfFunctionCheckingForType(Type type) {
+  static llvh::StringLiteral nameOfFunctionCheckingForType(
+      TypeContext &tc,
+      Type type) {
     assert(!type.isNoType() && "type must be non-zero");
-    switch (type.getFirstTypeKind()) {
-      case Type::Empty:
+    switch (tc.getFirstKind(type)) {
+      case TypeKind::Empty:
         return "_sh_ljs_is_empty";
-      case Type::Uninit:
-      case Type::Undefined:
+      case TypeKind::Uninit:
+      case TypeKind::Undefined:
         return "_sh_ljs_is_undefined";
-      case Type::Null:
+      case TypeKind::Null:
         return "_sh_ljs_is_null";
-      case Type::Boolean:
+      case TypeKind::Boolean:
         return "_sh_ljs_is_bool";
-      case Type::String:
+      case TypeKind::String:
         return "_sh_ljs_is_string";
-      case Type::Number:
+      case TypeKind::Number:
+      // The number subtypes are all represented as doubles at runtime.
+      case TypeKind::Int32:
+      case TypeKind::Uint32:
+      case TypeKind::UInt31:
         return "_sh_ljs_is_double";
-      case Type::BigInt:
+      case TypeKind::BigInt:
         return "_sh_ljs_is_bigint";
-      case Type::Symbol:
+      case TypeKind::Symbol:
         return "_sh_ljs_is_symbol";
-      case Type::Environment:
+      case TypeKind::Environment:
         hermes_fatal("cannot check for environment type");
-      case Type::PrivateName:
+      case TypeKind::PrivateName:
         hermes_fatal("cannot check for PrivateName type");
-      case Type::FunctionCode:
+      case TypeKind::FunctionCode:
         hermes_fatal("cannot check for functionCode type");
-      case Type::Object:
+      case TypeKind::Object:
         return "_sh_ljs_is_object";
-      case Type::LAST_TYPE:
+      default:
         break;
     }
     hermes_fatal("invalid type for checking");
@@ -2322,7 +2368,7 @@ class InstrGen {
     // Are there fewer "bad" types than "good" types? That determines which we
     // check.
     auto [checkTypes, negativeCheck] =
-        badTypes.countTypes() < resultType.countTypes()
+        typeCtx_.countKinds(badTypes) < typeCtx_.countKinds(resultType)
         ? std::make_pair(badTypes, true)
         : std::make_pair(resultType, false);
 
@@ -2330,10 +2376,10 @@ class InstrGen {
       os_ << "!(";
     {
       bool first = true;
-      for (Type t : checkTypes) {
+      for (Type t : typeCtx_.arms(checkTypes)) {
         if (!first)
           os_ << " || ";
-        os_ << nameOfFunctionCheckingForType(t) << '(';
+        os_ << nameOfFunctionCheckingForType(typeCtx_, t) << '(';
         generateRegister(srcReg);
         os_ << ')';
         first = false;
@@ -2364,7 +2410,7 @@ class InstrGen {
     sh::Register dstReg = ra_.getRegister(&inst);
 
     // Are the input and output type the same?
-    if (inputType.isSubsetOf(resultType)) {
+    if (typeCtx_.isSubsetOf(inputType, resultType)) {
       // If so, just move the value, but do nothing if the registers are the
       // same.
       if (dstReg != srcReg) {
@@ -2380,7 +2426,7 @@ class InstrGen {
     // TODO: generate a type-specific error.
     _typeCastHelper(
         resultType,
-        Type::subtractTy(inputType, resultType),
+        typeCtx_.subtractTy(inputType, resultType),
         dstReg,
         srcReg,
         "_sh_throw_type_error_ascii(shr, \"Checked cast failed\")");
@@ -2393,8 +2439,7 @@ class InstrGen {
     Type badTypes = inst.getInvalidTypes()->getData();
     assert(
         !badTypes.isNoType() &&
-        badTypes.isSubsetOf(
-            Type::unionTy(Type::createEmpty(), Type::createUninit())) &&
+        typeCtx_.isSubsetOf(badTypes, Type::createEmptyOrUninit()) &&
         "invalidTypes set can only contain Empty or Uninit");
 
     _typeCastHelper(
@@ -2808,6 +2853,23 @@ void generateFunction(
        i < e;
        ++i) {
     OS << "  SHLegacyValue np" << i << " = _sh_ljs_undefined();\n";
+  }
+
+  switch (F.getProhibitInvoke()) {
+    case Function::ProhibitInvoke::ProhibitNone:
+      break;
+    case Function::ProhibitInvoke::ProhibitConstruct:
+      OS << "  if (!_sh_ljs_is_undefined(frame["
+         << hbc::StackFrameLayout::NewTarget << "]))\n"
+         << "    _sh_throw_type_error_ascii(shr, \"Function is not a "
+            "constructor\");\n";
+      break;
+    case Function::ProhibitInvoke::ProhibitCall:
+      OS << "  if (_sh_ljs_is_undefined(frame["
+         << hbc::StackFrameLayout::NewTarget << "]))\n"
+         << "    _sh_throw_type_error_ascii(shr, \"Class constructor invoked "
+            "without new\");\n";
+      break;
   }
 
   // Initialize SHJmpBuf and emit the setjmp for the function-level try.

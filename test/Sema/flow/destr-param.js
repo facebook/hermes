@@ -54,7 +54,7 @@ function qux({x}: {x: number} = {x: 0}): void {
 // CHECK-NEXT:%function.10 = function(%object.9): void
 
 // CHECK:SemContext
-// CHECK-NEXT:Func strict
+// CHECK-NEXT:Func strict mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:        Decl %d.2 'foo' Var : %function.3
@@ -66,26 +66,26 @@ function qux({x}: {x: number} = {x: 0}): void {
 // CHECK-NEXT:        hoistedFunction bar
 // CHECK-NEXT:        hoistedFunction baz
 // CHECK-NEXT:        hoistedFunction qux
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.7 'x' Parameter : number
 // CHECK-NEXT:            Decl %d.8 'y' Parameter : string
 // CHECK-NEXT:            Decl %d.9 'a' Let : number
 // CHECK-NEXT:            Decl %d.10 'b' Let : string
 // CHECK-NEXT:            Decl %d.11 'arguments' Var Arguments
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.3
 // CHECK-NEXT:            Decl %d.12 'a' Parameter : number
 // CHECK-NEXT:            Decl %d.13 'b' Parameter : string
 // CHECK-NEXT:            Decl %d.14 'c' Let : number
 // CHECK-NEXT:            Decl %d.15 'd' Let : string
 // CHECK-NEXT:            Decl %d.16 'arguments' Var Arguments
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.4
 // CHECK-NEXT:            Decl %d.17 'b' Parameter : number
 // CHECK-NEXT:            Decl %d.18 'c' Let : number
 // CHECK-NEXT:            Decl %d.19 'arguments' Var Arguments
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.5
 // CHECK-NEXT:            Decl %d.20 'x' Parameter : number
 // CHECK-NEXT:            Decl %d.21 'arguments' Var Arguments

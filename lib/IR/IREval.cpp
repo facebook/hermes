@@ -18,12 +18,12 @@ namespace {
 
 /// \returns true when the types \p A and \p B prove that the instances can't
 /// be strictly equal.
-bool disjointComparisonTypes(Type A, Type B) {
-  if (!A.isPrimitive() || !B.isPrimitive())
+bool disjointComparisonTypes(TypeContext &tc, Type A, Type B) {
+  if (!tc.isPrimitive(A) || !tc.isPrimitive(B))
     return false;
 
   // Check if types are disjoint.
-  return Type::intersectTy(A, B).isNoType();
+  return tc.intersectTy(A, B).isNoType();
 }
 
 bool isNaN(Literal *lit) {
@@ -303,7 +303,7 @@ Literal *hermes::evalBinaryOperator(
       }
 
       // Operands of different types can't be strictly equal.
-      if (disjointComparisonTypes(leftTy, rightTy))
+      if (disjointComparisonTypes(builder.getTypeContext(), leftTy, rightTy))
         return builder.getLiteralBool(false);
 
       // Handle numeric comparisons:
@@ -540,6 +540,15 @@ Literal *hermes::evalBinaryOperator(
 
       if ((leftNull && rightLiteralNum) || (rightNull && leftLiteralNum) ||
           (leftNull && rightNull)) {
+        // `null` coerces to +0. Multiplying 0 by a non-finite value is NaN,
+        // not 0: 0 * (+-Infinity) == NaN. (NaN operands are already handled
+        // above.) Only fold to a signed zero when the numeric operand is
+        // finite.
+        LiteralNumber *numOperand =
+            leftLiteralNum ? leftLiteralNum : rightLiteralNum;
+        if (numOperand && std::isinf(numOperand->getValue())) {
+          return builder.getLiteralNaN();
+        }
         if ((leftLiteralNum && std::signbit(leftLiteralNum->getValue())) ||
             (rightLiteralNum && std::signbit(rightLiteralNum->getValue()))) {
           return builder.getLiteralNegativeZero();

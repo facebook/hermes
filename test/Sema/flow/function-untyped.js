@@ -22,18 +22,18 @@
 // CHECK-NEXT:%function.2 = function(): void
 
 // CHECK:SemContext
-// CHECK-NEXT:Func strict
+// CHECK-NEXT:Func strict mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:        Decl %d.2 'arguments' Var Arguments
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.3 'main' FunctionExprName : %function.2
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.3
 // CHECK-NEXT:            Decl %d.4 'foo' Var : %untyped_function.1
 // CHECK-NEXT:            Decl %d.5 'arguments' Var Arguments
 // CHECK-NEXT:            hoistedFunction foo
-// CHECK-NEXT:        Func strict
+// CHECK-NEXT:        Func strict mayReachImplicitReturn
 // CHECK-NEXT:            Scope %s.4
 // CHECK-NEXT:                Decl %d.6 'arguments' Var Arguments
 

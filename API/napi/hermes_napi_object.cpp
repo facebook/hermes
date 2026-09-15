@@ -1,0 +1,929 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+#include "hermes_napi_internal.h"
+
+#include "hermes/VM/Callable.h"
+#include "hermes/VM/HandleRootOwner.h"
+#include "hermes/VM/JSArray.h"
+#include "hermes/VM/JSObject.h"
+#include "hermes/VM/Operations.h"
+#include "hermes/VM/PropertyAccessor.h"
+
+#include "llvh/ADT/DenseSet.h"
+
+#include <cstring>
+
+//===========================================================================
+// Property operations by value key
+//===========================================================================
+
+napi_status NAPI_CDECL napi_set_property(
+    napi_env env,
+    napi_value object,
+    napi_value key,
+    napi_value value) {
+  NAPI_PREAMBLE(env);
+  CHECK_ARG(env, key);
+  CHECK_ARG(env, value);
+
+  auto *objPhv = reinterpret_cast<hermes::vm::PinnedHermesValue *>(object);
+  RETURN_STATUS_IF_FALSE(
+      env, objPhv != nullptr && objPhv->isObject(), napi_object_expected);
+
+  auto objHandle = hermes::vm::Handle<hermes::vm::JSObject>::vmcast(objPhv);
+  auto keyHandle = hermes::vm::Handle<>(
+      reinterpret_cast<hermes::vm::PinnedHermesValue *>(key));
+  auto valHandle = hermes::vm::Handle<>(
+      reinterpret_cast<hermes::vm::PinnedHermesValue *>(value));
+
+  // A GCScope is needed because putComputed_RJS internally allocates
+  // temporary handles (MutableHandle, etc.).
+  hermes::vm::GCScope gcScope(env->runtime);
+  auto putRes = hermes::vm::JSObject::putComputed_RJS(
+      objHandle, env->runtime, keyHandle, valHandle);
+  if (LLVM_UNLIKELY(putRes == hermes::vm::ExecutionStatus::EXCEPTION)) {
+    return captureRuntimeException(env, napi_pending_exception);
+  }
+
+  return napi_clear_last_error(env);
+}
+
+napi_status NAPI_CDECL napi_get_property(
+    napi_env env,
+    napi_value object,
+    napi_value key,
+    napi_value *result) {
+  NAPI_PREAMBLE(env);
+  CHECK_ARG(env, key);
+  CHECK_ARG(env, result);
+
+  auto *objPhv = reinterpret_cast<hermes::vm::PinnedHermesValue *>(object);
+  RETURN_STATUS_IF_FALSE(
+      env, objPhv != nullptr && objPhv->isObject(), napi_object_expected);
+
+  auto objHandle = hermes::vm::Handle<hermes::vm::JSObject>::vmcast(objPhv);
+  auto keyHandle = hermes::vm::Handle<>(
+      reinterpret_cast<hermes::vm::PinnedHermesValue *>(key));
+
+  hermes::vm::GCScope gcScope(env->runtime);
+  auto getRes =
+      hermes::vm::JSObject::getComputed_RJS(objHandle, env->runtime, keyHandle);
+  if (LLVM_UNLIKELY(getRes == hermes::vm::ExecutionStatus::EXCEPTION)) {
+    return captureRuntimeException(env, napi_pending_exception);
+  }
+
+  *result = env->addToCurrentScope(getRes->get());
+  return napi_clear_last_error(env);
+}
+
+napi_status NAPI_CDECL napi_has_property(
+    napi_env env,
+    napi_value object,
+    napi_value key,
+    bool *result) {
+  NAPI_PREAMBLE(env);
+  CHECK_ARG(env, result);
+  CHECK_ARG(env, key);
+
+  auto *objPhv = reinterpret_cast<hermes::vm::PinnedHermesValue *>(object);
+  RETURN_STATUS_IF_FALSE(
+      env, objPhv != nullptr && objPhv->isObject(), napi_object_expected);
+
+  auto objHandle = hermes::vm::Handle<hermes::vm::JSObject>::vmcast(objPhv);
+  auto keyHandle = hermes::vm::Handle<>(
+      reinterpret_cast<hermes::vm::PinnedHermesValue *>(key));
+
+  hermes::vm::GCScope gcScope(env->runtime);
+  auto hasRes =
+      hermes::vm::JSObject::hasComputed(objHandle, env->runtime, keyHandle);
+  if (LLVM_UNLIKELY(hasRes == hermes::vm::ExecutionStatus::EXCEPTION)) {
+    return captureRuntimeException(env, napi_pending_exception);
+  }
+
+  *result = *hasRes;
+  return napi_clear_last_error(env);
+}
+
+napi_status NAPI_CDECL napi_delete_property(
+    napi_env env,
+    napi_value object,
+    napi_value key,
+    bool *result) {
+  NAPI_PREAMBLE(env);
+  CHECK_ARG(env, key);
+
+  auto *objPhv = reinterpret_cast<hermes::vm::PinnedHermesValue *>(object);
+  RETURN_STATUS_IF_FALSE(
+      env, objPhv != nullptr && objPhv->isObject(), napi_object_expected);
+
+  auto objHandle = hermes::vm::Handle<hermes::vm::JSObject>::vmcast(objPhv);
+  auto keyHandle = hermes::vm::Handle<>(
+      reinterpret_cast<hermes::vm::PinnedHermesValue *>(key));
+
+  hermes::vm::GCScope gcScope(env->runtime);
+  auto delRes =
+      hermes::vm::JSObject::deleteComputed(objHandle, env->runtime, keyHandle);
+  if (LLVM_UNLIKELY(delRes == hermes::vm::ExecutionStatus::EXCEPTION)) {
+    return captureRuntimeException(env, napi_pending_exception);
+  }
+
+  if (result != nullptr) {
+    *result = *delRes;
+  }
+
+  return napi_clear_last_error(env);
+}
+
+//===========================================================================
+// Named property operations
+//===========================================================================
+
+napi_status NAPI_CDECL napi_set_named_property(
+    napi_env env,
+    napi_value object,
+    const char *utf8name,
+    napi_value value) {
+  NAPI_PREAMBLE(env);
+  CHECK_ARG(env, utf8name);
+  CHECK_ARG(env, value);
+
+  auto *objPhv = reinterpret_cast<hermes::vm::PinnedHermesValue *>(object);
+  RETURN_STATUS_IF_FALSE(
+      env, objPhv != nullptr && objPhv->isObject(), napi_object_expected);
+
+  auto objHandle = hermes::vm::Handle<hermes::vm::JSObject>::vmcast(objPhv);
+  auto valHandle = hermes::vm::Handle<>(
+      reinterpret_cast<hermes::vm::PinnedHermesValue *>(value));
+
+  hermes::vm::GCScope gcScope(env->runtime);
+
+  // Intern the property name.
+  hermes::vm::CallResult<hermes::vm::Handle<hermes::vm::SymbolID>> symRes =
+      hermes::vm::ExecutionStatus::EXCEPTION;
+  auto internStatus = internUtf8AsSymbol(env, utf8name, symRes);
+  if (internStatus != napi_ok) {
+    return internStatus;
+  }
+
+  // Use putNamedOrIndexed because the property name could be
+  // index-like (e.g. "0", "1").
+  auto putRes = hermes::vm::JSObject::putNamedOrIndexed(
+      objHandle, env->runtime, **symRes, valHandle);
+  if (LLVM_UNLIKELY(putRes == hermes::vm::ExecutionStatus::EXCEPTION)) {
+    return captureRuntimeException(env, napi_pending_exception);
+  }
+
+  return napi_clear_last_error(env);
+}
+
+napi_status NAPI_CDECL napi_get_named_property(
+    napi_env env,
+    napi_value object,
+    const char *utf8name,
+    napi_value *result) {
+  NAPI_PREAMBLE(env);
+  CHECK_ARG(env, utf8name);
+  CHECK_ARG(env, result);
+
+  auto *objPhv = reinterpret_cast<hermes::vm::PinnedHermesValue *>(object);
+  RETURN_STATUS_IF_FALSE(
+      env, objPhv != nullptr && objPhv->isObject(), napi_object_expected);
+
+  auto objHandle = hermes::vm::Handle<hermes::vm::JSObject>::vmcast(objPhv);
+
+  hermes::vm::GCScope gcScope(env->runtime);
+
+  // Intern the property name.
+  hermes::vm::CallResult<hermes::vm::Handle<hermes::vm::SymbolID>> symRes =
+      hermes::vm::ExecutionStatus::EXCEPTION;
+  auto internStatus = internUtf8AsSymbol(env, utf8name, symRes);
+  if (internStatus != napi_ok) {
+    return internStatus;
+  }
+
+  // Use getNamedOrIndexed because the property name could be
+  // index-like (e.g. "0", "1").
+  auto getRes = hermes::vm::JSObject::getNamedOrIndexed(
+      objHandle, env->runtime, **symRes);
+  if (LLVM_UNLIKELY(getRes == hermes::vm::ExecutionStatus::EXCEPTION)) {
+    return captureRuntimeException(env, napi_pending_exception);
+  }
+
+  *result = env->addToCurrentScope(getRes->get());
+  return napi_clear_last_error(env);
+}
+
+napi_status NAPI_CDECL napi_has_named_property(
+    napi_env env,
+    napi_value object,
+    const char *utf8name,
+    bool *result) {
+  NAPI_PREAMBLE(env);
+  CHECK_ARG(env, utf8name);
+  CHECK_ARG(env, result);
+
+  auto *objPhv = reinterpret_cast<hermes::vm::PinnedHermesValue *>(object);
+  RETURN_STATUS_IF_FALSE(
+      env, objPhv != nullptr && objPhv->isObject(), napi_object_expected);
+
+  auto objHandle = hermes::vm::Handle<hermes::vm::JSObject>::vmcast(objPhv);
+
+  hermes::vm::GCScope gcScope(env->runtime);
+
+  // Intern the property name.
+  hermes::vm::CallResult<hermes::vm::Handle<hermes::vm::SymbolID>> symRes =
+      hermes::vm::ExecutionStatus::EXCEPTION;
+  auto internStatus = internUtf8AsSymbol(env, utf8name, symRes);
+  if (internStatus != napi_ok) {
+    return internStatus;
+  }
+
+  // Use hasNamedOrIndexed because the property name could be
+  // index-like (e.g. "0", "1").
+  auto hasRes = hermes::vm::JSObject::hasNamedOrIndexed(
+      objHandle, env->runtime, **symRes);
+  if (LLVM_UNLIKELY(hasRes == hermes::vm::ExecutionStatus::EXCEPTION)) {
+    return captureRuntimeException(env, napi_pending_exception);
+  }
+
+  *result = *hasRes;
+  return napi_clear_last_error(env);
+}
+
+//===========================================================================
+// Element (indexed) property operations
+//===========================================================================
+
+napi_status NAPI_CDECL napi_set_element(
+    napi_env env,
+    napi_value object,
+    uint32_t index,
+    napi_value value) {
+  NAPI_PREAMBLE(env);
+  CHECK_ARG(env, value);
+
+  auto *objPhv = reinterpret_cast<hermes::vm::PinnedHermesValue *>(object);
+  RETURN_STATUS_IF_FALSE(
+      env, objPhv != nullptr && objPhv->isObject(), napi_object_expected);
+
+  auto objHandle = hermes::vm::Handle<hermes::vm::JSObject>::vmcast(objPhv);
+  auto valHandle = hermes::vm::Handle<>(
+      reinterpret_cast<hermes::vm::PinnedHermesValue *>(value));
+
+  // Convert the uint32_t index to a HermesValue number for use as a
+  // computed property key.
+  hermes::vm::GCScope gcScope(env->runtime);
+  auto idxHandle = env->runtime.makeHandle(
+      hermes::vm::HermesValue::encodeTrustedNumberValue(index));
+  auto putRes = hermes::vm::JSObject::putComputed_RJS(
+      objHandle, env->runtime, idxHandle, valHandle);
+  if (LLVM_UNLIKELY(putRes == hermes::vm::ExecutionStatus::EXCEPTION)) {
+    return captureRuntimeException(env, napi_pending_exception);
+  }
+
+  return napi_clear_last_error(env);
+}
+
+napi_status NAPI_CDECL napi_get_element(
+    napi_env env,
+    napi_value object,
+    uint32_t index,
+    napi_value *result) {
+  NAPI_PREAMBLE(env);
+  CHECK_ARG(env, result);
+
+  auto *objPhv = reinterpret_cast<hermes::vm::PinnedHermesValue *>(object);
+  RETURN_STATUS_IF_FALSE(
+      env, objPhv != nullptr && objPhv->isObject(), napi_object_expected);
+
+  auto objHandle = hermes::vm::Handle<hermes::vm::JSObject>::vmcast(objPhv);
+
+  hermes::vm::GCScope gcScope(env->runtime);
+  auto idxHandle = env->runtime.makeHandle(
+      hermes::vm::HermesValue::encodeTrustedNumberValue(index));
+  auto getRes =
+      hermes::vm::JSObject::getComputed_RJS(objHandle, env->runtime, idxHandle);
+  if (LLVM_UNLIKELY(getRes == hermes::vm::ExecutionStatus::EXCEPTION)) {
+    return captureRuntimeException(env, napi_pending_exception);
+  }
+
+  *result = env->addToCurrentScope(getRes->get());
+  return napi_clear_last_error(env);
+}
+
+napi_status NAPI_CDECL napi_has_element(
+    napi_env env,
+    napi_value object,
+    uint32_t index,
+    bool *result) {
+  NAPI_PREAMBLE(env);
+  CHECK_ARG(env, result);
+
+  auto *objPhv = reinterpret_cast<hermes::vm::PinnedHermesValue *>(object);
+  RETURN_STATUS_IF_FALSE(
+      env, objPhv != nullptr && objPhv->isObject(), napi_object_expected);
+
+  auto objHandle = hermes::vm::Handle<hermes::vm::JSObject>::vmcast(objPhv);
+
+  hermes::vm::GCScope gcScope(env->runtime);
+  auto idxHandle = env->runtime.makeHandle(
+      hermes::vm::HermesValue::encodeTrustedNumberValue(index));
+  auto hasRes =
+      hermes::vm::JSObject::hasComputed(objHandle, env->runtime, idxHandle);
+  if (LLVM_UNLIKELY(hasRes == hermes::vm::ExecutionStatus::EXCEPTION)) {
+    return captureRuntimeException(env, napi_pending_exception);
+  }
+
+  *result = *hasRes;
+  return napi_clear_last_error(env);
+}
+
+napi_status NAPI_CDECL napi_delete_element(
+    napi_env env,
+    napi_value object,
+    uint32_t index,
+    bool *result) {
+  NAPI_PREAMBLE(env);
+
+  auto *objPhv = reinterpret_cast<hermes::vm::PinnedHermesValue *>(object);
+  RETURN_STATUS_IF_FALSE(
+      env, objPhv != nullptr && objPhv->isObject(), napi_object_expected);
+
+  auto objHandle = hermes::vm::Handle<hermes::vm::JSObject>::vmcast(objPhv);
+
+  hermes::vm::GCScope gcScope(env->runtime);
+  auto idxHandle = env->runtime.makeHandle(
+      hermes::vm::HermesValue::encodeTrustedNumberValue(index));
+  auto delRes =
+      hermes::vm::JSObject::deleteComputed(objHandle, env->runtime, idxHandle);
+  if (LLVM_UNLIKELY(delRes == hermes::vm::ExecutionStatus::EXCEPTION)) {
+    return captureRuntimeException(env, napi_pending_exception);
+  }
+
+  if (result != nullptr) {
+    *result = *delRes;
+  }
+
+  return napi_clear_last_error(env);
+}
+
+//===========================================================================
+// Property enumeration and prototype
+//===========================================================================
+
+napi_status NAPI_CDECL napi_get_all_property_names(
+    napi_env env,
+    napi_value object,
+    napi_key_collection_mode key_mode,
+    napi_key_filter key_filter,
+    napi_key_conversion key_conversion,
+    napi_value *result) {
+  NAPI_PREAMBLE(env);
+  CHECK_ARG(env, result);
+
+  auto *objPhv = reinterpret_cast<hermes::vm::PinnedHermesValue *>(object);
+  RETURN_STATUS_IF_FALSE(
+      env, objPhv != nullptr && objPhv->isObject(), napi_object_expected);
+
+  // Validate enum parameters.
+  RETURN_STATUS_IF_FALSE(
+      env,
+      key_mode == napi_key_include_prototypes || key_mode == napi_key_own_only,
+      napi_invalid_arg);
+  RETURN_STATUS_IF_FALSE(
+      env,
+      key_conversion == napi_key_keep_numbers ||
+          key_conversion == napi_key_numbers_to_strings,
+      napi_invalid_arg);
+
+  // Build OwnKeysFlags from the filter.
+  hermes::vm::OwnKeysFlags okFlags;
+  if (!(key_filter & napi_key_skip_strings))
+    okFlags = okFlags.plusIncludeNonSymbols();
+  if (!(key_filter & napi_key_skip_symbols))
+    okFlags = okFlags.plusIncludeSymbols().plusKeepSymbols();
+  // At least one of IncludeSymbols or IncludeNonSymbols must be set.
+  if ((key_filter & napi_key_skip_strings) &&
+      (key_filter & napi_key_skip_symbols))
+    okFlags = okFlags.plusIncludeNonSymbols();
+
+  // Always include non-enumerable so we can post-filter uniformly
+  // for all attribute filters (writable, enumerable, configurable).
+  okFlags = okFlags.plusIncludeNonEnumerable();
+
+  bool needAttrFilter =
+      (key_filter &
+       (napi_key_writable | napi_key_enumerable | napi_key_configurable)) != 0;
+
+  hermes::vm::GCScope gcScope(env->runtime);
+
+  // Create the result array.
+  auto arrRes = hermes::vm::JSArray::create(
+      env->runtime,
+      hermes::vm::Handle<hermes::vm::JSObject>::vmcast(
+          &env->runtime.arrayPrototype),
+      0,
+      0);
+  if (LLVM_UNLIKELY(arrRes == hermes::vm::ExecutionStatus::EXCEPTION)) {
+    return captureRuntimeException(env, napi_pending_exception);
+  }
+  auto resultArray = env->runtime.makeHandle(std::move(*arrRes));
+  uint32_t resultIndex = 0;
+
+  // For prototype chain deduplication, track seen keys.
+  // String keys from getOwnPropertyKeys come from the identifier
+  // table, so equal names share the same StringPrimitive pointer.
+  // Use uintptr_t to store raw pointer values for dedup.
+  llvh::SmallDenseSet<uintptr_t, 16> seenKeys;
+  bool needDedup = false;
+
+  // Use MutableHandle for the current object so we can update it
+  // in-place without allocating new GCScope handles.
+  auto curObj = env->runtime.makeMutableHandle(
+      hermes::vm::vmcast<hermes::vm::JSObject>(*objPhv));
+  // Temporary handle for element values.
+  auto tmpHandle = env->runtime.makeMutableHandle(
+      hermes::vm::HermesValue::encodeUndefinedValue());
+  auto marker = gcScope.createMarker();
+
+  // Walk the object (and optionally its prototype chain).
+  for (;;) {
+    gcScope.flushToMarker(marker);
+
+    auto keysRes =
+        hermes::vm::JSObject::getOwnPropertyKeys(curObj, env->runtime, okFlags);
+    if (LLVM_UNLIKELY(keysRes == hermes::vm::ExecutionStatus::EXCEPTION)) {
+      return captureRuntimeException(env, napi_pending_exception);
+    }
+
+    auto keysArray = *keysRes;
+    uint32_t len =
+        hermes::vm::JSArray::getLength(keysArray.get(), env->runtime);
+
+    auto innerMarker = gcScope.createMarker();
+    for (uint32_t i = 0; i < len; ++i) {
+      gcScope.flushToMarker(innerMarker);
+      hermes::vm::HermesValue elem =
+          keysArray->at(env->runtime, i).unboxToHV(env->runtime);
+
+      // Compute a dedup key for this element.
+      // Numbers: encode the index value with a tag bit to
+      // distinguish from pointer values.
+      // Strings: use the StringPrimitive pointer (unique per name
+      // from the identifier table).
+      // Symbols: use the raw SymbolID value with a tag bit.
+      uintptr_t dedupKey;
+      if (elem.isNumber()) {
+        // Use odd values for numeric keys (pointers are even).
+        dedupKey =
+            (static_cast<uintptr_t>(static_cast<uint32_t>(elem.getNumber()))
+             << 1) |
+            1;
+      } else if (elem.isString()) {
+        dedupKey = reinterpret_cast<uintptr_t>(elem.getString());
+      } else {
+        // Symbol: use raw SymbolID.
+        dedupKey = static_cast<uintptr_t>(elem.getSymbol().unsafeGetRaw());
+      }
+
+      if (needDedup) {
+        if (!seenKeys.insert(dedupKey).second)
+          continue;
+      } else if (key_mode == napi_key_include_prototypes) {
+        seenKeys.insert(dedupKey);
+      }
+
+      // Apply attribute filters if needed.
+      if (needAttrFilter) {
+        hermes::vm::ComputedPropertyDescriptor desc;
+        tmpHandle = elem;
+        auto found = hermes::vm::JSObject::getOwnComputedDescriptor(
+            curObj, env->runtime, tmpHandle, desc);
+        if (LLVM_UNLIKELY(found == hermes::vm::ExecutionStatus::EXCEPTION)) {
+          return captureRuntimeException(env, napi_pending_exception);
+        }
+        if (!*found)
+          continue;
+
+        // All specified attribute filters must match.
+        if ((key_filter & napi_key_enumerable) && !desc.flags.enumerable)
+          continue;
+        if ((key_filter & napi_key_writable) && !desc.flags.writable)
+          continue;
+        if ((key_filter & napi_key_configurable) && !desc.flags.configurable)
+          continue;
+      }
+
+      // When KeepSymbols is set, getOwnPropertyKeys returns ALL
+      // property names as Hermes SymbolValues, including plain string
+      // properties. Convert uniqued SymbolIDs (which represent
+      // regular string property names) back to StringPrimitive values
+      // so NAPI consumers see them as JS strings, not JS Symbols.
+      tmpHandle = elem;
+      if (elem.isSymbol()) {
+        hermes::vm::SymbolID symId = elem.getSymbol();
+        if (symId.isUniqued()) {
+          tmpHandle = hermes::vm::HermesValue::encodeStringValue(
+              env->runtime.getStringPrimFromSymbolID(symId));
+        }
+      }
+
+      // Convert number to string if requested.
+      if (key_conversion == napi_key_numbers_to_strings && elem.isNumber()) {
+        auto strRes = hermes::vm::toString_RJS(env->runtime, tmpHandle);
+        if (LLVM_UNLIKELY(strRes == hermes::vm::ExecutionStatus::EXCEPTION)) {
+          return captureRuntimeException(env, napi_pending_exception);
+        }
+        tmpHandle = strRes->getHermesValue();
+      }
+
+      // Append to result array.
+      if (LLVM_UNLIKELY(
+              hermes::vm::JSArray::setElementAt(
+                  resultArray, env->runtime, resultIndex, tmpHandle) ==
+              hermes::vm::ExecutionStatus::EXCEPTION)) {
+        return captureRuntimeException(env, napi_pending_exception);
+      }
+      ++resultIndex;
+    }
+
+    // If own-only, stop after the first object.
+    if (key_mode == napi_key_own_only)
+      break;
+
+    // Move to the prototype.
+    auto protoRes = hermes::vm::JSObject::getPrototypeOf(
+        hermes::vm::createPseudoHandle(curObj.get()), env->runtime);
+    if (LLVM_UNLIKELY(protoRes == hermes::vm::ExecutionStatus::EXCEPTION)) {
+      return captureRuntimeException(env, napi_pending_exception);
+    }
+    if (!protoRes->get())
+      break;
+    curObj = protoRes->get();
+    needDedup = true;
+  }
+
+  // Set the final length of the result array.
+  if (resultIndex > 0) {
+    auto setLenRes = hermes::vm::JSArray::setLengthProperty(
+        resultArray, env->runtime, resultIndex);
+    if (LLVM_UNLIKELY(setLenRes == hermes::vm::ExecutionStatus::EXCEPTION)) {
+      return captureRuntimeException(env, napi_pending_exception);
+    }
+  }
+
+  *result = env->addToCurrentScope(resultArray.getHermesValue());
+  return napi_clear_last_error(env);
+}
+
+napi_status NAPI_CDECL
+napi_get_property_names(napi_env env, napi_value object, napi_value *result) {
+  // napi_get_property_names is equivalent to
+  // napi_get_all_property_names with: include prototypes,
+  // enumerable + skip_symbols, numbers_to_strings.
+  // This matches the V8 reference implementation.
+  return napi_get_all_property_names(
+      env,
+      object,
+      napi_key_include_prototypes,
+      static_cast<napi_key_filter>(napi_key_enumerable | napi_key_skip_symbols),
+      napi_key_numbers_to_strings,
+      result);
+}
+
+napi_status NAPI_CDECL napi_has_own_property(
+    napi_env env,
+    napi_value object,
+    napi_value key,
+    bool *result) {
+  NAPI_PREAMBLE(env);
+  CHECK_ARG(env, key);
+  CHECK_ARG(env, result);
+
+  auto *objPhv = reinterpret_cast<hermes::vm::PinnedHermesValue *>(object);
+  RETURN_STATUS_IF_FALSE(
+      env, objPhv != nullptr && objPhv->isObject(), napi_object_expected);
+
+  // The key must be a string or symbol (a "name"), matching V8 which
+  // requires k->IsName().
+  auto *keyPhv = reinterpret_cast<hermes::vm::PinnedHermesValue *>(key);
+  RETURN_STATUS_IF_FALSE(
+      env, keyPhv->isString() || keyPhv->isSymbol(), napi_name_expected);
+
+  auto objHandle = hermes::vm::Handle<hermes::vm::JSObject>::vmcast(objPhv);
+  auto keyHandle = hermes::vm::Handle<>(keyPhv);
+
+  // Use getOwnComputedDescriptor to check if the property exists on
+  // the object itself (no prototype chain traversal).
+  hermes::vm::GCScope gcScope(env->runtime);
+  hermes::vm::ComputedPropertyDescriptor desc;
+  auto hasRes = hermes::vm::JSObject::getOwnComputedDescriptor(
+      objHandle, env->runtime, keyHandle, desc);
+  if (LLVM_UNLIKELY(hasRes == hermes::vm::ExecutionStatus::EXCEPTION)) {
+    return captureRuntimeException(env, napi_pending_exception);
+  }
+
+  *result = *hasRes;
+  return napi_clear_last_error(env);
+}
+
+napi_status NAPI_CDECL
+napi_get_prototype(napi_env env, napi_value object, napi_value *result) {
+  NAPI_PREAMBLE(env);
+  CHECK_ARG(env, result);
+
+  auto *objPhv = reinterpret_cast<hermes::vm::PinnedHermesValue *>(object);
+  RETURN_STATUS_IF_FALSE(
+      env, objPhv != nullptr && objPhv->isObject(), napi_object_expected);
+
+  auto objHandle = hermes::vm::Handle<hermes::vm::JSObject>::vmcast(objPhv);
+
+  // Use getPrototypeOf which is the proxy-aware version.
+  // It returns a null JSObject pointer (not a null JS value) if
+  // there is no prototype.
+  hermes::vm::GCScope gcScope(env->runtime);
+  auto protoRes = hermes::vm::JSObject::getPrototypeOf(
+      hermes::vm::createPseudoHandle(*objHandle), env->runtime);
+  if (LLVM_UNLIKELY(protoRes == hermes::vm::ExecutionStatus::EXCEPTION)) {
+    return captureRuntimeException(env, napi_pending_exception);
+  }
+
+  hermes::vm::JSObject *proto = protoRes->get();
+  if (proto) {
+    *result = env->addToCurrentScope(
+        hermes::vm::HermesValue::encodeObjectValue(proto));
+  } else {
+    *result =
+        env->addToCurrentScope(hermes::vm::HermesValue::encodeNullValue());
+  }
+
+  return napi_clear_last_error(env);
+}
+
+//===========================================================================
+// Define properties
+//===========================================================================
+
+/// Helper: create a NativeFunction wrapping a napi_callback for use as
+/// a method, getter, or setter in napi_define_properties and
+/// napi_define_class. The callback bundle is stored in the env's deque
+/// for lifetime management. Requires an active GCScope.
+napi_status createNapiNativeFunction(
+    napi_env env,
+    napi_callback cb,
+    void *data,
+    hermes::vm::SymbolID name,
+    unsigned paramCount,
+    hermes::vm::PseudoHandle<hermes::vm::NativeFunction> &out) {
+  using namespace hermes::vm;
+
+  Runtime &runtime = env->runtime;
+
+  // Allocate a callback bundle owned by the env.
+  env->callbackBundles_.push_back({env, cb, data});
+  CallbackBundle *bundle = &env->callbackBundles_.back();
+
+  // Use NativeConstructor so functions are callable with 'new',
+  // matching V8/Node behavior where all NAPI functions are
+  // constructable. napiConstructorTrampoline handles both regular
+  // calls and constructor calls.
+  auto ctor = NativeConstructor::create(
+      runtime,
+      Handle<JSObject>::vmcast(&runtime.functionPrototype),
+      Runtime::makeNullHandle<Environment>(),
+      bundle,
+      napiConstructorTrampoline);
+
+  // Root the constructor before creating the prototype, since
+  // JSObject::create is a GC safepoint that can invalidate the
+  // PseudoHandle.
+  auto ctorHandle = runtime.makeHandle(ctor.getHermesValue());
+
+  // Create a prototype object so the function can be used as a
+  // base class with extends.
+  auto protoObj = JSObject::create(runtime);
+  auto protoHandle = runtime.makeHandle(protoObj.getHermesValue());
+
+  // Set .name, .length, and .prototype on the function.
+  auto defRes = Callable::defineNameLengthAndPrototype(
+      Handle<Callable>::vmcast(ctorHandle),
+      runtime,
+      name,
+      paramCount,
+      Handle<JSObject>::vmcast(protoHandle),
+      Callable::WritablePrototype::Yes);
+  if (LLVM_UNLIKELY(defRes == ExecutionStatus::EXCEPTION)) {
+    env->callbackBundles_.pop_back();
+    return napi_generic_failure;
+  }
+
+  out = PseudoHandle<NativeFunction>::create(
+      vmcast<NativeFunction>(ctorHandle.getHermesValue()));
+
+  return napi_ok;
+}
+
+napi_status NAPI_CDECL napi_define_properties(
+    napi_env env,
+    napi_value object,
+    size_t property_count,
+    const napi_property_descriptor *properties) {
+  NAPI_PREAMBLE(env);
+  if (property_count > 0) {
+    CHECK_ARG(env, properties);
+  }
+
+  auto *objPhv = reinterpret_cast<hermes::vm::PinnedHermesValue *>(object);
+  RETURN_STATUS_IF_FALSE(
+      env, objPhv != nullptr && objPhv->isObject(), napi_object_expected);
+
+  using namespace hermes::vm;
+  Runtime &runtime = env->runtime;
+  GCScope gcScope(runtime);
+  auto marker = gcScope.createMarker();
+
+  auto objHandle = Handle<JSObject>::vmcast(objPhv);
+
+  for (size_t i = 0; i < property_count; ++i) {
+    gcScope.flushToMarker(marker);
+
+    const napi_property_descriptor *p = &properties[i];
+
+    // Resolve the property key. Either utf8name (C string) or name
+    // (napi_value that must be a string or symbol).
+    SymbolID propertySym{};
+    if (p->utf8name != nullptr) {
+      CallResult<Handle<SymbolID>> symRes = ExecutionStatus::EXCEPTION;
+      auto internStatus = internUtf8AsSymbol(env, p->utf8name, symRes);
+      if (internStatus != napi_ok) {
+        return internStatus;
+      }
+      propertySym = **symRes;
+    } else {
+      auto *namePhv = reinterpret_cast<PinnedHermesValue *>(p->name);
+      RETURN_STATUS_IF_FALSE(
+          env,
+          namePhv != nullptr && (namePhv->isString() || namePhv->isSymbol()),
+          napi_name_expected);
+
+      if (namePhv->isString()) {
+        // Intern the string to get a SymbolID.
+        auto symRes = runtime.getIdentifierTable().getSymbolHandleFromPrimitive(
+            runtime,
+            PseudoHandle<StringPrimitive>::create(
+                vmcast<StringPrimitive>(*namePhv)));
+        if (LLVM_UNLIKELY(symRes == ExecutionStatus::EXCEPTION)) {
+          return captureRuntimeException(env, napi_pending_exception);
+        }
+        propertySym = **symRes;
+      } else {
+        // Symbol value — extract the SymbolID directly.
+        propertySym = namePhv->getSymbol();
+      }
+    }
+
+    if (p->getter != nullptr || p->setter != nullptr) {
+      // Case 1: Accessor property (getter and/or setter).
+      Handle<Callable> getterHandle = Runtime::makeNullHandle<Callable>();
+      Handle<Callable> setterHandle = Runtime::makeNullHandle<Callable>();
+
+      if (p->getter != nullptr) {
+        PseudoHandle<NativeFunction> getterFunc{};
+        STATUS_CALL(createNapiNativeFunction(
+            env, p->getter, p->data, propertySym, 0, getterFunc));
+        getterHandle =
+            runtime.makeHandle<Callable>(getterFunc.getHermesValue());
+      }
+      if (p->setter != nullptr) {
+        PseudoHandle<NativeFunction> setterFunc{};
+        STATUS_CALL(createNapiNativeFunction(
+            env, p->setter, p->data, propertySym, 1, setterFunc));
+        setterHandle =
+            runtime.makeHandle<Callable>(setterFunc.getHermesValue());
+      }
+
+      auto accessor =
+          PropertyAccessor::create(runtime, getterHandle, setterHandle);
+      auto accessorHandle = runtime.makeHandle(accessor.getHermesValue());
+
+      DefinePropertyFlags dpf{};
+      dpf.setEnumerable = 1;
+      dpf.enumerable = (p->attributes & napi_enumerable) ? 1 : 0;
+      dpf.setConfigurable = 1;
+      dpf.configurable = (p->attributes & napi_configurable) ? 1 : 0;
+      dpf.setGetter = 1;
+      dpf.setSetter = 1;
+
+      auto defRes = JSObject::defineOwnProperty(
+          objHandle,
+          runtime,
+          propertySym,
+          dpf,
+          accessorHandle,
+          PropOpFlags().plusThrowOnError());
+      if (LLVM_UNLIKELY(defRes == ExecutionStatus::EXCEPTION)) {
+        return captureRuntimeException(env, napi_pending_exception);
+      }
+      RETURN_STATUS_IF_FALSE(env, *defRes, napi_invalid_arg);
+    } else if (p->method != nullptr) {
+      // Case 2: Method property.
+      PseudoHandle<NativeFunction> methodFunc{};
+      STATUS_CALL(createNapiNativeFunction(
+          env, p->method, p->data, propertySym, 0, methodFunc));
+      auto methodHandle = runtime.makeHandle(methodFunc.getHermesValue());
+
+      DefinePropertyFlags dpf{};
+      dpf.setEnumerable = 1;
+      dpf.enumerable = (p->attributes & napi_enumerable) ? 1 : 0;
+      dpf.setWritable = 1;
+      dpf.writable = (p->attributes & napi_writable) ? 1 : 0;
+      dpf.setConfigurable = 1;
+      dpf.configurable = (p->attributes & napi_configurable) ? 1 : 0;
+      dpf.setValue = 1;
+
+      auto defRes = JSObject::defineOwnProperty(
+          objHandle,
+          runtime,
+          propertySym,
+          dpf,
+          methodHandle,
+          PropOpFlags().plusThrowOnError());
+      if (LLVM_UNLIKELY(defRes == ExecutionStatus::EXCEPTION)) {
+        return captureRuntimeException(env, napi_pending_exception);
+      }
+      RETURN_STATUS_IF_FALSE(env, *defRes, napi_generic_failure);
+    } else {
+      // Case 3: Data property (plain value).
+      auto *valPhv = reinterpret_cast<PinnedHermesValue *>(p->value);
+      auto valHandle = Handle<>(valPhv);
+
+      DefinePropertyFlags dpf{};
+      dpf.setEnumerable = 1;
+      dpf.enumerable = (p->attributes & napi_enumerable) ? 1 : 0;
+      dpf.setWritable = 1;
+      dpf.writable = (p->attributes & napi_writable) ? 1 : 0;
+      dpf.setConfigurable = 1;
+      dpf.configurable = (p->attributes & napi_configurable) ? 1 : 0;
+      dpf.setValue = 1;
+
+      auto defRes = JSObject::defineOwnProperty(
+          objHandle,
+          runtime,
+          propertySym,
+          dpf,
+          valHandle,
+          PropOpFlags().plusThrowOnError());
+      if (LLVM_UNLIKELY(defRes == ExecutionStatus::EXCEPTION)) {
+        return captureRuntimeException(env, napi_pending_exception);
+      }
+      RETURN_STATUS_IF_FALSE(env, *defRes, napi_invalid_arg);
+    }
+  }
+
+  return napi_clear_last_error(env);
+}
+
+napi_status NAPI_CDECL napi_object_freeze(napi_env env, napi_value object) {
+  NAPI_PREAMBLE(env);
+  CHECK_ARG(env, object);
+
+  auto *objPhv = reinterpret_cast<hermes::vm::PinnedHermesValue *>(object);
+  RETURN_STATUS_IF_FALSE(env, objPhv->isObject(), napi_object_expected);
+
+  using namespace hermes::vm;
+  Runtime &runtime = env->runtime;
+  GCScope gcScope(runtime);
+
+  auto objHandle = Handle<JSObject>::vmcast(objPhv);
+  auto status = JSObject::freeze(objHandle, runtime);
+  if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
+    return captureRuntimeException(env, napi_pending_exception);
+  }
+
+  return napi_clear_last_error(env);
+}
+
+napi_status NAPI_CDECL napi_object_seal(napi_env env, napi_value object) {
+  NAPI_PREAMBLE(env);
+  CHECK_ARG(env, object);
+
+  auto *objPhv = reinterpret_cast<hermes::vm::PinnedHermesValue *>(object);
+  RETURN_STATUS_IF_FALSE(env, objPhv->isObject(), napi_object_expected);
+
+  using namespace hermes::vm;
+  Runtime &runtime = env->runtime;
+  GCScope gcScope(runtime);
+
+  auto objHandle = Handle<JSObject>::vmcast(objPhv);
+  auto status = JSObject::seal(objHandle, runtime);
+  if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
+    return captureRuntimeException(env, napi_pending_exception);
+  }
+
+  return napi_clear_last_error(env);
+}

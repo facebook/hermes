@@ -40,14 +40,14 @@ function run(N: number): void {
   for (let i: number = 1; i <= N; ++i) {
     const root = React.createRoot();
     const rootElement = <App />;
-    root.render(rootElement);
+    root.update(rootElement);
 
     React.callOnClickOrChange('toggle-modal', null);
     React.callOnClickOrChange('update-text', {
       target: {value: '!!!!! some text !!!!!'},
     });
     drainMicrotaskQueue();
-    root.render(rootElement);
+    root.update(rootElement);
   }
   var end = Date.now();
   print(`${end - start} ms`);

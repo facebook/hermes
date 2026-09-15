@@ -440,10 +440,10 @@ static inline uint64_t _sh_tryfast_f64_to_u64_cvt(double x) {
 }
 #endif
 
-#if defined(__GNUC__) && defined(__ARM_ARCH_7A__)
+#if defined(__GNUC__) && defined(__arm__)
 // =============================================================================
 //
-// _sh_tryfast_f64_to_i64_cvt()/_sh_tryfast_f64_to_u64_cvt() Clang/GCC  armv7-a
+// _sh_tryfast_f64_to_i64_cvt()/_sh_tryfast_f64_to_u64_cvt() Clang/GCC AArch32
 // TODO: Unfortunately we don't have fully UB-safe implementations of these.
 
 #define HERMES_TRYFAST_F64_TO_64_IS_FAST 0
@@ -677,10 +677,10 @@ static inline uint64_t _sh_tryfast_f64_to_u64_cvt(double x) {
 }
 #endif
 
-#elif defined(__GNUC__) && defined(__ARM_ARCH_7A__) && defined(__VFP_FP__)
+#elif defined(__GNUC__) && defined(__arm__) && defined(__VFP_FP__)
 // =============================================================================
 //
-// Clang/GCC armv7-a
+// Clang/GCC AArch32 (armv7-a and later, incl. 32-bit armv8-a)
 //
 
 static inline int _sh_tryfast_f64_to_i32_cvt(double x) {

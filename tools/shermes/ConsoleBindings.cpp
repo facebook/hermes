@@ -9,9 +9,15 @@
 #include "hermes/hermes.h"
 #include "jsi/jsi.h"
 
+#include "llvh/ADT/DenseSet.h"
+
 #include <chrono>
+#include <condition_variable>
 #include <cstdio>
 #include <cstring>
+#include <functional>
+#include <mutex>
+#include <queue>
 #include <thread>
 #include <vector>
 
@@ -48,6 +54,74 @@ class VectorMutableBuffer : public facebook::jsi::MutableBuffer {
 
 } // namespace
 
+// Simple EventLoopControl that just adds the tasks to a queue when
+// `scheduleTask` is called and tracks the number of sources. When the queue
+// is empty, users can also wait for new tasks to be added.
+class EventLoopControl final : public facebook::hermes::IEventLoopControl {
+  void scheduleTask(const std::function<void()> &callback) override {
+    std::lock_guard<std::mutex> lock(mutex_);
+    tasks_.push(callback);
+    cv_.notify_all();
+  }
+
+  uint64_t registerTaskQueueSource() override {
+    std::lock_guard<std::mutex> lock(mutex_);
+    sourceCount_++;
+    sources_.insert(sourceCount_);
+    return sourceCount_;
+  }
+
+  void unregisterTaskQueueSource(uint64_t sourceId) override {
+    std::lock_guard<std::mutex> lock(mutex_);
+    sources_.erase(sourceId);
+    if (sources_.empty()) {
+      cv_.notify_all();
+    }
+  }
+
+ public:
+  ~EventLoopControl() = default;
+  /// Drain all tasks from the queue, blocking until there are no more tasks
+  /// and no more active sources that could schedule new tasks.
+  void drainTasks() {
+    std::unique_lock<std::mutex> lock(mutex_);
+    while (true) {
+      if (!tasks_.empty()) {
+        // There are tasks to run. Grab the next one and run it.
+        auto task = tasks_.front();
+        tasks_.pop();
+        lock.unlock();
+        // Run the task outside the lock. Otherwise, the running task may
+        // also try to queue more tasks, causing a deadlock.
+        task();
+        lock.lock();
+      } else if (!sources_.empty()) {
+        // No tasks to run, but there are still active sources that may
+        // schedule tasks. Sleep until woken by `scheduleTask` or
+        // `decrementTaskQueueSource`
+        cv_.wait(lock);
+      } else {
+        // No tasks and no sources at this point, exit the event loop.
+        break;
+      }
+    }
+  }
+
+ private:
+  // Callbacks are added to the queue from the Worker thread and removed from
+  // the main thread. Guard with a mutex.
+  std::mutex mutex_{};
+  // Used to wake up the event-loop if it is waiting for a new task or if all
+  // task sources have disappeared.
+  std::condition_variable cv_;
+  // All schedules tasks.
+  std::queue<std::function<void()>> tasks_{};
+  // Counter of total number of sources. Incremented when register is called.
+  uint64_t sourceCount_{0};
+  // The set of active sources
+  llvh::DenseSet<uint64_t> sources_{};
+};
+
 /// Object that contains console state that needs to be preserved between
 /// init_console_bindings and run_event_loop.
 struct SHConsoleContext {
@@ -59,6 +133,9 @@ struct SHConsoleContext {
   int scriptArgc;
   const char *const *scriptArgv;
 
+  EventLoopControl eventLoopControl{};
+  facebook::hermes::HermesRuntime *hermesRuntime{nullptr};
+
   SHConsoleContext(
       facebook::jsi::Object &&helpers,
       int scriptArgc,
@@ -66,6 +143,15 @@ struct SHConsoleContext {
       : helpers(std::move(helpers)),
         scriptArgc(scriptArgc),
         scriptArgv(scriptArgv) {}
+
+  ~SHConsoleContext() {
+    if (hermesRuntime) {
+      auto *iface =
+          facebook::jsi::castInterface<facebook::hermes::ISetEventLoopControl>(
+              hermesRuntime);
+      iface->setEventLoopControl(nullptr);
+    }
+  }
 };
 
 /// Init harness symbols used in the test262 testsuite:
@@ -289,6 +375,11 @@ extern "C" SHERMES_EXPORT SHConsoleContext *init_console_bindings(
 
   initHermesCLIBindings(hrt, consoleContext.get());
 
+  consoleContext->hermesRuntime = &hrt;
+  auto *setEventLoopInterface =
+      jsi::castInterface<facebook::hermes::ISetEventLoopControl>(&hrt);
+  setEventLoopInterface->setEventLoopControl(&consoleContext->eventLoopControl);
+
   jsi::Object &helpers = consoleContext->helpers;
 
   jsi::Function runMacroTask = helpers.getPropertyAsFunction(hrt, "run");
@@ -357,6 +448,9 @@ extern "C" SHERMES_EXPORT bool run_event_loop(
       runMacroTask.call(hrt, curTimeMs);
       hrt.drainMicrotasks();
     }
+
+    // Run all tasks queued in the event loop.
+    consoleContext->eventLoopControl.drainTasks();
   } catch (jsi::JSError &e) {
     // Handle JS exceptions here.
     fprintf(stderr, "JS Exception: %s\n", e.what());

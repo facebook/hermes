@@ -163,3 +163,82 @@ print(m.has(s));
 // Ensure some reuse occurred.
 print(HermesInternal.getWeakSize(m) < 10000);
 // CHECK-NEXT: true
+
+print('upsert');
+// CHECK-LABEL: upsert
+var a = {};
+var b = {};
+var c = {};
+var m = new WeakMap();
+
+// getOrInsert inserts when absent and returns the value.
+print(m.getOrInsert(a, 1));
+// CHECK-NEXT: 1
+// getOrInsert returns the existing value without overwriting.
+print(m.getOrInsert(a, 99), m.get(a));
+// CHECK-NEXT: 1 1
+
+// getOrInsertComputed computes and inserts when absent.
+print(m.getOrInsertComputed(b, (k) => 2));
+// CHECK-NEXT: 2
+// getOrInsertComputed returns the existing value without invoking the callback.
+print(m.getOrInsertComputed(b, () => { throw 'should not run'; }));
+// CHECK-NEXT: 2
+
+// The computed value overwrites anything the callback inserts for the key.
+print(m.getOrInsertComputed(c, (k) => { m.set(k, 'mutated'); return 'computed'; }));
+// CHECK-NEXT: computed
+print(m.get(c));
+// CHECK-NEXT: computed
+
+// The computed value is stored even if the callback deletes the key it set.
+var d = {};
+print(m.getOrInsertComputed(d, (k) => { m.set(k, 'temp'); m.delete(k); return 'computed'; }));
+// CHECK-NEXT: computed
+print(m.get(d));
+// CHECK-NEXT: computed
+
+// The callback may delete a pre-existing key, and that deletion persists.
+var existing = {};
+var f = {};
+m.set(existing, 'exists');
+print(m.getOrInsertComputed(f, (k) => { m.delete(existing); return 'computed'; }));
+// CHECK-NEXT: computed
+print(m.get(f), m.has(existing));
+// CHECK-NEXT: computed false
+
+// When the key already exists, the callback never runs, so a callback that
+// would delete the key has no effect: the existing value is returned and
+// the entry is left intact.
+var g = {};
+m.set(g, 'original');
+print(m.getOrInsertComputed(g, (k) => { m.delete(k); return 'computed'; }));
+// CHECK-NEXT: original
+print(m.get(g), m.has(g));
+// CHECK-NEXT: original true
+
+// Symbol keys work too.
+var s = Symbol('k');
+print(m.getOrInsert(s, 7), m.get(s));
+// CHECK-NEXT: 7 7
+
+// Entries survive a GC.
+gc();
+print(m.get(a), m.get(b), m.get(c), m.get(s));
+// CHECK-NEXT: 1 2 computed 7
+
+// Keys that cannot be held weakly throw.
+try { m.getOrInsert(1, 1) } catch (e) { print('caught', e.name, e.message) }
+// CHECK-NEXT: caught TypeError WeakMap key must be an Object or non-registered Symbol
+try { m.getOrInsertComputed(1, () => 1) } catch (e) { print('caught', e.name, e.message) }
+// CHECK-NEXT: caught TypeError WeakMap key must be an Object or non-registered Symbol
+
+// Non-callable callback throws, even when the key is already present.
+try { m.getOrInsertComputed(a, 5) } catch (e) { print('caught', e.name) }
+// CHECK-NEXT: caught TypeError
+
+// Non-WeakMap receiver throws.
+try { WeakMap.prototype.getOrInsert.call([], a, 1) } catch (e) { print('caught', e.name, e.message) }
+// CHECK-NEXT: caught TypeError WeakMap.prototype.getOrInsert can only be called on a WeakMap
+try { WeakMap.prototype.getOrInsertComputed.call([], a, () => 1) } catch (e) { print('caught', e.name, e.message) }
+// CHECK-NEXT: caught TypeError WeakMap.prototype.getOrInsertComputed can only be called on a WeakMap

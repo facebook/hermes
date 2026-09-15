@@ -10,7 +10,6 @@
 
 import type {Props, React$MixedElement} from 'react';
 
-import {reduce} from 'sh/fastarray';
 import * as React from 'react';
 // import * as ReactDOM from 'react-dom';
 // import {Slot} from '@radix-ui/react-slot';
@@ -58,8 +57,7 @@ type Primitives = any;
  * Primitive
  * -----------------------------------------------------------------------------------------------*/
 
-const Primitive = reduce<string, Primitives>(
-  NODES,
+const Primitive = NODES.reduce<Primitives>(
   (primitive: Primitives, node: string, _i: number): Primitives => {
     const Node = React.forwardRef(
       (

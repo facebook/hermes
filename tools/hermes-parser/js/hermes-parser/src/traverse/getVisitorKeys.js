@@ -15,17 +15,19 @@ import type {VisitorKeys as VisitorKeysType} from '../generated/ESTreeVisitorKey
 
 import FlowVisitorKeys from '../generated/ESTreeVisitorKeys';
 
-export function isNode(thing: mixed) /*: implies thing is {+[string]: mixed} */ {
+export function isNode(
+  thing: unknown,
+) /*: implies thing is {readonly [string]: unknown} */ {
   return (
     typeof thing === 'object' && thing != null && typeof thing.type === 'string'
   );
 }
 
 export type {VisitorKeysType};
-export function getVisitorKeys<T: ESNode>(
+export function getVisitorKeys<T extends ESNode>(
   node: T,
   visitorKeys?: ?VisitorKeysType,
-): $ReadOnlyArray<$Keys<T>> {
+) /*: ReadonlyArray<keyof T> */ {
   const keys = (visitorKeys ?? FlowVisitorKeys)[node.type];
   if (keys == null) {
     throw new Error(`No visitor keys found for node type "${node.type}".`);

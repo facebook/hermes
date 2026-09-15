@@ -29,7 +29,7 @@ let a5: number[] = ([]: (number|number)[]);
 // CHECK-NEXT:%class.5 = class(Array<%class.2>)
 
 // CHECK:SemContext
-// CHECK-NEXT:Func strict
+// CHECK-NEXT:Func strict mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:        Decl %d.2 'a1' Let : %class.2

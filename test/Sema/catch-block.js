@@ -14,7 +14,7 @@ try {} catch (e) { let x; }
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:SemContext
-// CHECK-NEXT:Func loose
+// CHECK-NEXT:Func loose mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:        Scope %s.3

@@ -22,7 +22,7 @@ let c = Math.random();
 // CHECK:%untyped_function.1 = untyped_function()
 
 // CHECK:SemContext
-// CHECK-NEXT:Func strict
+// CHECK-NEXT:Func strict mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:        Decl %d.2 'func' Let : %untyped_function.1
@@ -30,7 +30,7 @@ let c = Math.random();
 // CHECK-NEXT:        Decl %d.4 'b' Let : number
 // CHECK-NEXT:        Decl %d.5 'c' Let : any
 // CHECK-NEXT:        Decl %d.6 'arguments' Var Arguments
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.7 'x' Let : number
 // CHECK-NEXT:            Decl %d.8 'y' Let : number

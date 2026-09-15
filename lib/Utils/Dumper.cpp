@@ -30,23 +30,24 @@ using llvh::isa;
 namespace hermes::irdumper {
 
 IRPrinter::IRPrinter(
-    Context &ctx,
+    const Module &M,
     bool usePersistent,
     llvh::raw_ostream &ost,
     bool escape,
     bool labelAllInsts)
     : indent_(0),
-      ctx_(ctx),
-      sm_(ctx.getSourceErrorManager()),
+      ctx_(M.getContext()),
+      sm_(ctx_.getSourceErrorManager()),
       os_(ost),
-      colors_(ctx.getCodeGenerationSettings().colors && os_.has_colors()),
+      colors_(ctx_.getCodeGenerationSettings().colors && os_.has_colors()),
       needEscape_(escape),
       tempNamer_(
-          usePersistent && ctx.getPersistentIRNamer()
+          usePersistent && ctx_.getPersistentIRNamer()
               ? nullptr
               : new Namer(usePersistent)),
-      namer_(tempNamer_ ? *tempNamer_ : *ctx.getPersistentIRNamer()),
-      labelAllInsts_(labelAllInsts) {}
+      namer_(tempNamer_ ? *tempNamer_ : *ctx_.getPersistentIRNamer()),
+      labelAllInsts_(labelAllInsts),
+      module_(M) {}
 
 std::string IRPrinter::escapeStr(llvh::StringRef name) {
   std::string s = name.str();
@@ -157,7 +158,8 @@ void IRPrinter::printTypeLabel(Value *v) {
       llvh::isa<LiteralTypeOfIsTypes>(v))
     return;
   setColor(Color::Type);
-  os_ << ": " << v->getType();
+  os_ << ": ";
+  module_.getTypeContext().print(os_, v->getType());
   resetColor();
 }
 
@@ -220,7 +222,9 @@ void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
     os_ << "[%VS" << namer_.getScopeNumber(VR->getParent()) << "."
         << namer_.getVarName(VR) << "]";
   } else if (auto *lt = llvh::dyn_cast<LiteralIRType>(V)) {
-    os_ << "type(" << lt->getData() << ")";
+    os_ << "type(";
+    module_.getTypeContext().print(os_, lt->getData());
+    os_ << ")";
   } else if (auto *lt = llvh::dyn_cast<LiteralTypeOfIsTypes>(V)) {
     os_ << "typeOfIs(" << lt->getData() << ")";
   } else if (auto *NS = llvh::dyn_cast<LiteralNativeSignature>(V)) {
@@ -262,7 +266,8 @@ void IRPrinter::printFunctionHeader(Function *F) {
   }
   os_ << ")";
   setColor(Color::Type);
-  os_ << ": " << F->getReturnType();
+  os_ << ": ";
+  F->getParent()->getTypeContext().print(os_, F->getReturnType());
   resetColor();
   os_ << " " << F->getAttributes(F->getParent()).getDescriptionStr();
 }
@@ -319,7 +324,8 @@ void IRPrinter::printInstruction(Instruction *I) {
   if (I->hasOutput()) {
     os_ << " (";
     setColor(Color::Type);
-    os_ << ':' << I->getType();
+    os_ << ':';
+    I->getModule()->getTypeContext().print(os_, I->getType());
     resetColor();
     os_ << ")";
   }
@@ -518,10 +524,10 @@ struct DottyPrinter : public IRVisitor<DottyPrinter, void> {
   IRPrinter Printer;
 
   explicit DottyPrinter(
-      Context &ctx,
+      const Module &M,
       llvh::raw_ostream &ost,
       llvh::StringRef Title)
-      : os(ost), Printer(ctx, false, ost, /* escape output */ true, false) {
+      : os(ost), Printer(M, false, ost, /* escape output */ true, false) {
     Printer.disableColors();
     os << " digraph g {\n graph [ rankdir = \"TD\" ];\n";
     os << "labelloc=\"t\"; ";
@@ -620,7 +626,7 @@ void viewGraph(Function *F) {
       return;
     }
 
-    DottyPrinter D(F->getContext(), O, Name);
+    DottyPrinter D(*F->getParent(), O, Name);
     D.visitFunction(*F);
   }
 

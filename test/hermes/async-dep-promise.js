@@ -11,4 +11,4 @@
 
 async function empty() {};
 print(empty())
-// ON: [object Object]
+// ON: [object Promise]

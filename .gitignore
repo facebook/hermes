@@ -16,17 +16,6 @@ buck-out
 # Mac
 .DS_Store
 
-# CocoaPods testing
-build
-build_*
-destroot
-test/ApplePlatformsIntegrationTestApp/Podfile.lock
-test/ApplePlatformsIntegrationTestApp/Pods
-test/ApplePlatformsIntegrationTestApp/**/xcuserdata
-test/ApplePlatformsIntegrationTestApp/ApplePlatformsIntegrationTestApp.xcworkspace
-
-# Intl testing
-android/intltest/java/com/facebook/hermes/test/assets/**
 
 # VS Code and Visual Studio
 .vs
@@ -37,7 +26,7 @@ android/intltest/java/com/facebook/hermes/test/assets/**
 cmake-build*/
 
 # clangd cache
-.cache/
+/.cache/
 
 # Compilation database
-compile_commands.json
+/compile_commands.json

@@ -46,26 +46,26 @@
 // CHECK-NEXT:%function.3 = function(global: any, require: any): number
 
 // CHECK:SemContext
-// CHECK-NEXT:Func strict
+// CHECK-NEXT:Func strict mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:        Decl %d.2 'arguments' Var Arguments
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.3 'arguments' Var Arguments
-// CHECK-NEXT:        Func strict
+// CHECK-NEXT:        Func strict noImplicitReturn
 // CHECK-NEXT:            Scope %s.3
 // CHECK-NEXT:                Decl %d.4 'global' Parameter : any
 // CHECK-NEXT:                Decl %d.5 'require' Parameter : any
 // CHECK-NEXT:                Decl %d.6 's' Parameter : string
 // CHECK-NEXT:                Decl %d.7 'arguments' Var Arguments
-// CHECK-NEXT:        Func strict
+// CHECK-NEXT:        Func strict noImplicitReturn
 // CHECK-NEXT:            Scope %s.4
 // CHECK-NEXT:                Decl %d.8 'global' Parameter : any
 // CHECK-NEXT:                Decl %d.9 'require' Parameter : any
 // CHECK-NEXT:                Decl %d.10 'n' Var : number
 // CHECK-NEXT:                Decl %d.11 'arguments' Var Arguments
-// CHECK-NEXT:        Func strict
+// CHECK-NEXT:        Func strict noImplicitReturn
 // CHECK-NEXT:            Scope %s.5
 // CHECK-NEXT:                Decl %d.12 'global' Parameter : any
 // CHECK-NEXT:                Decl %d.13 'require' Parameter : any

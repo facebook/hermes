@@ -39,4 +39,17 @@ TEST(JSONParserTest, SimpleParserTest) {
   EXPECT_TRUE(Node.hasValue());
 }
 
+/// Regression test: deeply nested input used to overflow the stack; it must
+/// be rejected with an error instead.
+TEST(JSONParserTest, DeepNestingTest) {
+  Context context;
+  parser::JSONFactory factory(context.getAllocator());
+  std::string deep(100000, '[');
+  parser::JSONParser parser(factory, deep, context.getSourceErrorManager());
+
+  auto parsed = parser.parse();
+  EXPECT_FALSE(parsed.hasValue());
+  EXPECT_NE(0u, context.getSourceErrorManager().getErrorCount());
+}
+
 } // end anonymous namespace

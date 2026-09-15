@@ -218,7 +218,7 @@ bool isAsync(FunctionLikeNode *node) {
       return cast<FunctionDeclarationNode>(node)->_async;
 #if HERMES_PARSE_FLOW
     case NodeKind::ComponentDeclaration:
-      return false;
+      return cast<ComponentDeclarationNode>(node)->_async;
     case NodeKind::HookDeclaration:
       return cast<HookDeclarationNode>(node)->_async;
 #endif
@@ -295,6 +295,9 @@ Node *getPatternTypeAnnotation(Node *node) {
       return cast<ObjectPatternNode>(node)->_typeAnnotation;
     case NodeKind::ArrayPattern:
       return cast<ArrayPatternNode>(node)->_typeAnnotation;
+    case NodeKind::RestElement:
+      // Rest elements annotation is on the inner argument.
+      return nullptr;
     default:
       break;
   }

@@ -25,7 +25,7 @@ function getParentKey(
   target: ESNode,
   parent: ESNode,
   visitorKeys?: ?VisitorKeysType,
-): $ReadOnly<
+): Readonly<
   | {
       type: 'single',
       node: ESNode,
@@ -52,10 +52,16 @@ function getParentKey(
       if (parent[key] === target) {
         return {type: 'single', node: parent, key};
       }
-    } else if (Array.isArray(parent[key])) {
+    } else if (
+      Array.isArray(
+        // $FlowExpectedError[prop-missing]
+        parent[key],
+      )
+    ) {
       for (let i = 0; i < parent[key].length; i += 1) {
         // $FlowExpectedError[invalid-tuple-index]
         const current = parent[key][i];
+        // $FlowFixMe[invalid-compare]
         if (current === target) {
           return {type: 'array', node: parent, key, targetIndex: i};
         }
@@ -75,7 +81,7 @@ function getParentKey(
 export function replaceNodeOnParent(
   originalNode: ESNode,
   originalNodeParent: ESNode,
-  nodeToReplaceWith: ESNode | $ReadOnlyArray<ESNode>,
+  nodeToReplaceWith: ESNode | ReadonlyArray<ESNode>,
   visitorKeys?: ?VisitorKeysType,
 ): void {
   const replacementParent = getParentKey(
@@ -173,7 +179,7 @@ export function updateAllParentPointers(
  *
  * This will only create a new object if the overrides actually result in a change.
  */
-export function nodeWith<T: ESNode>(
+export function nodeWith<T extends ESNode>(
   node: T,
   overrideProps: Partial<T>,
   visitorKeys?: ?VisitorKeysType,
@@ -210,7 +216,7 @@ export function nodeWith<T: ESNode>(
 /**
  * Shallow clones node, providing a new reference for an existing node.
  */
-export function shallowCloneNode<T: ESNode>(
+export function shallowCloneNode<T extends ESNode>(
   node: T,
   visitorKeys?: ?VisitorKeysType,
 ): T {
@@ -226,7 +232,7 @@ export function shallowCloneNode<T: ESNode>(
 /**
  * Deeply clones node and its entire tree.
  */
-export function deepCloneNode<T: ESNode>(
+export function deepCloneNode<T extends ESNode>(
   node: T,
   visitorKeys?: ?VisitorKeysType,
 ): T {

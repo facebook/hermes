@@ -15,20 +15,22 @@ import type {VisitorKeysType} from 'hermes-parser';
 
 import {FlowVisitorKeys} from 'hermes-parser';
 
-type VisitorOptions = $ReadOnly<{
+type VisitorOptions = Readonly<{
   childVisitorKeys?: VisitorKeysType | null,
 }>;
 
-function isNode(node: mixed) /*: implies node is {+[string]: mixed} */ {
+function isNode(
+  node: unknown,
+) /*: implies node is {readonly [string]: unknown} */ {
   return (
     typeof node === 'object' && node != null && typeof node.type === 'string'
   );
 }
 type NodeChildValue = string | boolean | number | ESNode;
-type NodeChildValueOrArray = NodeChildValue | $ReadOnlyArray<NodeChildValue>;
+type NodeChildValueOrArray = NodeChildValue | ReadonlyArray<NodeChildValue>;
 
 /* abstract */ class VisitorBase {
-  +_childVisitorKeys: VisitorKeysType;
+  readonly _childVisitorKeys: VisitorKeysType;
   constructor(options: VisitorOptions) {
     this._childVisitorKeys = options.childVisitorKeys ?? FlowVisitorKeys;
   }
@@ -38,7 +40,7 @@ type NodeChildValueOrArray = NodeChildValue | $ReadOnlyArray<NodeChildValue>;
    * @param node the node whose children should be visited
    * @param exclude a list of keys to not visit
    */
-  visitChildren(node: ?ESNode, excludeArr: $ReadOnlyArray<string> = []): void {
+  visitChildren(node: ?ESNode, excludeArr: ReadonlyArray<string> = []): void {
     if (node == null || node.type == null) {
       return;
     }
@@ -91,7 +93,7 @@ type NodeChildValueOrArray = NodeChildValue | $ReadOnlyArray<NodeChildValue>;
     this.visitChildren(node);
   }
 
-  visitArray: (?$ReadOnlyArray<ESNode>) => void = (arr): void => {
+  visitArray: (?ReadonlyArray<ESNode>) => void = (arr): void => {
     if (arr == null) {
       return;
     }

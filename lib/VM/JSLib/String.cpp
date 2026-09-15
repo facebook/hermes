@@ -1508,9 +1508,9 @@ CallResult<HermesValue> stringPrototypeMatchAll(void *, Runtime &runtime) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  // 2. If regexp is neither undefined nor null, then
+  // 2. If regexp is an Object, then
   auto regexp = args.getArgHandle(0);
-  if (!regexp->isUndefined() && !regexp->isNull()) {
+  if (regexp->isObject()) {
     // a. Let isRegExp be ? IsRegExp(regexp).
     auto isRegExpRes = isRegExp(runtime, regexp);
     if (LLVM_UNLIKELY(isRegExpRes == ExecutionStatus::EXCEPTION)) {
@@ -1787,8 +1787,8 @@ CallResult<HermesValue> stringPrototypeReplaceAll(void *, Runtime &runtime) {
 
   auto searchValue = args.getArgHandle(0);
   auto replaceValue = args.getArgHandle(1);
-  // 2. If searchValue is neither undefined nor null, then
-  if (!searchValue->isUndefined() && !searchValue->isNull()) {
+  // 2. If searchValue is an Object, then
+  if (searchValue->isObject()) {
     // a. Let isRegExp be ? IsRegExp(searchValue).
     auto isRegExpRes = isRegExp(runtime, searchValue);
     if (LLVM_UNLIKELY(isRegExpRes == ExecutionStatus::EXCEPTION)) {
@@ -1997,9 +1997,9 @@ CallResult<HermesValue> stringPrototypeMatch(void *, Runtime &runtime) {
           checkObjectCoercible(runtime, O) == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  // 3. If regexp is neither undefined nor null, then
+  // 3. If regexp is an Object, then
   auto regexp = args.getArgHandle(0);
-  if (!regexp->isUndefined() && !regexp->isNull()) {
+  if (regexp->isObject()) {
     // a. Let matcher be GetMethod(regexp, @@match).
     lv.matchSymbol = HermesValue::encodeSymbolValue(
         Predefined::getSymbolID(Predefined::SymbolMatch));
@@ -2183,10 +2183,10 @@ CallResult<HermesValue> stringPrototypeReplace(void *, Runtime &runtime) {
           checkObjectCoercible(runtime, O) == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  // 3. If searchValue is neither undefined nor null, then
+  // 3. If searchValue is an Object, then
   auto searchValue = args.getArgHandle(0);
   auto replaceValue = args.getArgHandle(1);
-  if (!searchValue->isUndefined() && !searchValue->isNull()) {
+  if (searchValue->isObject()) {
     // a. Let replacer be GetMethod(searchValue, @@replace).
     lv.replaceSymbol = HermesValue::encodeSymbolValue(
         Predefined::getSymbolID(Predefined::SymbolReplace));
@@ -2333,9 +2333,9 @@ CallResult<HermesValue> stringPrototypeSearch(void *, Runtime &runtime) {
           checkObjectCoercible(runtime, O) == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  // 3. If regexp is neither undefined nor null, then
+  // 3. If regexp is an Object, then
   auto regexp = args.getArgHandle(0);
-  if (!regexp->isUndefined() && !regexp->isNull()) {
+  if (regexp->isObject()) {
     // a. Let searcher be GetMethod(regexp, @@search).
     lv.searchSymbol = HermesValue::encodeSymbolValue(
         Predefined::getSymbolID(Predefined::SymbolSearch));
@@ -2661,9 +2661,9 @@ CallResult<HermesValue> stringPrototypeSplit(void *, Runtime &runtime) {
           checkObjectCoercible(runtime, O) == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  // 2. If separator is neither undefined nor null, then
+  // 2. If separator is an Object, then
   auto separator = args.getArgHandle(0);
-  if (!separator->isUndefined() && !separator->isNull()) {
+  if (separator->isObject()) {
     // a. Let splitter be ? GetMethod(separator, @@split).
     lv.splitSymbol = HermesValue::encodeSymbolValue(
         Predefined::getSymbolID(Predefined::SymbolSplit));

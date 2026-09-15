@@ -5,8 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use std::num::NonZeroU32;
-
 use hermes::parser::Comment as HermesComment;
 use hermes::parser::NodeKind;
 use hermes::parser::NodeLabel;
@@ -21,7 +19,6 @@ use hermes::parser::SMRange;
 use hermes::parser::hermes_get_ArrowFunctionExpression_async;
 use hermes::parser::hermes_get_ArrowFunctionExpression_body;
 use hermes::parser::hermes_get_ArrowFunctionExpression_expression;
-use hermes::parser::hermes_get_ArrowFunctionExpression_id;
 use hermes::parser::hermes_get_ArrowFunctionExpression_params;
 use hermes::parser::hermes_get_ArrowFunctionExpression_returnType;
 use hermes::parser::hermes_get_ClassDeclaration_body;
@@ -268,7 +265,7 @@ impl FromHermes for FunctionExpression {
             unsafe { hermes_get_FunctionExpression_returnType(node) },
             |node| TypeAnnotation::convert(cx, node),
         )?;
-        let is_generator = unsafe { hermes_get_FunctionExpression_generator(node) };
+        let is_generator = false;
         let is_async = unsafe { hermes_get_FunctionExpression_async(node) };
         let loc = None;
         let range = convert_range(cx, node);
@@ -291,10 +288,7 @@ impl FromHermes for FunctionExpression {
 
 impl FromHermes for ArrowFunctionExpression {
     fn convert(cx: &mut Context, node: NodePtr) -> DiagnosticsResult<Self> {
-        let id = convert_option(
-            unsafe { hermes_get_ArrowFunctionExpression_id(node) },
-            |node| Identifier::convert(cx, node),
-        )?;
+        let id = None;
         let params = convert_vec(
             unsafe { hermes_get_ArrowFunctionExpression_params(node) },
             |node| Pattern::convert(cx, node),

@@ -15,6 +15,7 @@
 #include "hermes/AST/NativeContext.h"
 #include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/FrontEndDefs/Typeof.h"
+#include "hermes/IR/TypeContext.h"
 #include "hermes/Sema/SemContext.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/ScopeChain.h"
@@ -51,432 +52,6 @@ class Context;
 class TerminatorInst;
 class LazyCompilationDataInst;
 class EvalCompilationDataInst;
-
-/// Representation of a type in the IR. This roughly corresponds for JavaScript
-/// types, but represents lower level concepts like "empty" type for TDZ and
-/// integers.
-class Type {
- public:
-  // Encodes the JavaScript type hierarchy.
-  enum TypeKind {
-    /// An TDZ variable before its declaration.
-    Empty,
-    /// A typed variable after its declaration, but before initialization.
-    /// At runtime this maps to undefined.
-    Uninit,
-    Undefined,
-    Null,
-    Boolean,
-    String,
-    Number,
-    BigInt,
-    // ES2024 4.4.32 Symbol type (not the symbol object)
-    Symbol,
-    Environment,
-    // ES2024 6.2.12 Private Names. We currently happen to use symbols at
-    // runtime to represent private names, but conceptually private names are a
-    // different entity, and for example certain private operations can only
-    // operate on this type.
-    PrivateName,
-    /// Function code (IR Function value), not a closure.
-    FunctionCode,
-    Object,
-
-    LAST_TYPE
-  };
-
- private:
-  static_assert(LAST_TYPE <= 16, "Type tag must fit in 16 bits");
-
-  /// Return the string representation of the type at index \p idx.
-  llvh::StringRef getKindStr(TypeKind idx) const {
-    // The strings below match the values in TypeKind.
-    static const char *const names[] = {
-        "empty",
-        "uninit",
-        "undefined",
-        "null",
-        "boolean",
-        "string",
-        "number",
-        "bigint",
-        "symbol",
-        "environment",
-        "privateName",
-        "functionCode",
-        "object"};
-    static_assert(
-        LAST_TYPE == (sizeof(names) / sizeof(char *)),
-        "Not all types have a defined string representation");
-    return names[idx];
-  }
-
-#define BIT_TO_VAL(XX) (1 << TypeKind::XX)
-#define IS_VAL(XX) (bitmask_ == (1 << TypeKind::XX))
-
-#define NUM_BIT_TO_VAL(XX) (1 << NumTypeKind::XX)
-#define NUM_IS_VAL(XX) (numBitmask_ == (1 << NumTypeKind::XX))
-
-  // All possible types including "empty" and "uninit", but not including
-  // special internal types that are never mixed with other types.
-  static constexpr uint16_t TYPE_ANY_EMPTY_UNINIT_MASK =
-      ((1u << TypeKind::LAST_TYPE) - 1) & ~BIT_TO_VAL(Environment) &
-      ~BIT_TO_VAL(PrivateName) & ~BIT_TO_VAL(FunctionCode);
-  // All of the above types except "empty" and "uninit".
-  static constexpr uint16_t TYPE_ANY_MASK =
-      TYPE_ANY_EMPTY_UNINIT_MASK & ~BIT_TO_VAL(Empty) & ~BIT_TO_VAL(Uninit);
-
-  static constexpr uint16_t PRIMITIVE_BITS = BIT_TO_VAL(Number) |
-      BIT_TO_VAL(String) | BIT_TO_VAL(BigInt) | BIT_TO_VAL(Null) |
-      BIT_TO_VAL(Undefined) | BIT_TO_VAL(Boolean) | BIT_TO_VAL(Symbol);
-
-  static constexpr uint16_t NONPTR_BITS = BIT_TO_VAL(Number) |
-      BIT_TO_VAL(Boolean) | BIT_TO_VAL(Null) | BIT_TO_VAL(Undefined);
-
-  /// Each bit represent the possibility of the type being the type that's
-  /// represented in the enum entry.
-  uint16_t bitmask_{0};
-
-  /// The constructor is only accessible by static builder methods.
-  constexpr explicit Type(uint16_t mask) : bitmask_(mask) {}
-
- public:
-  static constexpr Type unionTy(Type A, Type B) {
-    return Type(A.bitmask_ | B.bitmask_);
-  }
-
-  static constexpr Type intersectTy(Type A, Type B) {
-    // This is sound but not complete, but this is only used for disjointness
-    // check.
-    return Type(A.bitmask_ & B.bitmask_);
-  }
-
-  static constexpr Type subtractTy(Type A, Type B) {
-    return Type(A.bitmask_ & ~B.bitmask_);
-  }
-
-  static constexpr Type createNoType() {
-    return Type(0);
-  }
-  static constexpr Type createAnyEmptyUninit() {
-    return Type(TYPE_ANY_EMPTY_UNINIT_MASK);
-  }
-  static constexpr Type createAnyType() {
-    return Type(TYPE_ANY_MASK);
-  }
-  /// Create an uninitialized TDZ type.
-  static constexpr Type createEmpty() {
-    return Type(BIT_TO_VAL(Empty));
-  }
-  static constexpr Type createUninit() {
-    return Type(BIT_TO_VAL(Uninit));
-  }
-  static constexpr Type createUndefined() {
-    return Type(BIT_TO_VAL(Undefined));
-  }
-  static constexpr Type createNull() {
-    return Type(BIT_TO_VAL(Null));
-  }
-  static constexpr Type createBoolean() {
-    return Type(BIT_TO_VAL(Boolean));
-  }
-  static constexpr Type createString() {
-    return Type(BIT_TO_VAL(String));
-  }
-  static constexpr Type createSymbol() {
-    return Type(BIT_TO_VAL(Symbol));
-  }
-  static constexpr Type createObject() {
-    return Type(BIT_TO_VAL(Object));
-  }
-  static constexpr Type createNumber() {
-    return Type(BIT_TO_VAL(Number));
-  }
-  /// This is just an alias of createNumber(). We used to track whether a
-  /// number was known to be an integer, but we don't anymore. Still, we don't
-  /// want to lose the callsite information, so we keep this alias.
-  static constexpr Type createInt32() {
-    return createNumber();
-  }
-  /// This is just an alias of createNumber(). We used to track whether a
-  /// number was known to be an integer, but we don't anymore. Still, we don't
-  /// want to lose the callsite information, so we keep this alias.
-  static constexpr Type createUint32() {
-    return createNumber();
-  }
-  static constexpr Type createBigInt() {
-    return Type(BIT_TO_VAL(BigInt));
-  }
-  static constexpr Type createNumeric() {
-    return unionTy(createNumber(), createBigInt());
-  }
-  static constexpr Type createEnvironment() {
-    return Type(BIT_TO_VAL(Environment));
-  }
-  static constexpr Type createPrivateName() {
-    return Type(BIT_TO_VAL(PrivateName));
-  }
-  static constexpr Type createFunctionCode() {
-    return Type(BIT_TO_VAL(FunctionCode));
-  }
-
-  constexpr bool isNoType() const {
-    return bitmask_ == 0;
-  }
-
-  constexpr bool isAnyEmptyUninitType() const {
-    return bitmask_ == TYPE_ANY_EMPTY_UNINIT_MASK;
-  }
-  constexpr bool isAnyType() const {
-    return bitmask_ == TYPE_ANY_MASK;
-  }
-
-  constexpr bool isEmptyType() const {
-    return IS_VAL(Empty);
-  }
-  constexpr bool isUninitType() const {
-    return IS_VAL(Uninit);
-  }
-  constexpr bool isUndefinedType() const {
-    return IS_VAL(Undefined);
-  }
-  constexpr bool isNullType() const {
-    return IS_VAL(Null);
-  }
-  constexpr bool isBooleanType() const {
-    return IS_VAL(Boolean);
-  }
-  constexpr bool isStringType() const {
-    return IS_VAL(String);
-  }
-  constexpr bool isObjectType() const {
-    return IS_VAL(Object);
-  }
-  constexpr bool isNumberType() const {
-    return IS_VAL(Number);
-  }
-  constexpr bool isBigIntType() const {
-    return IS_VAL(BigInt);
-  }
-  constexpr bool isSymbolType() const {
-    return IS_VAL(Symbol);
-  }
-  constexpr bool isEnvironmentType() const {
-    return IS_VAL(Environment);
-  }
-  constexpr bool isPrivateNameType() const {
-    return IS_VAL(PrivateName);
-  }
-  constexpr bool isFunctionCodeType() const {
-    return IS_VAL(FunctionCode);
-  }
-
-  /// \return the TypeKind of the first set bit. This is intended to be used
-  /// when there is single type set. If there are no types, it returns
-  /// LAST_TYPE.
-  TypeKind getFirstTypeKind() const {
-    auto res = LLVM_LIKELY(bitmask_)
-        ? (TypeKind)llvh::countTrailingZeros(bitmask_, llvh::ZB_Undefined)
-        : TypeKind::LAST_TYPE;
-    assert(res <= LAST_TYPE && "Invalid bitmask");
-    return res;
-  }
-
-  /// \return how many valid types are represented by this (union) type.
-  unsigned countTypes() const {
-    return llvh::countPopulation(bitmask_);
-  }
-
-  /// \return true if the type is one of the known javascript primitive types:
-  /// Number, BigInt, Null, Boolean, String, Undefined.
-  constexpr bool isKnownPrimitiveType() const {
-    return isPrimitive() && 1 == countTypes();
-  }
-
-  constexpr bool isPrimitive() const {
-    // Check if any bit except the primitive bits is on.
-    return bitmask_ && !(bitmask_ & ~PRIMITIVE_BITS);
-  }
-
-  /// \return true if any of the types are primitive.
-  constexpr bool canBePrimitive() const {
-    return (bitmask_ & PRIMITIVE_BITS) != 0;
-  }
-
-  /// \return true if the type is not referenced by a pointer in javascript.
-  constexpr bool isNonPtr() const {
-    // One or more of NONPTR_BITS must be set, and no other bit must be set.
-    return bitmask_ && !(bitmask_ & ~NONPTR_BITS);
-  }
-#undef BIT_TO_VAL
-#undef IS_VAL
-#undef NUM_BIT_TO_VAL
-#undef NUM_IS_VAL
-
-  /// \returns true if this type is a subset of \p t.
-  constexpr bool isSubsetOf(Type t) const {
-    return !(bitmask_ & ~t.bitmask_);
-  }
-
-  /// \returns true if the type \p t can be any of the types that this type
-  /// represents. For example, if this type is "string|number" and \p t is
-  /// a string the result is true because this type can represent strings.
-  constexpr bool canBeType(Type t) const {
-    return t.isSubsetOf(*this);
-  }
-
-  /// \returns true if this type can represent a string value.
-  constexpr bool canBeString() const {
-    return canBeType(Type::createString());
-  }
-
-  /// \returns true if this type can represent a bigint value.
-  constexpr bool canBeBigInt() const {
-    return canBeType(Type::createBigInt());
-  }
-
-  /// \returns true if this type can represent a symbol value.
-  constexpr bool canBeSymbol() const {
-    return canBeType(Type::createSymbol());
-  }
-
-  /// \returns true if this type can represent a number value.
-  constexpr bool canBeNumber() const {
-    return canBeType(Type::createNumber());
-  }
-
-  /// \returns true if this type can represent an object.
-  constexpr bool canBeObject() const {
-    return canBeType(Type::createObject());
-  }
-
-  /// \returns true if this type can represent a boolean value.
-  constexpr bool canBeBoolean() const {
-    return canBeType(Type::createBoolean());
-  }
-
-  /// \returns true if this type can represent an "empty" value.
-  constexpr bool canBeEmpty() const {
-    return canBeType(Type::createEmpty());
-  }
-
-  /// \returns true if this type can represent an "uninit" value.
-  constexpr bool canBeUninit() const {
-    return canBeType(Type::createUninit());
-  }
-
-  /// \returns true if this type can represent an undefined value.
-  constexpr bool canBeUndefined() const {
-    return canBeType(Type::createUndefined());
-  }
-
-  /// \returns true if this type can represent a null value.
-  constexpr bool canBeNull() const {
-    return canBeType(Type::createNull());
-  }
-
-  /// \returns true if this type can represent an "any" type value.
-  constexpr bool canBeAny() const {
-    return canBeType(Type::createAnyType());
-  }
-
-  /// Return true if this type is a proper subset of \p t. A "proper subset"
-  /// means that it is a subset bit is not equal.
-  constexpr bool isProperSubsetOf(Type t) const {
-    return bitmask_ != t.bitmask_ && !(bitmask_ & ~t.bitmask_);
-  }
-
-  void print(llvh::raw_ostream &OS) const;
-
-  /// The hash of a Type is the hash of its opaque value.
-  llvh::hash_code hash() const {
-    return llvh::hash_value(bitmask_);
-  }
-
-  constexpr bool operator==(Type RHS) const {
-    return bitmask_ == RHS.bitmask_;
-  }
-  constexpr bool operator!=(Type RHS) const {
-    return !(*this == RHS);
-  }
-
-  class iterator;
-
-  /// Return an iterator over the types in this Type.
-  iterator begin() const;
-  /// Return an "end" iterator over the types in this Type.
-  iterator end() const;
-
-  /// Allow Type to be used as a llvh::FoldingSet.
-  void Profile(llvh::FoldingSetNodeID &ID) const {
-    ID.AddInteger(bitmask_);
-  }
-};
-
-static_assert(sizeof(Type) == 2, "Type must not be too big");
-
-/// An iterator over the types in a Type.
-class Type::iterator {
-  friend class Type;
-  Type type_;
-  unsigned index_;
-
-  iterator(Type type, unsigned index) : type_(type), index_(index) {
-    skip();
-  }
-
-  /// Skip to the first set bit in the bitmask.
-  void skip() {
-    while (index_ < sizeof(type_.bitmask_) * CHAR_BIT &&
-           !(type_.bitmask_ & (1 << index_))) {
-      ++index_;
-    }
-  }
-
- public:
-  bool operator==(const iterator &RHS) const {
-    return type_ == RHS.type_ && index_ == RHS.index_;
-  }
-  bool operator!=(const iterator &RHS) const {
-    return !(*this == RHS);
-  }
-
-  iterator &operator++() {
-    assert(index_ < sizeof(type_.bitmask_) * CHAR_BIT && "Out of bounds");
-    ++index_;
-    skip();
-    return *this;
-  }
-  iterator operator++(int) {
-    auto copy = *this;
-    ++*this;
-    return copy;
-  }
-
-  Type operator*() const {
-    assert(index_ < sizeof(type_.bitmask_) * CHAR_BIT && "Out of bounds");
-    return Type(1 << index_);
-  }
-};
-
-inline Type::iterator Type::begin() const {
-  return iterator(*this, 0);
-}
-inline Type::iterator Type::end() const {
-  return iterator(*this, sizeof(bitmask_) * CHAR_BIT);
-}
-} // namespace hermes
-
-namespace llvh {
-template <>
-struct FoldingSetTrait<hermes::Type> {
-  static inline void Profile(hermes::Type t, FoldingSetNodeID &ID) {
-    t.Profile(ID);
-  }
-};
-} // namespace llvh
-
-namespace hermes {
 
 /// Describes the potential side effects of an instruction. The side effects are
 /// described by a series of bits, each of which specifies a particular way in
@@ -1870,6 +1445,11 @@ class VariableScope
     return children_;
   }
 
+  /// \return whether assignIndexToVariables() has been called already.
+  bool hasAssignedIndices() const {
+    return numVisibleVariables_ != UINT32_MAX;
+  }
+
   /// \return the number of variables that are visible in this scope.
   /// The first numVisibleVariables in this VariableScope are visible to the
   /// debugger.
@@ -2553,6 +2133,10 @@ class Module : public Value {
 
  private:
   std::shared_ptr<Context> Ctx;
+  /// Type context for the IR type system. Marked mutable because type
+  /// operations may intern derived union entries (e.g. unionTy,
+  /// intersectTy) and must remain callable through a const Module.
+  mutable TypeContext typeContext_;
   /// Optionally specify the top level function, if it isn't the first one.
   Function *topLevelFunction_{};
 
@@ -2566,7 +2150,25 @@ class Module : public Value {
   FunctionListType compiledFunctions_{};
 
   /// List of all the VariableScopes owned by this module.
+  ///
+  /// Invariant: VariableScopes at the start of the list have Variables with
+  /// assigned indices, while VariableScopes at the end of the list have
+  /// Variables with unassigned indices. New VariableScopes are never added to
+  /// the middle of the list, but they may be deleted from the middle of the
+  /// list without violating the invariant.
   VariableScopeListType variableScopes_{};
+
+  /// List of VariableScopes that may have no users, letting lazy
+  /// compilation reclaim dead scopes without rescanning all of variableScopes_.
+  ///
+  /// Invariant: every user-less scope is a member, so no dead scope is missed.
+  /// Membership does not imply user-less, so entries are re-checked before
+  /// deletion.
+  /// Maintained by addVariableScope() (new scopes) and
+  /// markVariableScopeAsMaybeDead() (last user removed).
+  /// Once it's iterated, this list is cleared but a VariableScope may be
+  /// re-added by one of the above mechanisms.
+  llvh::SmallPtrSet<VariableScope *, 16> maybeDeadVariableScopes_{};
 
   GlobalObject globalObject_{};
   LiteralEmpty literalEmpty{};
@@ -2671,6 +2273,13 @@ class Module : public Value {
     return *Ctx;
   }
 
+  /// Return the IR type context for this module. Returns a mutable reference
+  /// even from a const Module because type operations may intern derived
+  /// union entries.
+  TypeContext &getTypeContext() const {
+    return typeContext_;
+  }
+
   std::shared_ptr<Context> shareContext() const {
     return Ctx;
   }
@@ -2720,12 +2329,32 @@ class Module : public Value {
     return topLevelFunction_;
   }
 
-  /// Get the list of variable scopes owned by this module.
+  /// \return the list of variable scopes owned by this module.
+  /// NOTE: DO NOT append or remove from the returned list.
+  /// ONLY use addVariableScope and destroyVariableScope for that.
   VariableScopeListType &getVariableScopes() {
     return variableScopes_;
   }
+  /// \return the list of variable scopes owned by this module.
+  /// NOTE: DO NOT append or remove from the returned list.
+  /// ONLY use addVariableScope and destroyVariableScope for that.
   const VariableScopeListType &getVariableScopes() const {
     return variableScopes_;
+  }
+
+  /// Add a VariableScope owned by this Module.
+  void addVariableScope(VariableScope *varScope) {
+    variableScopes_.push_back(varScope);
+    maybeDeadVariableScopes_.insert(varScope);
+  }
+
+  /// Remove and destroy a VariableScope owned by this Module.
+  /// \pre \p variableScope has no users.
+  void destroyVariableScope(VariableScope *varScope);
+
+  /// Remember that a VariableScope lost its last user.
+  void markVariableScopeAsMaybeDead(VariableScope *varScope) {
+    maybeDeadVariableScopes_.insert(varScope);
   }
 
   OptimizationContext &getOptimizationContext() {
@@ -2735,10 +2364,19 @@ class Module : public Value {
     return optContext_;
   }
 
-  /// Assign index to all Variables in all VariableScopes.
+  /// Assign indices to Variables in newly-created VariableScopes.
   void assignIndexToVariables() {
-    for (VariableScope &varScope : variableScopes_)
-      varScope.assignIndexToVariables();
+    // Iterate variableScopes_ backwards, and stop at the first one that has
+    // already been assigned indices. This prevents rescanning VariableScopes
+    // unnecessarily and causing slowdown.
+    // See the invariant on variableScopes_ for why this works.
+    for (auto it = variableScopes_.rbegin(); it != variableScopes_.rend();
+         ++it) {
+      VariableScope *varScope = &*it;
+      if (varScope->hasAssignedIndices())
+        break;
+      varScope->assignIndexToVariables();
+    }
   }
 
   /// Create the specified global property if it doesn't exist. If it does

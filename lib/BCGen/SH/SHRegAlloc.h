@@ -418,6 +418,10 @@ class RegisterAllocator {
     return F->getContext();
   }
 
+  Module *getModule() {
+    return F->getParent();
+  }
+
   void setFastPassThreshold(unsigned maxInstCount) {
     fastPassThreshold = maxInstCount;
   }

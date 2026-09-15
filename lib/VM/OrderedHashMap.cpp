@@ -198,6 +198,9 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::rehash(
     Handle<Derived> self,
     Runtime &runtime,
     bool beforeAdd) {
+  // A rehash rebuilds the table, relocating every entry and invalidating any
+  // cached bucket index.
+  self->cachedBucketInvalidated_ = true;
   struct : public Locals {
     PinnedValue<StorageType> newDataTable;
   } lv;
@@ -209,14 +212,9 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::rehash(
     return ExecutionStatus::EXCEPTION;
   }
 
-  // Set new capacity first to update the hash function.
-  self->capacity_ = *newCapacity;
-
   // Create a new hash table.
   std::vector<uint32_t> newHashTable;
   newHashTable.resize(*newCapacity, kHashTableElementUnused);
-  runtime.getHeap().creditExternalMemory(
-      *self, *newCapacity * sizeof(uint32_t));
 
   // Create a new data table.
   auto dataTableRes = StorageType::create(
@@ -228,10 +226,26 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::rehash(
   }
   lv.newDataTable.template castAndSetHermesValue<StorageType>(*dataTableRes);
 
+  // Publish the new capacity so the re-add loop below hashes into the new
+  // table. This happens only after the fallible allocation above succeeds; an
+  // early return on OOM must leave capacity_ consistent with the still-current
+  // hashTable_.
+  self->capacity_ = *newCapacity;
+
   // Now re-add all entries to the hash table.
   uint32_t totalEntries = self->size_ + self->deletedCount_;
   uint32_t newDataTableKeyIndex = 0;
   uint32_t oldDataTableKeyIndex = 0;
+
+  // For each of the deleted entry, we store the entry index to help iterators
+  // adjust their entry index in the next step.
+  // Suppose you have the following data table (kElementsPerEntry = 1), and 'x'
+  // marks the deleted entries.
+  // entry index: 0 1 2 3 4 5 6 7 8
+  //            : 0 x 2 x 4 x 6 x 8
+  // We'll record the deleted indices as: [1 3 5 7]
+  std::vector<uint32_t> deletedEntryIndices;
+  deletedEntryIndices.reserve(self->deletedCount_);
 
   NoHandleScope noHandle{runtime};
 
@@ -262,6 +276,9 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::rehash(
       newHashTable[bucket] = newDataTableKeyIndex;
 
       newDataTableKeyIndex += BucketType::kElementsPerEntry;
+    } else {
+      // Entry is deleted.
+      deletedEntryIndices.push_back(i);
     }
     oldDataTableKeyIndex += BucketType::kElementsPerEntry;
   }
@@ -272,37 +289,29 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::rehash(
 
   // Adjust any active iterators to handle the fact that we removed deleted
   // entries in the new data table.
-  rawSelf->updateIteratorIndicesForRehash(runtime);
+  rawSelf->updateIteratorIndicesForRehash(deletedEntryIndices);
 
   rawSelf->deletedCount_ = 0;
-  uint32_t oldSizeInBytes = rawSelf->hashTable_.size() * sizeof(uint32_t);
+  // The external memory credit tracks hashTable_.size() * sizeof(uint32_t).
+  // The new table may be larger or smaller than the old one, so settle the
+  // difference in whichever direction it went.
+  const uint32_t oldSizeInBytes = rawSelf->hashTable_.size() * sizeof(uint32_t);
+  const uint32_t newSizeInBytes = newHashTable.size() * sizeof(uint32_t);
   rawSelf->hashTable_ = std::move(newHashTable);
-  runtime.getHeap().debitExternalMemory(*self, oldSizeInBytes);
+  if (newSizeInBytes >= oldSizeInBytes) {
+    runtime.getHeap().creditExternalMemory(
+        *self, newSizeInBytes - oldSizeInBytes);
+  } else {
+    runtime.getHeap().debitExternalMemory(
+        *self, oldSizeInBytes - newSizeInBytes);
+  }
   rawSelf->dataTable_.setNonNull(runtime, *lv.newDataTable, runtime.getHeap());
   return ExecutionStatus::RETURNED;
 }
 
 template <typename BucketType, typename Derived>
 void OrderedHashMapBase<BucketType, Derived>::updateIteratorIndicesForRehash(
-    Runtime &runtime) {
-  // For each of the deleted entry, we store the entry index to help iterators
-  // adjust their entry index in the next step.
-  // Suppose you have the following data table (kElementsPerEntry = 1), and 'x'
-  // marks the deleted entries.
-  // entry index: 0 1 2 3 4 5 6 7 8
-  //            : 0 x 2 x 4 x 6 x 8
-  // We'll record the deleted indices as: [1 3 5 7]
-  std::vector<uint32_t> deletedEntryIndices;
-  deletedEntryIndices.reserve(deletedCount_);
-  uint32_t oldDataTableKeyIndex = 0;
-  for (uint32_t i = 0; i < size_ + deletedCount_; i++) {
-    auto shv = dataTable_.getNonNull(runtime)->at(oldDataTableKeyIndex);
-    if (shv.isEmpty()) {
-      // Entry is deleted
-      deletedEntryIndices.push_back(i);
-    }
-    oldDataTableKeyIndex += BucketType::kElementsPerEntry;
-  }
+    llvh::ArrayRef<uint32_t> deletedEntryIndices) {
   assert(
       deletedEntryIndices.size() == deletedCount_ &&
       "Should encounter same number of deleted elements as the deletedCount_");
@@ -421,6 +430,102 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::insert(
 
 template <typename BucketType, typename Derived>
 template <typename>
+CallResult<HermesValue> OrderedHashMapBase<BucketType, Derived>::getOrInsert(
+    Handle<Derived> self,
+    Runtime &runtime,
+    Handle<> key,
+    Handle<> value) {
+  self->assertInitialized();
+  uint32_t bucket = hashToBucket(self->capacity_, runtime, *key);
+  {
+    NoAllocScope noAlloc{runtime};
+    OptValue<uint32_t> dataTableKeyIndex;
+    std::tie(dataTableKeyIndex, bucket) =
+        self->lookupInBucket(runtime, bucket, key.getHermesValue());
+    if (dataTableKeyIndex.hasValue()) {
+      // Element for the key already exists; return its value without
+      // overwriting.
+      SmallHermesValue existing =
+          self->dataTable_.getNonNull(runtime)->at(*dataTableKeyIndex + 1);
+      return existing.unboxToHV(runtime);
+    }
+  }
+
+  // Key is absent; insert at the bucket we just resolved and return the value.
+  if (LLVM_UNLIKELY(
+          doInsert(self, runtime, bucket, key, value) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return value.getHermesValue();
+}
+
+template <typename BucketType, typename Derived>
+template <typename>
+CallResult<HermesValue>
+OrderedHashMapBase<BucketType, Derived>::getOrInsertComputed(
+    Handle<Derived> self,
+    Runtime &runtime,
+    Handle<> key,
+    Handle<Callable> callback) {
+  self->assertInitialized();
+  uint32_t bucket = hashToBucket(self->capacity_, runtime, *key);
+  {
+    NoAllocScope noAlloc{runtime};
+    OptValue<uint32_t> dataTableKeyIndex;
+    std::tie(dataTableKeyIndex, bucket) =
+        self->lookupInBucket(runtime, bucket, key.getHermesValue());
+    if (dataTableKeyIndex.hasValue()) {
+      // Element for the key already exists; return its value without
+      // overwriting.
+      SmallHermesValue existing =
+          self->dataTable_.getNonNull(runtime)->at(*dataTableKeyIndex + 1);
+      return existing.unboxToHV(runtime);
+    }
+  }
+
+  // Clear the flag so we can detect whether the callback structurally modifies
+  // the map; save its prior value to restore on the exception path.
+  bool savedInvalidated = self->cachedBucketInvalidated_;
+  self->cachedBucketInvalidated_ = false;
+
+  struct : public Locals {
+    PinnedValue<> value;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  CallResult<PseudoHandle<>> callRes = Callable::executeCall1(
+      callback, runtime, Runtime::getUndefinedValue(), key.getHermesValue());
+  if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
+    // The callback threw, so this call inserts nothing. The flag must reflect
+    // whether a cached bucket held by an enclosing call is now stale, which is
+    // the case if the map was modified before this call (savedInvalidated) or
+    // if the callback modified it before throwing (e.g. a rehash triggered by a
+    // nested getOrInsertComputed). Combine both.
+    self->cachedBucketInvalidated_ =
+        savedInvalidated || self->cachedBucketInvalidated_;
+    return ExecutionStatus::EXCEPTION;
+  }
+  lv.value = std::move(*callRes);
+
+  // Fast path: the bucket above is still valid and can be used for insertion.
+  if (LLVM_LIKELY(!self->cachedBucketInvalidated_)) {
+    if (LLVM_UNLIKELY(
+            doInsert(self, runtime, bucket, key, lv.value) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return lv.value.getHermesValue();
+  }
+  // The callback modified the map, so do an insert from scratch.
+  if (LLVM_UNLIKELY(
+          insert(self, runtime, key, lv.value) == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return lv.value.getHermesValue();
+}
+
+template <typename BucketType, typename Derived>
+template <typename>
 ExecutionStatus OrderedHashMapBase<BucketType, Derived>::insert(
     Handle<Derived> self,
     Runtime &runtime,
@@ -449,6 +554,8 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::doInsert(
     uint32_t bucket,
     Handle<> key,
     Handle<> value) {
+  // Appending an entry can invalidate a cached bucket index.
+  self->cachedBucketInvalidated_ = true;
   struct : public Locals {
     PinnedValue<StorageType> dataTable;
   } lv;
@@ -457,7 +564,7 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::doInsert(
   // Run rehash if necessary before inserting.
   if (shouldRehash(self->capacity_, self->size_, self->deletedCount_)) {
     if (LLVM_UNLIKELY(
-            self->rehash(self, runtime, true) == ExecutionStatus::EXCEPTION)) {
+            rehash(self, runtime, true) == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
 
@@ -511,9 +618,12 @@ bool OrderedHashMapBase<BucketType, Derived>::erase(
   deleteBucket(self, runtime, bucket, *dataTableKeyIndex);
   self->deletedCount_++;
   self->size_--;
+  // A deleted entry (and any shrink-rehash below) can invalidate a cached
+  // bucket index.
+  self->cachedBucketInvalidated_ = true;
 
   if (shouldShrink(self->capacity_, self->size_))
-    self->rehash(self, runtime);
+    rehash(self, runtime);
 
   return true;
 }
@@ -593,15 +703,26 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::clear(
     Runtime &runtime) {
   self->assertInitialized();
   if (self->size_ == 0 && self->deletedCount_ == 0) {
-    // Empty set.
+    // Empty set: nothing to do, so the table layout is unchanged.
     return ExecutionStatus::RETURNED;
   }
 
-  // Clear the hash table.
+  // Clearing rebuilds the table and invalidates any cached bucket index.
+  self->cachedBucketInvalidated_ = true;
+
+  // Clear the hash table. The external memory credit tracks
+  // hashTable_.size() * sizeof(uint32_t), so debit the difference between the
+  // discarded table and the reinitialized one.
+  const uint32_t oldSizeInBytes = self->hashTable_.size() * sizeof(uint32_t);
   self->hashTable_ = std::vector<uint32_t>();
   // Resize the hash table to the initial size.
   self->hashTable_.resize(kInitialCapacity, kHashTableElementUnused);
   self->capacity_ = kInitialCapacity;
+  constexpr uint32_t newSizeInBytes = kInitialCapacity * sizeof(uint32_t);
+  assert(
+      oldSizeInBytes >= newSizeInBytes &&
+      "Capacity never shrinks below kInitialCapacity");
+  runtime.getHeap().debitExternalMemory(*self, oldSizeInBytes - newSizeInBytes);
 
   // Resize the data table back to 0.
   self->dataTable_.getNonNull(runtime)->clear(runtime);
@@ -624,6 +745,19 @@ OrderedHashMapBase<HashMapEntry, JSMapImpl<CellKind::JSMapKind>>::insert(
     Runtime &runtime,
     Handle<> key,
     Handle<> value);
+template CallResult<HermesValue>
+OrderedHashMapBase<HashMapEntry, JSMapImpl<CellKind::JSMapKind>>::getOrInsert(
+    Handle<JSMapImpl<CellKind::JSMapKind>> self,
+    Runtime &runtime,
+    Handle<> key,
+    Handle<> value);
+template CallResult<HermesValue>
+OrderedHashMapBase<HashMapEntry, JSMapImpl<CellKind::JSMapKind>>::
+    getOrInsertComputed(
+        Handle<JSMapImpl<CellKind::JSMapKind>> self,
+        Runtime &runtime,
+        Handle<> key,
+        Handle<Callable> callback);
 template ExecutionStatus
 OrderedHashMapBase<HashSetEntry, JSMapImpl<CellKind::JSSetKind>>::insert(
     Handle<JSMapImpl<CellKind::JSSetKind>> self,

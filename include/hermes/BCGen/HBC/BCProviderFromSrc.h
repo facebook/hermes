@@ -36,11 +36,13 @@ class BCProviderFromSrc final : public BCProviderBase {
     /// IR Module used for compiling more code into this BytecodeModule.
     /// May be shared with other BCProviders during local eval,
     /// which reuses SemContext and the IR but makes a new BCProvider.
+    /// May be nullptr if no further compilation is possible.
     std::shared_ptr<Module> M;
 
     /// SemContext used for compiling more code into this BytecodeModule.
     /// May be shared with other BCProviders during local eval,
     /// which reuses SemContext and the IR but makes a new BCProvider.
+    /// May be nullptr if no further compilation is possible.
     std::shared_ptr<sema::SemContext> semCtx;
 
     /// The file and source map ID cache used for compiling more code into this

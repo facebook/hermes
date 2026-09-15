@@ -10,6 +10,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string>
 
 namespace hermes {
 
@@ -33,6 +34,36 @@ class Buffer {
  protected:
   const uint8_t *data_ = nullptr;
   size_t size_ = 0;
+};
+
+/// A Buffer that calls a callback on destruction.
+class CallbackBuffer : public Buffer {
+ public:
+  using FinalizeCb = void (*)(const uint8_t *data, size_t size, void *hint);
+
+  CallbackBuffer(const uint8_t *data, size_t size, FinalizeCb cb, void *hint)
+      : Buffer(data, size), cb_(cb), hint_(hint) {}
+
+  ~CallbackBuffer() override {
+    if (cb_)
+      cb_(data_, size_, hint_);
+  }
+
+ private:
+  FinalizeCb cb_;
+  void *hint_;
+};
+
+/// A Buffer that owns a std::string.
+class StdStringBuffer : public Buffer {
+ public:
+  StdStringBuffer(std::string &&str) : str_(std::move(str)) {
+    data_ = reinterpret_cast<const uint8_t *>(str_.data());
+    size_ = str_.size();
+  }
+
+ private:
+  std::string str_;
 };
 
 } // namespace hermes

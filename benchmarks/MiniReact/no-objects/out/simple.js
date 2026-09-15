@@ -26,47 +26,18 @@
     return (value: any);
   }
   /* file: packages/sh/microtask.js */
-  let M$sh_microtask$INTERNAL$microtaskQueue = [];
+  let M$sh_microtask$INTERNAL$microtaskQueue: (() => void)[] = [];
+  // Use a stub to avoid having a union in the array.
+  function M$sh_microtask$INTERNAL$stub(): void {}
   function M$sh_microtask$drainMicrotaskQueue(): void {
     for (let i = 0; i < M$sh_microtask$INTERNAL$microtaskQueue.length; i++) {
       M$sh_microtask$INTERNAL$microtaskQueue[i]();
-      M$sh_microtask$INTERNAL$microtaskQueue[i] = undefined;
+      M$sh_microtask$INTERNAL$microtaskQueue[i] = M$sh_microtask$INTERNAL$stub;
     }
     M$sh_microtask$INTERNAL$microtaskQueue = [];
   }
   function M$sh_microtask$queueMicrotask(callback: () => void): void {
     M$sh_microtask$INTERNAL$microtaskQueue.push(callback);
-  }
-  /* file: packages/sh/fastarray.js */
-  function M$sh_fastarray$join(arr: string[], sep: string): string {
-    let result: string = '';
-    for (let i: number = 0, e = arr.length; i < e; ++i) {
-      if (i !== 0) result += sep;
-      result += arr[i];
-    }
-    return result;
-  }
-  function M$sh_fastarray$reduce<TInput, TAcc>(arr: TInput[], fn: (acc: TAcc, item: TInput, index: number) => TAcc, initialValue: TAcc): TAcc {
-    let acc = initialValue;
-    for (let i = 0, e = arr.length; i < e; ++i) {
-      acc = fn(acc, arr[i], i);
-    }
-    return acc;
-  }
-  function M$sh_fastarray$map<TInput, TOutput>(arr: TInput[], fn: (item: TInput, index: number) => TOutput): TOutput[] {
-    const output: TOutput[] = [];
-    for (let i = 0, e = arr.length; i < e; ++i) {
-      output.push(fn(arr[i], i));
-    }
-    return output;
-  }
-  function M$sh_fastarray$includes<T>(arr: T[], searchElement: T): boolean {
-    for (let i = 0, e = arr.length; i < e; ++i) {
-      if (arr[i] === searchElement) {
-        return true;
-      }
-    }
-    return false;
   }
   /* file: packages/react/index.js */
   function M$react_index$INTERNAL$padString(str: string, len: number): string {
@@ -133,7 +104,7 @@
   /**
    * Queue of updates triggered *during* render.
    */
-  const M$react_index$INTERNAL$renderPhaseUpdateQueue: M$react_index$INTERNAL$Update<mixed>[] = [];
+  let M$react_index$INTERNAL$renderPhaseUpdateQueue: M$react_index$INTERNAL$Update<mixed>[] = [];
   /**
    * Public API to create a new "root", this is where React attaches rendering to a host element.
    * In our case we don't actually have a real host, and currently only "render" to strings.
@@ -151,9 +122,9 @@
    * Initial value of the state
    */
   initial: T): [T, M$react_index$INTERNAL$SetState<T>] {
+    M$react_invariant$default(M$react_index$INTERNAL$workInProgressFiber !== null && M$react_index$INTERNAL$workInProgressRoot !== null, 'useState() called outside of render');
     const root: M$react_index$INTERNAL$Root = M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$Root>(M$react_index$INTERNAL$workInProgressRoot);
     const fiber: M$react_index$INTERNAL$Fiber = M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$Fiber>(M$react_index$INTERNAL$workInProgressFiber);
-    M$react_invariant$default(fiber !== null && root !== null, 'useState() called outside of render');
     let state: M$react_index$INTERNAL$State<T>;
     const _workInProgressState: M$react_index$INTERNAL$State<mixed> | null = M$react_index$INTERNAL$workInProgressState;
     if (_workInProgressState === null) {
@@ -191,9 +162,9 @@
       }
     }];
   }
-  const M$react_index$INTERNAL$callbacks = new Map();
+  const M$react_index$INTERNAL$callbacks = new Map<string, any>();
   function M$react_index$callOnClickOrChange(id: string, event: any): void {
-    const callback = M$react_index$INTERNAL$callbacks.get(id);
+    const callback: any = M$react_index$INTERNAL$callbacks.get(id);
     if (callback == null) {
       throw new Error('No callback registered with id: ' + id);
     }
@@ -259,18 +230,24 @@
         });
       }
     }
-    render(element: M$react_index$React$MixedElement): string {
+    update(element: M$react_index$React$MixedElement): void {
       M$react_invariant$default(M$react_index$INTERNAL$workInProgressFiber === null && M$react_index$INTERNAL$workInProgressState === null, 'Cannot render, an existing render is in progress');
       const hasChanges = element !== this.element;
       this.element = element;
       if (hasChanges) {
         this.doWork(element);
       }
+    }
+    toString(): string {
       M$react_invariant$default(this.root !== null, 'Expected root to be rendered');
       const root: M$react_index$INTERNAL$Fiber = M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$Fiber>(this.root);
       const output: string[] = [];
       this.printFiber(root, output, 0);
-      return M$sh_fastarray$join(output, '\n');
+      return output.join('\n');
+    }
+    render(element: M$react_index$React$MixedElement): string {
+      this.update(element);
+      return this.toString();
     }
     doWork(element: M$react_index$React$MixedElement): void {
       let mustRender = this.root === null;
@@ -377,7 +354,7 @@
                   M$react_invariant$default(update.fiber === fiber, 'setState() during render is currently only supported when updating the component ' + 'being rendered. Setting state from another component is not supported.');
                   hasChanges = update.run() || hasChanges;
                 }
-                M$react_index$INTERNAL$renderPhaseUpdateQueue.length = 0;
+                M$react_index$INTERNAL$renderPhaseUpdateQueue = [];
                 if (!hasChanges) {
                   break;
                 }
@@ -392,11 +369,11 @@
               if (id != null) {
                 const onClick = fiber.props.onClick;
                 if (onClick != null) {
-                  M$react_index$INTERNAL$callbacks.set(id, onClick);
+                  M$react_index$INTERNAL$callbacks.set(M$sh_CHECKED_CAST$default<string>(id), onClick);
                 }
                 const onChange = fiber.props.onChange;
                 if (onChange != null) {
-                  M$react_index$INTERNAL$callbacks.set(id, onChange);
+                  M$react_index$INTERNAL$callbacks.set(M$sh_CHECKED_CAST$default<string>(id), onChange);
                 }
               }
               break;
@@ -429,7 +406,7 @@
         } else if (typeof element.type === 'string') {
           M$react_invariant$default(typeof element.type === 'string', 'Expected a host component name such as "div" or "span", got ' + typeof element.type);
           const type: M$react_index$INTERNAL$FiberType = new M$react_index$INTERNAL$FiberTypeHost(M$sh_CHECKED_CAST$default<string>(element.type));
-          M$react_invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
+          M$react_invariant$default((element.props: any) !== null && typeof element.props === 'object', 'Expected component props');
           // const {children, ...props} = element.props;
           const children = element.props.children;
           const props = {
@@ -437,14 +414,14 @@
           };
           delete props.children;
           fiber = new M$react_index$INTERNAL$Fiber(type, props, element.key);
-          this.mountChildren(children, fiber);
+          this.mountChildren(M$sh_CHECKED_CAST$default<M$react_index$React$Node>(children), fiber);
         } else {
           switch (element.type) {
             case M$react_index$INTERNAL$REACT_FRAGMENT_TYPE:
               {
                 const type: M$react_index$INTERNAL$FiberType = new M$react_index$INTERNAL$FiberTypeFragment();
                 fiber = new M$react_index$INTERNAL$Fiber(type, (element.props: any), element.key);
-                this.mountChildren(element.props.children, fiber);
+                this.mountChildren(M$sh_CHECKED_CAST$default<M$react_index$React$Node>(element.props.children), fiber);
                 break;
               }
             default:
@@ -463,7 +440,7 @@
       return fiber;
     }
     mountChildren(children: M$react_index$React$Node, parentFiber: M$react_index$INTERNAL$Fiber): void {
-      if (Array.isArray(children)) {
+      if (globalThis.Array.isArray(children)) {
         let prev: M$react_index$INTERNAL$Fiber | null = null;
         for (const childElement of M$sh_CHECKED_CAST$default<any[]>(children)) {
           if (childElement == null) {
@@ -484,7 +461,7 @@
       }
     }
     reconcileFiber(parent: M$react_index$INTERNAL$Fiber, prevChild: M$react_index$INTERNAL$Fiber | null, element: M$react_index$React$MixedElement): M$react_index$INTERNAL$Fiber {
-      if (prevChild !== null && M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$Fiber>(prevChild).type === element.type) {
+      if (prevChild !== null && M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$Fiber>(prevChild).type === (element.type: any)) {
         let prevChild: M$react_index$INTERNAL$Fiber = M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$Fiber>(prevChild);
         // Only host and fragment nodes have to be reconciled: otherwise this is a
         // function component and its children will be reconciled when they are later
@@ -492,7 +469,7 @@
         switch (prevChild.type.kind) {
           case 'host':
             {
-              M$react_invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
+              M$react_invariant$default((element.props: any) !== null && typeof element.props === 'object', 'Expected component props');
               // const {children, ...props} = element.props;
               const children = element.props.children;
               const props = {
@@ -505,14 +482,14 @@
             }
           case 'fragment':
             {
-              M$react_invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
+              M$react_invariant$default((element.props: any) !== null && typeof element.props === 'object', 'Expected component props');
               const children = element.props.children;
               this.reconcileChildren(prevChild, (children: any));
               break;
             }
           case 'component':
             {
-              M$react_invariant$default(element.props !== null && typeof element.props === 'object', 'Expected component props');
+              M$react_invariant$default((element.props: any) !== null && typeof element.props === 'object', 'Expected component props');
               prevChild.props = element.props;
               break;
             }
@@ -529,7 +506,7 @@
     }
     reconcileChildren(parent: M$react_index$INTERNAL$Fiber, children: M$react_index$React$Node): void {
       const prevChild: M$react_index$INTERNAL$Fiber | null = parent.child;
-      if (Array.isArray(children)) {
+      if (globalThis.Array.isArray(children)) {
         let childrenArray = M$sh_CHECKED_CAST$default<M$react_index$React$MixedElement[]>(children);
         // Fast-path for empty and single-element arrays
         if (childrenArray.length === 0) {
@@ -561,7 +538,7 @@
     reconcileMultipleChildren(parent: M$react_index$INTERNAL$Fiber, children: M$react_index$React$MixedElement[]): void {
       M$react_invariant$default(children.length > 1, 'Expected children to have multiple elements');
       // map existing children by key to make subsequent lookup O(log n)
-      const keyedChildren: any = new Map();
+      const keyedChildren: any = new Map<M$react_index$INTERNAL$Fiber, M$react_index$INTERNAL$Fiber>();
       let current: M$react_index$INTERNAL$Fiber | null = parent.child;
       while (current !== null) {
         if (M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$Fiber>(current).key !== null) {
@@ -648,7 +625,9 @@
    * the framework only looks at the identity of prop values and does not otherwise make any
    * assumptions about which props may exist and what their types are.
    */
-  type M$react_index$Props = any;
+  type M$react_index$Props = {
+    +[prop: string]: mixed
+  };
   /**
    * Data storage for the useState() hook
    */
@@ -720,9 +699,10 @@
     }, null);
   }
   function M$App$INTERNAL$Select(props: M$react_index$Props): M$react_index$React$MixedElement {
-    const children = [];
-    for (let i = 0; i < props.options.length; i++) {
-      const option = props.options[i];
+    const children: M$react_index$React$MixedElement[] = [];
+    const options: any = props.options;
+    for (let i = 0; i < options.length; i++) {
+      const option = options[i];
       children.push(M$react_index$jsx('option', {
         value: option.value,
         children: option.label
@@ -902,7 +882,7 @@
     for (let i: number = 1; i <= N; ++i) {
       const root = M$react_index$createRoot();
       const rootElement = M$react_index$jsx(M$App$default, {}, null);
-      root.render(rootElement);
+      root.update(rootElement);
       M$react_index$callOnClickOrChange('toggle-modal', null);
       M$react_index$callOnClickOrChange('update-text', {
         target: {
@@ -910,7 +890,7 @@
         }
       });
       M$sh_microtask$drainMicrotaskQueue();
-      root.render(rootElement);
+      root.update(rootElement);
     }
     var end = Date.now();
     print(`${end - start} ms`);

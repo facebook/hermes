@@ -1,4 +1,4 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`ComponentDeclaration Basic Babel 1`] = `
 {
@@ -354,6 +354,212 @@ exports[`ComponentDeclaration Complex params ESTree 1`] = `
           "type": "ComponentParameter",
         },
       ],
+      "rendersType": null,
+      "type": "ComponentDeclaration",
+      "typeParameters": null,
+    },
+  ],
+  "type": "Program",
+}
+`;
+
+exports[`ComponentDeclaration async Babel 1`] = `
+{
+  "body": [
+    {
+      "__componentDeclaration": true,
+      "async": true,
+      "body": {
+        "body": [],
+        "directives": [],
+        "type": "BlockStatement",
+      },
+      "generator": false,
+      "id": {
+        "name": "Foo",
+        "type": "Identifier",
+      },
+      "params": [],
+      "returnType": {
+        "type": "TypeAnnotation",
+        "typeAnnotation": {
+          "id": {
+            "id": {
+              "name": "Node",
+              "type": "Identifier",
+            },
+            "qualification": {
+              "name": "React",
+              "type": "Identifier",
+            },
+            "type": "QualifiedTypeIdentifier",
+          },
+          "type": "GenericTypeAnnotation",
+          "typeParameters": null,
+        },
+      },
+      "type": "FunctionDeclaration",
+    },
+  ],
+  "type": "Program",
+}
+`;
+
+exports[`ComponentDeclaration async ESTree 1`] = `
+{
+  "body": [
+    {
+      "async": true,
+      "body": {
+        "body": [],
+        "type": "BlockStatement",
+      },
+      "id": {
+        "name": "Foo",
+        "optional": false,
+        "type": "Identifier",
+        "typeAnnotation": null,
+      },
+      "params": [],
+      "rendersType": null,
+      "type": "ComponentDeclaration",
+      "typeParameters": null,
+    },
+  ],
+  "type": "Program",
+}
+`;
+
+exports[`ComponentDeclaration async with await Babel 1`] = `
+{
+  "body": [
+    {
+      "__componentDeclaration": true,
+      "async": true,
+      "body": {
+        "body": [
+          {
+            "declarations": [
+              {
+                "id": {
+                  "name": "x",
+                  "type": "Identifier",
+                },
+                "init": {
+                  "argument": {
+                    "arguments": [],
+                    "callee": {
+                      "name": "something",
+                      "type": "Identifier",
+                    },
+                    "type": "CallExpression",
+                  },
+                  "type": "AwaitExpression",
+                },
+                "type": "VariableDeclarator",
+              },
+            ],
+            "kind": "const",
+            "type": "VariableDeclaration",
+          },
+          {
+            "argument": {
+              "name": "x",
+              "type": "Identifier",
+            },
+            "type": "ReturnStatement",
+          },
+        ],
+        "directives": [],
+        "type": "BlockStatement",
+      },
+      "generator": false,
+      "id": {
+        "name": "Foo",
+        "type": "Identifier",
+      },
+      "params": [],
+      "returnType": {
+        "type": "TypeAnnotation",
+        "typeAnnotation": {
+          "id": {
+            "id": {
+              "name": "Node",
+              "type": "Identifier",
+            },
+            "qualification": {
+              "name": "React",
+              "type": "Identifier",
+            },
+            "type": "QualifiedTypeIdentifier",
+          },
+          "type": "GenericTypeAnnotation",
+          "typeParameters": null,
+        },
+      },
+      "type": "FunctionDeclaration",
+    },
+  ],
+  "type": "Program",
+}
+`;
+
+exports[`ComponentDeclaration async with await ESTree 1`] = `
+{
+  "body": [
+    {
+      "async": true,
+      "body": {
+        "body": [
+          {
+            "declarations": [
+              {
+                "id": {
+                  "name": "x",
+                  "optional": false,
+                  "type": "Identifier",
+                  "typeAnnotation": null,
+                },
+                "init": {
+                  "argument": {
+                    "arguments": [],
+                    "callee": {
+                      "name": "something",
+                      "optional": false,
+                      "type": "Identifier",
+                      "typeAnnotation": null,
+                    },
+                    "optional": false,
+                    "type": "CallExpression",
+                    "typeArguments": null,
+                  },
+                  "type": "AwaitExpression",
+                },
+                "type": "VariableDeclarator",
+              },
+            ],
+            "kind": "const",
+            "type": "VariableDeclaration",
+          },
+          {
+            "argument": {
+              "name": "x",
+              "optional": false,
+              "type": "Identifier",
+              "typeAnnotation": null,
+            },
+            "type": "ReturnStatement",
+          },
+        ],
+        "type": "BlockStatement",
+      },
+      "id": {
+        "name": "Foo",
+        "optional": false,
+        "type": "Identifier",
+        "typeAnnotation": null,
+      },
+      "params": [],
       "rendersType": null,
       "type": "ComponentDeclaration",
       "typeParameters": null,
@@ -5087,73 +5293,6 @@ exports[`ComponentDeclaration type parameters ESTree 1`] = `
         ],
         "type": "TypeParameterDeclaration",
       },
-    },
-  ],
-  "type": "Program",
-}
-`;
-
-exports[`ComponentDeclaration async ESTree 1`] = `
-{
-  "body": [
-    {
-      "async": true,
-      "body": {
-        "body": [],
-        "type": "BlockStatement",
-      },
-      "id": {
-        "name": "Foo",
-        "optional": false,
-        "type": "Identifier",
-        "typeAnnotation": null,
-      },
-      "params": [],
-      "rendersType": null,
-      "type": "ComponentDeclaration",
-      "typeParameters": null,
-    },
-  ],
-  "type": "Program",
-}
-`;
-
-exports[`ComponentDeclaration async Babel 1`] = `
-{
-  "body": [
-    {
-      "__componentDeclaration": true,
-      "async": true,
-      "body": {
-        "body": [],
-        "directives": [],
-        "type": "BlockStatement",
-      },
-      "generator": false,
-      "id": {
-        "name": "Foo",
-        "type": "Identifier",
-      },
-      "params": [],
-      "returnType": {
-        "type": "TypeAnnotation",
-        "typeAnnotation": {
-          "id": {
-            "id": {
-              "name": "Node",
-              "type": "Identifier",
-            },
-            "qualification": {
-              "name": "React",
-              "type": "Identifier",
-            },
-            "type": "QualifiedTypeIdentifier",
-          },
-          "type": "GenericTypeAnnotation",
-          "typeParameters": null,
-        },
-      },
-      "type": "FunctionDeclaration",
     },
   ],
   "type": "Program",

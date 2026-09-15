@@ -410,7 +410,7 @@ function *args() {
 // CHECK-NEXT:    bc 23: line 10 col 1
 // CHECK-NEXT:    bc 36: line 10 col 1
 // CHECK-NEXT:  0x0011  function idx 3, starts at line 10 col 1
-// CHECK-NEXT:    bc 43: line 13 col 5
+// CHECK-NEXT:    bc 43: line 10 col 1
 // CHECK-NEXT:    bc 114: line 12 col 10
 // CHECK-NEXT:    bc 138: line 13 col 5
 // CHECK-NEXT:    bc 157: line 13 col 5
@@ -419,17 +419,17 @@ function *args() {
 // CHECK-NEXT:    bc 284: line 13 col 14
 // CHECK-NEXT:    bc 294: line 13 col 12
 // CHECK-NEXT:    bc 312: line 13 col 5
-// CHECK-NEXT:    bc 352: line 13 col 5
-// CHECK-NEXT:    bc 373: line 13 col 5
-// CHECK-NEXT:    bc 415: line 13 col 5
+// CHECK-NEXT:    bc 352: line 10 col 1
+// CHECK-NEXT:    bc 373: line 10 col 1
+// CHECK-NEXT:    bc 415: line 10 col 1
 // CHECK-NEXT:  0x003c  function idx 4, starts at line 18 col 1
-// CHECK-NEXT:    bc 43: line 19 col 3
+// CHECK-NEXT:    bc 43: line 18 col 1
 // CHECK-NEXT:    bc 119: line 20 col 1
 // CHECK-NEXT:    bc 134: line 19 col 3
 // CHECK-NEXT:    bc 153: line 19 col 3
 // CHECK-NEXT:    bc 219: line 19 col 18
 // CHECK-NEXT:    bc 237: line 19 col 3
-// CHECK-NEXT:    bc 277: line 19 col 3
-// CHECK-NEXT:    bc 298: line 19 col 3
-// CHECK-NEXT:    bc 340: line 19 col 3
+// CHECK-NEXT:    bc 277: line 18 col 1
+// CHECK-NEXT:    bc 298: line 18 col 1
+// CHECK-NEXT:    bc 340: line 18 col 1
 // CHECK-NEXT:  0x005e  end of debug source table

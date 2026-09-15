@@ -27,7 +27,7 @@ let e: [[number, bool], string] = [[1, true], "hi"];
 // CHECK-NEXT:%union.6 = union(boolean | string)
 
 // CHECK:SemContext
-// CHECK-NEXT:Func strict
+// CHECK-NEXT:Func strict mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:        Decl %d.2 'a' Let : %tuple.2
@@ -37,7 +37,7 @@ let e: [[number, bool], string] = [[1, true], "hi"];
 // CHECK-NEXT:        Decl %d.6 'e' Let : %tuple.4
 // CHECK-NEXT:        Decl %d.7 'arguments' Var Arguments
 // CHECK-NEXT:        hoistedFunction d
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict noImplicitReturn
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.8 'arguments' Var Arguments
 

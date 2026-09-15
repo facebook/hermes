@@ -373,10 +373,15 @@ void ensureEvalException(
   ASSERT_TRUE(resp.exceptionDetails.has_value());
 
   m::runtime::ExceptionDetails &details = resp.exceptionDetails.value();
-  EXPECT_EQ(details.text, exceptionText);
+  EXPECT_EQ(details.text, "Uncaught");
 
   ASSERT_TRUE(details.exception.has_value());
   EXPECT_TRUE(details.exception->objectId.has_value());
+  ASSERT_TRUE(details.exception->description.has_value());
+  EXPECT_EQ(details.exception->description->find(exceptionText), 0);
+  EXPECT_EQ(
+      details.exception->description->find(exceptionText, exceptionText.size()),
+      std::string::npos);
 
   // TODO: Hermes doesn't seem to populate the line number for the exception?
   EXPECT_EQ(details.lineNumber, 0);

@@ -18,7 +18,8 @@ use std::fs::File;
 use std::io::Read;
 
 use anyhow;
-use base64;
+use base64::Engine;
+use base64::engine::general_purpose::URL_SAFE;
 use thiserror;
 use url::Url;
 
@@ -125,7 +126,7 @@ fn fetch_data(url: &Url) -> Result<Data, FetchError> {
         return Err(FetchError::InvalidURL("data URL unsupported encoding"));
     }
 
-    let buf = base64::decode_config(data, base64::URL_SAFE).map_err(|e| {
+    let buf = URL_SAFE.decode(data).map_err(|e| {
         FetchError::DecodeError(anyhow::anyhow!(e).context("error decoding data URL"))
     })?;
 

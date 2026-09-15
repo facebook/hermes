@@ -1058,6 +1058,16 @@ function transformNode(node: ESNodeOrBabelNode): ESNodeOrBabelNode | null {
       delete node.raw;
       return node;
     }
+    case 'TupleTypeAnnotation': {
+      // Babel's TupleTypeAnnotation reads `types`, but hermes-estree uses
+      // `elementTypes`.
+      // $FlowExpectedError[prop-missing]
+      // $FlowExpectedError[cannot-write]
+      node.types = node.elementTypes;
+      // $FlowExpectedError[cannot-write]
+      delete node.elementTypes;
+      return node;
+    }
     case 'JSXText': {
       // $FlowExpectedError[prop-missing]
       node.extra = {

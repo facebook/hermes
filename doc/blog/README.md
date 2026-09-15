@@ -4,6 +4,10 @@ Technical articles and deep dives into Hermes internals.
 
 ## Posts
 
+### 2026
+
+- **Jun 5** - [What's New in the Next Stable Release 260318099.0.0](2026-06-05-new-hermes-stable-release.md) - New JS features, faster JSON/Map, Unicode 17, and bug fixes.
+
 ### 2025
 
 - **Dec 12** - [New Way to Contribute to Hermes](2025-12-12-new-way-to-contribute.md) - JSI-based extensions make contributing easier and safer.

@@ -16,7 +16,7 @@ let x = c_null;
 // CHECK:%untyped_function.1 = untyped_function()
 
 // CHECK:SemContext
-// CHECK-NEXT:Func strict
+// CHECK-NEXT:Func strict mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:        Decl %d.2 'c_null' Const : c_ptr

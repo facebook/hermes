@@ -69,7 +69,18 @@ async function publishNpm(
   let tagFlag = '';
 
   if (buildType === 'dry-run') {
-    tagFlag = ` --dry-run`;
+    // `--tag latest-v1` mirrors the real release command. It is also required
+    // here because the dry-run version below is a prerelease (contains a `-`),
+    // and npm refuses to publish a prerelease without an explicit `--tag`,
+    // even under `--dry-run`.
+    tagFlag = ` --dry-run --tag latest-v1`;
+    // For a dry run, publish a unique per-commit version
+    // (`${mainVersion}-${shortCommit}`) so the `npm publish --dry-run`
+    // validation does not collide with an already-published version (npm
+    // performs this check even with `--dry-run`). For a real release we keep
+    // the version declared in package.json untouched.
+    const version = await getVersion(buildType);
+    await updatePackageJsonVersion(version);
   } else if (buildType === 'release') {
     tagFlag = ` --tag latest-v1`;
   }

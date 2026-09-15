@@ -38,26 +38,26 @@ import {ClassStaticBlockScope} from './scope/ClassStaticBlockScope';
 import {Variable} from './variable';
 import {ScopeType} from './scope/ScopeType';
 
-type ScopeManagerOptions = $ReadOnly<{
+type ScopeManagerOptions = Readonly<{
   globalReturn?: boolean,
   sourceType?: 'module' | 'script',
 }>;
 
 class ScopeManager {
   currentScope: Scope | null = null;
-  +declaredVariables: WeakMap<ESNode, Array<Variable>> = new WeakMap();
+  readonly declaredVariables: WeakMap<ESNode, Array<Variable>> = new WeakMap();
   /**
    * The root scope
    * @public
    */
   globalScope: GlobalScope;
-  +nodeToScope: WeakMap<ESNode, Array<Scope>> = new WeakMap();
-  +_options: ScopeManagerOptions;
+  readonly nodeToScope: WeakMap<ESNode, Array<Scope>> = new WeakMap();
+  readonly _options: ScopeManagerOptions;
   /**
    * All scopes
    * @public
    */
-  +scopes: Array<Scope> = [];
+  readonly scopes: Array<Scope> = [];
 
   // $FlowExpectedError[unsafe-getters-setters]
   get variables(): Array<Variable> {
@@ -153,6 +153,15 @@ class ScopeManager {
     return null;
   }
 
+  addGlobals(names: ReadonlyArray<string>): void {
+    if (this.globalScope == null) {
+      throw new Error(
+        'addGlobals must be called after a global scope has been created.',
+      );
+    }
+    this.globalScope.addVariables(names);
+  }
+
   _assertCurrentScope(): Scope {
     if (this.currentScope == null) {
       throw new Error('currentScope was unexpectedly null.');
@@ -160,7 +169,7 @@ class ScopeManager {
 
     return this.currentScope;
   }
-  _nestScope<T: Scope>(scope: T): T {
+  _nestScope<T extends Scope>(scope: T): T {
     if (scope instanceof GlobalScope) {
       this.globalScope = scope;
     }

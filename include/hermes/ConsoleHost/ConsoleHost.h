@@ -99,7 +99,12 @@ namespace microtask {
 /// Note that exceptions are directly printed to stderr.
 inline void performCheckpoint(vm::Runtime &runtime) {
   runtime.clearKeptObjects();
-  runtime.cleanUpFinalizationCallbacks();
+  if (LLVM_UNLIKELY(
+          runtime.cleanUpFinalizationCallbacks() ==
+          vm::ExecutionStatus::EXCEPTION)) {
+    runtime.printException(
+        llvh::errs(), runtime.makeHandle(runtime.getThrownValue()));
+  }
   if (!runtime.hasMicrotaskQueue())
     return;
 
@@ -167,6 +172,11 @@ struct ExecuteOptions {
 
   /// Emit counters in JIT'ed code.
   bool jitEmitCounters{false};
+
+  /// Largest lazy JIT id assignable to a HiddenClass. Lowered only by tests,
+  /// so that the exhaustion path can be reached without interning 65535
+  /// hidden classes.
+  uint32_t jitHCIdLimit{0xFFFF};
 
   /// If non-null, holds statistics for every garbage collection that occurs.
   const std::vector<::hermes::vm::GCAnalyticsEvent> *gcAnalyticsEvents{nullptr};

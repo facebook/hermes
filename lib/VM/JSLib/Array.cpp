@@ -174,6 +174,13 @@ HermesValue createArrayConstructor(Runtime &runtime) {
   defineMethod(
       runtime,
       arrayPrototype,
+      Predefined::getSymbolID(Predefined::toSorted),
+      nullptr,
+      arrayPrototypeToSorted,
+      1);
+  defineMethod(
+      runtime,
+      arrayPrototype,
       Predefined::getSymbolID(Predefined::with),
       nullptr,
       arrayPrototypeWith,
@@ -1665,11 +1672,9 @@ class StandardSortModel : public SortModel {
     assert(!lv_.bValue->isEmpty());
 
     if (lv_.aValue->isUndefined()) {
-      // Spec defines undefined as greater than everything.
-      return 1;
+      return lv_.bValue->isUndefined() ? 0 : 1;
     }
     if (lv_.bValue->isUndefined()) {
-      // Spec defines undefined as greater than everything.
       return -1;
     }
 
@@ -1694,6 +1699,119 @@ class StandardSortModel : public SortModel {
       return (res < 0) ? -1 : (res > 0 ? 1 : 0);
     } else {
       // Convert both arguments to strings and compare
+      auto aValueRes = toString_RJS(runtime_, lv_.aValue);
+      if (LLVM_UNLIKELY(aValueRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      lv_.aValue = aValueRes->getHermesValue();
+
+      auto bValueRes = toString_RJS(runtime_, lv_.bValue);
+      if (LLVM_UNLIKELY(bValueRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      lv_.bValue = bValueRes->getHermesValue();
+
+      return lv_.aValue->getString()->compare(lv_.bValue->getString());
+    }
+  }
+};
+
+/// A sort model that operates directly on a JSArray's indexed storage.
+/// This is only safe when the caller owns the array and user code has no
+/// reference to it (e.g. the fresh array created by toSorted). Unlike
+/// StandardSortModel, this bypasses the full property descriptor machinery
+/// and reads/writes via storage->at()/storage->set() directly.
+/// The array must not contain any holes (empty values). Its beginIndex must be
+/// 0 and elements count must be equal to length.
+class DirectSortModel : public SortModel {
+ private:
+  Runtime &runtime_;
+  GCScope gcScope_;
+  Handle<Callable> compareFn_;
+  Handle<JSArray> arr_;
+
+  struct : Locals {
+    PinnedValue<> aValue;
+    PinnedValue<> bValue;
+    PinnedValue<> tmpValue;
+  } lv_;
+  LocalsRAII lraii_;
+  GCScope::Marker gcMarker_;
+
+  /// Get the indexed storage, which must be re-fetched after any GC safepoint.
+  JSArray::StorageType *storage() {
+    return arr_->getIndexedStorageUnsafe(runtime_);
+  }
+
+ public:
+  DirectSortModel(
+      Runtime &runtime,
+      Handle<JSArray> arr,
+      Handle<Callable> compareFn)
+      : runtime_(runtime),
+        gcScope_(runtime),
+        compareFn_(compareFn),
+        arr_(arr),
+        lraii_(runtime_, &lv_),
+        gcMarker_(gcScope_.createMarker()) {
+    assert(arr_->getIndexedStorageUnsafe(runtime_) && "Empty array");
+#ifndef NDEBUG
+    NoAllocScope noAlloc{runtime};
+    auto *s = arr->getIndexedStorageUnsafe(runtime);
+    assert(
+        (arr->getBeginIndex() == 0) &&
+        (arr->getElemCount() == JSArray::getLength(*arr, runtime)));
+    for (uint32_t i = 0, e = arr->getEndIndex(); i < e; ++i) {
+      assert(
+          !s->at(i).isEmpty() && "DirectSortModel input must not have holes");
+    }
+#endif
+  }
+
+  ExecutionStatus swap(uint32_t a, uint32_t b) override {
+    NoAllocScope noAlloc{runtime_};
+    auto *s = storage();
+    auto tmp = s->at(a);
+    s->set(a, s->at(b), runtime_.getHeap());
+    s->set(b, tmp, runtime_.getHeap());
+    return ExecutionStatus::RETURNED;
+  }
+
+  CallResult<int> compare(uint32_t a, uint32_t b) override {
+    {
+      NoAllocScope noAlloc{runtime_};
+      auto *s = storage();
+      auto aSmall = s->at(a);
+      auto bSmall = s->at(b);
+      if (aSmall.isUndefined()) {
+        return bSmall.isUndefined() ? 0 : 1;
+      }
+      if (bSmall.isUndefined()) {
+        return -1;
+      }
+      lv_.aValue = aSmall.unboxToHV(runtime_);
+      lv_.bValue = bSmall.unboxToHV(runtime_);
+    }
+
+    GCScopeMarkerRAII gcMarker{gcScope_, gcMarker_};
+    if (compareFn_) {
+      auto callRes = Callable::executeCall2(
+          compareFn_,
+          runtime_,
+          Runtime::getUndefinedValue(),
+          lv_.aValue.get(),
+          lv_.bValue.get());
+      if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      lv_.tmpValue = std::move(*callRes);
+      auto intRes = toNumber_RJS(runtime_, lv_.tmpValue);
+      if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      auto res = intRes->getNumber();
+      return (res < 0) ? -1 : (res > 0 ? 1 : 0);
+    } else {
       auto aValueRes = toString_RJS(runtime_, lv_.aValue);
       if (LLVM_UNLIKELY(aValueRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
@@ -4656,6 +4774,114 @@ CallResult<HermesValue> arrayPrototypeToReversed(void *, Runtime &runtime) {
     ++k;
   }
 
+  return lv.A.getHermesValue();
+}
+
+/// ES2025 23.1.3.34
+CallResult<HermesValue> arrayPrototypeToSorted(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+
+  // 1. If comparator is not undefined and IsCallable(comparator) is false,
+  // throw a TypeError exception.
+  auto compareFn = Handle<Callable>::dyn_vmcast(args.getArgHandle(0));
+  if (!args.getArg(0).isUndefined() && !compareFn) {
+    return runtime.raiseTypeError("Array sort argument must be callable");
+  }
+
+  struct : Locals {
+    PinnedValue<JSObject> O;
+    PinnedValue<JSArray> A;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  // 2. Let O be ? ToObject(this value).
+  auto oRes = toObject(runtime, args.getThisHandle());
+  if (LLVM_UNLIKELY(oRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  lv.O.castAndSetHermesValue<JSObject>(*oRes);
+
+  // 3. Let len be ? LengthOfArrayLike(O).
+  auto jsArr = vmisa<JSArray>(*lv.O) ? Handle<JSArray>::vmcast(&lv.O)
+                                     : Runtime::makeNullHandle<JSArray>();
+  auto lenRes = lengthOfArrayLike(runtime, lv.O, jsArr);
+  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto len = lenRes.getValue();
+  // We use a JSArray to store the sorted results, which is limited to
+  // uint32_t elements.
+  if (LLVM_UNLIKELY(len > UINT32_MAX)) {
+    return runtime.raiseRangeError("invalid array length");
+  }
+  uint32_t len32 = (uint32_t)len;
+
+  // 4. Let A be ? ArrayCreate(len).
+  // Allocate with known capacity to avoid reallocation.
+  auto ARes = JSArray::create(runtime, len32, 0);
+  if (LLVM_UNLIKELY(ARes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  lv.A = std::move(*ARes);
+  if (len == 0) {
+    return lv.A.getHermesValue();
+  }
+
+  // 6. Let sortedList be ? SortIndexedProperties(O, len, SortCompare,
+  // READ-THROUGH-HOLES).
+  // Copy all elements from O into A, treating holes as undefined.
+  if (jsArr && arrayFastPathCheck(runtime, jsArr.get(), nullptr, len32)) {
+    // A is freshly created with the default class, so length is writable.
+    // May allocate, so encode before NoAllocScope.
+    auto newLen = SmallHermesValue::encodeNumberValue(len32, runtime);
+    NoAllocScope noAllocScope{runtime};
+    auto *srcStorage = jsArr->getIndexedStorageNullable(runtime);
+    auto *destStorage = lv.A->getIndexedStorageNullable(runtime);
+    assert(srcStorage && destStorage && "storage should not be null");
+    // Bulk copy the source storage into the destination.
+    destStorage->appendWithinCapacity(runtime, srcStorage);
+    lv.A->setElemCountUnsafe(len32);
+    JSArray::putLengthUnsafe(lv.A.get(), runtime, newLen);
+    // Replace holes (empty values) with undefined.
+    for (uint32_t k = 0; k < len32; ++k) {
+      if (LLVM_UNLIKELY(destStorage->at(k).isEmpty())) {
+        destStorage->set(
+            k, SmallHermesValue::encodeUndefinedValue(), runtime.getHeap());
+      }
+    }
+  } else {
+    if (LLVM_UNLIKELY(
+            JSArray::setStorageEndIndex(lv.A, runtime, len32) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    // A is freshly created with the default class, so length is writable.
+    auto newLen = SmallHermesValue::encodeNumberValue(len32, runtime);
+    JSArray::putLengthUnsafe(lv.A.get(), runtime, newLen);
+    GCScope gcScope{runtime};
+    auto marker = gcScope.createMarker();
+    for (uint32_t k = 0; k < len32; ++k) {
+      gcScope.flushToMarker(marker);
+      CallResult<PseudoHandle<>> propRes = getIndexed_RJS(runtime, lv.O, k);
+      if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      auto shv = SmallHermesValue::encodeHermesValue(
+          propRes->getHermesValue(), runtime);
+      JSArray::unsafeSetExistingElementAt(lv.A.get(), runtime, k, shv);
+    }
+  }
+
+  // Sort A in place. Use DirectSortModel since A is a fresh array that
+  // user code has no reference to — direct storage access is safe.
+  // 5. Let SortCompare be an Abstract Closure calling
+  // CompareArrayElements(x, y, comparator).
+  // 7-8. Copy sortedList into A (already done above, sort in place).
+  DirectSortModel sm(runtime, lv.A, compareFn);
+  if (LLVM_UNLIKELY(quickSort(&sm, 0u, len32) == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+
+  // 9. Return A.
   return lv.A.getHermesValue();
 }
 

@@ -266,7 +266,7 @@ class Regex {
   void pushNamedBackRef(GroupName &&identifier, bool icase);
   void pushAlternation(std::vector<NodeList> alternatives);
   void pushMarkedSubexpression(NodeList, uint32_t mexp);
-  void pushWordBoundary(bool);
+  void pushWordBoundary(bool invert, bool icase);
   void pushLookaround(NodeList, uint16_t, uint16_t, bool, bool);
 };
 
@@ -441,8 +441,8 @@ void Regex<Traits>::pushMatchAny(bool dotAll) {
 }
 
 template <class Traits>
-void Regex<Traits>::pushWordBoundary(bool invert) {
-  appendNode<WordBoundaryNode>(invert);
+void Regex<Traits>::pushWordBoundary(bool invert, bool icase) {
+  appendNode<WordBoundaryNode>(invert, icase);
 }
 
 template <class Traits>

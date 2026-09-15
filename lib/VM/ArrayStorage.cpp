@@ -295,12 +295,14 @@ template <typename HVType>
 ExecutionStatus ArrayStorageBase<HVType>::appendSlowPath(
     MutableHandle<ArrayStorageBase> selfHandle,
     Runtime &runtime,
-    Handle<ArrayStorageBase> other) {
-  auto newSize = selfHandle->size() + other->size();
+    Handle<ArrayStorageBase> other,
+    size_type fromIndex) {
+  assert(fromIndex <= other->size() && "fromIndex out of range");
+  auto newSize = selfHandle->size() + (other->size() - fromIndex);
   if (ensureCapacity(selfHandle, runtime, newSize) ==
       ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
-  selfHandle->appendWithinCapacity(runtime, *other);
+  selfHandle->appendWithinCapacity(runtime, *other, fromIndex);
   return ExecutionStatus::RETURNED;
 }
 

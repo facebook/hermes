@@ -73,7 +73,7 @@ export function is${comment}Comment(node /*: ESNode | Token */) /*: implies node
 }
 
 // TODO(bradzacher) generate this list from the types maybe?
-const TOKENS: $ReadOnlyArray<[string, string, string]> = [
+const TOKENS: ReadonlyArray<[string, string, string]> = [
   // Both BinaryOperator and UnaryOperator
   ['Minus', '-', 'Punctuator'],
   ['Plus', '+', 'Punctuator'],

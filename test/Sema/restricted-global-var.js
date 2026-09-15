@@ -15,7 +15,7 @@ var Infinity;
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:SemContext
-// CHECK-NEXT:Func loose
+// CHECK-NEXT:Func loose mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'undefined' GlobalProperty
 // CHECK-NEXT:        Decl %d.2 'NaN' GlobalProperty

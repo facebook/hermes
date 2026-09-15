@@ -357,7 +357,7 @@ impl Node {
             let serialized_field_name = field.rename.as_ref().unwrap_or(field_name_str);
             let serializer = if field.flatten {
                 quote! {
-                    Serialize::serialize(&self.#field_name, serde::__private::ser::FlatMapSerializer(&mut state))?;
+                    Serialize::serialize(&self.#field_name, crate::ser::FlatMapSerializer(&mut state))?;
                 }
             } else {
                 quote! {
@@ -602,7 +602,7 @@ impl Field {
         let name = format_ident!("{}", name);
         parse_type(&self.type_).unwrap();
         let type_name: Type = syn::parse_str(&self.type_)
-            .unwrap_or_else(|_| panic!("Expected a type name, got `{}`", &self.type_));
+            .unwrap_or_else(|_| panic!("Expected a type name, got `{}`", self.type_));
 
         let type_ = quote!(#type_name);
         let mut field = quote!(pub #name: #type_);
@@ -637,7 +637,7 @@ impl Field {
         let name = format_ident!("{}", name);
         parse_type(&self.type_).unwrap();
         let type_name: Type = syn::parse_str(&self.type_)
-            .unwrap_or_else(|_| panic!("Expected a type name, got `{}`", &self.type_));
+            .unwrap_or_else(|_| panic!("Expected a type name, got `{}`", self.type_));
         let type_ = quote!(#type_name);
         let mut field = quote!(pub #name: #type_);
         if self.optional {
@@ -733,7 +733,7 @@ impl Enum {
                     tag_matches.push(quote! {
                         #enum_tag::#inner_variant => {
                             let node: Box<#inner_variant> = <Box<#inner_variant> as Deserialize>::deserialize(
-                                serde::__private::de::ContentDeserializer::<D::Error>::new(tagged.1),
+                                crate::de::ContentDeserializer::<D::Error>::new(tagged.1),
                             )?;
                             Ok(#name::#outer_variant(#outer_variant::#inner_variant(node)))
                         }
@@ -752,7 +752,7 @@ impl Enum {
                 tag_matches.push(quote! {
                     #enum_tag::#variant_name => {
                         let node: Box<#variant_name> = <Box<#variant_name> as Deserialize>::deserialize(
-                            serde::__private::de::ContentDeserializer::<D::Error>::new(tagged.1),
+                            crate::de::ContentDeserializer::<D::Error>::new(tagged.1),
                         )?;
                         Ok(#name::#variant_name(node))
                     }
@@ -787,7 +787,7 @@ impl Enum {
                 where D: serde::Deserializer<'de> {
                     let tagged = serde::Deserializer::deserialize_any(
                         deserializer,
-                        serde::__private::de::TaggedContentVisitor::<#enum_tag>::new("type", #name_str)
+                        crate::de::TaggedContentVisitor::<#enum_tag>::new("type", #name_str)
                     )?;
                     match tagged.0 {
                         #(#tag_matches),*
@@ -941,7 +941,7 @@ impl Operator {
             .iter()
             .map(|(name, operator)| {
                 let name = format_ident!("{}", name);
-                let comment = format!(" {}", &operator);
+                let comment = format!(" {}", operator);
                 quote! {
                     #[doc = #comment]
                     #[serde(rename = #operator)]

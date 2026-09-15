@@ -17,15 +17,15 @@ import type {PartialAnalyzeOptions, ScopeManager} from './scope-manager';
 import * as HermesParser from 'hermes-parser';
 import {analyze} from './scope-manager';
 
-type ParseForESLintOptions = $ReadOnly<{
+type ParseForESLintOptions = Readonly<{
   ...PartialAnalyzeOptions,
 }>;
 
 function parse(code: string, options?: ParseForESLintOptions): Program {
   const parserOptions = {
     allowReturnOutsideFunction: true,
-    flow: ('all': 'all'),
-    sourceType: options?.sourceType ?? ('module': 'module'),
+    flow: 'all' as 'all',
+    sourceType: options?.sourceType ?? ('module' as 'module'),
     tokens: true,
     enableExperimentalComponentSyntax:
       options?.enableExperimentalComponentSyntax ?? true,
@@ -52,6 +52,12 @@ function parse(code: string, options?: ParseForESLintOptions): Program {
 }
 
 const VisitorKeys = HermesParser.FlowVisitorKeys;
+
+const meta: Readonly<{name: string, version: string}> = {
+  name: 'hermes-eslint',
+  // $FlowExpectedError[untyped-import]
+  version: require('../package.json').version as string,
+};
 
 type ParseForESLintReturn = {
   ast: Program,
@@ -85,4 +91,4 @@ function parseForESLint(
 export type * from './scope-manager';
 export type {ParseForESLintOptions, ParseForESLintReturn};
 export {ScopeType, DefinitionType} from './scope-manager';
-export {parse, parseForESLint, VisitorKeys};
+export {parse, parseForESLint, VisitorKeys, meta};

@@ -16,24 +16,24 @@ import {GetHermesESTreeJSON} from '../scripts/utils/scriptUtils';
 import {parseForESLint} from 'hermes-eslint';
 import {traverse} from 'hermes-transform';
 
-type PropertyEntry = $ReadOnly<{
+type PropertyEntry = Readonly<{
   name: string,
   optional: boolean,
   value: TypeAnnotationType,
 }>;
-type InterfaceEntry = $ReadOnly<{
-  interface: $ReadOnly<{
+type InterfaceEntry = Readonly<{
+  interface: Readonly<{
     name: string,
-    extends: $ReadOnlyArray<string>,
+    extends: ReadonlyArray<string>,
   }>,
   properties: Map<string, PropertyEntry>,
 }>;
 
-function getInterfaces(): $ReadOnlyMap<
+function getInterfaces(): ReadonlyMap<
   string,
-  $ReadOnly<{
+  Readonly<{
     ...InterfaceEntry,
-    properties: $ReadOnlyMap<string, PropertyEntry>,
+    properties: ReadonlyMap<string, PropertyEntry>,
   }>,
 > {
   const code = fs.readFileSync(

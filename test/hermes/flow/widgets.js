@@ -187,7 +187,7 @@ function mapEntitiesToComponents(
       map.set(key, ([]: Component[]));
     }
 
-    const components: Component[] = map.get(key);
+    const components: Component[] | void = map.get(key);
     if (components !== undefined) {
       components.push(...value);
     } else {
@@ -422,7 +422,7 @@ class TestApp extends ComposedWidget {
   }
 
   getWidgets(sizes: number[], models: string[]): Widget[] {
-    if (sizes.length != models.length) {
+    if (sizes.length !== models.length) {
       throw new Error('sizes and models must have same length');
     }
     return models.map((modelPath: string, index: number): Widget => {

@@ -27,13 +27,14 @@ function flowOptional(): void {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%function.2 = function(x: number): void
-// CHECK-NEXT:%function.3 = function(x: number): number
+// CHECK-NEXT:%function.2 = function(x?: number): void
+// CHECK-NEXT:%function.3 = function(x?: number): number
 // CHECK-NEXT:%function.4 = function(): void
-// CHECK-NEXT:%function.5 = function(a: number, b: number): void
+// CHECK-NEXT:%function.5 = function(a: number): void
+// CHECK-NEXT:%function.6 = function(a: number, b?: number): void
 
 // CHECK:SemContext
-// CHECK-NEXT:Func strict
+// CHECK-NEXT:Func strict mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:        Decl %d.2 'basic' Var : %function.2
@@ -45,27 +46,27 @@ function flowOptional(): void {
 // CHECK-NEXT:        hoistedFunction useParam
 // CHECK-NEXT:        hoistedFunction flowFewer
 // CHECK-NEXT:        hoistedFunction flowOptional
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.7 'x' Parameter : number
 // CHECK-NEXT:            Decl %d.8 'arguments' Var Arguments
 // CHECK-NEXT:            Scope %s.3
 // CHECK-NEXT:            Scope %s.4
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict noImplicitReturn
 // CHECK-NEXT:        Scope %s.5
 // CHECK-NEXT:            Decl %d.9 'x' Parameter : number
 // CHECK-NEXT:            Decl %d.10 'arguments' Var Arguments
 // CHECK-NEXT:            Scope %s.6
 // CHECK-NEXT:            Scope %s.7
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.8
-// CHECK-NEXT:            Decl %d.11 'f' Let : %function.2
+// CHECK-NEXT:            Decl %d.11 'f' Let : %function.5
 // CHECK-NEXT:            Decl %d.12 'arguments' Var Arguments
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.9
-// CHECK-NEXT:            Decl %d.13 'f' Let : %function.5
+// CHECK-NEXT:            Decl %d.13 'f' Let : %function.6
 // CHECK-NEXT:            Decl %d.14 'arguments' Var Arguments
-// CHECK-NEXT:        Func strict
+// CHECK-NEXT:        Func strict mayReachImplicitReturn
 // CHECK-NEXT:            Scope %s.10
 // CHECK-NEXT:                Decl %d.15 'a' Parameter : number
 // CHECK-NEXT:                Decl %d.16 'b' Parameter : number
@@ -102,7 +103,7 @@ function flowOptional(): void {
 // CHECK-NEXT:            BlockStatement
 // CHECK-NEXT:                VariableDeclaration
 // CHECK-NEXT:                    VariableDeclarator
-// CHECK-NEXT:                        FunctionExpression : %function.5
+// CHECK-NEXT:                        FunctionExpression : %function.6
 // CHECK-NEXT:                            Id 'a' [D:E:%d.15 'a']
 // CHECK-NEXT:                            AssignmentPattern
 // CHECK-NEXT:                                Id 'b' [D:E:%d.16 'b']

@@ -11,7 +11,7 @@
 import type {
   DeclareHook as DeclareHookType,
   ESNode,
-  FunctionTypeAnnotation as FunctionTypeAnnotationType,
+  HookTypeAnnotation as HookTypeAnnotationType,
 } from 'hermes-estree';
 import type {DetachedNode, MaybeDetachedNode} from '../../detachedNode';
 
@@ -25,12 +25,12 @@ import {
 // which is super awkward to work with and type - so we flatten the input
 // and put it in the right spot after
 export type DeclareHookProps = {
-  +name: string,
-  +functionType: MaybeDetachedNode<FunctionTypeAnnotationType>,
+  readonly name: string,
+  readonly functionType: MaybeDetachedNode<HookTypeAnnotationType>,
 };
 export function DeclareHook(props: {
-  ...$ReadOnly<DeclareHookProps>,
-  +parent?: ESNode,
+  ...Readonly<DeclareHookProps>,
+  readonly parent?: ESNode,
 }): DetachedNode<DeclareHookType> {
   const node = detachedProps<DeclareHookType>(props.parent, {
     type: 'DeclareHook',

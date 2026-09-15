@@ -12,5 +12,5 @@
 // with GCC).
 // UNSUPPORTED: linux && asan
 
-// CHECK: {{.*}}: error: ft: too many nested expressions/statements/declarations
+// CHECK: {{.*}}: error: too many nested expressions/statements/declarations
 // CHECK-TS: {{.*}}: error: ts2flow: too many nested expressions/statements/declarations

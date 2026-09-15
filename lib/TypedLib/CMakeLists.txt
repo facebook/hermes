@@ -42,7 +42,15 @@ add_custom_command(
   VERBATIM
 )
 
-add_custom_target(TypedLibInclude ALL DEPENDS TypedLib.inc)
+add_custom_command(
+  OUTPUT TypedLanguage.inc
+  COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/lib/InternalJavaScript/xxd.py ${PROJECT_SOURCE_DIR}/doc/TypedLanguage.md > ${CMAKE_CURRENT_BINARY_DIR}/TypedLanguage.inc
+  DEPENDS ${PROJECT_SOURCE_DIR}/lib/InternalJavaScript/xxd.py ${PROJECT_SOURCE_DIR}/doc/TypedLanguage.md
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  VERBATIM
+)
+
+add_custom_target(TypedLibInclude ALL DEPENDS TypedLib.inc TypedLanguage.inc)
 
 add_hermes_library(hermesTypedLib TypedLib.cpp)
 target_include_directories(hermesTypedLib_obj PRIVATE ${CMAKE_CURRENT_BINARY_DIR})

@@ -143,6 +143,12 @@ class DebuggerDomainAgent : public DomainAgent {
   /// even in the same CDP session. For comparison, V8 allows it from different
   /// sessions but disallows it within a single session.
   void setBreakpointByUrl(const m::debugger::SetBreakpointByUrlRequest &req);
+  /// @cdp Debugger.getPossibleBreakpoints returns the valid breakpoint
+  /// locations within a source range. The `start` and (if provided) `end`
+  /// locations must refer to the same script. `restrictToFunction` is not yet
+  /// supported and is ignored.
+  void getPossibleBreakpoints(
+      const m::debugger::GetPossibleBreakpointsRequest &req);
   /// Handles Debugger.removeBreakpoint
   void removeBreakpoint(const m::debugger::RemoveBreakpointRequest &req);
   /// Handles Debugger.setBreakpointsActive

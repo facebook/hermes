@@ -475,7 +475,8 @@ NormalFunction *ESTreeIRGen::genBasicFunction(
           newFunctionContext.capturedState.thisVal = Builder.createVariable(
               curFunction()->curScope()->getVariableScope(),
               Builder.createIdentifier("?CHECKED_this"),
-              Type::unionTy(Type::createObject(), Type::createEmpty()),
+              getTypeContext().unionTy(
+                  Type::createObject(), Type::createEmpty()),
               true);
           Builder.createStoreFrameInst(
               curFunction()->curScope(),
@@ -914,7 +915,8 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
           var = Builder.createVariable(
               curFunction()->curScope()->getVariableScope(),
               decl->name,
-              tdz ? Type::unionTy(Type::createAnyType(), Type::createEmpty())
+              tdz ? getTypeContext().unionTy(
+                        Type::createAnyType(), Type::createEmpty())
                   : Type::createAnyType(),
               false);
           var->setObeysTDZ(tdz);
@@ -954,7 +956,8 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
               curFunction()->curScope()->getVariableScope(),
               decl->name,
               (isClsExpr && tdz)
-                  ? Type::unionTy(Type::createAnyType(), Type::createEmpty())
+                  ? getTypeContext().unionTy(
+                        Type::createAnyType(), Type::createEmpty())
                   : Type::createAnyType(),
               // FunctionExprName isn't supposed to show up in the list when
               // debugging.
@@ -1106,7 +1109,8 @@ void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
     Variable *var = Builder.createVariable(
         curFunction()->curScope()->getVariableScope(),
         decl->name,
-        tdz ? Type::unionTy(Type::createAnyType(), Type::createEmpty())
+        tdz ? getTypeContext().unionTy(
+                  Type::createAnyType(), Type::createEmpty())
             : Type::createAnyType(),
         /* hidden */ false);
     setDeclData(decl, var);
@@ -1137,10 +1141,18 @@ void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
     ++paramIndex;
 
     if (auto *rest = llvh::dyn_cast<ESTree::RestElementNode>(param)) {
+      // For typed rest params declared as Array<T>, use the FastArray-
+      // returning variant so subsequent FastArray ops work on the result.
+      BuiltinMethod::Enum builtin = BuiltinMethod::HermesBuiltin_copyRestArgs;
+      if (auto *ftype = llvh::dyn_cast<flow::TypedFunctionType>(
+              flowContext_.getNodeTypeOrAny(funcNode)->info);
+          ftype && paramIndex < ftype->getParams().size() &&
+          flowContext_.isArrayClassType(ftype->getParams()[paramIndex].type)) {
+        builtin = BuiltinMethod::HermesBuiltin_copyRestArgsFast;
+      }
       createLRef(rest->_argument, true)
-          .emitStore(genBuiltinCall(
-              BuiltinMethod::HermesBuiltin_copyRestArgs,
-              Builder.getLiteralNumber(paramIndex)));
+          .emitStore(
+              genBuiltinCall(builtin, Builder.getLiteralNumber(paramIndex)));
       break;
     }
 
@@ -1168,7 +1180,7 @@ void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
       Type irType = flowTypeToIRType(ftype->getParams()[paramIndex].type);
       // Optional parameters can receive undefined when omitted.
       if (ftype->getParams()[paramIndex].optional)
-        irType = Type::unionTy(irType, Type::createUndefined());
+        irType = getTypeContext().unionTy(irType, Type::createUndefined());
       jsParam->setType(irType);
     }
     Instruction *formalParam = Builder.createLoadParamInst(jsParam);

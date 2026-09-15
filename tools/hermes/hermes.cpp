@@ -9,6 +9,7 @@
 #include "hermes/ConsoleHost/ConsoleHost.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/PageAccessTracker.h"
+#include "hermes/TypedLib/TypedLib.h"
 #include "hermes/VM/RuntimeFlags.h"
 
 #include "llvh/ADT/SmallString.h"
@@ -136,6 +137,7 @@ static int executeHBCBytecodeFromCL(
           .withEnableHermesInternalTestMethods(
               flags.EnableHermesInternalTestMethods)
           .withTest262(cl::compilerRuntimeFlags.Test262)
+          .withES6BlockScoping(cl::compilerRuntimeFlags.ES6BlockScoping)
           .build();
 
   options.basicBlockProfiling = cl::BasicBlockProfiling;
@@ -147,6 +149,7 @@ static int executeHBCBytecodeFromCL(
   options.jitCrashOnError = flags.JITCrashOnError;
   options.jitEmitAsserts = flags.JITEmitAsserts;
   options.jitEmitCounters = flags.JITEmitCounters;
+  options.jitHCIdLimit = flags.JITHCIdLimit;
   options.stopAfterInit = flags.StopAfterInit;
   options.forceGCBeforeStats = flags.GCBeforeStats;
   options.sampleProfiling = flags.SampleProfiling;
@@ -229,6 +232,7 @@ static vm::RuntimeConfig getReplRuntimeConfig() {
       .withEnableHermesInternal(flags.EnableHermesInternal)
       .withEnableHermesInternalTestMethods(
           flags.EnableHermesInternalTestMethods)
+      .withES6BlockScoping(cl::compilerRuntimeFlags.ES6BlockScoping)
       .build();
 }
 
@@ -277,6 +281,11 @@ int main(int argc, char **argv) {
     driver::printHermesCompilerVMVersion(s, &vmFeatures);
   });
   llvh::cl::ParseCommandLineOptions(clArgc, argv, "Hermes driver\n");
+
+  if (cl::HelpTyped) {
+    llvh::outs() << getTypedLanguageDoc();
+    return 0;
+  }
 
   if (cl::InputFilenames.size() == 0) {
     return repl(getReplRuntimeConfig());

@@ -28,27 +28,27 @@ class A {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:SemContext
-// CHECK-NEXT:Func loose
+// CHECK-NEXT:Func loose mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'A' Class
 // CHECK-NEXT:        Decl %d.2 'sink' UndeclaredGlobalProperty
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.3 'A' ClassExprName
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.3
-// CHECK-NEXT:    StaticBlock strict
+// CHECK-NEXT:    StaticBlock strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.4
 // CHECK-NEXT:            Decl %d.4 'x' Var
-// CHECK-NEXT:    StaticBlock strict
+// CHECK-NEXT:    StaticBlock strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.5
 // CHECK-NEXT:            Decl %d.5 'x' Var
-// CHECK-NEXT:    StaticBlock strict
+// CHECK-NEXT:    StaticBlock strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.6
 // CHECK-NEXT:            Decl %d.6 'y' Var
 // CHECK-NEXT:            Decl %d.7 'z' Let
 // CHECK-NEXT:            Scope %s.7
 // CHECK-NEXT:            Scope %s.8
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.9
 
 // CHECK:Program Scope %s.1

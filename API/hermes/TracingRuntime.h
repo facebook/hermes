@@ -16,6 +16,10 @@ namespace facebook {
 namespace hermes {
 namespace tracing {
 
+/// Prepare traceable builtins by installing Math wrappers into both properties
+/// and static builtin slots.
+void installTraceableBuiltinWrappers(jsi::Runtime &runtime);
+
 class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime>
 #ifdef JSI_UNSTABLE
     ,

@@ -18,13 +18,13 @@ function foo(x: any) {
 // CHECK-NEXT:%function.2 = function(x: any): any
 
 // CHECK:SemContext
-// CHECK-NEXT:Func strict
+// CHECK-NEXT:Func strict mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:        Decl %d.2 'foo' Var : %function.2
 // CHECK-NEXT:        Decl %d.3 'arguments' Var Arguments
 // CHECK-NEXT:        hoistedFunction foo
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.4 'x' Parameter : any
 // CHECK-NEXT:            Decl %d.5 'y' Let : number

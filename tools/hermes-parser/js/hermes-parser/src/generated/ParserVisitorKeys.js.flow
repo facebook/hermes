@@ -10,8 +10,8 @@
 
 declare export var NODE_CHILD: 'Node';
 declare export var NODE_LIST_CHILD: 'NodeList';
-declare export var HERMES_AST_VISITOR_KEYS: $ReadOnly<{
-  [string]: $ReadOnly<{
+declare export var HERMES_AST_VISITOR_KEYS: Readonly<{
+  [string]: Readonly<{
     [string]: 'Node' | 'NodeList',
   }>,
 }>;

@@ -38,7 +38,6 @@ import type {ScopeManager} from '../ScopeManager';
 
 import {isStringLiteral} from 'hermes-estree';
 import {ScopeType} from './ScopeType';
-import {DefinitionType} from '../definition';
 import {createIdGenerator} from '../ID';
 import {
   Reference,
@@ -142,30 +141,30 @@ type VariableScope =
   | DeclareNamespaceScope;
 
 /* abstract */ class ScopeBase<
-  +TType: ScopeTypeType,
-  +TBlock: ESNode,
-  +TUpper: Scope | null,
+  out TType extends ScopeTypeType,
+  out TBlock extends ESNode,
+  out TUpper extends Scope | null,
 > {
   /**
    * A unique ID for this instance - primarily used to help debugging and testing
    */
-  +$id: number = generator();
+  readonly $id: number = generator();
 
   /**
    * The AST node which created this scope.
    * @public
    */
-  +block: TBlock;
+  readonly block: TBlock;
   /**
    * The array of child scopes. This does not include grandchild scopes.
    * @public
    */
-  +childScopes: Array<Scope> = [];
+  readonly childScopes: Array<Scope> = [];
   /**
    * A map of the variables for each node in this scope.
    * This is map is a pointer to the one in the parent ScopeManager instance
    */
-  +__declaredVariables: WeakMap<ESNode, Array<Variable>>;
+  readonly __declaredVariables: WeakMap<ESNode, Array<Variable>>;
   /**
    * Generally, through the lexical scoping of JS you can always know which variable an identifier in the source code
    * refers to. There are a few exceptions to this rule. With `global` and `with` scopes you can only decide at runtime
@@ -177,7 +176,7 @@ type VariableScope =
    * Whether this scope is created by a FunctionExpression.
    * @public
    */
-  +functionExpressionScope: boolean = false;
+  readonly functionExpressionScope: boolean = false;
   /**
    * Whether 'use strict' is in effect in this scope.
    * @public
@@ -195,27 +194,27 @@ type VariableScope =
    * In a 'function' scope this does not include the occurrences of the formal parameter in the parameter list.
    * @public
    */
-  +references: Array<Reference> = [];
+  readonly references: Array<Reference> = [];
   /**
    * The map from variable names to variable objects.
    * @public
    */
-  +set: Map<string, Variable> = new Map<string, Variable>();
+  readonly set: Map<string, Variable> = new Map<string, Variable>();
   /**
    * The {@link Reference}s that are not resolved with this scope.
    * @public
    */
-  +through: Array<Reference> = [];
+  through: Array<Reference> = [];
   /**
    * The type of scope
    * @public
    */
-  +type: TType;
+  readonly type: TType;
   /**
    * Reference to the parent {@link Scope}.
    * @public
    */
-  +upper: TUpper;
+  readonly upper: TUpper;
   /**
    * The scoped {@link Variable}s of this scope.
    * In the case of a 'function' scope this includes the automatic argument `arguments` as its first element, as well
@@ -223,18 +222,18 @@ type VariableScope =
    * This does not include variables which are defined in child scopes.
    * @public
    */
-  +variables: Array<Variable> = [];
+  readonly variables: Array<Variable> = [];
   /**
    * For scopes that can contain variable declarations, this is a self-reference.
    * For other scope types this is the *variableScope* value of the parent scope.
    * @public
    */
-  +variableScope: VariableScope;
+  readonly variableScope: VariableScope;
   /**
    * The names that are indirectly referenced within this scope.
    * @private
    */
-  +__indirectReferences: Set<string> = new Set();
+  readonly __indirectReferences: Set<string> = new Set();
 
   constructor(
     scopeManager: ScopeManager,
@@ -284,45 +283,7 @@ type VariableScope =
   }
 
   shouldStaticallyClose(): boolean {
-    return !this.__dynamic;
-  }
-
-  _shouldStaticallyCloseForGlobal(
-    ref: Reference,
-    scopeManager: ScopeManager,
-  ): boolean {
-    // On global scope, let/const/class declarations should be resolved statically.
-    const name = ref.identifier.name;
-
-    const variable = this.set.get(name);
-    if (!variable) {
-      return false;
-    }
-    // variable exists on the scope
-
-    // in module mode, we can statically resolve everything, regardless of its decl type
-    if (scopeManager.isModule()) {
-      return true;
-    }
-
-    // in script mode, only certain cases should be statically resolved
-    // Example:
-    // a `var` decl is ignored by the runtime if it clashes with a global name
-    // this means that we should not resolve the reference to the variable
-    const defs = variable.defs;
-    return (
-      defs.length > 0 &&
-      defs.every(def => {
-        if (
-          def.type === DefinitionType.Variable &&
-          def.parent?.type === 'VariableDeclaration' &&
-          def.parent.kind === 'var'
-        ) {
-          return false;
-        }
-        return true;
-      })
-    );
+    return !this.__dynamic || this.type === ScopeType.Global;
   }
 
   _staticCloseRef = (ref: Reference, _?: ScopeManager): void => {
@@ -369,26 +330,10 @@ type VariableScope =
     }
   };
 
-  _globalCloseRef = (ref: Reference, scopeManager: ScopeManager): void => {
-    // let/const/class declarations should be resolved statically.
-    // others should be resolved dynamically.
-    if (this._shouldStaticallyCloseForGlobal(ref, scopeManager)) {
-      this._staticCloseRef(ref);
-    } else {
-      this._dynamicCloseRef(ref);
-    }
-  };
-
-  close(scopeManager: ScopeManager): Scope | null {
-    let closeRef: (Reference, ScopeManager) => void;
-
-    if (this.shouldStaticallyClose()) {
-      closeRef = this._staticCloseRef;
-    } else if (this.type !== 'global') {
-      closeRef = this._dynamicCloseRef;
-    } else {
-      closeRef = this._globalCloseRef;
-    }
+  close(_scopeManager: ScopeManager): Scope | null {
+    const closeRef = this.shouldStaticallyClose()
+      ? this._staticCloseRef
+      : this._dynamicCloseRef;
 
     // Try Resolving all references in this scope.
     if (this.__referencesLeftToResolve == null) {
@@ -396,7 +341,7 @@ type VariableScope =
     }
     for (let i = 0; i < this.__referencesLeftToResolve.length; ++i) {
       const ref = this.__referencesLeftToResolve[i];
-      closeRef(ref, scopeManager);
+      closeRef(ref);
     }
     this.__referencesLeftToResolve = null;
 

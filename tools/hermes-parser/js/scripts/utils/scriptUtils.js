@@ -20,12 +20,12 @@ import aliasDefs from './aliases';
 // $FlowExpectedError[cannot-resolve-module]
 import prettierConfig from '../../.prettierrc.json';
 
-export type ESTreeJSON = $ReadOnlyArray<
-  $ReadOnly<{
+export type ESTreeJSON = ReadonlyArray<
+  Readonly<{
     name: string,
     base: string,
-    arguments: $ReadOnlyArray<
-      $ReadOnly<{
+    arguments: ReadonlyArray<
+      Readonly<{
         type:
           | 'NodeLabel'
           | 'NodeString'
@@ -48,6 +48,36 @@ export const HermesESTreeJSONFile: string = path.resolve(
 export const GetHermesESTreeJSON: () => ESTreeJSON = () =>
   // $FlowExpectedError[unsupported-syntax]
   require(HermesESTreeJSONFile);
+
+const isFlowTransform = process.env.HERMES_TRANSFORM_TARGET === 'flow';
+
+export const TransformESTreePackage: 'hermes-estree' | 'flow-estree' =
+  isFlowTransform ? 'flow-estree' : 'hermes-estree';
+export const TransformPackage: 'hermes-transform' | 'flow-transform' =
+  isFlowTransform ? 'flow-transform' : 'hermes-transform';
+export const TransformReadonly: 'readonly ' | '+' = isFlowTransform
+  ? '+'
+  : 'readonly ';
+
+export const GetTransformESTreeJSON: () => ESTreeJSON = () => {
+  const nodes = GetHermesESTreeJSON();
+  if (!isFlowTransform) {
+    return nodes;
+  }
+
+  return nodes.map(node =>
+    node.name === 'DeclareVariable'
+      ? {
+          ...node,
+          arguments: [
+            {type: 'NodeList', name: 'declarations', optional: false},
+            {type: 'NodeString', name: 'kind', optional: false},
+            {type: 'NodeBoolean', name: 'implicitDeclare', optional: false},
+          ],
+        }
+      : node,
+  );
+};
 
 type FlowStyle = false | 'loose' | 'strict' | 'strict-local';
 function HEADER(flow: FlowStyle, skipFormat: boolean): string {
@@ -81,7 +111,7 @@ function HEADER(flow: FlowStyle, skipFormat: boolean): string {
 
 // lint directives to let us do some basic validation of generated files
 /* eslint no-undef: 'error', no-unused-vars: ['error', {vars: "local"}], no-redeclare: 'error' */
-/* global $NonMaybeType, Partial, $ReadOnly, $ReadOnlyArray, $FlowFixMe */
+/* global NonNullable, Partial, Readonly, ReadonlyArray, $FlowFixMe */
 
 'use strict';
 
@@ -93,14 +123,14 @@ type Package =
   | 'hermes-estree'
   | 'hermes-parser'
   | 'hermes-transform'
-  | 'flow-api-translator'
+  | 'flow-transform'
   | 'prettier-plugin-hermes-parser'
   | 'babel-plugin-syntax-hermes-parser';
 
-type ArtifactOptions = $ReadOnly<{
+type ArtifactOptions = Readonly<{
   code: string,
   flow?: FlowStyle,
-  // will write to ../<package>/<file>
+  // Writes to ../<package>/<file> unless a transform package override is set.
   package: Package,
   file: string,
   skipFormat?: boolean,
@@ -143,14 +173,18 @@ async function formatAndWriteArtifact({
       });
 
   // make sure the folder exists first
-  const folder = path.resolve(__dirname, '..', '..', pkg, path.dirname(file));
+  const packageRoot =
+    pkg === TransformPackage && process.env.HERMES_TRANSFORM_PACKAGE_DIR != null
+      ? process.env.HERMES_TRANSFORM_PACKAGE_DIR
+      : path.resolve(__dirname, '..', '..', pkg);
+  const folder = path.resolve(packageRoot, path.dirname(file));
   mkdirp.sync(folder);
   // write to disk
   const artifactPath = path.resolve(folder, path.basename(file));
   fs.writeFileSync(artifactPath, formattedContents);
 }
 
-export const LITERAL_TYPES: $ReadOnlySet<string> = new Set([
+export const LITERAL_TYPES: ReadonlySet<string> = new Set([
   'BigIntLiteral',
   'BooleanLiteral',
   'NullLiteral',
@@ -159,8 +193,8 @@ export const LITERAL_TYPES: $ReadOnlySet<string> = new Set([
   'StringLiteral',
 ]);
 
-export const FLIPPED_ALIAS_KEYS: $ReadOnly<{
-  [string]: $ReadOnlySet<string>,
+export const FLIPPED_ALIAS_KEYS: Readonly<{
+  [string]: ReadonlySet<string>,
 }> = (() => {
   // $FlowExpectedError[incompatible-type]
   const flippedAliasKeys: {[string]: Set<string>} = Object.create(null);
@@ -178,9 +212,9 @@ export const FLIPPED_ALIAS_KEYS: $ReadOnly<{
   return flippedAliasKeys;
 })();
 
-export const EXCLUDE_PROPERTIES_FROM_NODE: $ReadOnlyMap<
+export const EXCLUDE_PROPERTIES_FROM_NODE: ReadonlyMap<
   string,
-  $ReadOnlySet<string>,
+  ReadonlySet<string>,
 > = new Map([
   // This property is only needed for TS
   ['PropertyDefinition', new Set(['tsModifiers'])],

@@ -7,6 +7,8 @@
 
 #include "hermes/VM/ArrayStorage.h"
 
+#include "hermes/VM/FastArray.h"
+
 #include "VMRuntimeTestHelpers.h"
 
 using namespace hermes::vm;
@@ -119,6 +121,68 @@ TEST_F(ArrayStorageTest, PushBackTest) {
   ASSERT_EQ(3.0_hd, st->at(2));
   ASSERT_EQ(4.0_hd, st->at(3));
   ASSERT_EQ(5.0_hd, st->at(4));
+}
+
+TEST_F(ArrayStorageTest, AppendExactCapacityTest) {
+  struct : Locals {
+    PinnedValue<ArrayStorage> dst;
+    PinnedValue<ArrayStorage> src;
+    PinnedValue<FastArray> fastDst;
+    PinnedValue<FastArray> fastSrc;
+    PinnedValue<ArrayStorageSmall> fastDstStorage;
+    PinnedValue<ArrayStorageSmall> fastSrcStorage;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  // ArrayStorage: dst capacity 4 + size 2, src size 2. After append, the
+  // resulting size exactly equals capacity, exercising the boundary of the
+  // fast path.
+  lv.dst.castAndSetHermesValue<ArrayStorage>(*ArrayStorage::create(runtime, 4));
+  lv.src.castAndSetHermesValue<ArrayStorage>(*ArrayStorage::create(runtime, 2));
+  lv.dst->pushWithinCapacity(runtime, HermesValue::encodeTrustedNumberValue(1));
+  lv.dst->pushWithinCapacity(runtime, HermesValue::encodeTrustedNumberValue(2));
+  lv.src->pushWithinCapacity(runtime, HermesValue::encodeTrustedNumberValue(3));
+  lv.src->pushWithinCapacity(runtime, HermesValue::encodeTrustedNumberValue(4));
+
+  ASSERT_EQ(4u, lv.dst->capacity());
+  ASSERT_EQ(2u, lv.dst->size());
+  MutableHandle<ArrayStorage> dst{lv.dst};
+  ASSERT_RETURNED(ArrayStorage::append(dst, runtime, lv.src));
+  EXPECT_EQ(4u, lv.dst->size());
+  EXPECT_EQ(4u, lv.dst->capacity());
+  EXPECT_EQ(1, lv.dst->at(0).getNumber());
+  EXPECT_EQ(2, lv.dst->at(1).getNumber());
+  EXPECT_EQ(3, lv.dst->at(2).getNumber());
+  EXPECT_EQ(4, lv.dst->at(3).getNumber());
+
+  // Same boundary case for FastArray::append.
+  lv.fastDst.castAndSetHermesValue<FastArray>(*FastArray::create(runtime, 4));
+  lv.fastSrc.castAndSetHermesValue<FastArray>(*FastArray::create(runtime, 2));
+  lv.fastDstStorage = lv.fastDst->unsafeGetIndexedStorage(runtime);
+  lv.fastSrcStorage = lv.fastSrc->unsafeGetIndexedStorage(runtime);
+  auto v1 = SmallHermesValue::encodeNumberValue(1, runtime);
+  lv.fastDstStorage->pushWithinCapacity(runtime, v1);
+  auto v2 = SmallHermesValue::encodeNumberValue(2, runtime);
+  lv.fastDstStorage->pushWithinCapacity(runtime, v2);
+  auto v3 = SmallHermesValue::encodeNumberValue(3, runtime);
+  lv.fastSrcStorage->pushWithinCapacity(runtime, v3);
+  auto v4 = SmallHermesValue::encodeNumberValue(4, runtime);
+  lv.fastSrcStorage->pushWithinCapacity(runtime, v4);
+
+  ASSERT_EQ(4u, lv.fastDstStorage->capacity());
+  ASSERT_RETURNED(
+      FastArray::append(
+          Handle<FastArray>{lv.fastDst},
+          runtime,
+          Handle<FastArray>{lv.fastSrc}));
+  EXPECT_EQ(4u, lv.fastDst->getLengthAsUint32(runtime));
+  lv.fastDstStorage = lv.fastDst->unsafeGetIndexedStorage(runtime);
+  EXPECT_EQ(4u, lv.fastDstStorage->size());
+  EXPECT_EQ(4u, lv.fastDstStorage->capacity());
+  EXPECT_EQ(1, lv.fastDstStorage->at(0).getNumber(runtime));
+  EXPECT_EQ(2, lv.fastDstStorage->at(1).getNumber(runtime));
+  EXPECT_EQ(3, lv.fastDstStorage->at(2).getNumber(runtime));
+  EXPECT_EQ(4, lv.fastDstStorage->at(3).getNumber(runtime));
 }
 
 // ArrayStorage trimming is disabled for now. In the future, we may consider

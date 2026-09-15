@@ -131,6 +131,15 @@ class WeakRefObjOrSym : public WeakRefBase {
   }
   explicit WeakRefObjOrSym(WeakRefSlot *slot) : WeakRefBase(slot) {}
 
+  /// Return the held Object or Symbol, encoded as HermesValue, with a read
+  /// barrier.
+  HermesValue get(Runtime &runtime) const {
+    if (slot_->isObject())
+      return HermesValue::encodeObjectValue(
+          slot_->getObject(runtime, runtime.getHeap()));
+    return HermesValue::encodeSymbolValue(slot_->getSymbol(runtime.getHeap()));
+  }
+
   HermesValue getNoBarrierUnsafe(PointerBase &base) const {
     if (slot_->isObject()) {
       return HermesValue::encodeObjectValue(

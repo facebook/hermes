@@ -92,6 +92,9 @@ endif()
 
 # Project options.
 
+set(HERMES_ENABLE_NAPI ON CACHE BOOL
+  "Build Node-API support")
+
 set(HERMES_IS_ANDROID OFF CACHE BOOL
   "Building for Android")
 
@@ -319,7 +322,7 @@ set(LLVM_FORCE_ENABLE_STATS OFF CACHE BOOL
 set(QEMU_RUN_PREFIX "" CACHE STRING
   "Command prefix for invoking cross-compiled binaries with QEMU.")
 
-set(JSI_UNSTABLE ON CACHE BOOL "Enable the JSI unstable APIs.")
+set(JSI_UNSTABLE OFF CACHE BOOL "Enable the JSI unstable APIs.")
 
 if (NOT QEMU_RUN_PREFIX STREQUAL "")
   add_definitions(-DQEMU_MODE)
@@ -835,6 +838,20 @@ if(HERMES_ENABLE_TEST_SUITE)
     hermes-jsi-lean-shared
     )
 
+  if(HERMES_ENABLE_NAPI)
+    list(APPEND HERMES_TEST_DEPS
+      napi-runner
+    )
+    if(NOT WIN32)
+      list(APPEND HERMES_TEST_DEPS
+        napi_test_addon
+        napi_ref_addon
+        napi_text_encoder_addon
+        napi_async_work_addon
+      )
+    endif()
+  endif()
+
   set(coverage_directory "")
   if (HERMES_ENABLE_CODE_COVERAGE)
     set(coverage_directory ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/coverage)
@@ -869,8 +886,18 @@ if(HERMES_ENABLE_TEST_SUITE)
     unicode_lite=${HERMES_UNICODE_LITE}
     core_extensions_enabled=${HERMES_ENABLE_CORE_EXTENSIONS}
     contrib_extensions_enabled=${HERMES_ENABLE_CONTRIB_EXTENSIONS}
+    jsi_unstable=${JSI_UNSTABLE}
     qemu_run_prefix=${QEMU_RUN_PREFIX}
+    napi_enabled=${HERMES_ENABLE_NAPI}
+    python=${Python_EXECUTABLE}
     )
+
+  if(HERMES_ENABLE_NAPI)
+    list(APPEND HERMES_LIT_TEST_PARAMS_BASE
+      napi_runner=${HERMES_TOOLS_OUTPUT_DIR}/napi-runner
+      napi_addon_dir=${CMAKE_CURRENT_BINARY_DIR}/unittests/napi
+    )
+  endif()
 
   set(HERMES_LIT_TEST_PARAMS
     ${HERMES_LIT_TEST_PARAMS_BASE}
@@ -892,6 +919,9 @@ if(HERMES_ENABLE_TEST_SUITE)
     ARGS ${HERMES_TEST_EXTRA_ARGS}
     )
   set_target_properties(check-hermes PROPERTIES FOLDER "Hermes regression tests")
+  if(HERMES_ENABLE_NAPI)
+    add_dependencies(check-hermes check-napi)
+  endif()
 
   list(APPEND SHERMES_TEST_DEPS shermes-dep)
   add_lit_testsuite(check-shermes "Running the Static Hermes regression tests"

@@ -25,7 +25,7 @@ class StackExecutor;
 ///   will be allocated again when needed.
 std::shared_ptr<StackExecutor> newStackExecutor(
     size_t stackSize = 0,
-    std::chrono::milliseconds timeout = std::chrono::milliseconds::max());
+    std::chrono::nanoseconds timeout = std::chrono::hours(24));
 
 /// Execute the specified function in the provided stack executor.
 /// Note that this is not thread safe.
