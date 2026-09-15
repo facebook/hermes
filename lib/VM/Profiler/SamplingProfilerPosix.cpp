@@ -25,6 +25,7 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <algorithm>
 #include <cassert>
 #include <chrono>
 #include <cmath>
@@ -150,7 +151,30 @@ void attachHandleToCurrentThread(std::shared_ptr<ProfilerHandle> handle) {
     guard = new ThreadDeathGuard();
     pthread_setspecific(g_threadDeathGuardKey, guard);
   }
-  guard->handles.push_back(std::move(handle));
+  // Before adding the new handle, drop entries this thread's death guard no
+  // longer needs to keep around:
+  //  - handles whose profiler has been destroyed (its back-pointer was
+  //    cleared under handle->mu by ~SamplingProfilerPosix), and
+  //  - an existing entry for the same profiler, which happens when a profiler
+  //    is moved back onto this thread via setRuntimeThread().
+  // Without this, a thread that hosts many profilers over its lifetime -- or
+  // a single profiler that repeatedly moves onto it -- would accumulate
+  // entries until the thread exits.
+  auto &handles = guard->handles;
+  ProfilerHandle *incoming = handle.get();
+  handles.erase(
+      std::remove_if(
+          handles.begin(),
+          handles.end(),
+          [incoming](const std::shared_ptr<ProfilerHandle> &h) {
+            if (h.get() == incoming) {
+              return true;
+            }
+            std::lock_guard<std::mutex> lock(h->mu);
+            return h->profiler == nullptr;
+          }),
+      handles.end());
+  handles.push_back(std::move(handle));
 }
 } // namespace
 
