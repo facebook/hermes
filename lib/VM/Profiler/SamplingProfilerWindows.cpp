@@ -86,7 +86,7 @@ void Sampler::platformUnregisterRuntime(SamplingProfiler *profiler) {}
 
 void Sampler::platformPostSampleStack(SamplingProfiler *localProfiler) {}
 
-bool Sampler::platformSuspendVMAndWalkStack(SamplingProfiler *profiler) {
+SampleResult Sampler::platformSuspendVMAndWalkStack(SamplingProfiler *profiler) {
   auto *winProfiler = static_cast<SamplingProfilerWindows *>(profiler);
 
   // Suspend the JS thread. The runtimeDataLock is held by the caller, ensuring
@@ -94,7 +94,7 @@ bool Sampler::platformSuspendVMAndWalkStack(SamplingProfiler *profiler) {
   // begins.
   DWORD prevSuspendCount = SuspendThread(winProfiler->currentThread_);
   if (prevSuspendCount == static_cast<DWORD>(-1)) {
-    return true;
+    return SampleResult::Success;
   }
 
   // Get the JS thread context. This ensures that the thread suspension is
@@ -112,7 +112,7 @@ bool Sampler::platformSuspendVMAndWalkStack(SamplingProfiler *profiler) {
       "couldn't resume js thread");
   (void)prevSuspendCount;
 
-  return true;
+  return SampleResult::Success;
 }
 } // namespace sampling_profiler
 

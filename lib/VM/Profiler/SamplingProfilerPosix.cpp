@@ -297,7 +297,7 @@ void Sampler::platformUnregisterRuntime(SamplingProfiler *profiler) {}
 
 void Sampler::platformPostSampleStack(SamplingProfiler *localProfiler) {}
 
-bool Sampler::platformSuspendVMAndWalkStack(SamplingProfiler *profiler) {
+SampleResult Sampler::platformSuspendVMAndWalkStack(SamplingProfiler *profiler) {
   auto *self = static_cast<SamplerPosix *>(this);
   auto *posixProfiler = static_cast<SamplingProfilerPosix *>(profiler);
 
@@ -308,7 +308,7 @@ bool Sampler::platformSuspendVMAndWalkStack(SamplingProfiler *profiler) {
   // below. This prevents bionic's pthread_kill from aborting on a recycled
   // pthread_t after a registered JS thread has exited.
   if (posixProfiler->currentThread_ == 0) {
-    return false;
+    return SampleResult::ThreadExited;
   }
 
   // Guarantee that the runtime thread will not proceed until it has
@@ -322,15 +322,17 @@ bool Sampler::platformSuspendVMAndWalkStack(SamplingProfiler *profiler) {
   if (result != 0) {
     // On non-Android POSIX, pthread_kill may return ESRCH if the target
     // terminated in the narrow window where its pthread_t is still in the
-    // thread list but the thread has exited.
+    // thread list but the thread has exited. Treat it as a thread-exit skip
+    // rather than a fatal error so the timer loop keeps sampling the other
+    // registered profilers.
     self->profilerForSig_.store(nullptr, std::memory_order_release);
-    return false;
+    return SampleResult::ThreadExited;
   }
 
   // Threading: samplingDoneSem_ will synchronise this thread with the
   // signal handler, so that we only have one active signal at a time.
   if (!self->samplingDoneSem_.wait()) {
-    return false;
+    return SampleResult::Failed;
   }
 
   // Guarantee that this thread will observe all changes made to data
@@ -338,7 +340,7 @@ bool Sampler::platformSuspendVMAndWalkStack(SamplingProfiler *profiler) {
   while (self->profilerForSig_.load(std::memory_order_acquire) != nullptr) {
   }
 
-  return true;
+  return SampleResult::Success;
 }
 
 } // namespace sampling_profiler
