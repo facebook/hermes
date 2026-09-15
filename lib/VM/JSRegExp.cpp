@@ -151,6 +151,10 @@ ExecutionStatus JSRegExp::initialize(
         lv.pattern,
         flags,
         {otherHandle->bytecode_, otherHandle->bytecodeSize_});
+    // The group name mapping depends only on the pattern, and it is never
+    // modified after initialization, so share it rather than rebuilding it.
+    selfHandle->groupNameMappings_.set(
+        runtime, otherHandle->groupNameMappings_, runtime.getHeap());
     return ExecutionStatus::RETURNED;
   }
   return initialize(selfHandle, runtime, lv.pattern, flags);
