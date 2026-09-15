@@ -10,6 +10,21 @@
 namespace hermes {
 namespace vm {
 
+namespace {
+/// DST offset alone at a UTC time, for the local-to-UTC fallback in
+/// getLocalTimeOffset(). Not cached: it is only needed when the guessed UTC
+/// turns out to be inconsistent (see below).
+int dstOffsetInMs(int64_t utcTimeMs) {
+  std::time_t t = utcTimeMs / MS_PER_SECOND;
+  std::tm tm;
+#ifdef _WINDOWS
+  return ::localtime_s(&tm, &t) == 0 && tm.tm_isdst ? (int)MS_PER_HOUR : 0;
+#else
+  return ::localtime_r(&t, &tm) && tm.tm_isdst ? (int)MS_PER_HOUR : 0;
+#endif
+}
+} // namespace
+
 double LocalTimeOffsetCache::getLocalTimeOffset(
     double timeMs,
     TimeType timeType) {
@@ -45,10 +60,26 @@ double LocalTimeOffsetCache::getLocalTimeOffset(
   // UTC+3 until 1991 and is UTC+2 now), the guess may be off by more than an
   // hour; the probed total offset is still correct as long as no offset
   // transition falls between the guess and the true UTC time.
+  //
+  // If the guess is inconsistent, i.e. an offset transition falls between
+  // the guess and the UTC time implied by the total offset at the guess
+  // (e.g. a local time in a historical DST gap whose guess lands on the
+  // other side of the transition), the total offset at the guess belongs to
+  // the wrong side of the transition and must not be used. Fall back to the
+  // single current standard offset plus the DST offset at the guess, which
+  // matches the documented behavior for such ambiguous times; resolving them
+  // exactly would require the timezone database.
   double guessUTC = timeMs - ltza_ - MS_PER_HOUR;
   if (guessUTC < -TIME_RANGE_MS || guessUTC > TIME_RANGE_MS)
     return std::numeric_limits<double>::quiet_NaN();
-  return localOffsetInMs((int64_t)guessUTC);
+  int64_t guessMs = (int64_t)guessUTC;
+  int totalAtGuess = localOffsetInMs(guessMs);
+  double impliedUTC = timeMs - totalAtGuess;
+  if (impliedUTC < -TIME_RANGE_MS || impliedUTC > TIME_RANGE_MS ||
+      localOffsetInMs((int64_t)impliedUTC) != totalAtGuess) {
+    return ltza_ + dstOffsetInMs(guessMs);
+  }
+  return totalAtGuess;
 }
 
 int LocalTimeOffsetCache::computeLocalOffset(int64_t utcTimeMs) {

@@ -287,6 +287,33 @@ TEST(DateUtilTest, HistoricalStandardOffsetChangeTest) {
   hermes::oscompat::unset_env("TZ");
 }
 
+TEST(DateUtilTest, HistoricalDstGapLocalToUtcTest) {
+  // A local time in a historical DST gap whose guessed UTC lands on the other
+  // side of the transition must not use the total offset from the wrong side.
+  // Europe/Kyiv sprang forward from UTC+3 to UTC+4 at 1984-03-31T23:00Z
+  // (1984-04-01 00:00+03:00 -> 01:00+04:00), so 1984-04-01 00:30 local never
+  // existed. V8 resolves new Date(1984, 3, 1, 0, 30) to 1984-03-31T21:30Z
+  // (pre-transition UTC+3); using the post-transition total UTC+4 would give
+  // 20:30Z instead.
+  // Requires the IANA timezone database for the historical rules; POSIX TZ
+  // strings cannot express a standard-offset change, and Windows does not
+  // follow historic rules.
+  if (!hasIANATimezoneDB()) {
+    return;
+  }
+  LocalTimeOffsetCache localTimeOffsetCache;
+  setTimeZone("Europe/Kyiv");
+  localTimeOffsetCache.reset();
+
+  // 1984-04-01 00:30 local, in the historical DST gap.
+  double localMs = makeDate(makeDay(1984, 3, 1), makeTime(0, 30, 0, 0));
+  double utcMs = utcTime(localMs, localTimeOffsetCache);
+  // 1984-03-31T21:30:00.000Z, as produced by V8.
+  EXPECT_EQ(449616600000, utcMs);
+
+  hermes::oscompat::unset_env("TZ");
+}
+
 TEST(DateUtilTest, LocalTimeTest) {
   // On Windows, TZ env can only be set to a very limited format,
   // as documented in Microsoft Docs for _tzset. Specifically,
