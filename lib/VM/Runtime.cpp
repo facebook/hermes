@@ -1541,10 +1541,9 @@ ExecutionStatus Runtime::raiseTypeErrorForValue(
     default:
       if (value->isNumber()) {
         char buf[hermes::NUMBER_TO_STRING_BUF_SIZE];
-        size_t len = hermes::numberToString(
+        llvh::StringRef str = hermes::numberToString(
             value->getNumber(), buf, hermes::NUMBER_TO_STRING_BUF_SIZE);
-        return raiseTypeError(
-            msg1 + TwineChar16(llvh::StringRef{buf, len}) + msg2);
+        return raiseTypeError(msg1 + TwineChar16(str) + msg2);
       }
   }
   return raiseTypeError(msg1 + TwineChar16("Value") + msg2);

@@ -68,8 +68,7 @@ void JSONEmitter::emitValue(double val) {
   willEmitValue();
   if (std::isfinite(val)) {
     char buf8[hermes::NUMBER_TO_STRING_BUF_SIZE];
-    (void)hermes::numberToString(val, buf8, sizeof(buf8));
-    OS << buf8;
+    OS << hermes::numberToString(val, buf8, sizeof(buf8));
   } else {
     OS << "null";
   }

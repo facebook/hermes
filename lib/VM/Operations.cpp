@@ -285,42 +285,35 @@ CallResult<PseudoHandle<StringPrimitive>> numberToStringPrimitive(
     Runtime &runtime,
     double m) {
   char buf8[hermes::NUMBER_TO_STRING_BUF_SIZE];
+  llvh::StringRef str;
 
   // Optimization: Fast-case for positive integers < 2^31
-  int32_t n;
-  if (sh_tryfast_f64_to_i32(m, n) && n > 0) {
-    // Write base 10 digits in reverse from end of buf8.
-    char *p = buf8 + sizeof(buf8);
-    do {
-      *--p = '0' + (n % 10);
-      n /= 10;
-    } while (n);
-    size_t len = buf8 + sizeof(buf8) - p;
-    // Temporarily stop the propagation of removing.
-    auto result = StringPrimitive::create(runtime, ASCIIRef(p, len));
-    if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    return createPseudoHandle(vmcast<StringPrimitive>(*result));
+  if (auto fast = hermes::tryFastPositiveIntToString(m, buf8, sizeof(buf8))) {
+    str = *fast;
+  } else {
+    // These cases are already handled correctly by numberToStringSlowPath().
+    // We check them here only so that we can return an interned string instead
+    // of allocating a new one, and only after the fast path so that the common
+    // integer case does not pay for the comparisons.
+    auto getPredefined = [&runtime](Predefined::Str predefinedID) {
+      return createPseudoHandle(runtime.getPredefinedString(predefinedID));
+    };
+
+    if (std::isnan(m))
+      return getPredefined(Predefined::NaN);
+    if (m == 0)
+      return getPredefined(Predefined::zero);
+    if (m == std::numeric_limits<double>::infinity())
+      return getPredefined(Predefined::Infinity);
+    if (m == -std::numeric_limits<double>::infinity())
+      return getPredefined(Predefined::NegativeInfinity);
+
+    // After special cases, run the slow path to convert.
+    str = hermes::numberToStringSlowPath(m, buf8, sizeof(buf8));
   }
 
-  auto getPredefined = [&runtime](Predefined::Str predefinedID) {
-    return createPseudoHandle(runtime.getPredefinedString(predefinedID));
-  };
-
-  if (std::isnan(m))
-    return getPredefined(Predefined::NaN);
-  if (m == 0)
-    return getPredefined(Predefined::zero);
-  if (m == std::numeric_limits<double>::infinity())
-    return getPredefined(Predefined::Infinity);
-  if (m == -std::numeric_limits<double>::infinity())
-    return getPredefined(Predefined::NegativeInfinity);
-
-  // After special cases, run the generic routine to convert.
-  size_t len = hermes::numberToString(m, buf8, sizeof(buf8));
-
-  auto result = StringPrimitive::create(runtime, ASCIIRef(buf8, len));
+  auto result =
+      StringPrimitive::create(runtime, ASCIIRef(str.data(), str.size()));
   if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

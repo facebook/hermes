@@ -42,9 +42,8 @@ bool tryPromoteObject(
         if (cachedLS) {
           return cachedLS;
         }
-        auto len = numberToString(
+        auto strRef = numberToString(
             LN->getValue(), conversionBuf, NUMBER_TO_STRING_BUF_SIZE);
-        auto strRef = llvh::StringRef(conversionBuf, len);
         auto *LS = builder.getLiteralString(strRef);
         cachedLS = LS;
         return LS;

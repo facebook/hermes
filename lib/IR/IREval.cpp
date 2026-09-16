@@ -643,8 +643,8 @@ LiteralString *hermes::evalToString(IRBuilder &builder, Literal *operand) {
     return str;
   if (auto *num = llvh::dyn_cast<LiteralNumber>(operand)) {
     char buf[NUMBER_TO_STRING_BUF_SIZE];
-    auto len = numberToString(num->getValue(), buf, sizeof(buf));
-    return builder.getLiteralString(llvh::StringRef(buf, len));
+    return builder.getLiteralString(
+        numberToString(num->getValue(), buf, sizeof(buf)));
   }
   return nullptr;
 }

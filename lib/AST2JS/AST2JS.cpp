@@ -150,8 +150,9 @@ class GenJS {
   }
   void visit(NumericLiteralNode *node) {
     char buf8[hermes::NUMBER_TO_STRING_BUF_SIZE];
-    size_t len = hermes::numberToString(node->_value, buf8, sizeof(buf8));
-    OS_.write(buf8, len);
+    llvh::StringRef str =
+        hermes::numberToString(node->_value, buf8, sizeof(buf8));
+    OS_.write(str.data(), str.size());
   }
 
   void visit(ThisExpressionNode *) {

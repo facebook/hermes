@@ -254,10 +254,9 @@ struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
         // Convert the number value to a string, according to the JS conversion
         // routines.
         char buf[hermes::NUMBER_TO_STRING_BUF_SIZE];
-        size_t len = hermes::numberToString(num, buf, sizeof(buf));
         snap_.endNode(
             HeapSnapshot::NodeType::Number,
-            llvh::StringRef{buf, len},
+            hermes::numberToString(num, buf, sizeof(buf)),
             tracker_.getNumberID(num),
             // Numbers are zero-sized in the heap because they're stored inline.
             0,

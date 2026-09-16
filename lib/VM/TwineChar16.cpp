@@ -53,10 +53,7 @@ void TwineChar16::print(llvh::raw_ostream &os) const {
         break;
       case TwineChar16::DoubleKind:
         char buf[NUMBER_TO_STRING_BUF_SIZE];
-        auto len = numberToString(child.flt, buf, sizeof(buf));
-        assert(len < sizeof(buf));
-        buf[len] = '\0';
-        os << buf;
+        os << numberToString(child.flt, buf, sizeof(buf));
         break;
     }
   };
@@ -101,10 +98,8 @@ size_t TwineChar16::toChar16Str(char16_t *out, size_t maxlen) const {
           }
           case TwineChar16::DoubleKind: {
             char buf[NUMBER_TO_STRING_BUF_SIZE];
-            auto len = numberToString(child.flt, buf, sizeof(buf));
-            assert(len < sizeof(buf));
-            buf[len] = '\0';
-            std::copy(buf, buf + len, out);
+            llvh::StringRef str = numberToString(child.flt, buf, sizeof(buf));
+            std::copy(str.begin(), str.end(), out);
             break;
           }
         }
@@ -153,10 +148,8 @@ void TwineChar16::toVector(llvh::SmallVectorImpl<char16_t> &out) const {
       }
       case TwineChar16::DoubleKind: {
         char buf[NUMBER_TO_STRING_BUF_SIZE];
-        auto len = numberToString(child.flt, buf, sizeof(buf));
-        assert(len < sizeof(buf));
-        buf[len] = '\0';
-        out.append(buf, buf + len);
+        llvh::StringRef str = numberToString(child.flt, buf, sizeof(buf));
+        out.append(str.begin(), str.end());
         break;
       }
     }

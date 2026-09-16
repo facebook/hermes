@@ -180,46 +180,24 @@ int32_t truncateToInt32SlowPath(double d) {
   }
 }
 
-/// Convert an unsigned integer \p value to its decimal string representation,
-/// not null terminated. Least significant digit will be written to the last
-/// position in \p buf.
-/// \param value is the value to be converted.
-/// \param buf is a pre-allocated buffer to hold the string contents. Must be
-///   at least 20 characters to hold the maximum uint64_t value.
-/// \return pointer to the beginning of the string within \p buf.
-template <typename T>
-static char *uintToStr(T value, llvh::MutableArrayRef<char> buf) {
-  static_assert(std::is_integral<T>::value, "T must be integral");
-  static_assert(std::is_unsigned<T>::value, "T must be unsigned");
-  // uint64_t max number is 20 digits.
-  assert(buf.size() >= 20 && "buffer must hold at least 20 characters");
-  char *bufEnd = buf.end() - 1;
-  if (value == 0) {
-    *bufEnd = '0';
-    return bufEnd;
-  }
-  // Extract digits least-significant first.
-  for (; value > 0; value /= 10, --bufEnd) {
-    T digit = value % 10;
-    *bufEnd = (char)('0' + digit);
-  }
-  return bufEnd + 1;
-}
-
 /// ES2025 6.1.6.1.20 Number::toString ( x, radix ). This only implements
 /// base 10.
-size_t numberToString(double m, char *dest, size_t destSize) {
+///
+/// NOTE: the NaN/zero/infinity special cases below are not merely an
+/// optimization: they establish fastDoubleToDecimal()'s precondition that the
+/// input is finite and nonzero.
+llvh::StringRef numberToStringSlowPath(double m, char *dest, size_t destSize) {
   assert(destSize >= NUMBER_TO_STRING_BUF_SIZE);
   (void)destSize;
   // 1. If x is NaN, return "NaN".
   if (std::isnan(m)) {
     strcpy(dest, "NaN");
-    return 3;
+    return llvh::StringRef(dest, 3);
   }
   // 2. If x is either +0 or -0, return "0".
   if (m == 0) {
     strcpy(dest, "0");
-    return 1;
+    return llvh::StringRef(dest, 1);
   }
 
   // 3. If x < -0, return the string-concatenation of "-" and
@@ -229,11 +207,11 @@ size_t numberToString(double m, char *dest, size_t destSize) {
   // 4. If x is +Infinity, return "Infinity".
   if (m == std::numeric_limits<double>::infinity()) {
     strcpy(dest, "Infinity");
-    return 8;
+    return llvh::StringRef(dest, 8);
   }
   if (m == -std::numeric_limits<double>::infinity()) {
     strcpy(dest, "-Infinity");
-    return 9;
+    return llvh::StringRef(dest, 9);
   }
   char *destPtr = dest;
 
@@ -257,10 +235,10 @@ size_t numberToString(double m, char *dest, size_t destSize) {
   }
   // Convert significand to a temporary digit buffer.
   char sDigitsBuf[NUMBER_TO_STRING_BUF_SIZE];
-  char *sDigitsBegin =
+  llvh::StringRef sDigits =
       uintToStr(conv.significand, llvh::MutableArrayRef<char>(sDigitsBuf));
-  char *sDigitsEnd = sDigitsBuf + NUMBER_TO_STRING_BUF_SIZE - 1;
-  int k = sDigitsEnd - sDigitsBegin + 1;
+  const char *sDigitsBegin = sDigits.data();
+  int k = sDigits.size();
   int n = conv.exponent + k;
 
   // 6. If radix != 10 or n is in the inclusive interval from -5 to 21, then
@@ -322,10 +300,10 @@ size_t numberToString(double m, char *dest, size_t destSize) {
     char exponentSign = n < 0 ? '\x2d' : '\x2b';
 
     char nDigitsBuf[NUMBER_TO_STRING_BUF_SIZE];
-    char *nDigitsBegin = uintToStr(
+    llvh::StringRef nDigits = uintToStr(
         (unsigned int)std::abs(n - 1), llvh::MutableArrayRef<char>(nDigitsBuf));
-    char *nDigitsEnd = nDigitsBuf + NUMBER_TO_STRING_BUF_SIZE - 1;
-    int nLen = nDigitsEnd - nDigitsBegin + 1;
+    const char *nDigitsBegin = nDigits.data();
+    int nLen = nDigits.size();
 
     // 11. If k = 1, then
     if (k == 1) {
@@ -366,12 +344,14 @@ size_t numberToString(double m, char *dest, size_t destSize) {
   // Null-terminate
   *destPtr++ = '\0';
   assert(static_cast<size_t>(destPtr - dest) < NUMBER_TO_STRING_BUF_SIZE);
-  return static_cast<size_t>(destPtr - dest - 1);
+  return llvh::StringRef(dest, static_cast<size_t>(destPtr - dest - 1));
 }
 } // namespace hermes
 
 extern "C" {
 size_t hermes_numberToString(double m, char *dest, size_t destSize) {
-  return hermes::numberToString(m, dest, destSize);
+  // The C API contract is a null-terminated result written at dest[0], so this
+  // uses the slow path directly rather than numberToString().
+  return hermes::numberToStringSlowPath(m, dest, destSize).size();
 }
 }

@@ -185,9 +185,6 @@ class Regex {
   Regex(Regex &&) = default;
 
   // Accessors.
-  unsigned markCount() const {
-    return markedCount_;
-  }
   SyntaxFlags globalFlags() const {
     return globalFlags_;
   }

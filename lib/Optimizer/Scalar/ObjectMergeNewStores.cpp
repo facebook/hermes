@@ -92,9 +92,8 @@ Literal *normalizeKey(IRBuilder &builder, Literal *key) {
     auto *LN = llvh::cast<LiteralNumber>(key);
     if (!doubleToArrayIndex(LN->getValue())) {
       char buf[NUMBER_TO_STRING_BUF_SIZE];
-      size_t sz =
-          numberToString(LN->getValue(), buf, NUMBER_TO_STRING_BUF_SIZE);
-      return builder.getLiteralString(llvh::StringRef{buf, sz});
+      return builder.getLiteralString(
+          numberToString(LN->getValue(), buf, NUMBER_TO_STRING_BUF_SIZE));
     }
   }
   return key;

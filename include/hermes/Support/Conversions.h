@@ -11,10 +11,14 @@
 #include "hermes/Support/OptValue.h"
 #include "hermes/Support/sh_tryfast_fp_cvt.h"
 
+#include "llvh/ADT/ArrayRef.h"
 #include "llvh/ADT/StringRef.h"
+#include "llvh/Support/Compiler.h"
 #include "llvh/Support/MathExtras.h"
 
+#include <cassert>
 #include <cstdint>
+#include <type_traits>
 
 namespace hermes {
 
@@ -150,12 +154,79 @@ uint16_t doubleToFloat16(double d);
 /// Size of buffer that must be passed to numberToString.
 const size_t NUMBER_TO_STRING_BUF_SIZE = 32;
 
-/// Convert a double number to string, following ES5.1 9.8.1.
+/// The slow path of numberToString(): the full ES5.1 9.8.1 conversion, with no
+/// integer fast path. Prefer numberToString() unless you specifically need the
+/// two extra guarantees this makes: the result always starts at \p dest, and
+/// \p dest is null terminated just past it.
 /// \param m the number to convert
 /// \param dest output buffer
 /// \param destSize size of dest, at least NUMBER_TO_STRING_BUF_SIZE
-/// \return the length of the generated string (excluding the terminating zero).
-size_t numberToString(double m, char *dest, size_t destSize);
+/// \return the string, starting at \p dest.
+llvh::StringRef numberToStringSlowPath(double m, char *dest, size_t destSize);
+
+/// Convert an unsigned integer \p value to its decimal string representation,
+/// not null terminated. Least significant digit will be written to the last
+/// position in \p buf.
+/// \param value is the value to be converted.
+/// \param buf is a pre-allocated buffer to hold the string contents. Must be
+///   at least 20 characters to hold the maximum uint64_t value.
+/// \return the digits, pointing into \p buf.
+template <typename T>
+llvh::StringRef uintToStr(T value, llvh::MutableArrayRef<char> buf) {
+  static_assert(std::is_integral<T>::value, "T must be integral");
+  static_assert(std::is_unsigned<T>::value, "T must be unsigned");
+  // uint64_t max number is 20 digits.
+  assert(buf.size() >= 20 && "buffer must hold at least 20 characters");
+  char *bufEnd = buf.end() - 1;
+  if (value == 0) {
+    *bufEnd = '0';
+    return llvh::StringRef(bufEnd, 1);
+  }
+  // Extract digits least-significant first.
+  for (; value > 0; value /= 10, --bufEnd) {
+    T digit = value % 10;
+    *bufEnd = (char)('0' + digit);
+  }
+  return llvh::StringRef(bufEnd + 1, buf.end() - (bufEnd + 1));
+}
+
+/// If \p m is a positive integer representable as int32_t, write its decimal
+/// digits into \p buf. This is by far the most common input in JS, so it is
+/// worth skipping the general conversion machinery entirely.
+///
+/// NOTE: the "> 0" test is what excludes 0 and -0 from this path:
+/// sh_tryfast_f64_to_i32 succeeds for both (since 0.0 == -0.0) and yields 0.
+/// NaN and +-Infinity are rejected by the round-trip check inside
+/// sh_tryfast_f64_to_i32 itself.
+///
+/// \param m the number to convert.
+/// \param buf scratch buffer, at least NUMBER_TO_STRING_BUF_SIZE characters.
+/// \param bufSize size of \p buf.
+/// \return the digits, pointing into \p buf. The result is NOT null
+///   terminated and does NOT necessarily start at buf[0]. Returns None if
+///   \p m does not qualify for the fast path.
+inline OptValue<llvh::StringRef>
+tryFastPositiveIntToString(double m, char *buf, size_t bufSize) {
+  assert(bufSize >= NUMBER_TO_STRING_BUF_SIZE && "buffer is too small");
+  int32_t n;
+  if (LLVM_LIKELY(sh_tryfast_f64_to_i32(m, n)) && n > 0)
+    return uintToStr((uint32_t)n, llvh::MutableArrayRef<char>(buf, bufSize));
+  return llvh::None;
+}
+
+/// Convert a double number to string, following ES5.1 9.8.1. Takes the positive
+/// integer fast path when possible, and otherwise falls back to
+/// numberToStringSlowPath().
+/// \param m the number to convert.
+/// \param buf scratch buffer, at least NUMBER_TO_STRING_BUF_SIZE characters.
+/// \param bufSize size of \p buf.
+/// \return the string, pointing into \p buf. The result is NOT null
+///   terminated and does NOT necessarily start at buf[0].
+inline llvh::StringRef numberToString(double m, char *buf, size_t bufSize) {
+  if (auto fast = tryFastPositiveIntToString(m, buf, bufSize))
+    return *fast;
+  return numberToStringSlowPath(m, buf, bufSize);
+}
 
 /// Takes a letter (a-z or A-Z) and makes it lowercase.
 template <typename T>

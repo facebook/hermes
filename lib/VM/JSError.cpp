@@ -670,8 +670,8 @@ ExecutionStatus JSError::constructStackTraceString_RJS(
     if (LLVM_UNLIKELY(max > PRINT_HEAD + PRINT_TAIL)) {
       if (index == PRINT_HEAD) {
         stack.append("\n    ... skipping ");
-        numberToString(max - PRINT_HEAD - PRINT_TAIL, buf, sizeof(buf));
-        stack.append(buf);
+        stack.append(
+            numberToString(max - PRINT_HEAD - PRINT_TAIL, buf, sizeof(buf)));
         stack.append(" frames");
         continue;
       }
@@ -774,13 +774,11 @@ void JSError::appendBytecodeFrame(
   }
   stack.push_back(u':');
 
-  numberToString(lineNo, buf, NUMBER_TO_STRING_BUF_SIZE);
-  stack.append(buf);
+  stack.append(numberToString(lineNo, buf, NUMBER_TO_STRING_BUF_SIZE));
 
   stack.push_back(u':');
 
-  numberToString(columnNo, buf, NUMBER_TO_STRING_BUF_SIZE);
-  stack.append(buf);
+  stack.append(numberToString(columnNo, buf, NUMBER_TO_STRING_BUF_SIZE));
 
   stack.push_back(u')');
 }
@@ -804,13 +802,11 @@ void JSError::appendNativeFrame(
     int32_t lineNo = loc.line;
     int32_t columnNo = loc.column;
 
-    numberToString(lineNo, buf, NUMBER_TO_STRING_BUF_SIZE);
-    stack.append(buf);
+    stack.append(numberToString(lineNo, buf, NUMBER_TO_STRING_BUF_SIZE));
 
     stack.push_back(u':');
 
-    numberToString(columnNo, buf, NUMBER_TO_STRING_BUF_SIZE);
-    stack.append(buf);
+    stack.append(numberToString(columnNo, buf, NUMBER_TO_STRING_BUF_SIZE));
   } else {
     stack.append(u"native");
   }

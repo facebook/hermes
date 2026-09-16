@@ -145,8 +145,7 @@ llvh::StringRef ESTreeIRGen::propertyKeyAsString(
     LLVM_DEBUG(
         llvh::dbgs() << "Loading Numeric Literal \"" << Lit->_value << "\"\n");
     storage.resize(NUMBER_TO_STRING_BUF_SIZE);
-    auto len = numberToString(Lit->_value, storage.data(), storage.size());
-    return llvh::StringRef(storage.begin(), len);
+    return numberToString(Lit->_value, storage.data(), storage.size());
   }
 
   // Handle BigInt Literals, because they're a type of NumericLiteral.

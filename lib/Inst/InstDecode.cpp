@@ -183,8 +183,7 @@ void dumpOperand(llvh::raw_ostream &OS, OperandType type, OperandValue value) {
       break;
     case OperandType::Double:
       char buf[NUMBER_TO_STRING_BUF_SIZE];
-      hermes::numberToString(value.floating, buf, sizeof(buf));
-      OS << buf;
+      OS << hermes::numberToString(value.floating, buf, sizeof(buf));
       break;
   }
 }
