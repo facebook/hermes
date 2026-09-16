@@ -205,11 +205,13 @@ void FlowChecker::populateBuiltinMethods() {
       thisTypeKind = TypeKind::Array;
     } else if (llvh::isa<ESTree::StringTypeAnnotationNode>(innerType)) {
       thisTypeKind = TypeKind::String;
+    } else if (llvh::isa<ESTree::NumberTypeAnnotationNode>(innerType)) {
+      thisTypeKind = TypeKind::Number;
     } else {
       sm_.error(
           funcDecl->getStartLoc(),
           "ft: unsupported builtin 'this' type "
-          "(only T[] and string supported right now)");
+          "(only T[], string and number supported right now)");
       continue;
     }
 
