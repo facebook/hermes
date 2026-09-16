@@ -6,7 +6,7 @@
  */
 
 #include "hermes/VM/JIT/Config.h"
-#if HERMESVM_JIT
+#if HERMESVM_JIT_ARM64
 
 #include "JitEmitter-internal.h"
 
@@ -341,4 +341,4 @@ asmjit::Error OurLogger::_log(const char *data, size_t size) noexcept {
 
 } // namespace hermes::vm::arm64
 
-#endif // HERMESVM_JIT
+#endif // HERMESVM_JIT_ARM64
