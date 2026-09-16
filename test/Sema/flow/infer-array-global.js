@@ -27,7 +27,7 @@ s = [];
 // CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:    BlockStatement
 // CHECK-NEXT:        ExpressionStatement
-// CHECK-NEXT:            StringLiteral : string
+// CHECK-NEXT:            StringLiteral : "use strict"
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            AssignmentExpression : %class.2
 // CHECK-NEXT:                Id 's' [D:E:%d.3 's'] : any

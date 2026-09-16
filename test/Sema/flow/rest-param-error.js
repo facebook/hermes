@@ -12,5 +12,5 @@ function foo(x: number, ...args: Array<string>): void {}
 // CHECK: {{.*}}:13:1: error: ft: function expects at least 1 arguments, but 0 supplied
 foo();
 
-// CHECK: {{.*}}:16:8: error: ft: function parameter #2 type mismatch: cannot assign number to string
+// CHECK: {{.*}}:16:8: error: ft: function parameter #2 type mismatch: cannot assign 2 to string
 foo(1, 2);

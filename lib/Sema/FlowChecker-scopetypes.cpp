@@ -135,6 +135,21 @@ class FlowChecker::FindLoopingTypes {
     return false;
   }
 
+  bool isLooping(Type *, StringLiteralType *) {
+    // Literals carry no nested types.
+    return false;
+  }
+
+  bool isLooping(Type *, NumberLiteralType *) {
+    // Literals carry no nested types.
+    return false;
+  }
+
+  bool isLooping(Type *, BooleanLiteralType *) {
+    // Literals carry no nested types.
+    return false;
+  }
+
   bool isLooping(Type *, TypeWithId *type) {
     // Nominal type. Stop checking for recursion.
     return false;
@@ -238,6 +253,10 @@ class FlowChecker::DeclareScopeTypes {
   /// after generic resolution.
   llvh::SmallVector<Type *, 2> funcTypesWithRest{};
 
+  /// Generic bound checks to validate after generic class resolution.
+  llvh::SmallVector<FlowChecker::GenericBoundCheck, 4>
+      deferredGenericBoundChecks{};
+
   /// The generic specializations to be parsed after the class body is parsed.
   /// These have to be deferred here instead of in DeclareScopeTypes because
   /// we have to not defer parsing the superClass, e.g.
@@ -253,6 +272,18 @@ class FlowChecker::DeclareScopeTypes {
     LLVM_DEBUG(llvh::dbgs() << "Declaring scope types\n");
     llvh::SaveAndRestore savedDeferredGenerics{
         outer.deferredParseGenerics_, &deferredParseGenerics};
+    // Generic bounds may reference classes owned by another resolver, so
+    // prefer an existing queue if it already exists. If it doesn't exist, use
+    // the newly created queue in DeclareScopeTypes.
+    // NOTE: In practice the outer will be nullptr in this case, but this is
+    // defensive and mirrors the resolveGenericTypeAlias case.
+    llvh::SaveAndRestore<
+        llvh::SmallVectorImpl<FlowChecker::GenericBoundCheck> *>
+        savedBoundChecks{
+            outer.deferredGenericBoundChecks_,
+            outer.deferredGenericBoundChecks_
+                ? outer.deferredGenericBoundChecks_
+                : &deferredGenericBoundChecks};
 
     if (!createForwardDeclarations(decls))
       return;
@@ -274,6 +305,16 @@ class FlowChecker::DeclareScopeTypes {
     DeclareScopeTypes declareScopeTypes(outer, typeDecl->scope);
     llvh::SaveAndRestore savedDeferredGenerics{
         outer.deferredParseGenerics_, &declareScopeTypes.deferredParseGenerics};
+    // Generic bounds may reference classes owned by another resolver, so
+    // prefer an existing queue if it already exists. If it doesn't exist, use
+    // the newly created queue in DeclareScopeTypes.
+    llvh::SaveAndRestore<
+        llvh::SmallVectorImpl<FlowChecker::GenericBoundCheck> *>
+        savedBoundChecks{
+            outer.deferredGenericBoundChecks_,
+            outer.deferredGenericBoundChecks_
+                ? outer.deferredGenericBoundChecks_
+                : &declareScopeTypes.deferredGenericBoundChecks};
     llvh::SmallDenseSet<ESTree::TypeAliasNode *> visited{};
     // Don't call createForwardDeclarations, because we're directly calling
     // resolveTypeAnnotation and we don't have a list of decls.
@@ -1091,47 +1132,74 @@ class FlowChecker::DeclareScopeTypes {
 
       // This is not a generic class, it's a generic type alias.
       // Specialize it with the provided arguments by resolving the type.
-      ScopeRAII paramScope{outer};
-      bool populated = outer.validateAndBindTypeParameters(
-          llvh::cast<ESTree::TypeParameterDeclarationNode>(
-              aliasNode->_typeParameters),
-          generic.annotation->getSourceRange(),
-          generic.typeArgTypes,
-          scope);
-      if (!populated) {
-        LLVM_DEBUG(llvh::dbgs() << "Failed to bind type parameters\n");
-        type->info = outer.flowContext_.getAnyInfo();
-        return;
-      }
+      Type *resolved;
+      {
+        // Resolve the bound and RHS in the alias's declaration scope.
+        // paramScope below is where the type parameters are bound; a bound may
+        // reference an earlier parameter (e.g. <T, U: T>), which is already
+        // bound when it is resolved.
+        // The arguments are already-resolved concrete Types.
+        auto savedScope = outer.bindingTable_.getCurrentScope();
+        outer.bindingTable_.activateScope(genericInfo.bindingTableScope);
+        // Restored before the bookkeeping below.
+        auto restoreScope = llvh::make_scope_exit([this, &savedScope]() {
+          outer.bindingTable_.activateScope(savedScope);
+        });
 
-      unsigned errorsBefore = outer.sm_.getErrorCount();
+        ScopeRAII paramScope{outer};
+        bool populated = outer.validateAndBindTypeParameters(
+            llvh::cast<ESTree::TypeParameterDeclarationNode>(
+                aliasNode->_typeParameters),
+            generic.annotation->getSourceRange(),
+            generic.typeArgTypes,
+            scope,
+            [this](ESTree::Node *n) -> Type * {
+              // Do not complete the bound here. It may recursively reference
+              // this specialization before its RHS has been cached. The
+              // forward-type worklist completes it before bound validation.
+              llvh::SmallDenseSet<ESTree::TypeAliasNode *> boundVisited{};
+              return resolveTypeAnnotation(n, boundVisited, 0);
+            });
+        if (!populated) {
+          LLVM_DEBUG(llvh::dbgs() << "Failed to bind type parameters\n");
+          type->info = outer.flowContext_.getAnyInfo();
+          return;
+        }
 
-      // Resolve the generic type alias to its specialization.
-      // This may add to forwardGenericInstantiations and forwardUnions.
-      llvh::SmallDenseSet<ESTree::TypeAliasNode *> visitedTypes{};
-      Type *resolved =
-          resolveTypeAnnotation(aliasNode->_right, visitedTypes, 0);
+        unsigned errorsBefore = outer.sm_.getErrorCount();
 
-      // If we errored during resolution this isn't a valid type to try
-      // specialization on, so give up.
-      // This prevents trying to specialize "any" to multiple resolutions.
-      if (errorsBefore != outer.sm_.getErrorCount()) {
-        type->info = outer.flowContext_.getAnyInfo();
-        return;
+        // Resolve the generic type alias to its specialization.
+        // This may add to forwardGenericInstantiations and forwardUnions.
+        llvh::SmallDenseSet<ESTree::TypeAliasNode *> visitedTypes{};
+        resolved = resolveTypeAnnotation(aliasNode->_right, visitedTypes, 0);
+
+        // If we errored during resolution this isn't a valid type to try
+        // specialization on, so give up.
+        // This prevents trying to specialize "any" to multiple resolutions.
+        if (errorsBefore != outer.sm_.getErrorCount()) {
+          type->info = outer.flowContext_.getAnyInfo();
+          return;
+        }
       }
 
       typeArgsRef =
           genericInfo.addSpecialization(outer, std::move(typeArgs), resolved);
 
-      // This is a generic type alias resolution.
-      // The generic type is marked as resolved to the correct "resolved",
-      // which may itself be generic right now (i.e. if we're in the middle of a
-      // generic type alias chain).
-      // Adding to the typeAliasResolutions map will allow future
-      // calls to populateTypeAlias to correctly set type->info.
+      // "resolved" may still be a forward GenericType (mid alias chain).
       typeAliasResolutions[type] = resolved;
+
+      // First pass: copy any concrete info from "resolved" into type->info
+      // before completing it. For cyclic aliases where completing "resolved"
+      // recurses into "type", a concrete type->info stops the cycle scan from
+      // wrongly reporting a circular reference.
       populateTypeAlias(type);
       completeForwardType(resolved, visited);
+
+      // Second pass: in a chain like type A<X> = X; type B<Y> = A<Y>; ... B<C>,
+      // "resolved" was still a forward GenericType during the first pass.
+      // completeForwardType set its final info, so re-run to propagate it up.
+      if (llvh::isa<GenericType>(type->info))
+        populateTypeAlias(type);
       return;
     }
 
@@ -1152,7 +1220,14 @@ class FlowChecker::DeclareScopeTypes {
     // Write it back to the actual vector.
     forwardGenericInstantiations.at(type).classSpecialization = specialization;
 
-    Type *classConsType = outer.getDeclType(newDecl);
+    Type *classConsType = outer.flowContext_.findDeclType(newDecl);
+    if (!classConsType) {
+      outer.sm_.error(
+          generic.annotation->getSourceRange(),
+          "ft: type contains a circular reference to itself");
+      type->info = outer.flowContext_.getAnyInfo();
+      return;
+    }
     Type *classType =
         llvh::cast<ClassConstructorType>(classConsType->info)->getClassType();
     type->info = classType->info;
@@ -1234,7 +1309,11 @@ class FlowChecker::DeclareScopeTypes {
       GenericInfo<ESTree::Node> &genericInfo =
           outer.getGenericInfoMustExist(typeDecl->genericClassDecl);
       ESTree::Node *oldSpecialization = generic.classSpecialization;
-      assert(oldSpecialization && "need old specialization");
+      if (!oldSpecialization) {
+        // There's no valid oldSpecialization.
+        // There was an error specializing, just ignore this one.
+        continue;
+      }
 
       // Make sure the type arguments have been handled.
       GenericInfo<ESTree::Node>::TypeArgsVector typeArgs{};
@@ -1323,6 +1402,10 @@ class FlowChecker::DeclareScopeTypes {
   /// Run a post-processing validation step to check certain errors that are
   /// hard to find during resolution.
   void validateTypes() {
+    for (const auto &check : deferredGenericBoundChecks) {
+      outer.validateGenericBound(check);
+    }
+
     /// Ensure that rest params have valid types.
     for (Type *funcType : funcTypesWithRest) {
       auto *typedFunc = llvh::cast<TypedFunctionType>(funcType->info);

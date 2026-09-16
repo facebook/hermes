@@ -111,22 +111,22 @@ function main(
 // CHECK-NEXT:                    BinaryExpression : boolean
 // CHECK-NEXT:                        Id 'optFoo' [D:E:%d.5 'optFoo'] : %union.3
 // CHECK-NEXT:                        UnaryExpression : void
-// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                            NumericLiteral : 0
 // CHECK-NEXT:                ExpressionStatement
 // CHECK-NEXT:                    BinaryExpression : boolean
 // CHECK-NEXT:                        Id 'optFoo' [D:E:%d.5 'optFoo'] : %union.3
 // CHECK-NEXT:                        UnaryExpression : void
-// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                            NumericLiteral : 0
 // CHECK-NEXT:                ExpressionStatement
 // CHECK-NEXT:                    BinaryExpression : boolean
 // CHECK-NEXT:                        Id 'numOrVoid' [D:E:%d.7 'numOrVoid'] : %union.5
 // CHECK-NEXT:                        UnaryExpression : void
-// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                            NumericLiteral : 0
 // CHECK-NEXT:                ExpressionStatement
 // CHECK-NEXT:                    BinaryExpression : boolean
 // CHECK-NEXT:                        Id 'mixedVal' [D:E:%d.9 'mixedVal'] : mixed
 // CHECK-NEXT:                        UnaryExpression : void
-// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                            NumericLiteral : 0
 // CHECK-NEXT:                ExpressionStatement
 // CHECK-NEXT:                    BinaryExpression : boolean
 // CHECK-NEXT:                        Id 'numOrVoid' [D:E:%d.7 'numOrVoid'] : %union.5
@@ -135,7 +135,7 @@ function main(
 // CHECK-NEXT:                    BinaryExpression : boolean
 // CHECK-NEXT:                        NullLiteral : null
 // CHECK-NEXT:                        UnaryExpression : void
-// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                            NumericLiteral : 0
 // CHECK-NEXT:                ExpressionStatement
 // CHECK-NEXT:                    BinaryExpression : boolean
 // CHECK-NEXT:                        Id 'anyVal' [D:E:%d.8 'anyVal'] : any

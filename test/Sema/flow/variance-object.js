@@ -161,11 +161,11 @@ function invariantToReadOnlyWiden(o: {x: number}): {+x: number | string} {
 // CHECK-NEXT:            Id 'o' [D:E:%d.11 'o']
 // CHECK-NEXT:            BlockStatement
 // CHECK-NEXT:                ExpressionStatement
-// CHECK-NEXT:                    AssignmentExpression : number
+// CHECK-NEXT:                    AssignmentExpression : 1
 // CHECK-NEXT:                        MemberExpression : number
 // CHECK-NEXT:                            Id 'o' [D:E:%d.11 'o'] : %object.3
 // CHECK-NEXT:                            Id 'y'
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 1
 // CHECK-NEXT:        FunctionDeclaration : %function.7
 // CHECK-NEXT:            Id 'rw' [D:E:%d.4 'rw']
 // CHECK-NEXT:            Id 'o' [D:E:%d.13 'o']
@@ -177,11 +177,11 @@ function invariantToReadOnlyWiden(o: {x: number}): {+x: number | string} {
 // CHECK-NEXT:                            Id 'r'
 // CHECK-NEXT:                        Id '_r' [D:E:%d.14 '_r']
 // CHECK-NEXT:                ExpressionStatement
-// CHECK-NEXT:                    AssignmentExpression : number
+// CHECK-NEXT:                    AssignmentExpression : 0
 // CHECK-NEXT:                        MemberExpression : number
 // CHECK-NEXT:                            Id 'o' [D:E:%d.13 'o'] : %object.4
 // CHECK-NEXT:                            Id 'w'
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 0
 // CHECK-NEXT:                ExpressionStatement
 // CHECK-NEXT:                    AssignmentExpression : number
 // CHECK-NEXT:                        MemberExpression : number
@@ -192,7 +192,7 @@ function invariantToReadOnlyWiden(o: {x: number}): {+x: number | string} {
 // CHECK-NEXT:                                Id 'o' [D:E:%d.13 'o'] : %object.4
 // CHECK-NEXT:                                Id 'z'
 // CHECK-NEXT:                            BinOp +
-// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                            NumericLiteral : 1
 // CHECK-NEXT:        FunctionDeclaration : %function.8
 // CHECK-NEXT:            Id 'spreadDropsVariance' [D:E:%d.5 'spreadDropsVariance']
 // CHECK-NEXT:            Id 'o' [D:E:%d.16 'o']

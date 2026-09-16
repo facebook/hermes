@@ -17,6 +17,7 @@ set(typedlib_sources
   "02-string.js"
   "03-map.js"
   "04-set.js"
+  "05-symbol.js"
 )
 list(SORT typedlib_sources)
 

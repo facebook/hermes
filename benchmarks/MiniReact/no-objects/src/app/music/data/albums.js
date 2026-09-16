@@ -8,13 +8,11 @@
  * @format
  */
 
-export type Album = any;
-// TODO: Need Object support
-// export type Album = {
-//   name: string
-//   artist: string
-//   cover: string
-// };
+export type Album = {|
+  name: string,
+  artist: string,
+  cover: string,
+|};
 
 export const listenNowAlbums: Album[] = [
   {

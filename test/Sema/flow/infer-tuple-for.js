@@ -42,7 +42,7 @@ function foo(c: [number, string][]) {
 // CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:    BlockStatement
 // CHECK-NEXT:        ExpressionStatement
-// CHECK-NEXT:            StringLiteral : string
+// CHECK-NEXT:            StringLiteral : "use strict"
 // CHECK-NEXT:        FunctionDeclaration : %function.3
 // CHECK-NEXT:            Id 'foo' [D:E:%d.2 'foo']
 // CHECK-NEXT:            Id 'c' [D:E:%d.4 'c']

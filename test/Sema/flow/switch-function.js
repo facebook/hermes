@@ -34,7 +34,7 @@ switch (0) {
 // CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:    BlockStatement
 // CHECK-NEXT:        SwitchStatement Scope %s.2
-// CHECK-NEXT:            NumericLiteral : number
+// CHECK-NEXT:            NumericLiteral : 0
 // CHECK-NEXT:            SwitchCase
 // CHECK-NEXT:                FunctionDeclaration : %function.2
 // CHECK-NEXT:                    Id 'foo' [D:E:%d.3 'foo']

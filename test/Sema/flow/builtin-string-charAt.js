@@ -43,4 +43,4 @@ function test(s: string): string {
 // CHECK-NEXT:                        MemberExpression : %function.3
 // CHECK-NEXT:                            Id 's' [D:E:%d.4 's'] : string
 // CHECK-NEXT:                            Id 'charAt'
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 0

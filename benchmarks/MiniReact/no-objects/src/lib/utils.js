@@ -8,7 +8,6 @@
  * @format
  */
 
-// TODO switch from legacy function when SH supports rest args.
-export function cn(...rest) {
+export function cn(...rest: mixed[]): string {
   return rest.join(' ');
 }

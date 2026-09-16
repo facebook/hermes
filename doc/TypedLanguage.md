@@ -30,6 +30,24 @@ The TypeScript type syntax is partially supported (use `-parse-ts` to convert TS
 
 * `empty` has no values. It is the subtype of all other types.
 
+### Literal Types
+
+* String literal types: `"left"`, `"right"`
+* Number literal types: `1`, `-3`
+* Boolean literal types: `true`, `false`
+
+`"abc"` is typed as `"abc"`. Literal types flows into their general (widened) types, and into another literal only when the value is identical. Operators treat a literal as the widened type. This can be used for tagged unions and string enums.
+
+#### Widening
+
+A fresh literal is widened to its general type (`"abc"` -> `string`) when it becomes the inferred type of a mutable binding, for example:
+
+* `let`/`var`: `let x = 'a'` infers `string`.
+* Array literals: `['a','b']` infers `Array<string>`.
+* Object fields, indexer keys, and indexer values.
+
+The literal is kept (no widening) for `const`, or any annotated context (e.g. `Array<"a">`).
+
 ### Unions
 
 `A | B` indicates a union between two types `A` and `B`. Values that are either `A` or `B` are valid values of `A | B`. Unions may be cyclic, but cycles must include another type. For example: `type A = A` is invalid, but `type A = [A, B] | null` is valid.
@@ -83,11 +101,20 @@ Reads yield `T` but are checked by a checked cast at runtime (so a read of a mis
 
 Non-computed access (`dict.x`) routes through the indexer using a `string` key, so it requires a `string`-keyed indexer.
 
-Spreading an object that has an indexer produces an object with an indexer of the same key type. If the result also has named properties (literal properties, or fields from another spread source), they fold into the indexer and its value type becomes the union of all the value types:
+Spreading an object that has an indexer produces an object with an indexer of the same key type. If the result also has named properties, they fold into the indexer and its value type becomes the union of all the value types:
 ```
 var d: {[string]: number} = {};
 var a = {...d};            // {[string]: number}
 var b = {...d, x: "s"};    // {[string]: number | string}
+```
+
+A computed property (`{[k]: v}`) in an object literal also produces an indexer object: the key type is the union of all computed key types, and the value type is the union of all value types. Mixing computed and named properties results in an indexer.
+
+```
+var k: string;
+var x = {[k]: 1};          // {[string]: number}
+var n: number;
+var y = {[n]: 1};          // {[number]: number}
 ```
 
 ### Functions
@@ -152,6 +179,14 @@ class Wrapper<T> { x: T }
 type NumberTuple<T> = [T, number];
 ```
 
+#### Bounds
+
+A type parameter may have a bound (`<T extends Bound>`). Each type argument must flow into the bound, otherwise it's an error. Bounds are checked for each specialization of a generic. A bound may reference an earlier type parameter. Example:
+
+```
+function g<T extends Base, U extends T>(x: T, y: U): void {}
+```
+
 ## Typechecking
 
 ### Compile-time Typechecking
@@ -192,6 +227,13 @@ Tuples are never inferred without context — `[1,"x"]` alone is `Array<number|s
 #### Generic Calls
 
 When a generic call omits type arguments, each type parameter is attempted to be inferred. Arguments are processed in two passes: first those whose parameter type is a bare type variable, then those with complex types like `(T) => U` from left to right. Inference succeeds only if every placeholder is resolved.
+
+Type arguments may also be supplied partially, in which case only the unspecified trailing type parameters are inferred:
+
+```
+function makePair<T, U>(a: T, b: U): [T, U] { return [a, b]; }
+makePair<number>(1, 'a');  // T = number (explicit), U = string (inferred)
+```
 
 Matching is structural: same-kind containers (`Array`, `Tuple`, `ExactObject`, function types) recurse into their components, a union constraint tries each arm against a non-union concrete, etc.
 
@@ -259,6 +301,8 @@ Destructuring is supported in variable declarations and parameters, including ne
 const [x, y]: [number, string] = [1, "abc"];
 const {a, b}: {a: number, b: number} = obj;
 ```
+
+Destructuring names in object patterns can have defaults, but array-pattern destructuring doesn't support defaults.
 
 ### Spread in Array Literals
 

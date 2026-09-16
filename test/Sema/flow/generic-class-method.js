@@ -116,7 +116,7 @@ class C<Props> {
 // CHECK-NEXT:                                        MemberExpression : %tuple.9
 // CHECK-NEXT:                                            ThisExpression : %class.5
 // CHECK-NEXT:                                            Id 'vals'
-// CHECK-NEXT:                                        NumericLiteral : number
+// CHECK-NEXT:                                        NumericLiteral : 0
 // CHECK-NEXT:                                    Id 'b' [D:E:%d.10 'b']
 // CHECK-NEXT:                            ExpressionStatement
 // CHECK-NEXT:                                CallExpression : void

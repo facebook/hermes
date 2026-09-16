@@ -66,10 +66,10 @@ let merged: {[string]: number | boolean} = {...d, ...plain};
 // CHECK-NEXT:                ObjectExpression : %object.6
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'a'
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 1
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'b'
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 2
 // CHECK-NEXT:                Id 'd' [D:E:%d.2 'd']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
@@ -84,14 +84,14 @@ let merged: {[string]: number | boolean} = {...d, ...plain};
 // CHECK-NEXT:                        Id 'd' [D:E:%d.2 'd'] : %object.2
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'x'
-// CHECK-NEXT:                        StringLiteral : string
+// CHECK-NEXT:                        StringLiteral : "s"
 // CHECK-NEXT:                Id 'withName' [D:E:%d.4 'withName']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                ObjectExpression : %object.3
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'x'
-// CHECK-NEXT:                        StringLiteral : string
+// CHECK-NEXT:                        StringLiteral : "s"
 // CHECK-NEXT:                    SpreadElement
 // CHECK-NEXT:                        Id 'd' [D:E:%d.2 'd'] : %object.2
 // CHECK-NEXT:                Id 'nameFirst' [D:E:%d.5 'nameFirst']
@@ -100,7 +100,7 @@ let merged: {[string]: number | boolean} = {...d, ...plain};
 // CHECK-NEXT:                ObjectExpression : %object.4
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'a'
-// CHECK-NEXT:                        BooleanLiteral : boolean
+// CHECK-NEXT:                        BooleanLiteral : true
 // CHECK-NEXT:                Id 'plain' [D:E:%d.6 'plain']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator

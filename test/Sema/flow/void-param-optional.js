@@ -137,7 +137,7 @@ let s: string = fg('hi');
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            CallExpression : void
 // CHECK-NEXT:                Id 'f2' [D:E:%d.3 'f2'] : %function.4
-// CHECK-NEXT:                StringLiteral : string
+// CHECK-NEXT:                StringLiteral : "a"
 // CHECK-NEXT:        FunctionDeclaration : %function.6
 // CHECK-NEXT:            Id 'f3' [D:E:%d.4 'f3']
 // CHECK-NEXT:            Id 'x' [D:E:%d.18 'x']
@@ -152,7 +152,7 @@ let s: string = fg('hi');
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            CallExpression : void
 // CHECK-NEXT:                Id 'f3' [D:E:%d.4 'f3'] : %function.6
-// CHECK-NEXT:                StringLiteral : string
+// CHECK-NEXT:                StringLiteral : "a"
 // CHECK-NEXT:        FunctionDeclaration : %function.7
 // CHECK-NEXT:            Id 'f4' [D:E:%d.5 'f4']
 // CHECK-NEXT:            Id 'x' [D:E:%d.20 'x']
@@ -161,7 +161,7 @@ let s: string = fg('hi');
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            CallExpression : void
 // CHECK-NEXT:                Id 'f4' [D:E:%d.5 'f4'] : %function.7
-// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:                NumericLiteral : 1
 // CHECK-NEXT:        FunctionDeclaration : %function.8
 // CHECK-NEXT:            Id 'f5' [D:E:%d.6 'f5']
 // CHECK-NEXT:            Id 'x' [D:E:%d.23 'x']
@@ -209,5 +209,5 @@ let s: string = fg('hi');
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                CallExpression : string
 // CHECK-NEXT:                    Id 'fg' [D:E:%d.13 'fg'] : %function.10
-// CHECK-NEXT:                    StringLiteral : string
+// CHECK-NEXT:                    StringLiteral : "hi"
 // CHECK-NEXT:                Id 's' [D:E:%d.10 's']

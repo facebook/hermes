@@ -81,13 +81,13 @@ function flowOptional(): void {
 // CHECK-NEXT:            Id 'basic' [D:E:%d.2 'basic']
 // CHECK-NEXT:            AssignmentPattern
 // CHECK-NEXT:                Id 'x' [D:E:%d.7 'x']
-// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:                NumericLiteral : 1
 // CHECK-NEXT:            BlockStatement
 // CHECK-NEXT:        FunctionDeclaration : %function.3
 // CHECK-NEXT:            Id 'useParam' [D:E:%d.3 'useParam']
 // CHECK-NEXT:            AssignmentPattern
 // CHECK-NEXT:                Id 'x' [D:E:%d.9 'x']
-// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:                NumericLiteral : 1
 // CHECK-NEXT:            BlockStatement
 // CHECK-NEXT:                ReturnStatement
 // CHECK-NEXT:                    Id 'x' [D:E:%d.9 'x'] : number
@@ -107,6 +107,6 @@ function flowOptional(): void {
 // CHECK-NEXT:                            Id 'a' [D:E:%d.15 'a']
 // CHECK-NEXT:                            AssignmentPattern
 // CHECK-NEXT:                                Id 'b' [D:E:%d.16 'b']
-// CHECK-NEXT:                                NumericLiteral : number
+// CHECK-NEXT:                                NumericLiteral : 0
 // CHECK-NEXT:                            BlockStatement
 // CHECK-NEXT:                        Id 'f' [D:E:%d.13 'f']

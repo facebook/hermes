@@ -86,7 +86,7 @@ class B extends A {
 // CHECK-NEXT:                    FunctionExpression : %function.6
 // CHECK-NEXT:                        BlockStatement
 // CHECK-NEXT:                            ReturnStatement
-// CHECK-NEXT:                                NumericLiteral : number
+// CHECK-NEXT:                                NumericLiteral : 0
 // CHECK-NEXT:        ClassDeclaration Scope %s.3
 // CHECK-NEXT:            Id 'B' [D:E:%d.3 'B']
 // CHECK-NEXT:            Id 'A' [D:E:%d.2 'A'] : %class_constructor.3

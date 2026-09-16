@@ -99,7 +99,7 @@ c1 = new C<number | string>('abc');
 // CHECK-NEXT:                        UnionTypeAnnotation
 // CHECK-NEXT:                            NumberTypeAnnotation
 // CHECK-NEXT:                            StringTypeAnnotation
-// CHECK-NEXT:                    NumericLiteral : number
+// CHECK-NEXT:                    NumericLiteral : 3
 // CHECK-NEXT:                Id 'c1' [D:E:%d.3 'c1']
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            AssignmentExpression : %class.3
@@ -110,4 +110,4 @@ c1 = new C<number | string>('abc');
 // CHECK-NEXT:                        UnionTypeAnnotation
 // CHECK-NEXT:                            NumberTypeAnnotation
 // CHECK-NEXT:                            StringTypeAnnotation
-// CHECK-NEXT:                    StringLiteral : string
+// CHECK-NEXT:                    StringLiteral : "abc"

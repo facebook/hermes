@@ -30,6 +30,9 @@ type F = (x: number, ...rest: Array<string>) => void;
 // Flow: assign function with rest to matching type.
 let f: F = foo;
 
+type F2 = (number, ...Array<string>) => void;
+let f2: F2 = foo;
+
 // Type alias to Array used as rest param type.
 type MyArr = Array<string>;
 type G = (...rest: MyArr) => void;
@@ -49,48 +52,49 @@ type G = (...rest: MyArr) => void;
 // CHECK-NEXT:        Decl %d.2 'foo' Var : %function.2
 // CHECK-NEXT:        Decl %d.3 'bar' Var : %function.5
 // CHECK-NEXT:        Decl %d.4 'f' Let : %function.2
-// CHECK-NEXT:        Decl %d.5 'arguments' Var Arguments
+// CHECK-NEXT:        Decl %d.5 'f2' Let : %function.2
+// CHECK-NEXT:        Decl %d.6 'arguments' Var Arguments
 // CHECK-NEXT:        hoistedFunction foo
 // CHECK-NEXT:        hoistedFunction bar
 // CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.2
-// CHECK-NEXT:            Decl %d.6 'x' Parameter : number
-// CHECK-NEXT:            Decl %d.7 'args' Parameter : %class.3
-// CHECK-NEXT:            Decl %d.8 'arguments' Var Arguments
+// CHECK-NEXT:            Decl %d.7 'x' Parameter : number
+// CHECK-NEXT:            Decl %d.8 'args' Parameter : %class.3
+// CHECK-NEXT:            Decl %d.9 'arguments' Var Arguments
 // CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.3
-// CHECK-NEXT:            Decl %d.9 'items' Parameter : %class.4
-// CHECK-NEXT:            Decl %d.10 'arguments' Var Arguments
+// CHECK-NEXT:            Decl %d.10 'items' Parameter : %class.4
+// CHECK-NEXT:            Decl %d.11 'arguments' Var Arguments
 
 // CHECK:FunctionExpression : %untyped_function.1
 // CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:    BlockStatement
 // CHECK-NEXT:        FunctionDeclaration : %function.2
 // CHECK-NEXT:            Id 'foo' [D:E:%d.2 'foo']
-// CHECK-NEXT:            Id 'x' [D:E:%d.6 'x']
+// CHECK-NEXT:            Id 'x' [D:E:%d.7 'x']
 // CHECK-NEXT:            RestElement
-// CHECK-NEXT:                Id 'args' [D:E:%d.7 'args']
+// CHECK-NEXT:                Id 'args' [D:E:%d.8 'args']
 // CHECK-NEXT:            BlockStatement
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            CallExpression : void
 // CHECK-NEXT:                Id 'foo' [D:E:%d.2 'foo'] : %function.2
-// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:                NumericLiteral : 1
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            CallExpression : void
 // CHECK-NEXT:                Id 'foo' [D:E:%d.2 'foo'] : %function.2
-// CHECK-NEXT:                NumericLiteral : number
-// CHECK-NEXT:                StringLiteral : string
+// CHECK-NEXT:                NumericLiteral : 1
+// CHECK-NEXT:                StringLiteral : "a"
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            CallExpression : void
 // CHECK-NEXT:                Id 'foo' [D:E:%d.2 'foo'] : %function.2
-// CHECK-NEXT:                NumericLiteral : number
-// CHECK-NEXT:                StringLiteral : string
-// CHECK-NEXT:                StringLiteral : string
-// CHECK-NEXT:                StringLiteral : string
+// CHECK-NEXT:                NumericLiteral : 1
+// CHECK-NEXT:                StringLiteral : "a"
+// CHECK-NEXT:                StringLiteral : "b"
+// CHECK-NEXT:                StringLiteral : "c"
 // CHECK-NEXT:        FunctionDeclaration : %function.5
 // CHECK-NEXT:            Id 'bar' [D:E:%d.3 'bar']
 // CHECK-NEXT:            RestElement
-// CHECK-NEXT:                Id 'items' [D:E:%d.9 'items']
+// CHECK-NEXT:                Id 'items' [D:E:%d.10 'items']
 // CHECK-NEXT:            BlockStatement
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            CallExpression : void
@@ -98,9 +102,9 @@ type G = (...rest: MyArr) => void;
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            CallExpression : void
 // CHECK-NEXT:                Id 'bar' [D:E:%d.3 'bar'] : %function.5
-// CHECK-NEXT:                NumericLiteral : number
-// CHECK-NEXT:                NumericLiteral : number
-// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:                NumericLiteral : 1
+// CHECK-NEXT:                NumericLiteral : 2
+// CHECK-NEXT:                NumericLiteral : 3
 // CHECK-NEXT:        TypeAlias
 // CHECK-NEXT:            Id 'F'
 // CHECK-NEXT:            FunctionTypeAnnotation
@@ -118,6 +122,21 @@ type G = (...rest: MyArr) => void;
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                Id 'foo' [D:E:%d.2 'foo'] : %function.2
 // CHECK-NEXT:                Id 'f' [D:E:%d.4 'f']
+// CHECK-NEXT:        TypeAlias
+// CHECK-NEXT:            Id 'F2'
+// CHECK-NEXT:            FunctionTypeAnnotation
+// CHECK-NEXT:                FunctionTypeParam
+// CHECK-NEXT:                    NumberTypeAnnotation
+// CHECK-NEXT:                VoidTypeAnnotation
+// CHECK-NEXT:                FunctionTypeParam
+// CHECK-NEXT:                    GenericTypeAnnotation
+// CHECK-NEXT:                        Id 'Array'
+// CHECK-NEXT:                        TypeParameterInstantiation
+// CHECK-NEXT:                            StringTypeAnnotation
+// CHECK-NEXT:        VariableDeclaration
+// CHECK-NEXT:            VariableDeclarator
+// CHECK-NEXT:                Id 'foo' [D:E:%d.2 'foo'] : %function.2
+// CHECK-NEXT:                Id 'f2' [D:E:%d.5 'f2']
 // CHECK-NEXT:        TypeAlias
 // CHECK-NEXT:            Id 'MyArr'
 // CHECK-NEXT:            GenericTypeAnnotation

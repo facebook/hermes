@@ -506,6 +506,24 @@ bool TypeContext::canBePrimitive(Type t) const {
   return containsMatchingKind(t.id_, isPrimitiveKind);
 }
 
+bool TypeContext::isIDZType(Type t) const {
+  // A field needs IDZ unless it can hold a non-symbol primitive, which provides
+  // a representable literal default (0/""/false/0n/undefined/null). Object
+  // types and symbol have no such default and must be IDZ-checked.
+  {
+    uint16_t m = entries_[t.id_].primMask;
+    if (m != kNotMaskable)
+      return (m & kNumCodeMask) == NC_None &&
+          (m & (MB_Undefined | MB_Null | MB_Boolean | MB_BigInt | MB_String)) ==
+          0;
+  }
+  if (t.id_ == kNoTypeId)
+    return false;
+  return !containsMatchingKind(t.id_, [](TypeKind k) {
+    return isPrimitiveKind(k) && k != TypeKind::Symbol;
+  });
+}
+
 bool TypeContext::isNonPtr(Type t) const {
   {
     uint16_t m = entries_[t.id_].primMask;

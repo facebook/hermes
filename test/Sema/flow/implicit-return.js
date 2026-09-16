@@ -158,54 +158,54 @@ function main(x) {
 // CHECK-NEXT:                        IfStatement
 // CHECK-NEXT:                            Id 'x' [D:E:%d.4 'x'] : any
 // CHECK-NEXT:                            ReturnStatement
-// CHECK-NEXT:                                NumericLiteral : number
+// CHECK-NEXT:                                NumericLiteral : 1
 // CHECK-NEXT:                FunctionDeclaration : %function.3
 // CHECK-NEXT:                    Id 'f2' [D:E:%d.6 'f2']
 // CHECK-NEXT:                    BlockStatement
 // CHECK-NEXT:                        IfStatement
 // CHECK-NEXT:                            Id 'x' [D:E:%d.4 'x'] : any
 // CHECK-NEXT:                            ReturnStatement
-// CHECK-NEXT:                                NumericLiteral : number
+// CHECK-NEXT:                                NumericLiteral : 1
 // CHECK-NEXT:                            ReturnStatement
-// CHECK-NEXT:                                NumericLiteral : number
+// CHECK-NEXT:                                NumericLiteral : 2
 // CHECK-NEXT:                FunctionDeclaration : %function.3
 // CHECK-NEXT:                    Id 'f3' [D:E:%d.7 'f3']
 // CHECK-NEXT:                    BlockStatement
 // CHECK-NEXT:                        TryStatement
 // CHECK-NEXT:                            BlockStatement Scope %s.6
 // CHECK-NEXT:                                ThrowStatement
-// CHECK-NEXT:                                    NumericLiteral : number
+// CHECK-NEXT:                                    NumericLiteral : 1
 // CHECK-NEXT:                            BlockStatement Scope %s.7
 // CHECK-NEXT:                                ReturnStatement
-// CHECK-NEXT:                                    NumericLiteral : number
+// CHECK-NEXT:                                    NumericLiteral : 2
 // CHECK-NEXT:                FunctionDeclaration : %function.3
 // CHECK-NEXT:                    Id 'f4' [D:E:%d.8 'f4']
 // CHECK-NEXT:                    BlockStatement
 // CHECK-NEXT:                        TryStatement
 // CHECK-NEXT:                            BlockStatement Scope %s.9
 // CHECK-NEXT:                                ReturnStatement
-// CHECK-NEXT:                                    NumericLiteral : number
+// CHECK-NEXT:                                    NumericLiteral : 1
 // CHECK-NEXT:                            BlockStatement Scope %s.10
 // CHECK-NEXT:                                ReturnStatement
-// CHECK-NEXT:                                    NumericLiteral : number
+// CHECK-NEXT:                                    NumericLiteral : 2
 // CHECK-NEXT:                FunctionDeclaration : %function.3
 // CHECK-NEXT:                    Id 'f5' [D:E:%d.9 'f5']
 // CHECK-NEXT:                    BlockStatement
 // CHECK-NEXT:                        TryStatement
 // CHECK-NEXT:                            BlockStatement Scope %s.12
 // CHECK-NEXT:                                ReturnStatement
-// CHECK-NEXT:                                    NumericLiteral : number
+// CHECK-NEXT:                                    NumericLiteral : 1
 // CHECK-NEXT:                            CatchClause Scope %s.13
 // CHECK-NEXT:                                BlockStatement Scope %s.14
 // CHECK-NEXT:                                    ReturnStatement
-// CHECK-NEXT:                                        NumericLiteral : number
+// CHECK-NEXT:                                        NumericLiteral : 2
 // CHECK-NEXT:                FunctionDeclaration : %function.3
 // CHECK-NEXT:                    Id 'f6' [D:E:%d.10 'f6']
 // CHECK-NEXT:                    BlockStatement
 // CHECK-NEXT:                        TryStatement
 // CHECK-NEXT:                            BlockStatement Scope %s.16
 // CHECK-NEXT:                                ReturnStatement
-// CHECK-NEXT:                                    NumericLiteral : number
+// CHECK-NEXT:                                    NumericLiteral : 1
 // CHECK-NEXT:                            BlockStatement Scope %s.17
 // CHECK-NEXT:                FunctionDeclaration : %function.3
 // CHECK-NEXT:                    Id 'f7' [D:E:%d.11 'f7']
@@ -215,12 +215,12 @@ function main(x) {
 // CHECK-NEXT:                                TryStatement
 // CHECK-NEXT:                                    BlockStatement Scope %s.20
 // CHECK-NEXT:                                        ReturnStatement
-// CHECK-NEXT:                                            NumericLiteral : number
+// CHECK-NEXT:                                            NumericLiteral : 1
 // CHECK-NEXT:                                    BlockStatement Scope %s.21
 // CHECK-NEXT:                            CatchClause Scope %s.22
 // CHECK-NEXT:                                BlockStatement Scope %s.23
 // CHECK-NEXT:                                    ReturnStatement
-// CHECK-NEXT:                                        NumericLiteral : number
+// CHECK-NEXT:                                        NumericLiteral : 2
 // CHECK-NEXT:                FunctionDeclaration : %function.3
 // CHECK-NEXT:                    Id 'f8' [D:E:%d.12 'f8']
 // CHECK-NEXT:                    BlockStatement
@@ -233,4 +233,4 @@ function main(x) {
 // CHECK-NEXT:                                            Id 'label'
 // CHECK-NEXT:                                    BlockStatement Scope %s.27
 // CHECK-NEXT:                                        ReturnStatement
-// CHECK-NEXT:                                            NumericLiteral : number
+// CHECK-NEXT:                                            NumericLiteral : 1

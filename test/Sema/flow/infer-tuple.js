@@ -45,38 +45,38 @@ let e: [[number, bool], string] = [[1, true], "hi"];
 // CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:    BlockStatement
 // CHECK-NEXT:        ExpressionStatement
-// CHECK-NEXT:            StringLiteral : string
+// CHECK-NEXT:            StringLiteral : "use strict"
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                ArrayExpression : %tuple.2
-// CHECK-NEXT:                    NumericLiteral : number
-// CHECK-NEXT:                    BooleanLiteral : boolean
+// CHECK-NEXT:                    NumericLiteral : 1
+// CHECK-NEXT:                    BooleanLiteral : true
 // CHECK-NEXT:                Id 'a' [D:E:%d.2 'a']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                ArrayExpression : %tuple.3
-// CHECK-NEXT:                    NumericLiteral : number
-// CHECK-NEXT:                    BooleanLiteral : boolean
+// CHECK-NEXT:                    NumericLiteral : 1
+// CHECK-NEXT:                    BooleanLiteral : true
 // CHECK-NEXT:                Id 'b' [D:E:%d.3 'b']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                TypeCastExpression : %tuple.3
 // CHECK-NEXT:                    ArrayExpression : %tuple.3
-// CHECK-NEXT:                        NumericLiteral : number
-// CHECK-NEXT:                        BooleanLiteral : boolean
+// CHECK-NEXT:                        NumericLiteral : 1
+// CHECK-NEXT:                        BooleanLiteral : true
 // CHECK-NEXT:                Id 'c' [D:E:%d.4 'c']
 // CHECK-NEXT:        FunctionDeclaration : %function.5
 // CHECK-NEXT:            Id 'd' [D:E:%d.5 'd']
 // CHECK-NEXT:            BlockStatement
 // CHECK-NEXT:                ReturnStatement
 // CHECK-NEXT:                    ArrayExpression : %tuple.3
-// CHECK-NEXT:                        NumericLiteral : number
-// CHECK-NEXT:                        BooleanLiteral : boolean
+// CHECK-NEXT:                        NumericLiteral : 1
+// CHECK-NEXT:                        BooleanLiteral : true
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                ArrayExpression : %tuple.4
 // CHECK-NEXT:                    ArrayExpression : %tuple.3
-// CHECK-NEXT:                        NumericLiteral : number
-// CHECK-NEXT:                        BooleanLiteral : boolean
-// CHECK-NEXT:                    StringLiteral : string
+// CHECK-NEXT:                        NumericLiteral : 1
+// CHECK-NEXT:                        BooleanLiteral : true
+// CHECK-NEXT:                    StringLiteral : "hi"
 // CHECK-NEXT:                Id 'e' [D:E:%d.6 'e']

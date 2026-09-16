@@ -78,13 +78,13 @@ class C1 extends C0 {
 // CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:    BlockStatement
 // CHECK-NEXT:        ExpressionStatement
-// CHECK-NEXT:            StringLiteral : string
+// CHECK-NEXT:            StringLiteral : "use strict"
 // CHECK-NEXT:        ClassDeclaration Scope %s.2
 // CHECK-NEXT:            Id 'C0' [D:E:%d.2 'C0']
 // CHECK-NEXT:            ClassBody
 // CHECK-NEXT:                ClassProperty : number
 // CHECK-NEXT:                    Id 'x'
-// CHECK-NEXT:                    NumericLiteral : number
+// CHECK-NEXT:                    NumericLiteral : 7
 // CHECK-NEXT:                MethodDefinition : %function.6
 // CHECK-NEXT:                    Id 'm'
 // CHECK-NEXT:                    FunctionExpression : %function.6
@@ -95,7 +95,7 @@ class C1 extends C0 {
 // CHECK-NEXT:                                        ThisExpression : %class.2
 // CHECK-NEXT:                                        Id 'x'
 // CHECK-NEXT:                                    BinOp +
-// CHECK-NEXT:                                    NumericLiteral : number
+// CHECK-NEXT:                                    NumericLiteral : 1
 // CHECK-NEXT:        ClassDeclaration Scope %s.3
 // CHECK-NEXT:            Id 'C1' [D:E:%d.3 'C1']
 // CHECK-NEXT:            Id 'C0' [D:E:%d.2 'C0'] : %class_constructor.3
@@ -108,7 +108,7 @@ class C1 extends C0 {
 // CHECK-NEXT:                                Super : %class.2
 // CHECK-NEXT:                                Id 'm'
 // CHECK-NEXT:                        BinOp +
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 1
 // CHECK-NEXT:                ClassProperty : number
 // CHECK-NEXT:                    Id 'y'
 // CHECK-NEXT:                ClassProperty : number
@@ -118,7 +118,7 @@ class C1 extends C0 {
 // CHECK-NEXT:                            ThisExpression : %class.4
 // CHECK-NEXT:                            Id 'x'
 // CHECK-NEXT:                        BinOp +
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 2
 // CHECK-NEXT:                MethodDefinition : %function.7
 // CHECK-NEXT:                    Id 'constructor'
 // CHECK-NEXT:                    FunctionExpression : %function.7
@@ -137,4 +137,4 @@ class C1 extends C0 {
 // CHECK-NEXT:                                                Super : %class.2
 // CHECK-NEXT:                                                Id 'm'
 // CHECK-NEXT:                                        BinOp +
-// CHECK-NEXT:                                        NumericLiteral : number
+// CHECK-NEXT:                                        NumericLiteral : 1

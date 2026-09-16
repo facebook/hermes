@@ -35,13 +35,13 @@ function f(x: any) {
 // CHECK-NEXT:  b: string
 // CHECK-NEXT:  c: boolean
 // CHECK-NEXT:})
-// CHECK-NEXT:%object.3 = object({
+// CHECK-NEXT:%function.3 = function(x: any): any
+// CHECK-NEXT:%object.4 = object({
 // CHECK-NEXT:  b: string
 // CHECK-NEXT:  c: boolean
 // CHECK-NEXT:})
-// CHECK-NEXT:%object.4 = object({
+// CHECK-NEXT:%object.5 = object({
 // CHECK-NEXT:})
-// CHECK-NEXT:%function.5 = function(x: any): any
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict mayReachImplicitReturn
@@ -49,14 +49,14 @@ function f(x: any) {
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:        Decl %d.2 'obj' Let : %object.2
 // CHECK-NEXT:        Decl %d.3 'a' Let : number
-// CHECK-NEXT:        Decl %d.4 'rest1' Let : %object.3
+// CHECK-NEXT:        Decl %d.4 'rest1' Let : %object.4
 // CHECK-NEXT:        Decl %d.5 'aa' Let : number
-// CHECK-NEXT:        Decl %d.6 'rest2' Let : %object.3
+// CHECK-NEXT:        Decl %d.6 'rest2' Let : %object.4
 // CHECK-NEXT:        Decl %d.7 'a3' Let : number
 // CHECK-NEXT:        Decl %d.8 'b3' Let : string
 // CHECK-NEXT:        Decl %d.9 'c3' Let : boolean
-// CHECK-NEXT:        Decl %d.10 'rest3' Let : %object.4
-// CHECK-NEXT:        Decl %d.11 'f' Var : %function.5
+// CHECK-NEXT:        Decl %d.10 'rest3' Let : %object.5
+// CHECK-NEXT:        Decl %d.11 'f' Var : %function.3
 // CHECK-NEXT:        Decl %d.12 'arguments' Var Arguments
 // CHECK-NEXT:        hoistedFunction f
 // CHECK-NEXT:    Func strict noImplicitReturn
@@ -70,19 +70,19 @@ function f(x: any) {
 // CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:    BlockStatement
 // CHECK-NEXT:        ExpressionStatement
-// CHECK-NEXT:            StringLiteral : string
+// CHECK-NEXT:            StringLiteral : "use strict"
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                ObjectExpression : %object.2
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'a'
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 1
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'b'
-// CHECK-NEXT:                        StringLiteral : string
+// CHECK-NEXT:                        StringLiteral : "x"
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'c'
-// CHECK-NEXT:                        BooleanLiteral : boolean
+// CHECK-NEXT:                        BooleanLiteral : true
 // CHECK-NEXT:                Id 'obj' [D:E:%d.2 'obj']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
@@ -92,7 +92,7 @@ function f(x: any) {
 // CHECK-NEXT:                        Id 'a'
 // CHECK-NEXT:                        Id 'a' [D:E:%d.3 'a'] : number
 // CHECK-NEXT:                    RestElement
-// CHECK-NEXT:                        Id 'rest1' [D:E:%d.4 'rest1'] : %object.3
+// CHECK-NEXT:                        Id 'rest1' [D:E:%d.4 'rest1'] : %object.4
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                Id 'obj' [D:E:%d.2 'obj'] : %object.2
@@ -101,7 +101,7 @@ function f(x: any) {
 // CHECK-NEXT:                        Id 'a'
 // CHECK-NEXT:                        Id 'aa' [D:E:%d.5 'aa'] : number
 // CHECK-NEXT:                    RestElement
-// CHECK-NEXT:                        Id 'rest2' [D:E:%d.6 'rest2'] : %object.3
+// CHECK-NEXT:                        Id 'rest2' [D:E:%d.6 'rest2'] : %object.4
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                Id 'obj' [D:E:%d.2 'obj'] : %object.2
@@ -116,8 +116,8 @@ function f(x: any) {
 // CHECK-NEXT:                        Id 'c'
 // CHECK-NEXT:                        Id 'c3' [D:E:%d.9 'c3'] : boolean
 // CHECK-NEXT:                    RestElement
-// CHECK-NEXT:                        Id 'rest3' [D:E:%d.10 'rest3'] : %object.4
-// CHECK-NEXT:        FunctionDeclaration : %function.5
+// CHECK-NEXT:                        Id 'rest3' [D:E:%d.10 'rest3'] : %object.5
+// CHECK-NEXT:        FunctionDeclaration : %function.3
 // CHECK-NEXT:            Id 'f' [D:E:%d.11 'f']
 // CHECK-NEXT:            Id 'x' [D:E:%d.13 'x']
 // CHECK-NEXT:            BlockStatement

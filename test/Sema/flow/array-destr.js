@@ -81,14 +81,14 @@ let [[na, nb]]: Array<Array<number>> = nested;
 // CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:    BlockStatement
 // CHECK-NEXT:        ExpressionStatement
-// CHECK-NEXT:            StringLiteral : string
+// CHECK-NEXT:            StringLiteral : "use strict"
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                ArrayExpression : %class.2
-// CHECK-NEXT:                    NumericLiteral : number
-// CHECK-NEXT:                    NumericLiteral : number
-// CHECK-NEXT:                    NumericLiteral : number
-// CHECK-NEXT:                    NumericLiteral : number
+// CHECK-NEXT:                    NumericLiteral : 1
+// CHECK-NEXT:                    NumericLiteral : 2
+// CHECK-NEXT:                    NumericLiteral : 3
+// CHECK-NEXT:                    NumericLiteral : 4
 // CHECK-NEXT:                Id 'arr' [D:E:%d.2 'arr']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
@@ -126,7 +126,7 @@ let [[na, nb]]: Array<Array<number>> = nested;
 // CHECK-NEXT:            BlockStatement
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:                NumericLiteral : 0
 // CHECK-NEXT:                Id 'x' [D:E:%d.12 'x']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
@@ -147,7 +147,7 @@ let [[na, nb]]: Array<Array<number>> = nested;
 // CHECK-NEXT:                Id 'arr' [D:E:%d.2 'arr'] : %class.2
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:                NumericLiteral : 0
 // CHECK-NEXT:                Id 'y' [D:E:%d.14 'y']
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            AssignmentExpression : %class.2
@@ -159,8 +159,8 @@ let [[na, nb]]: Array<Array<number>> = nested;
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                ArrayExpression : %class.3
 // CHECK-NEXT:                    ArrayExpression : %class.2
-// CHECK-NEXT:                        NumericLiteral : number
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 1
+// CHECK-NEXT:                        NumericLiteral : 2
 // CHECK-NEXT:                Id 'nested' [D:E:%d.15 'nested']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator

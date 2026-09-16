@@ -72,8 +72,17 @@ void FlowChecker::matchConstraintToType(
       continue;
 
     if (llvh::isa<InferencePlaceholderType>(constraint->info)) {
-      // Found a placeholder, replace it with the type that matches it.
-      constraint->info = type->info;
+      // Found a placeholder, replace it with the type that matches it. Widen
+      // fresh literal types so that e.g. head(['a', 'b']) infers T = string,
+      // not T = "a".
+      if (llvh::isa<StringLiteralType>(type->info))
+        constraint->info = flowContext_.getStringInfo();
+      else if (llvh::isa<NumberLiteralType>(type->info))
+        constraint->info = flowContext_.getNumberInfo();
+      else if (llvh::isa<BooleanLiteralType>(type->info))
+        constraint->info = flowContext_.getBooleanInfo();
+      else
+        constraint->info = type->info;
       continue;
     }
 
@@ -145,6 +154,10 @@ void FlowChecker::matchConstraintToType(
       // InferencePlaceholderArray is only used as constraints, never as
       // actual types, so both sides having this kind shouldn't happen.
       case TypeKind::InferencePlaceholderArray:
+      // Literals carry no nested types to match.
+      case TypeKind::StringLiteral:
+      case TypeKind::NumberLiteral:
+      case TypeKind::BooleanLiteral:
         continue;
 
       case TypeKind::Union:
@@ -262,87 +275,16 @@ class FlowChecker::ExprVisitor {
       ESTree::ArrowFunctionExpressionNode *node,
       ESTree::Node *parent,
       Type *constraint) {
-    if (auto *constraintFnType = llvh::dyn_cast_or_null<TypedFunctionType>(
-            constraint ? constraint->info : nullptr)) {
-      // If a constraint was provided, attempt to infer the return type of the
-      // function.
-      if (node->_typeParameters) {
-        outer_.sm_.error(
-            node->_typeParameters->getStartLoc(),
-            "ft: type parameters not supported on function expressions");
-        return;
-      }
-
-      // Populate the param types.
-      size_t i = 0;
-      llvh::SmallVector<TypedFunctionType::Param, 4> params{};
-      for (const auto &param : node->_params) {
-        // Default is 'any', but try to get a narrower type if possible.
-        TypedFunctionType::Param typedFnParam{
-            Identifier{}, outer_.flowContext_.getAny(), false};
-
-        if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(&param)) {
-          typedFnParam.name = Identifier::getFromPointer(id->_name);
-          if (id->_typeAnnotation) {
-            // Use explicit type annotation that was provided.
-            typedFnParam.type =
-                outer_.parseOptionalTypeAnnotation(id->_typeAnnotation);
-            if (i < constraintFnType->getParams().size()) {
-              // Attempt to populate the constraint type with the explicit type.
-              // This allows us to pass an arrow function that looks like
-              //   (x: number) => x + 1
-              // to a placeholder function type like `A => B` and infer that `A`
-              // is number.
-              outer_.matchConstraintToType(
-                  constraintFnType->getParams()[i].type, typedFnParam.type);
-            }
-          } else if (i < constraintFnType->getParams().size()) {
-            // No type annotation, but there's a constraint type, so use that.
-            // Add the name of the parameter for better errors.
-            typedFnParam.type = constraintFnType->getParams()[i].type;
-          }
-        } else {
-          outer_.sm_.warning(
-              param.getSourceRange(),
-              "ft: arrow function destructuring not supported, assuming 'any'");
-        }
-
-        params.push_back(typedFnParam);
-        ++i;
-      }
-
-      Type *returnType;
-      if (node->_returnType) {
-        // Use explicit return type annotation if possible.
-        returnType = outer_.parseOptionalTypeAnnotation(node->_returnType);
-        outer_.matchConstraintToType(
-            constraintFnType->getReturnType(), returnType);
-      } else {
-        // Otherwise, use the constraint type.
-        returnType = constraintFnType->getReturnType();
-      }
-
-      // The type of the arrow function that we've inferred.
-      // Note that the return type is potentially an InferencePlaceholder,
-      // which may be filled in when the ReturnStatement argument is visited by
-      // ExprVisitor (with the return type as a constraint).
-      Type *arrowInferenceType =
-          outer_.flowContext_.createType(outer_.flowContext_.createFunction(
-              returnType, nullptr, params, node->_async, false));
-      outer_.setNodeType(node, arrowInferenceType);
-
-      {
-        FunctionContext functionContext{
-            outer_,
-            node,
-            arrowInferenceType,
-            outer_.curFunctionContext_->thisParamType,
-            outer_.curFunctionContext_->newTargetType};
-        outer_.visitFunctionLike(node, node->_body, node->_params);
-      }
-    } else {
-      outer_.visit(node);
-    }
+    // If the constraint is a function type, it drives inference of unannotated
+    // parameters and the return type (including any InferencePlaceholders,
+    // which are filled in when the ReturnStatement argument is visited). A null
+    // constraint means a plain arrow with no contextual type. Either way, all
+    // parameter kinds (including destructuring) are handled uniformly by
+    // visitArrowFunction -> parseFunctionType.
+    outer_.visitArrowFunction(
+        node,
+        llvh::dyn_cast_or_null<TypedFunctionType>(
+            constraint ? constraint->info : nullptr));
   }
   void visit(
       ESTree::ClassExpressionNode *node,
@@ -532,6 +474,7 @@ class FlowChecker::ExprVisitor {
       if (node->_computed) {
         Type *indexType = outer_.getNodeTypeOrAny(node->_property);
         if (!llvh::isa<NumberType>(indexType->info) &&
+            !llvh::isa<NumberLiteralType>(indexType->info) &&
             !llvh::isa<AnyType>(indexType->info)) {
           outer_.sm_.error(
               node->_property->getSourceRange(),
@@ -861,6 +804,7 @@ class FlowChecker::ExprVisitor {
     if (node->_computed) {
       Type *indexType = outer_.getNodeTypeOrAny(node->_property);
       if (!llvh::isa<NumberType>(indexType->info) &&
+          !llvh::isa<NumberLiteralType>(indexType->info) &&
           !llvh::isa<AnyType>(indexType->info)) {
         outer_.sm_.error(
             node->_property->getSourceRange(),
@@ -882,6 +826,68 @@ class FlowChecker::ExprVisitor {
     outer_.sm_.error(
         node->_property->getSourceRange(), "ft: unknown string property");
     return outer_.flowContext_.getAny();
+  }
+
+  /// Read a field that is common to every arm of a union of object-literal
+  /// types. The field must exist in every arm; it need not sit at the same slot
+  /// in each (IRGen picks a slot-indexed load when the slots happen to match
+  /// and a by-name load otherwise). The result type is the union of the per-arm
+  /// field types. Only non-computed reads are supported.
+  Type *visitMemberUnion(
+      ESTree::MemberExpressionNode *node,
+      ESTree::Node *parent,
+      UnionType *unionType,
+      bool isWrite) {
+    if (node->_computed) {
+      outer_.sm_.error(
+          node->_property->getSourceRange(),
+          "ft: computed access to a union not supported");
+      return outer_.flowContext_.getAny();
+    }
+
+    // Only reads are supported for now.
+    if (classifyMemberAccess(node, parent, isWrite).write) {
+      outer_.sm_.error(
+          node->_property->getSourceRange(),
+          "ft: cannot write to a property of a union");
+      return outer_.flowContext_.getAny();
+    }
+
+    Identifier name = Identifier::getFromPointer(
+        llvh::cast<ESTree::IdentifierNode>(node->_property)->_name);
+
+    llvh::SmallVector<Type *, 4> fieldTypes{};
+    fieldTypes.reserve(unionType->getTypes().size());
+    for (Type *arm : unionType->getTypes()) {
+      auto *objType = llvh::dyn_cast<ExactObjectType>(arm->info);
+      if (!objType) {
+        outer_.sm_.error(
+            node->_property->getSourceRange(),
+            "ft: property '" + name.str() +
+                "' cannot be read on union with non-object arm " +
+                arm->messageString());
+        return outer_.flowContext_.getAny();
+      }
+      auto optFieldIdx = objType->findField(name);
+      if (!optFieldIdx) {
+        outer_.sm_.error(
+            node->_property->getSourceRange(),
+            "ft: property '" + name.str() +
+                "' is not present in all arms of the union");
+        return outer_.flowContext_.getAny();
+      }
+      const auto &field = objType->getFields()[*optFieldIdx];
+      if (field.variance == FieldVariance::WriteOnly) {
+        outer_.sm_.error(
+            node->_property->getSourceRange(),
+            "ft: cannot read writeonly property '" + name.str() + "'");
+        return outer_.flowContext_.getAny();
+      }
+      fieldTypes.push_back(field.type);
+    }
+
+    return outer_.flowContext_.createType(
+        outer_.flowContext_.maybeCreateUnion(fieldTypes));
   }
 
   void visit(
@@ -962,8 +968,13 @@ class FlowChecker::ExprVisitor {
       resType = visitMemberExactObject(node, parent, exactObjType, isWrite);
     } else if (auto *tupleType = llvh::dyn_cast<TupleType>(objType->info)) {
       resType = visitMemberTuple(node, tupleType);
-    } else if (llvh::isa<StringType>(objType->info)) {
+    } else if (
+        llvh::isa<StringType>(objType->info) ||
+        llvh::isa<StringLiteralType>(objType->info)) {
+      // A string literal type supports all the operations of String.
       resType = visitMemberString(node);
+    } else if (auto *unionType = llvh::dyn_cast<UnionType>(objType->info)) {
+      resType = visitMemberUnion(node, parent, unionType, isWrite);
     } else if (!llvh::isa<AnyType>(objType->info)) {
       if (node->_computed) {
         outer_.sm_.error(
@@ -1184,9 +1195,12 @@ class FlowChecker::ExprVisitor {
             "ft: empty array with no context, assuming 'any' array");
         elemUnion = outer_.flowContext_.getAny();
       } else {
-        // Otherwise, construct a union of all the element types.
-        elemUnion = outer_.flowContext_.createType(
-            outer_.flowContext_.maybeCreateUnion(elTypes.getArrayRef()));
+        // Otherwise, construct a union of all the element types. Widen fresh
+        // literal element types (e.g. ['a','b'] infers Array<string>, not
+        // Array<("a" | "b")>); an explicit Array<"a"> annotation is handled
+        // above via the constraint and keeps the literal type.
+        elemUnion = outer_.widenLiteralType(outer_.flowContext_.createType(
+            outer_.flowContext_.maybeCreateUnion(elTypes.getArrayRef())));
       }
       Type *arrType = outer_.getSpecializedArrayClassType(
           elemUnion, node->getSourceRange());
@@ -1227,11 +1241,17 @@ class FlowChecker::ExprVisitor {
     // Name of the key, mapping to index in the fields vector.
     llvh::SmallDenseMap<UniqueString *, size_t> names;
 
-    // If any spread source has an indexer, the result is an indexer object
-    // (indexers and named fields are mutually exclusive). These accumulate the
-    // common key type and all the value types contributed by spread indexers.
+    // A spread indexer or any computed property forces an indexer object.
+    // indexerKeyType holds the spread key type; indexerValueTypes accumulates
+    // value types from spreads, computed properties, and mixed-in named fields.
     Type *indexerKeyType = nullptr;
     llvh::SmallSetVector<Type *, 4> indexerValueTypes{};
+
+    // Computed properties (e.g. `{[k]: v}`) also force an indexer object.
+    bool sawComputed = false;
+    // The indexer key type is the union of all computed key types, plus string
+    // when named fields are present.
+    llvh::SmallSetVector<Type *, 4> computedKeyTypes{};
 
     auto *constraintObjectType = llvh::dyn_cast_or_null<ExactObjectType>(
         constraint ? constraint->info : nullptr);
@@ -1298,9 +1318,8 @@ class FlowChecker::ExprVisitor {
 
       auto *prop = llvh::dyn_cast<ESTree::PropertyNode>(&node);
       // prop->_kind being "init" makes sure this isn't a getter/setter.
-      if (!prop || prop->_computed || prop->_kind != outer_.kw_.identInit ||
-          prop->_method) {
-        // Exact object type doesn't support this, so bail.
+      if (!prop || prop->_kind != outer_.kw_.identInit || prop->_method) {
+        // Exact object type doesn't support getters/setters/methods, so bail.
         outer_.sm_.warning(
             node.getSourceRange(),
             "ft: unsupported property for typed object, assuming 'any'");
@@ -1308,7 +1327,37 @@ class FlowChecker::ExprVisitor {
         break;
       }
 
-      visitESTreeNodeNoReplace(*this, prop->_key, prop, nullptr);
+      if (prop->_computed) {
+        visitESTreeNode(*this, prop->_key, prop, nullptr);
+        Type *constraintValueType = nullptr;
+        if (constraintObjectType) {
+          // If the result is constrained to an indexer object, the value is
+          // checked against the indexer's value type.
+          if (auto optIndexer = constraintObjectType->getIndexer())
+            constraintValueType = optIndexer->valueType;
+        }
+        visitESTreeNode(*this, prop->_value, prop, constraintValueType);
+        Type *valueType = outer_.getNodeTypeOrAny(prop->_value);
+        if (constraintValueType) {
+          auto cf = outer_.canAFlowIntoB(valueType, constraintValueType);
+          if (!cf.canFlow) {
+            outer_.sm_.error(
+                prop->_value->getSourceRange(),
+                "ft: incompatible computed property value type");
+          }
+          if (cf.needCheckedCast) {
+            prop->_value = outer_.implicitCheckedCast(
+                prop->_value, constraintValueType, cf);
+          }
+          valueType = constraintValueType;
+        }
+        computedKeyTypes.insert(outer_.getNodeTypeOrAny(prop->_key));
+        indexerValueTypes.insert(valueType);
+        sawComputed = true;
+        continue;
+      }
+
+      visitESTreeNode(*this, prop->_key, prop, nullptr);
 
       UniqueString *name = outer_.propertyKeyAsIdentifier(prop->_key);
       if (!name || name == outer_.kw_.identUnderscoreProto) {
@@ -1333,7 +1382,7 @@ class FlowChecker::ExprVisitor {
       }
 
       // Use the value constraint to visit the value node.
-      visitESTreeNodeNoReplace(*this, prop->_value, prop, constraintValueType);
+      visitESTreeNode(*this, prop->_value, prop, constraintValueType);
 
       Type *valueType = outer_.getNodeTypeOrAny(prop->_value);
 
@@ -1369,10 +1418,43 @@ class FlowChecker::ExprVisitor {
       return;
     }
 
-    // A spread source had an indexer: the result is an indexer object whose
-    // value type is the union of every named field type and every spread
-    // indexer value type.
+    // Mixing computed (indexer) and named properties is not supported. Warn,
+    // but still produce the indexer type below. Named fields may come from
+    // explicit properties or spread sources, so check `fields` directly.
+    if (sawComputed && !fields.empty()) {
+      outer_.sm_.warning(
+          node->getSourceRange(),
+          "ft: mixing computed and named properties in a typed object "
+          "will result in an indexer");
+    }
+
+    // An un-annotated object literal (no contextual type) widens its fresh
+    // literal field types to their base types, mirroring let/var widening
+    // (e.g. {x: 'a'} infers {x: string}). When a constraint is present --
+    // including a union constraint used for discriminated unions -- the literal
+    // field types are kept so the object can flow into the expected arm.
+    if (!constraint) {
+      for (auto &f : fields)
+        f.type = outer_.widenLiteralType(f.type);
+    }
+
+    // Produce an indexer object if any spread had an indexer or any computed
+    // property was present. The key and value types are the unions of all
+    // contributing key and value types.
     if (!indexerValueTypes.empty()) {
+      // Fold the computed key types and string into the indexer key type.
+      if (sawComputed) {
+        if (!fields.empty())
+          computedKeyTypes.insert(outer_.flowContext_.getString());
+        if (indexerKeyType)
+          computedKeyTypes.insert(indexerKeyType);
+        indexerKeyType =
+            outer_.flowContext_.createType(outer_.flowContext_.maybeCreateUnion(
+                computedKeyTypes.getArrayRef()));
+      }
+      // An un-annotated indexer object widens fresh literal key types too.
+      if (!constraint)
+        indexerKeyType = outer_.widenLiteralType(indexerKeyType);
       // Named properties use string keys, so they require a string-keyed
       // indexer (field names cannot index a number-keyed indexer).
       if (!fields.empty() &&
@@ -1390,6 +1472,10 @@ class FlowChecker::ExprVisitor {
         valueTypes.insert(vt);
       Type *valueType = outer_.flowContext_.createType(
           outer_.flowContext_.maybeCreateUnion(valueTypes.getArrayRef()));
+      // Widen fresh literal indexer value types (computed/spread values) when
+      // there is no contextual constraint, mirroring the field widening above.
+      if (!constraint)
+        valueType = outer_.widenLiteralType(valueType);
       ExactObjectType::Indexer indexer{
           indexerKeyType, valueType, FieldVariance::None};
       outer_.setNodeType(
@@ -1421,13 +1507,25 @@ class FlowChecker::ExprVisitor {
       ESTree::BooleanLiteralNode *node,
       ESTree::Node *parent,
       Type *constraint) {
-    outer_.setNodeType(node, outer_.flowContext_.getBoolean());
+    // Type a boolean literal as its own BooleanLiteralType. It flows into
+    // Boolean, so this is compatible with Boolean contexts; un-annotated
+    // let/var declarations widen it back to Boolean during inference.
+    outer_.setNodeType(
+        node,
+        outer_.flowContext_.createType(
+            outer_.flowContext_.createBooleanLiteral(node->_value), node));
   }
   void visit(
       ESTree::StringLiteralNode *node,
       ESTree::Node *parent,
       Type *constraint) {
-    outer_.setNodeType(node, outer_.flowContext_.getString());
+    // Type a string literal as its own StringLiteralType. It flows into String,
+    // so this is compatible with String contexts; un-annotated let/var
+    // declarations widen it back to String during inference.
+    outer_.setNodeType(
+        node,
+        outer_.flowContext_.createType(
+            outer_.flowContext_.createStringLiteral(node->_value), node));
   }
   void visit(
       ESTree::TemplateLiteralNode *node,
@@ -1442,7 +1540,13 @@ class FlowChecker::ExprVisitor {
       ESTree::NumericLiteralNode *node,
       ESTree::Node *parent,
       Type *constraint) {
-    outer_.setNodeType(node, outer_.flowContext_.getNumber());
+    // Type a numeric literal as its own NumberLiteralType. It flows into
+    // Number, so this is compatible with Number contexts; un-annotated
+    // let/var declarations widen it back to Number during inference.
+    outer_.setNodeType(
+        node,
+        outer_.flowContext_.createType(
+            outer_.flowContext_.createNumberLiteral(node->_value), node));
   }
   void visit(
       ESTree::RegExpLiteralNode *node,
@@ -1564,6 +1668,19 @@ class FlowChecker::ExprVisitor {
 
   /// \return nullptr if the operation is not supported.
   Type *determineBinopType(BinopKind op, TypeKind lk, TypeKind rk) {
+    // Literal types behave like their widened base types for operators.
+    auto normalize = [](TypeKind k) -> TypeKind {
+      if (k == TypeKind::StringLiteral)
+        return TypeKind::String;
+      if (k == TypeKind::NumberLiteral)
+        return TypeKind::Number;
+      if (k == TypeKind::BooleanLiteral)
+        return TypeKind::Boolean;
+      return k;
+    };
+    lk = normalize(lk);
+    rk = normalize(rk);
+
     struct BinTypes {
       BinopKind op;
       TypeKind res;
@@ -1762,7 +1879,7 @@ class FlowChecker::ExprVisitor {
           node->getSourceRange(),
           llvh::Twine("ft: incompatible binary operation: ") +
               node->_operator->str() + " cannot be applied to " +
-              lt->info->getKindName() + " and " + rt->info->getKindName());
+              lt->messageString() + " and " + rt->messageString());
       res = outer_.flowContext_.getAny();
     }
 
@@ -1773,6 +1890,14 @@ class FlowChecker::ExprVisitor {
       ESTree::UnaryExpressionNode *node,
       UnopKind op,
       TypeKind argKind) {
+    // Literal types behave like their widened base types for operators.
+    if (argKind == TypeKind::StringLiteral)
+      argKind = TypeKind::String;
+    else if (argKind == TypeKind::NumberLiteral)
+      argKind = TypeKind::Number;
+    else if (argKind == TypeKind::BooleanLiteral)
+      argKind = TypeKind::Boolean;
+
     struct UnTypes {
       UnopKind op;
       TypeKind res;
@@ -2304,11 +2429,20 @@ class FlowChecker::ExprVisitor {
             llvh::dyn_cast<ESTree::IdentifierNode>(node->_callee)) {
       sema::Decl *decl = outer_.getDecl(identCallee);
       if (decl->generic) {
-        if (node->_typeArguments) {
+        // The number of explicitly provided type arguments (0 if none).
+        size_t numProvided = node->_typeArguments
+            ? llvh::cast<ESTree::TypeParameterInstantiationNode>(
+                  node->_typeArguments)
+                  ->_params.size()
+            : 0;
+        if (node->_typeArguments &&
+            numProvided >= outer_.getGenericInfoMustExist(decl).numTypeParams) {
+          // All type arguments provided (or too many, which errors during
+          // specialization): specialize directly.
           outer_.resolveCallToGenericFunctionSpecialization(
               node, identCallee, decl);
         } else {
-          // Attempt to infer the type arguments.
+          // No or partial type arguments: infer the missing trailing ones.
           auto [visited, typeArgs] =
               outer_.inferTypeArgumentsForGenericFunctionCall(
                   node, identCallee, decl);
@@ -2317,7 +2451,7 @@ class FlowChecker::ExprVisitor {
           if (typeArgs.empty()) {
             outer_.sm_.error(
                 node->getStartLoc(),
-                "could not infer type arguments for generic function");
+                "ft: could not infer type arguments for generic function");
             return;
           }
           outer_.resolveCallToGenericFunctionSpecializationWithParsedTypes(
@@ -2380,8 +2514,32 @@ class FlowChecker::ExprVisitor {
           shouldVisitArguments = false;
           overloadResolved = true;
         } else if (llvh::isa<GenericType>(field->type->info)) {
-          outer_.resolveCallToGenericMethodSpecialization(
-              node, memCallee, field->method);
+          size_t numProvided =
+              llvh::cast<ESTree::TypeParameterInstantiationNode>(
+                  node->_typeArguments)
+                  ->_params.size();
+          if (numProvided >= outer_.getGenericMethodInfoMustExist(field->method)
+                                 .numTypeParams) {
+            // All type arguments provided (or too many, which errors during
+            // specialization): specialize directly.
+            outer_.resolveCallToGenericMethodSpecialization(
+                node, memCallee, field->method);
+          } else {
+            // Partial type arguments: infer the missing trailing ones.
+            auto [didVisitArgs, typeArgs] =
+                outer_.inferTypeArgumentsForGenericMethodCall(
+                    node, memCallee, field->method);
+            if (didVisitArgs)
+              shouldVisitArguments = false;
+            if (typeArgs.empty()) {
+              outer_.sm_.error(
+                  node->getStartLoc(),
+                  "ft: could not infer type arguments for generic method");
+              return;
+            }
+            outer_.resolveCallToGenericMethodSpecializationWithParsedTypes(
+                node, memCallee, typeArgs, field->method);
+          }
         } else {
           outer_.sm_.error(
               node->_typeArguments->getSourceRange(),
@@ -2710,6 +2868,7 @@ class FlowChecker::ExprVisitor {
     }
     Type *countType = outer_.getNodeTypeOrAny(countArg);
     if (!llvh::isa<NumberType>(countType->info) &&
+        !llvh::isa<NumberLiteralType>(countType->info) &&
         !llvh::isa<AnyType>(countType->info)) {
       outer_.sm_.error(
           countArg->getSourceRange(),

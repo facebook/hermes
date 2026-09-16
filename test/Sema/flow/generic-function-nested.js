@@ -89,7 +89,7 @@ outer<string>('a');
 // CHECK-NEXT:            BlockStatement
 // CHECK-NEXT:                VariableDeclaration
 // CHECK-NEXT:                    VariableDeclarator
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 3
 // CHECK-NEXT:                        Id 'innerVar' [D:E:%d.13 'innerVar']
 // CHECK-NEXT:                FunctionDeclaration : %function.2
 // CHECK-NEXT:                    Id 'inner' [D:E:%d.16 'inner']
@@ -122,7 +122,7 @@ outer<string>('a');
 // CHECK-NEXT:            BlockStatement
 // CHECK-NEXT:                VariableDeclaration
 // CHECK-NEXT:                    VariableDeclarator
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 3
 // CHECK-NEXT:                        Id 'innerVar' [D:E:%d.22 'innerVar']
 // CHECK-NEXT:                FunctionDeclaration : %function.3
 // CHECK-NEXT:                    Id 'inner' [D:E:%d.25 'inner']
@@ -179,10 +179,10 @@ outer<string>('a');
 // CHECK-NEXT:                Id 'outer' [D:E:%d.4 'outer'] : %function.2
 // CHECK-NEXT:                TypeParameterInstantiation
 // CHECK-NEXT:                    NumberTypeAnnotation
-// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:                NumericLiteral : 1
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            CallExpression : string
 // CHECK-NEXT:                Id 'outer' [D:E:%d.5 'outer'] : %function.3
 // CHECK-NEXT:                TypeParameterInstantiation
 // CHECK-NEXT:                    StringTypeAnnotation
-// CHECK-NEXT:                StringLiteral : string
+// CHECK-NEXT:                StringLiteral : "a"

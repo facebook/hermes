@@ -66,7 +66,7 @@ let c = Math.random();
 // CHECK-NEXT:                Id 'a' [D:E:%d.3 'a']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:                NumericLiteral : 10
 // CHECK-NEXT:                Id 'b' [D:E:%d.4 'b']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator

@@ -92,7 +92,7 @@ var r2: boolean[] = map(arr, elem => !elem);
 // CHECK-NEXT:                ForStatement Scope %s.8
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
-// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                            NumericLiteral : 0
 // CHECK-NEXT:                            Id 'i' [D:E:%d.19 'i']
 // CHECK-NEXT:                    BinaryExpression : boolean
 // CHECK-NEXT:                        Id 'i' [D:E:%d.19 'i'] : number
@@ -130,7 +130,7 @@ var r2: boolean[] = map(arr, elem => !elem);
 // CHECK-NEXT:                ForStatement Scope %s.11
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
-// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                            NumericLiteral : 0
 // CHECK-NEXT:                            Id 'i' [D:E:%d.24 'i']
 // CHECK-NEXT:                    BinaryExpression : boolean
 // CHECK-NEXT:                        Id 'i' [D:E:%d.24 'i'] : number
@@ -196,9 +196,9 @@ var r2: boolean[] = map(arr, elem => !elem);
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                ArrayExpression : %class.2
-// CHECK-NEXT:                    NumericLiteral : number
-// CHECK-NEXT:                    NumericLiteral : number
-// CHECK-NEXT:                    NumericLiteral : number
+// CHECK-NEXT:                    NumericLiteral : 1
+// CHECK-NEXT:                    NumericLiteral : 2
+// CHECK-NEXT:                    NumericLiteral : 3
 // CHECK-NEXT:                Id 'arr' [D:E:%d.3 'arr']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator

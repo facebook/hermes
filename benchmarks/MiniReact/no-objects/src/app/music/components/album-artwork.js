@@ -9,7 +9,9 @@
  */
 
 import type {Props, React$MixedElement} from 'react';
+import type {Album} from '../data/albums';
 
+import CHECKED_CAST from 'sh/CHECKED_CAST';
 import Image from 'next/image';
 // import {PlusCircledIcon} from '@radix-ui/react-icons';
 
@@ -45,14 +47,15 @@ export function AlbumArtwork({
   className,
   ...props
 }: AlbumArtworkProps): React$MixedElement {
+  const albumData = CHECKED_CAST<Album>(album);
   return (
     <div className={cn('space-y-3', className)} {...props}>
       {/* <ContextMenu>
         <ContextMenuTrigger> */}
       <div className="overflow-hidden rounded-md">
         <Image
-          src={album.cover}
-          alt={album.name}
+          src={albumData.cover}
+          alt={albumData.name}
           width={width}
           height={height}
           className={cn(
@@ -100,8 +103,8 @@ export function AlbumArtwork({
         </ContextMenuContent>
       </ContextMenu> */}
       <div className="space-y-1 text-sm">
-        <h3 className="font-medium leading-none">{album.name}</h3>
-        <p className="text-xs text-muted-foreground">{album.artist}</p>
+        <h3 className="font-medium leading-none">{albumData.name}</h3>
+        <p className="text-xs text-muted-foreground">{albumData.artist}</p>
       </div>
     </div>
   );

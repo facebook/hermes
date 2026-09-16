@@ -82,16 +82,16 @@ const v: Foo | void = maybeFoo("a");
 // CHECK-NEXT:                IfStatement
 // CHECK-NEXT:                    BinaryExpression : boolean
 // CHECK-NEXT:                        Id 's' [D:E:%d.8 's'] : string
-// CHECK-NEXT:                        StringLiteral : string
+// CHECK-NEXT:                        StringLiteral : "a"
 // CHECK-NEXT:                    ReturnStatement
 // CHECK-NEXT:                        NewExpression : %class.2
 // CHECK-NEXT:                            Id 'Foo' [D:E:%d.2 'Foo'] : %class_constructor.3
-// CHECK-NEXT:                            StringLiteral : string
+// CHECK-NEXT:                            StringLiteral : "a"
 // CHECK-NEXT:                ReturnStatement
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                ImplicitCheckedCast : %union.5
 // CHECK-NEXT:                    CallExpression : %union.6
 // CHECK-NEXT:                        Id 'maybeFoo' [D:E:%d.3 'maybeFoo'] : %function.7
-// CHECK-NEXT:                        StringLiteral : string
+// CHECK-NEXT:                        StringLiteral : "a"
 // CHECK-NEXT:                Id 'v' [D:E:%d.4 'v']

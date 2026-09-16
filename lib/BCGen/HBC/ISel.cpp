@@ -1960,6 +1960,8 @@ void HBCISel::generateLIRLoadConstInst(
     case ValueKind::LiteralEmptyKind:
       BCFGen_->emitLoadConstEmpty(output);
       break;
+    // Uninit shares undefined's runtime representation.
+    case ValueKind::LiteralUninitKind:
     case ValueKind::LiteralUndefinedKind:
       BCFGen_->emitLoadConstUndefined(output);
       break;

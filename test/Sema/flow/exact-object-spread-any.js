@@ -41,5 +41,5 @@ let result = {...anyVal, x: 1};
 // CHECK-NEXT:                        Id 'anyVal' [D:E:%d.2 'anyVal'] : any
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'x'
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 1
 // CHECK-NEXT:                Id 'result' [D:E:%d.3 'result']

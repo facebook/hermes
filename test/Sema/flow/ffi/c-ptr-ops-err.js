@@ -11,13 +11,13 @@ let _ = function (p: c_ptr): void {
     ++p;
 // CHECK: {{.*}}:[[@LINE-1]]:5: error: ft: update expression must be number or bigint
     p + 1;
-// CHECK: {{.*}}:[[@LINE-1]]:5: error: ft: incompatible binary operation: + cannot be applied to c_ptr and number
+// CHECK: {{.*}}:[[@LINE-1]]:5: error: ft: incompatible binary operation: + cannot be applied to c_ptr and 1
     p * 2;
-// CHECK: {{.*}}:[[@LINE-1]]:5: error: ft: incompatible binary operation: * cannot be applied to c_ptr and number
+// CHECK: {{.*}}:[[@LINE-1]]:5: error: ft: incompatible binary operation: * cannot be applied to c_ptr and 2
     p > p;
 // CHECK: {{.*}}:[[@LINE-1]]:5: error: ft: incompatible binary operation: > cannot be applied to c_ptr and c_ptr
     p !== "hello";
-// CHECK: {{.*}}:[[@LINE-1]]:5: error: ft: !== cannot be applied to c_ptr and string
+// CHECK: {{.*}}:[[@LINE-1]]:5: error: ft: !== cannot be applied to c_ptr and "hello"
 }
 
 // CHECK: Emitted 5 errors. exiting.

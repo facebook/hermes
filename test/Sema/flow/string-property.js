@@ -30,10 +30,10 @@ let ch: string = s[0];
 // CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:    BlockStatement
 // CHECK-NEXT:        ExpressionStatement
-// CHECK-NEXT:            StringLiteral : string
+// CHECK-NEXT:            StringLiteral : "use strict"
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                StringLiteral : string
+// CHECK-NEXT:                StringLiteral : "hello"
 // CHECK-NEXT:                Id 's' [D:E:%d.2 's']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
@@ -45,5 +45,5 @@ let ch: string = s[0];
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                MemberExpression : string
 // CHECK-NEXT:                    Id 's' [D:E:%d.2 's'] : string
-// CHECK-NEXT:                    NumericLiteral : number
+// CHECK-NEXT:                    NumericLiteral : 0
 // CHECK-NEXT:                Id 'ch' [D:E:%d.4 'ch']

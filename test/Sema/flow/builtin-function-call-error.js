@@ -43,7 +43,7 @@ function test(): void {
 // CHECK-NEXT:{{.*}}builtin-function-call-error.js:31:3: error: ft: function.call expects at most 1 arguments, but 2 supplied
 // CHECK-NEXT:  noThis.call(undefined, 1, 2);
 // CHECK-NEXT:  ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// CHECK-NEXT:{{.*}}builtin-function-call-error.js:33:26: error: ft: function.call parameter 'a' type mismatch: cannot assign string to number
+// CHECK-NEXT:{{.*}}builtin-function-call-error.js:33:26: error: ft: function.call parameter 'a' type mismatch: cannot assign "x" to number
 // CHECK-NEXT:  noThis.call(undefined, "x");
 // CHECK-NEXT:                         ^~~
 // CHECK-NEXT:{{.*}}builtin-function-call-error.js:35:3: error: ft: function.call requires a 'this' argument

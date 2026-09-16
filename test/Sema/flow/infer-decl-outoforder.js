@@ -49,7 +49,7 @@ let z;
 // CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:    BlockStatement
 // CHECK-NEXT:        ExpressionStatement
-// CHECK-NEXT:            StringLiteral : string
+// CHECK-NEXT:            StringLiteral : "use strict"
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            CallExpression : void
 // CHECK-NEXT:                FunctionExpression : %function.2
@@ -58,9 +58,9 @@ let z;
 // CHECK-NEXT:                            Id 'foo' [D:E:%d.3 'foo']
 // CHECK-NEXT:                            BlockStatement
 // CHECK-NEXT:                                ExpressionStatement
-// CHECK-NEXT:                                    AssignmentExpression : number
+// CHECK-NEXT:                                    AssignmentExpression : 1
 // CHECK-NEXT:                                        Id 'z' [D:E:%d.6 'z'] : any
-// CHECK-NEXT:                                        NumericLiteral : number
+// CHECK-NEXT:                                        NumericLiteral : 1
 // CHECK-NEXT:                        VariableDeclaration
 // CHECK-NEXT:                            VariableDeclarator
 // CHECK-NEXT:                                BinaryExpression : any
@@ -70,7 +70,7 @@ let z;
 // CHECK-NEXT:                                Id 'x' [D:E:%d.4 'x']
 // CHECK-NEXT:                        VariableDeclaration
 // CHECK-NEXT:                            VariableDeclarator
-// CHECK-NEXT:                                NumericLiteral : number
+// CHECK-NEXT:                                NumericLiteral : 0
 // CHECK-NEXT:                                Id 'y' [D:E:%d.5 'y']
 // CHECK-NEXT:                        VariableDeclaration
 // CHECK-NEXT:                            VariableDeclarator

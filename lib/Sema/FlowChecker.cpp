@@ -340,6 +340,12 @@ void FlowChecker::visit(ESTree::FunctionExpressionNode *node) {
 }
 
 void FlowChecker::visit(ESTree::ArrowFunctionExpressionNode *node) {
+  visitArrowFunction(node, /*constraint=*/nullptr);
+}
+
+void FlowChecker::visitArrowFunction(
+    ESTree::ArrowFunctionExpressionNode *node,
+    TypedFunctionType *constraint) {
   if (node->_typeParameters) {
     sm_.error(
         node->_typeParameters->getStartLoc(),
@@ -351,7 +357,10 @@ void FlowChecker::visit(ESTree::ArrowFunctionExpressionNode *node) {
       node->_params,
       node->_returnType,
       node->_async,
-      false /*node->_generator*/);
+      false /*node->_generator*/,
+      /*defaultReturnType=*/nullptr,
+      /*defaultThisType=*/nullptr,
+      constraint);
   setNodeType(node, ftype);
 
   FunctionContext functionContext(
@@ -579,7 +588,17 @@ class FlowChecker::ParseClassType {
           superClass->getStartLoc(), "ft: super type must be a class");
       return nullptr;
     }
-    return superClassConsType->getClassType();
+    Type *superClassType = superClassConsType->getClassType();
+    // The super class type must already be fully parsed. It won't be if the
+    // class extends itself or if the super class is declared later in source,
+    // since classes are parsed in declaration order.
+    if (!llvh::cast<ClassType>(superClassType->info)->isInitialized()) {
+      outer_.sm_.error(
+          superClass->getStartLoc(),
+          "ft: super class used before it is defined");
+      return nullptr;
+    }
+    return superClassType;
   }
 
   Type *parseClassProperty(ESTree::ClassPropertyNode *prop) {
@@ -639,7 +658,9 @@ class FlowChecker::ParseClassType {
       // property's initializer.
       outer_.visitedInits_.insert(value);
       outer_.visitExpression(value, prop, nullptr);
-      fieldType = outer_.getNodeTypeOrAny(value);
+      // A class field is mutable, so widen a fresh literal initializer type to
+      // its base type, mirroring let/var widening.
+      fieldType = outer_.widenLiteralType(outer_.getNodeTypeOrAny(value));
     } else {
       // Unable to infer, just assume 'any'.
       fieldType = outer_.flowContext_.getAny();
@@ -1703,10 +1724,6 @@ void FlowChecker::visitFunctionLike(
       } else if (
           llvh::isa<ESTree::ObjectPatternNode>(assign->_left) ||
           llvh::isa<ESTree::ArrayPatternNode>(assign->_left)) {
-        // Error already emitted in parseFunctionType if no annotation.
-        if (!ESTree::getPatternTypeAnnotation(assign->_left))
-          continue;
-
         // Destructuring param with default value.
         assignDestructuringParamTypes(assign->_left, paramType);
 
@@ -1742,10 +1759,6 @@ void FlowChecker::visitFunctionLike(
     } else if (
         llvh::isa<ESTree::ObjectPatternNode>(&param) ||
         llvh::isa<ESTree::ArrayPatternNode>(&param)) {
-      // Error already emitted in parseFunctionType if no annotation.
-      if (!ESTree::getPatternTypeAnnotation(&param))
-        continue;
-
       // Destructuring param without default value.
       Type *paramType;
       auto *typedFn = llvh::dyn_cast<TypedFunctionType>(
@@ -1820,6 +1833,11 @@ void FlowChecker::resolveDestructuringTypes(
     worklist.emplace_back(n, ty);
   };
 
+  // Defaults (`x = init`) are checked after the worklist drains, so a default
+  // may reference an earlier binding in the same pattern.
+  llvh::SmallVector<std::pair<ESTree::AssignmentPatternNode *, Type *>, 2>
+      deferredDefaults{};
+
   while (!worklist.empty()) {
     auto [node, t] = worklist.pop_back_val();
     if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(node)) {
@@ -1889,6 +1907,28 @@ void FlowChecker::resolveDestructuringTypes(
             "ft: incompatible type for object pattern, "
             "expected object type");
       }
+    } else if (
+        auto *assign = llvh::dyn_cast<ESTree::AssignmentPatternNode>(node)) {
+      // A defaulted binding `x = default` inside a destructuring pattern.
+      // Defer checking the default until every binding in the pattern has been
+      // recorded, so a default may reference an earlier binding in the same
+      // pattern, e.g. `let {a, b = a} = o`.
+      deferredDefaults.emplace_back(assign, t);
+      worklist.emplace_back(assign->_left, t);
+    }
+  }
+
+  // Now that all bindings have been recorded, check the defaults.
+  for (auto [assign, t] : deferredDefaults) {
+    visitExpression(assign->_right, assign, t);
+    Type *initType = getNodeTypeOrAny(assign->_right);
+    CanFlowResult cf = canAFlowIntoB(initType, t);
+    if (!cf.canFlow) {
+      sm_.error(
+          assign->_right->getSourceRange(),
+          "ft: incompatible default value type");
+    } else {
+      assign->_right = implicitCheckedCast(assign->_right, t, cf);
     }
   }
 }
@@ -1916,6 +1956,13 @@ bool FlowChecker::expandTupleDestructuring(
       sm_.error(
           rest->getSourceRange(),
           "ft: rest element not allowed when destructuring a tuple");
+      return false;
+    }
+    if (llvh::isa<ESTree::AssignmentPatternNode>(&element)) {
+      sm_.error(
+          element.getSourceRange(),
+          "ft: default values are not yet supported "
+          "in typed tuple destructuring");
       return false;
     }
     if (i >= tuple->getTypes().size()) {
@@ -2161,11 +2208,12 @@ class FlowChecker::AnnotateScopeDecls {
                  llvh::isa<ESTree::RegExpLiteralNode>(declarator->_init) ||
                  llvh::isa<ESTree::BigIntLiteralNode>(declarator->_init))) {
               outer.visitExpression(declarator->_init, declarator, nullptr);
-              outer.recordDecl(
-                  outer.getDecl(id),
-                  outer.getNodeTypeOrAny(declarator->_init),
-                  id,
-                  declarator);
+              Type *initType = outer.getNodeTypeOrAny(declarator->_init);
+              // let/var widen a fresh literal type to its base type; const
+              // keeps the literal type.
+              if (decl->kind != sema::Decl::Kind::Const)
+                initType = outer.widenLiteralType(initType);
+              outer.recordDecl(decl, initType, id, declarator);
               continue;
             }
           } else if (
@@ -2203,30 +2251,39 @@ class FlowChecker::AnnotateScopeDecls {
   void annotateAllScopeDecls(
       const sema::ScopeDecls &decls,
       ESTree::Node *scopeNode) {
+    // Annotate function declaration signatures first, mirroring JS function
+    // hoisting, so their types are available to variable initializers that
+    // reference them regardless of textual order.
+    for (ESTree::Node *declNode : decls) {
+      auto *funcDecl =
+          llvh::dyn_cast<ESTree::FunctionDeclarationNode>(declNode);
+      if (!funcDecl)
+        continue;
+      ESTree::Node *parent = nullptr;
+      if (auto *program = llvh::dyn_cast<ESTree::ProgramNode>(scopeNode)) {
+        parent = program;
+      } else if (
+          auto *func = llvh::dyn_cast<ESTree::FunctionLikeNode>(scopeNode)) {
+        parent = ESTree::getBlockStatement(func);
+      } else {
+        parent = scopeNode;
+        assert(
+            llvh::isa<ESTree::BlockStatementNode>(parent) ||
+            llvh::isa<ESTree::SwitchStatementNode>(parent));
+      }
+      annotateFunctionDeclaration(funcDecl, parent);
+    }
+
     for (ESTree::Node *declNode : decls) {
       if (auto *declaration =
               llvh::dyn_cast<ESTree::VariableDeclarationNode>(declNode)) {
         // VariableDeclaration.
         //
         annotateVariableDeclaration(declaration);
-      } else if (
-          auto *funcDecl =
-              llvh::dyn_cast<ESTree::FunctionDeclarationNode>(declNode)) {
-        // FunctionDeclaration.
+      } else if (llvh::isa<ESTree::FunctionDeclarationNode>(declNode)) {
+        // FunctionDeclaration: already annotated in the hoisting pass above.
         //
-        ESTree::Node *parent = nullptr;
-        if (auto *program = llvh::dyn_cast<ESTree::ProgramNode>(scopeNode)) {
-          parent = program;
-        } else if (
-            auto *func = llvh::dyn_cast<ESTree::FunctionLikeNode>(scopeNode)) {
-          parent = ESTree::getBlockStatement(func);
-        } else {
-          parent = scopeNode;
-          assert(
-              llvh::isa<ESTree::BlockStatementNode>(parent) ||
-              llvh::isa<ESTree::SwitchStatementNode>(parent));
-        }
-        annotateFunctionDeclaration(funcDecl, parent);
+        continue;
       } else if (
           auto *id = llvh::dyn_cast<ESTree::ImportDeclarationNode>(declNode)) {
         // ImportDeclaration.
@@ -2282,8 +2339,13 @@ class FlowChecker::AnnotateScopeDecls {
                 "ft: global property type annotations are unsound and are ignored");
           }
         } else if (!id->_typeAnnotation && declarator->_init) {
-          if (Type *inferred = tryInferInitExpression(declarator))
-            type = inferred;
+          if (Type *inferred = tryInferInitExpression(declarator)) {
+            // let/var widen a fresh literal type to its base type; const keeps
+            // the literal type.
+            type = decl->kind != sema::Decl::Kind::Const
+                ? outer.widenLiteralType(inferred)
+                : inferred;
+          }
         }
 
         outer.recordDecl(decl, type, id, declarator);
@@ -2479,34 +2541,70 @@ Type *FlowChecker::parseFunctionType(
     bool isAsync,
     bool isGenerator,
     Type *defaultReturnType,
-    Type *defaultThisType) {
+    Type *defaultThisType,
+    TypedFunctionType *constraint) {
   llvh::SmallVector<TypedFunctionType::Param, 4> paramsList{};
 
   // If the default return type is expected, then we are parsing a typed
-  // function, even if it doesn't have any explicit type annotations.
-  bool isTyped = (defaultReturnType != nullptr);
+  // function, even if it doesn't have any explicit type annotations. A
+  // constraint likewise produces a typed function, so the parameter and return
+  // types inferred from it are preserved.
+  bool isTyped = (defaultReturnType != nullptr) || (constraint != nullptr);
 
   bool seenOptional = false;
 
+  /// Resolve a parameter's type, consulting the constraint to infer the type of
+  /// unannotated parameters and to match inference placeholders.
+  /// \p paramType is the parsed annotation type, may be nullptr.
+  /// \p paramConstraintType is the constraint type for the current parameter,
+  /// may be nullptr.
+  auto constrainParam =
+      [this](Type *paramType, Type *paramConstraintType) -> Type * {
+    if (paramType) {
+      if (paramConstraintType)
+        matchConstraintToType(paramConstraintType, paramType);
+      return paramType;
+    } else if (paramConstraintType) {
+      return paramConstraintType;
+    } else {
+      return flowContext_.getAny();
+    }
+  };
+
+  // Index of the current parameter.
+  size_t constraintIdx = 0;
   for (ESTree::Node &n : params) {
+    const TypedFunctionType::Param *paramConstraint =
+        (constraint && constraintIdx < constraint->getParams().size())
+        ? &constraint->getParams()[constraintIdx]
+        : nullptr;
+    Type *paramConstraintType =
+        paramConstraint ? paramConstraint->type : nullptr;
+
     if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(&n)) {
       if (id->_optional) {
         seenOptional = true;
       } else if (seenOptional) {
         sm_.error(id->getSourceRange(), "ft: optional params must be last");
       }
+      Type *annot = id->_typeAnnotation
+          ? parseOptionalTypeAnnotation(id->_typeAnnotation)
+          : nullptr;
       paramsList.push_back(
           {Identifier::getFromPointer(id->_name),
-           parseOptionalTypeAnnotation(id->_typeAnnotation),
+           constrainParam(annot, paramConstraintType),
            id->_optional});
       isTyped |= (id->_typeAnnotation != nullptr);
     } else if (
         auto *assign = llvh::dyn_cast<ESTree::AssignmentPatternNode>(&n)) {
       if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(assign->_left)) {
         seenOptional = true;
+        Type *annot = id->_typeAnnotation
+            ? parseOptionalTypeAnnotation(id->_typeAnnotation)
+            : nullptr;
         paramsList.push_back(
             {Identifier::getFromPointer(id->_name),
-             parseOptionalTypeAnnotation(id->_typeAnnotation),
+             constrainParam(annot, paramConstraintType),
              /*optional=*/true});
         isTyped |= (id->_typeAnnotation != nullptr);
       } else if (
@@ -2516,16 +2614,22 @@ Type *FlowChecker::parseFunctionType(
         isTyped = true;
         paramsList.push_back(
             {Identifier(),
-             parseOptionalTypeAnnotation(annot),
+             constrainParam(
+                 parseOptionalTypeAnnotation(annot), paramConstraintType),
              /*optional=*/true});
       } else if (
           llvh::isa<ESTree::ObjectPatternNode>(assign->_left) ||
           llvh::isa<ESTree::ArrayPatternNode>(assign->_left)) {
         // Destructuring param with default value but no annotation.
-        sm_.error(
-            assign->_left->getSourceRange(),
-            "ft: destructuring parameters must have a type annotation");
-        paramsList.push_back({Identifier(), flowContext_.getAny(), true});
+        seenOptional = true;
+        if (!paramConstraintType)
+          sm_.error(
+              assign->_left->getSourceRange(),
+              "ft: destructuring parameters must have a type annotation");
+        paramsList.push_back(
+            {Identifier(),
+             constrainParam(nullptr, paramConstraintType),
+             /*optional=*/true});
       } else {
         sm_.warning(
             n.getSourceRange(),
@@ -2534,15 +2638,22 @@ Type *FlowChecker::parseFunctionType(
       }
     } else if (auto *rest = llvh::dyn_cast<ESTree::RestElementNode>(&n)) {
       if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(rest->_argument)) {
-        Type *annotType = parseOptionalTypeAnnotation(id->_typeAnnotation);
-        if (id->_typeAnnotation && !flowContext_.isArrayClassType(annotType)) {
+        Type *annot = id->_typeAnnotation
+            ? parseOptionalTypeAnnotation(id->_typeAnnotation)
+            : nullptr;
+        if (annot && !flowContext_.isArrayClassType(annot)) {
           sm_.error(
               id->_typeAnnotation->getSourceRange(),
               "ft: rest parameter type must be Array<T>");
         }
+        Type *restConstraintType =
+            (paramConstraintType &&
+             flowContext_.isArrayClassType(paramConstraintType))
+            ? paramConstraintType
+            : nullptr;
         paramsList.push_back(
             {Identifier::getFromPointer(id->_name),
-             annotType,
+             constrainParam(annot, restConstraintType),
              /*optional=*/false,
              /*rest=*/true});
         isTyped |= (id->_typeAnnotation != nullptr);
@@ -2558,26 +2669,44 @@ Type *FlowChecker::parseFunctionType(
       // Destructuring param without default value, with type annotation.
       isTyped = true;
       paramsList.push_back(
-          {Identifier(), parseOptionalTypeAnnotation(annot), false});
+          {Identifier(),
+           constrainParam(
+               parseOptionalTypeAnnotation(annot), paramConstraintType),
+           false});
     } else if (
         llvh::isa<ESTree::ObjectPatternNode>(&n) ||
         llvh::isa<ESTree::ArrayPatternNode>(&n)) {
       // Destructuring param without annotation.
-      sm_.error(
-          n.getSourceRange(),
-          "ft: destructuring parameters must have a type annotation");
-      paramsList.push_back({Identifier(), flowContext_.getAny(), false});
+      if (!paramConstraintType)
+        sm_.error(
+            n.getSourceRange(),
+            "ft: destructuring parameters must have a type annotation");
+      paramsList.push_back(
+          {Identifier(),
+           constrainParam(nullptr, paramConstraintType),
+           /*optional=*/false});
     } else {
       sm_.warning(
           n.getSourceRange(),
           "ft: typing of pattern parameters not implemented, :any assumed");
       paramsList.push_back({Identifier(), flowContext_.getAny(), false});
     }
+    ++constraintIdx;
   }
 
   Type *returnType =
       parseOptionalTypeAnnotation(optReturnTypeAnnotation, defaultReturnType);
   isTyped |= (optReturnTypeAnnotation != nullptr);
+  if (constraint) {
+    if (optReturnTypeAnnotation) {
+      // Explicit return annotation: fill inference placeholders from it.
+      matchConstraintToType(constraint->getReturnType(), returnType);
+    } else if (!defaultReturnType) {
+      // No annotation: borrow the constraint's return type, which may itself be
+      // an inference placeholder filled in when return statements are visited.
+      returnType = constraint->getReturnType();
+    }
+  }
 
   Type *thisParamType = defaultThisType;
   llvh::ArrayRef<TypedFunctionType::Param> paramsRef(paramsList);
@@ -2629,8 +2758,28 @@ Type *FlowChecker::parseTypeAnnotation(ESTree::Node *node) {
       return flowContext_.getBoolean();
     case ESTree::NodeKind::StringTypeAnnotation:
       return flowContext_.getString();
+    case ESTree::NodeKind::StringLiteralTypeAnnotation:
+      return flowContext_.createType(
+          flowContext_.createStringLiteral(
+              llvh::cast<ESTree::StringLiteralTypeAnnotationNode>(node)
+                  ->_value),
+          node);
     case ESTree::NodeKind::NumberTypeAnnotation:
       return flowContext_.getNumber();
+    case ESTree::NodeKind::SymbolTypeAnnotation:
+      return flowContext_.getSymbol();
+    case ESTree::NodeKind::NumberLiteralTypeAnnotation:
+      return flowContext_.createType(
+          flowContext_.createNumberLiteral(
+              llvh::cast<ESTree::NumberLiteralTypeAnnotationNode>(node)
+                  ->_value),
+          node);
+    case ESTree::NodeKind::BooleanLiteralTypeAnnotation:
+      return flowContext_.createType(
+          flowContext_.createBooleanLiteral(
+              llvh::cast<ESTree::BooleanLiteralTypeAnnotationNode>(node)
+                  ->_value),
+          node);
     case ESTree::NodeKind::BigIntTypeAnnotation:
       return flowContext_.getBigInt();
     case ESTree::NodeKind::AnyTypeAnnotation:
@@ -2799,9 +2948,32 @@ Type *FlowChecker::parseFunctionTypeAnnotation(
   return result;
 }
 
+void FlowChecker::validateGenericBound(const GenericBoundCheck &check) {
+  if (!canAFlowIntoB(check.argument, check.bound).canFlowWithoutCast()) {
+    sm_.error(
+        check.errorRange,
+        llvh::Twine("ft: type argument for type parameter '") +
+            check.parameterName->str() + "' is incompatible with its bound");
+  }
+}
+
 FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     TypeInfo *a,
-    TypeInfo *b) {
+    TypeInfo *b,
+    CanFlowState &state,
+    ThisFlowDirection thisFlow) {
+  auto &active = thisFlow == ThisFlowDirection::Default
+      ? state.defaultFlow
+      : state.methodOverrideFlow;
+  CanFlowKey key{a, b};
+
+  // Revisiting an active relation provides no new information. Assume it can
+  // flow and let the original check validate the rest of the type structure.
+  if (!active.insert(key))
+    return {.canFlow = true};
+
+  auto popOnExit = llvh::make_scope_exit([&active]() { active.pop_back(); });
+
   if (a == b)
     return {.canFlow = true};
 
@@ -2820,7 +2992,7 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
   if (UnionType *unionA = llvh::dyn_cast<UnionType>(a)) {
     bool needCheckedCast = false;
     for (auto *aType : unionA->getTypes()) {
-      CanFlowResult tmp = canAFlowIntoB(aType->info, b);
+      CanFlowResult tmp = canAFlowIntoB(aType->info, b, state);
       if (!tmp.canFlow)
         return tmp;
       needCheckedCast |= tmp.needCheckedCast;
@@ -2838,7 +3010,7 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     // If we find an arm that does not need a checked cast, we're done.
     bool foundWithCast = false;
     for (auto *bType : unionB->getTypes()) {
-      CanFlowResult tmp = canAFlowIntoB(a, bType->info);
+      CanFlowResult tmp = canAFlowIntoB(a, bType->info, state);
       if (tmp.canFlow) {
         if (!tmp.needCheckedCast)
           return {.canFlow = true};
@@ -2856,7 +3028,7 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     auto *tupleB = llvh::dyn_cast<TupleType>(b);
     if (!tupleB)
       return {};
-    return canAFlowIntoB(tupleA, tupleB);
+    return canAFlowIntoB(tupleA, tupleB, state);
   }
 
   // Objects are invariant, so if `a` is an object, `b` must be an object with
@@ -2865,14 +3037,14 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     auto *objectB = llvh::dyn_cast<ExactObjectType>(b);
     if (!objectB)
       return {};
-    return canAFlowIntoB(objectA, objectB);
+    return canAFlowIntoB(objectA, objectB, state);
   }
 
   if (ClassType *classA = llvh::dyn_cast<ClassType>(a)) {
     ClassType *classB = llvh::dyn_cast<ClassType>(b);
     if (!classB)
       return {};
-    return canAFlowIntoB(classA, classB);
+    return canAFlowIntoB(classA, classB, state);
   }
 
   if (auto *consA = llvh::dyn_cast<ClassConstructorType>(a)) {
@@ -2882,22 +3054,52 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     // Delegate to the underlying ClassType comparison.
     return canAFlowIntoB(
         llvh::cast<ClassType>(consA->getClassType()->info),
-        llvh::cast<ClassType>(consB->getClassType()->info));
+        llvh::cast<ClassType>(consB->getClassType()->info),
+        state);
   }
 
   if (BaseFunctionType *funcA = llvh::dyn_cast<BaseFunctionType>(a)) {
     BaseFunctionType *funcB = llvh::dyn_cast<BaseFunctionType>(b);
     if (!funcB)
       return {};
-    return canAFlowIntoB(funcA, funcB);
+    return canAFlowIntoB(funcA, funcB, thisFlow, state);
+  }
+
+  // String literal flows into string, and into another string literal when
+  // the value is identical.
+  if (auto *litA = llvh::dyn_cast<StringLiteralType>(a)) {
+    if (llvh::isa<StringType>(b))
+      return {.canFlow = true};
+    if (auto *litB = llvh::dyn_cast<StringLiteralType>(b))
+      return {.canFlow = litA->getValue() == litB->getValue()};
+    return {};
+  }
+
+  // Number literal flows into number, and into another number literal when
+  // the value is identical.
+  if (auto *litA = llvh::dyn_cast<NumberLiteralType>(a)) {
+    if (llvh::isa<NumberType>(b))
+      return {.canFlow = true};
+    if (auto *litB = llvh::dyn_cast<NumberLiteralType>(b))
+      return {.canFlow = litA->getValue() == litB->getValue()};
+    return {};
+  }
+
+  // Boolean literal flows into boolean, and into another boolean literal when
+  // the value is identical.
+  if (auto *litA = llvh::dyn_cast<BooleanLiteralType>(a)) {
+    if (llvh::isa<BooleanType>(b))
+      return {.canFlow = true};
+    if (auto *litB = llvh::dyn_cast<BooleanLiteralType>(b))
+      return {.canFlow = litA->getValue() == litB->getValue()};
+    return {};
   }
 
   return {};
 }
 
-FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
-    ClassType *a,
-    ClassType *b) {
+FlowChecker::CanFlowResult
+FlowChecker::canAFlowIntoB(ClassType *a, ClassType *b, CanFlowState &state) {
   // It can flow into any superclass.
   ClassType *cur = a;
   while (cur) {
@@ -2909,9 +3111,8 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
   return {};
 }
 
-FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
-    TupleType *a,
-    TupleType *b) {
+FlowChecker::CanFlowResult
+FlowChecker::canAFlowIntoB(TupleType *a, TupleType *b, CanFlowState &state) {
   auto aTypes = a->getTypes();
   auto bTypes = b->getTypes();
   if (aTypes.size() != bTypes.size()) {
@@ -2930,12 +3131,13 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
 
 FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     ExactObjectType *a,
-    ExactObjectType *b) {
+    ExactObjectType *b,
+    CanFlowState &state) {
   // Decide whether a source value of variance \p av and type \p aVal flows
   // into a destination value of variance \p bv and type \p bVal (used for both
   // named fields and indexers).
   auto valueFlows =
-      [this](
+      [this, &state](
           Type *aVal, FieldVariance av, Type *bVal, FieldVariance bv) -> bool {
     // Invariant source can flow into a destination of any variance.
     // A ReadOnly or WriteOnly source can only flow into the same variance.
@@ -2947,10 +3149,10 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
         return aVal->info->equals(bVal->info);
       case FieldVariance::ReadOnly:
         // Covariant: a's value must flow into b's value without a cast.
-        return canAFlowIntoB(aVal, bVal).canFlowWithoutCast();
+        return canAFlowIntoB(aVal, bVal, state).canFlowWithoutCast();
       case FieldVariance::WriteOnly:
         // Contravariant: b's value must flow into a's value without a cast.
-        return canAFlowIntoB(bVal, aVal).canFlowWithoutCast();
+        return canAFlowIntoB(bVal, aVal, state).canFlowWithoutCast();
     }
     llvm_unreachable("invalid FieldVariance");
   };
@@ -3009,7 +3211,8 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
 FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     BaseFunctionType *a,
     BaseFunctionType *b,
-    ThisFlowDirection thisFlow) {
+    ThisFlowDirection thisFlow,
+    CanFlowState &state) {
   // Function a can flow into b when:
   // * they're the same kind of function (async, generator, etc)
   // * all parameters of b can flow into parameters of a
@@ -3056,8 +3259,8 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
   if (aType->getThisParam() && bType->getThisParam()) {
     // Both functions have `this`, it must be checked.
     CanFlowResult flowRes = thisFlow == ThisFlowDirection::Default
-        ? canAFlowIntoB(bType->getThisParam(), aType->getThisParam())
-        : canAFlowIntoB(aType->getThisParam(), bType->getThisParam());
+        ? canAFlowIntoB(bType->getThisParam(), aType->getThisParam(), state)
+        : canAFlowIntoB(aType->getThisParam(), bType->getThisParam(), state);
     if (!flowRes.canFlow || flowRes.needCheckedCast)
       return {};
   }
@@ -3098,7 +3301,7 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
         }
         for (size_t i = aNonRest; i < bNonRest; ++i) {
           CanFlowResult flowRes =
-              canAFlowIntoB(bType->getParams()[i].type, aElem);
+              canAFlowIntoB(bType->getParams()[i].type, aElem, state);
           if (!flowRes.canFlow || flowRes.needCheckedCast)
             return {};
         }
@@ -3123,7 +3326,7 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
         }
         for (size_t i = bNonRest; i < aNonRest; ++i) {
           CanFlowResult flowRes =
-              canAFlowIntoB(bElem, aType->getParams()[i].type);
+              canAFlowIntoB(bElem, aType->getParams()[i].type, state);
           if (!flowRes.canFlow || flowRes.needCheckedCast)
             return {};
         }
@@ -3134,7 +3337,7 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     for (size_t i = 0; i < minParamCount; ++i) {
       Type *paramA = aType->getParams()[i].type;
       Type *paramB = bType->getParams()[i].type;
-      CanFlowResult flowRes = canAFlowIntoB(paramB, paramA);
+      CanFlowResult flowRes = canAFlowIntoB(paramB, paramA, state);
       if (!flowRes.canFlow || flowRes.needCheckedCast)
         return {};
     }
@@ -3150,7 +3353,7 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
       Type *bElem = restElemOrNull(bType);
       if (!aElem || !bElem)
         return {};
-      CanFlowResult flowRes = canAFlowIntoB(bElem, aElem);
+      CanFlowResult flowRes = canAFlowIntoB(bElem, aElem, state);
       if (!flowRes.canFlow || flowRes.needCheckedCast)
         return {};
     }
@@ -3158,7 +3361,7 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
 
   {
     CanFlowResult flowRes =
-        canAFlowIntoB(aType->getReturnType(), bType->getReturnType());
+        canAFlowIntoB(aType->getReturnType(), bType->getReturnType(), state);
     if (!flowRes.canFlow || flowRes.needCheckedCast)
       return {};
   }
@@ -3194,6 +3397,44 @@ Type *FlowChecker::getNonOptionalSingleType(Type *exprType) {
   return nullptr;
 }
 
+Type *FlowChecker::widenLiteralType(Type *type) {
+  // Widen a literal type to its base singleton, or return nullptr if \p t is
+  // not a literal type.
+  auto widenLiteral = [this](Type *t) -> Type * {
+    if (llvh::isa<StringLiteralType>(t->info))
+      return flowContext_.getString();
+    if (llvh::isa<NumberLiteralType>(t->info))
+      return flowContext_.getNumber();
+    if (llvh::isa<BooleanLiteralType>(t->info))
+      return flowContext_.getBoolean();
+    return nullptr;
+  };
+
+  if (Type *widened = widenLiteral(type))
+    return widened;
+
+  if (auto *unionType = llvh::dyn_cast<UnionType>(type->info)) {
+    // Widen any direct literal arms to their base type. Don't recurse into the
+    // arms: union arms are already flattened, and recursing could loop on
+    // cyclic union arms.
+    bool changed = false;
+    llvh::SmallVector<Type *, 4> arms{};
+    for (Type *arm : unionType->getTypes()) {
+      if (Type *widened = widenLiteral(arm)) {
+        arms.push_back(widened);
+        changed = true;
+      } else {
+        arms.push_back(arm);
+      }
+    }
+    if (!changed)
+      return type;
+    return flowContext_.createType(flowContext_.maybeCreateUnion(arms));
+  }
+
+  return type;
+}
+
 std::pair<Type *, FlowChecker::CanFlowResult> FlowChecker::tryNarrowType(
     Type *exprType,
     Type *targetType) {
@@ -3206,6 +3447,11 @@ std::pair<Type *, FlowChecker::CanFlowResult> FlowChecker::tryNarrowType(
 
   // Try to narrow the expression type to a single type.
   Type *narrowType = getNonOptionalSingleType(exprType);
+  // Try to widen literal arms and retry, so that e.g.
+  // ?("x" | "y") narrows to string.
+  if (!narrowType)
+    narrowType = getNonOptionalSingleType(widenLiteralType(exprType));
+  // Done if we haven't managed to find a narrower type.
   if (!narrowType)
     return {exprType, cf};
 
@@ -3238,54 +3484,6 @@ ESTree::Node *FlowChecker::implicitCheckedCast(
   cast->copyLocationFrom(argument);
   setNodeType(cast, toType);
   return cast;
-}
-
-bool FlowChecker::validateAndBindTypeParameters(
-    ESTree::TypeParameterDeclarationNode *params,
-    SMRange errorRange,
-    llvh::ArrayRef<Type *> typeArgTypes,
-    sema::LexicalScope *scope) {
-  size_t i = 0;
-  // Whether we had to stop early due to not enough generic type arguments.
-  bool tooFewTypeArgs = false;
-  for (ESTree::Node &tparam : params->_params) {
-    if (i >= typeArgTypes.size()) {
-      // Not enough type arguments provided, break and error.
-      tooFewTypeArgs = true;
-      break;
-    }
-    if (auto *paramName = llvh::dyn_cast<ESTree::TypeParameterNode>(&tparam)) {
-      if (paramName->_bound) {
-        sm_.warning(
-            paramName->_bound->getSourceRange(),
-            "type parameter bounds not yet supported");
-      }
-      if (paramName->_variance) {
-        sm_.warning(
-            paramName->_variance->getSourceRange(),
-            "type parameter variance not yet supported");
-      }
-      bindingTable_.try_emplace(
-          paramName->_name, TypeDecl{typeArgTypes[i], scope, &tparam});
-    } else {
-      sm_.error(
-          tparam.getSourceRange(),
-          "only named type parameters supported in generics");
-    }
-    ++i;
-  }
-
-  // Check that there aren't too many (or too few) type arguments provided.
-  if (tooFewTypeArgs || i != typeArgTypes.size()) {
-    sm_.error(
-        errorRange,
-        llvh::Twine("type argument mismatch, expected ") +
-            llvh::Twine(params->_params.size()) + ", found " +
-            llvh::Twine(typeArgTypes.size()));
-    return false;
-  }
-
-  return true;
 }
 
 sema::Decl *FlowChecker::specializeGeneric(
@@ -3416,7 +3614,11 @@ FlowChecker::specializeGenericWithParsedTypes(
 
       ScopeRAII paramScope{*this};
       bool populated = validateAndBindTypeParameters(
-          typeParamsNode, errorRange, typeArgTypes, oldDecl->scope);
+          typeParamsNode,
+          errorRange,
+          typeArgTypes,
+          oldDecl->scope,
+          [this](ESTree::Node *n) { return parseTypeAnnotation(n); });
       if (!populated) {
         LLVM_DEBUG(llvh::dbgs() << "Failed to bind type parameters\n");
         return {nullptr, nullptr};
@@ -3718,9 +3920,20 @@ FlowChecker::inferTypeArgumentsForGenericFunctionCall(
   size_t numTypeParams = typeParams->_params.size();
   assert(numTypeParams > 0 && "expected at least one type parameter");
 
-  // Keep pointers to all the placeholder types.
+  // Seed the leading type arguments with any explicitly provided ones (parsed
+  // in the call-site scope), and fill the trailing ones with placeholders to be
+  // inferred from the call arguments.
   llvh::SmallVector<Type *, 2> typeArgs{};
-  for (size_t i = 0; i < numTypeParams; ++i) {
+  if (auto *typeArgsNode =
+          llvh::cast_or_null<ESTree::TypeParameterInstantiationNode>(
+              node->_typeArguments)) {
+    for (ESTree::Node &arg : typeArgsNode->_params)
+      typeArgs.push_back(parseTypeAnnotation(&arg));
+  }
+  assert(
+      typeArgs.size() < numTypeParams &&
+      "explicit type args must be partial when inferring");
+  while (typeArgs.size() < numTypeParams) {
     typeArgs.push_back(
         flowContext_.createType(flowContext_.getInferencePlaceholderInfo()));
   }
@@ -3850,7 +4063,17 @@ Type *FlowChecker::resolveGenericClassSpecializationForType(
   if (!newDecl)
     return flowContext_.getAny();
 
-  Type *classConsType = getDeclType(newDecl);
+  Type *classConsType = flowContext_.findDeclType(newDecl);
+  if (!classConsType) {
+    // The specialization is still in-flight: reaching it again means its own
+    // bound re-entered it (e.g. "class Node<T: Node<Base>>"). A bound may not
+    // reference the generic being declared, so report it instead of silently
+    // resolving to "any" (which would accept any argument).
+    sm_.error(
+        genericTypeNode->getSourceRange(),
+        "ft: type parameter bound cannot reference the generic being declared");
+    return flowContext_.getAny();
+  }
   return llvh::cast<ClassConstructorType>(classConsType->info)->getClassType();
 }
 
@@ -3991,9 +4214,20 @@ FlowChecker::inferTypeArgumentsForGenericMethodCall(
   size_t numTypeParams = typeParams->_params.size();
   assert(numTypeParams > 0 && "expected at least one type parameter");
 
-  // Keep pointers to all the placeholder types.
+  // Seed the leading type arguments with any explicitly provided ones (parsed
+  // in the call-site scope), and fill the trailing ones with placeholders to be
+  // inferred from the call arguments.
   llvh::SmallVector<Type *, 2> typeArgs{};
-  for (size_t i = 0; i < numTypeParams; ++i) {
+  if (auto *typeArgsNode =
+          llvh::cast_or_null<ESTree::TypeParameterInstantiationNode>(
+              node->_typeArguments)) {
+    for (ESTree::Node &arg : typeArgsNode->_params)
+      typeArgs.push_back(parseTypeAnnotation(&arg));
+  }
+  assert(
+      typeArgs.size() < numTypeParams &&
+      "explicit type args must be partial when inferring");
+  while (typeArgs.size() < numTypeParams) {
     typeArgs.push_back(
         flowContext_.createType(flowContext_.getInferencePlaceholderInfo()));
   }
@@ -4056,7 +4290,11 @@ FlowChecker::specializeGenericMethodWithParsedTypes(
 
     ScopeRAII paramScope{*this};
     if (!validateAndBindTypeParameters(
-            typeParamsNode, errorRange, typeArgTypes, generic.classScope)) {
+            typeParamsNode,
+            errorRange,
+            typeArgTypes,
+            generic.classScope,
+            [this](ESTree::Node *n) { return parseTypeAnnotation(n); })) {
       LLVM_DEBUG(llvh::dbgs() << "Failed to bind type parameters\n");
       return {};
     }

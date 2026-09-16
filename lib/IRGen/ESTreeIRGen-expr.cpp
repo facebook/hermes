@@ -1252,9 +1252,12 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
   // a FastArray will simply return undefined if it is out-of-bounds.
   if (flowContext_.isArrayClassType(
           flowContext_.getNodeTypeOrAny(mem->_object))) {
+    flow::TypeInfo *propInfo =
+        flowContext_.getNodeTypeOrAny(mem->_property)->info;
+    // A number or number-literal index uses the typed fast-array path.
     if (mem->_computed &&
-        llvh::isa<flow::NumberType>(
-            flowContext_.getNodeTypeOrAny(mem->_property)->info)) {
+        (llvh::isa<flow::NumberType>(propInfo) ||
+         llvh::isa<flow::NumberLiteralType>(propInfo))) {
       return MemberExpressionResult{
           Builder.createFastArrayLoadInst(
               baseValue,
@@ -1292,13 +1295,9 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
         Type irType = flowTypeToIRType(optFieldLookup->getField()->type);
         TypeContext &tc = getTypeContext();
         Instruction *inst;
-        if (tc.canBePrimitive(irType)) {
-          // If the type can be a primitive, it will have a default value that
-          // doesn't need IDZ.
-          inst =
-              Builder.createPrLoadInst(baseValue, fieldIndex, propName, irType);
-        } else {
-          // IDZ needed for object types.
+        if (tc.isIDZType(irType)) {
+          // No representable literal default (object types, symbol): the field
+          // is stored uninitialized, so IDZ-check it on load.
           inst = Builder.createThrowIfInst(
               Builder.createPrLoadInst(
                   baseValue,
@@ -1306,6 +1305,10 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
                   propName,
                   tc.unionTy(irType, Type::createUninit())),
               Type::createUninit());
+        } else {
+          // Has a literal default that doesn't need IDZ.
+          inst =
+              Builder.createPrLoadInst(baseValue, fieldIndex, propName, irType);
         }
         return MemberExpressionResult{inst, nullptr, baseValue};
       }
@@ -1405,6 +1408,47 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
     }
   }
 
+  // Reading a field common to every arm of an object-literal union.
+  // FlowChecker has verified the field exists in every exact-object arm and
+  // typed the member expression as the union of the per-arm field types.
+  // If the field is the same slot in every arm, use PrLoad, else use
+  // LoadProperty.
+  if (auto *unionType = llvh::dyn_cast<flow::UnionType>(
+          flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
+    if (!mem->_computed) {
+      auto propName = Identifier::getFromPointer(
+          llvh::cast<ESTree::IdentifierNode>(mem->_property)->_name);
+      Type resultTy = flowTypeToIRType(flowContext_.getNodeTypeOrAny(mem));
+      // Determine whether the field lives at the same slot in every arm.
+      OptValue<size_t> commonSlot = llvh::None;
+      bool sameSlot = true;
+      for (flow::Type *arm : unionType->getTypes()) {
+        auto *objType = llvh::cast<flow::ExactObjectType>(arm->info);
+        auto optIndex = objType->findField(propName);
+        assert(optIndex && "FlowChecker guarantees the field in every arm");
+        if (!commonSlot) {
+          commonSlot = *optIndex;
+        } else if (*commonSlot != *optIndex) {
+          sameSlot = false;
+          break;
+        }
+      }
+      if (sameSlot) {
+        return MemberExpressionResult{
+            Builder.createPrLoadInst(
+                baseValue,
+                *commonSlot,
+                Builder.getLiteralString(propName),
+                resultTy),
+            nullptr,
+            baseValue};
+      }
+      auto *loadProp = Builder.createLoadPropertyInst(baseValue, propValue);
+      loadProp->setType(resultTy);
+      return MemberExpressionResult{loadProp, nullptr, baseValue};
+    }
+  }
+
   // Check if we are loading a tuple element, and generate the typed IR.
   if (auto *tupleType = llvh::dyn_cast<flow::TupleType>(
           flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
@@ -1428,6 +1472,8 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
 
   // Check if we are loading a string property.
   if (llvh::isa<flow::StringType>(
+          flowContext_.getNodeTypeOrAny(mem->_object)->info) ||
+      llvh::isa<flow::StringLiteralType>(
           flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
     if (!mem->_computed) {
       auto *ident = llvh::cast<ESTree::IdentifierNode>(mem->_property);
@@ -1596,9 +1642,12 @@ void ESTreeIRGen::emitMemberStore(
   // because Array<T> is a ClassType.
   if (flowContext_.isArrayClassType(
           flowContext_.getNodeTypeOrAny(mem->_object))) {
+    flow::TypeInfo *propInfo =
+        flowContext_.getNodeTypeOrAny(mem->_property)->info;
+    // A number or number-literal index uses the typed fast-array path.
     if (mem->_computed &&
-        llvh::isa<flow::NumberType>(
-            flowContext_.getNodeTypeOrAny(mem->_property)->info)) {
+        (llvh::isa<flow::NumberType>(propInfo) ||
+         llvh::isa<flow::NumberLiteralType>(propInfo))) {
       Builder.createFastArrayStoreInst(storedValue, baseValue, propValue);
       return;
     }

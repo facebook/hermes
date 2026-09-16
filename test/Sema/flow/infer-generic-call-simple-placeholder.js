@@ -122,7 +122,7 @@ baz('hello', a => '');
 // CHECK-NEXT:                    BlockStatement
 // CHECK-NEXT:                        ReturnStatement
 // CHECK-NEXT:                            Id 'x' [D:E:%d.13 'x'] : string
-// CHECK-NEXT:                StringLiteral : string
+// CHECK-NEXT:                StringLiteral : "hello"
 // CHECK-NEXT:        FunctionDeclaration : %function.4
 // CHECK-NEXT:            Id 'bar' [D:E:%d.8 'bar']
 // CHECK-NEXT:            Id 'x' [D:E:%d.23 'x']
@@ -169,9 +169,9 @@ baz('hello', a => '');
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            CallExpression : void
 // CHECK-NEXT:                Id 'baz' [D:E:%d.9 'baz'] : %function.5
-// CHECK-NEXT:                StringLiteral : string
+// CHECK-NEXT:                StringLiteral : "hello"
 // CHECK-NEXT:                ArrowFunctionExpression : %function.2
 // CHECK-NEXT:                    Id 'a' [D:E:%d.19 'a']
 // CHECK-NEXT:                    BlockStatement
 // CHECK-NEXT:                        ReturnStatement
-// CHECK-NEXT:                            StringLiteral : string
+// CHECK-NEXT:                            StringLiteral : ""
