@@ -899,6 +899,45 @@ uint8_t getCurrencyDigits(std::u16string_view code) {
     return *digitsOpt;
   return 2;
 }
+
+/// Mapping between the calendar identifiers of
+/// https://unicode.org/reports/tr35/#UnicodeCalendarIdentifier and the
+/// corresponding NSCalendar identifiers. Identifiers with no counterpart are
+/// omitted; the fallback path returns "gregory".
+static const std::pair<std::u16string_view, NSString *const>
+    kCalendarIdentifiers[] = {
+        {u"buddhist", NSCalendarIdentifierBuddhist},
+        {u"chinese", NSCalendarIdentifierChinese},
+        {u"coptic", NSCalendarIdentifierCoptic},
+        {u"ethioaa", NSCalendarIdentifierEthiopicAmeteAlem},
+        {u"ethiopic", NSCalendarIdentifierEthiopicAmeteMihret},
+        {u"gregory", NSCalendarIdentifierGregorian},
+        {u"hebrew", NSCalendarIdentifierHebrew},
+        {u"indian", NSCalendarIdentifierIndian},
+        {u"islamic", NSCalendarIdentifierIslamic},
+        {u"islamic-civil", NSCalendarIdentifierIslamicCivil},
+        {u"islamic-tbla", NSCalendarIdentifierIslamicTabular},
+        {u"islamic-umalqura", NSCalendarIdentifierIslamicUmmAlQura},
+        {u"iso8601", NSCalendarIdentifierISO8601},
+        {u"japanese", NSCalendarIdentifierJapanese},
+        {u"persian", NSCalendarIdentifierPersian},
+        {u"roc", NSCalendarIdentifierRepublicOfChina}};
+
+/// Convert a UTS-35 calendar identifier to the corresponding NSCalendar
+/// identifier, if there is one.
+std::optional<NSString *> nsCalendarIdentifierFor(std::u16string_view id) {
+  return pairMapLookup(kCalendarIdentifiers, id);
+}
+
+/// Convert an NSCalendar identifier to the corresponding UTS-35 calendar
+/// identifier. Identifiers without a counterpart are reported as "gregory".
+std::u16string bcp47CalendarIdentifierFor(NSString *nsIdentifier) {
+  for (const auto &entry : kCalendarIdentifiers) {
+    if ([entry.second isEqualToString:nsIdentifier])
+      return std::u16string(entry.first);
+  }
+  return u"gregory";
+}
 } // namespace
 
 /// https://402.ecma-international.org/8.0/#sec-intl.getcanonicallocales
@@ -1786,9 +1825,21 @@ void DateTimeFormatApple::initializeNSDateFormatter(
   nsDateFormatter_.timeZone =
       [[NSTimeZone alloc] initWithName:u16StringToNSString(timeZone_)];
   nsDateFormatter_.locale = nsLocale;
-  if (calendar_)
-    nsDateFormatter_.calendar = [[NSCalendar alloc]
-        initWithCalendarIdentifier:u16StringToNSString(*calendar_)];
+  if (calendar_) {
+    // The requested calendar is a UTS-35 identifier, while NSCalendar is
+    // keyed by NSCalendar identifiers (e.g. "gregory" vs
+    // NSCalendarIdentifierGregorian), so map it before use.
+    if (auto nsCalendarId = nsCalendarIdentifierFor(*calendar_)) {
+      nsDateFormatter_.calendar =
+          [[NSCalendar alloc] initWithCalendarIdentifier:*nsCalendarId];
+    }
+  } else {
+    // ECMA-402 requires [[Calendar]] to always be defined. The formatter
+    // resolves the locale's default calendar on demand, so take it from
+    // there to stay consistent with what is actually used for formatting.
+    calendar_ = bcp47CalendarIdentifierFor(
+        nsDateFormatter_.calendar.calendarIdentifier);
+  }
   if (timeStyle_.has_value() || dateStyle_.has_value())
     return;
   // The following options cannot be used in conjunction with timeStyle or
