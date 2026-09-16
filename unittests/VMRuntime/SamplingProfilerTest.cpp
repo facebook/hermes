@@ -12,9 +12,13 @@
 #include "TestHelpers1.h"
 #include "hermes/VM/Runtime.h"
 
+#include "llvh/Support/raw_ostream.h"
+
 #include <gtest/gtest.h>
 
 #include <chrono>
+#include <cstdlib>
+#include <string>
 #include <thread>
 
 namespace {
@@ -122,6 +126,67 @@ TEST(SamplingProfilerTest, SamplingAfterRegisteredThreadExitDoesNotCrash) {
   // Re-register on the main thread so subsequent use works normally.
   rt->samplingProfiler->setRuntimeThread();
   EXPECT_TRUE(rt->samplingProfiler->belongsToCurrentThread());
+}
+
+// A profiler whose registered thread has exited must be skipped without
+// stopping the sampling loop: the other, still-live profilers must keep being
+// sampled. This exercises the tri-state SampleResult path where a per-profiler
+// skip (SampleResult::ThreadExited) is distinguished from a fatal error
+// (SampleResult::Failed) that would tear down the whole timer loop. See the
+// discussion on https://github.com/facebook/hermes/pull/1995.
+TEST(SamplingProfilerTest, SamplingSkipsExitedThreadButSamplesOthers) {
+  // This runtime stays registered on the main (this) thread for the whole
+  // test, so it remains sampleable.
+  auto liveRt = makeRuntime(withSamplingProfilerEnabled);
+  ASSERT_FALSE(liveRt->samplingProfiler == nullptr);
+
+  // This runtime is registered on a worker thread that then exits, leaving a
+  // profiler whose registered thread is gone.
+  auto deadRt = makeRuntime(withSamplingProfilerEnabled);
+  ASSERT_FALSE(deadRt->samplingProfiler == nullptr);
+
+  std::thread worker([&]() {
+    deadRt->samplingProfiler->setRuntimeThread();
+    EXPECT_TRUE(deadRt->samplingProfiler->belongsToCurrentThread());
+  });
+  // As documented in SamplingAfterRegisteredThreadExitDoesNotCrash, join()
+  // does not return until the worker's ThreadDeathGuard destructor -- and thus
+  // Sampler::onRegisteredThreadExit -- has run, so deadRt's registered thread
+  // is invalidated once join() returns.
+  worker.join();
+
+  // Preconditions: the dead profiler no longer belongs to any live thread,
+  // while the live profiler still belongs to this thread.
+  EXPECT_FALSE(deadRt->samplingProfiler->belongsToCurrentThread());
+  EXPECT_TRUE(liveRt->samplingProfiler->belongsToCurrentThread());
+
+  // Sample for long enough that the loop iterates many times over both
+  // profilers. The dead one is skipped every iteration; the live one must
+  // accumulate samples.
+  SamplingProfiler::enable();
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  SamplingProfiler::disable();
+
+  std::string dump;
+  llvh::raw_string_ostream os(dump);
+  liveRt->samplingProfiler->dumpSampledStack(os);
+  os.flush();
+
+  // dumpSampledStack emits a "Total N samples" header; extract N.
+  const std::string kPrefix = "Total ";
+  auto pos = dump.find(kPrefix);
+  ASSERT_NE(pos, std::string::npos) << dump;
+  int sampleCount = std::atoi(dump.c_str() + pos + kPrefix.size());
+
+  // The live profiler must have been sampled repeatedly. If skipping the
+  // exited-thread profiler had been treated as a fatal error, the timer loop
+  // would have torn down after a single iteration, so the live profiler would
+  // have at most one sample. Requiring several samples makes the test
+  // independent of the (pointer-ordered) iteration order of the two profilers.
+  EXPECT_GE(sampleCount, 2)
+      << "live profiler collected " << sampleCount
+      << " sample(s); the sampling loop likely stopped after skipping the "
+         "exited-thread profiler instead of continuing";
 }
 
 } // namespace
