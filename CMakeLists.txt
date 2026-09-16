@@ -863,6 +863,7 @@ if(HERMES_ENABLE_TEST_SUITE)
     unicode_lite=${HERMES_UNICODE_LITE}
     core_extensions_enabled=${HERMES_ENABLE_CORE_EXTENSIONS}
     contrib_extensions_enabled=${HERMES_ENABLE_CONTRIB_EXTENSIONS}
+    jsi_unstable=${JSI_UNSTABLE}
     qemu_run_prefix=${QEMU_RUN_PREFIX}
     )
 

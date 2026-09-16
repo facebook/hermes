@@ -3346,7 +3346,19 @@
         "mjsunit/regress/regress-crbug-1406774.js",
         "mjsunit/regress/regress-crbug-1412487.js",
         "mjsunit/regress/regress-crbug-1421198.js",
-        "mjsunit/regress/regress-v8-12219.js"
+        "mjsunit/regress/regress-v8-12219.js",
+        "mjsunit/regress/regress-v8-12219.js",
+        "mjsunit/regress/regress-crbug-503578.js",
+        "mjsunit/regress/regress-crbug-503968.js",
+        "mjsunit/regress/regress-crbug-503991.js",
+        "mjsunit/regress/regress-crbug-504136.js",
+        "mjsunit/regress/regress-crbug-505778.js",
+        "mjsunit/regress/regress-crbug-511880.js",
+        "mjsunit/regress/regress-crbug-518747.js",
+        "mjsunit/regress/regress-crbug-514081.js",
+        "mjsunit/regress/regress-crbug-522496.js",
+        "mjsunit/regress/regress-4271.js",
+        "mjsunit/regress/regress-4279.js"
       ],
       "comment": "Uses Worker, not supported."
     },
