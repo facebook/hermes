@@ -187,6 +187,8 @@ Key conventions:
 - **Line limit**: 80 characters, 2-space indent
 - **Doc comments**: Required for every declaration
 - **Inlining**: Only trivial one-line methods in class body
+- **Guard clauses**: prefer condition-scoped declarations with early `return`
+  (`if (auto *x = expr()) ...`) over intermediate nullable locals and ternary chains
 
 ## Native Function Development
 

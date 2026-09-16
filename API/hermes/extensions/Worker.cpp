@@ -9,7 +9,9 @@
 #include "Worker.h"
 #include "Intrinsics.h"
 #include "hermes/Public/RuntimeConfig.h"
+#include "hermes/Support/Base64.h"
 #include "hermes/hermes.h"
+#include "llvh/ADT/StringRef.h"
 #include "llvh/Support/Compiler.h"
 #include "llvh/Support/ErrorHandling.h"
 
@@ -27,6 +29,24 @@ namespace {
 
 using Message = std::
     variant<std::shared_ptr<jsi::Serialized>, std::unique_ptr<jsi::Serialized>>;
+
+/// The script source handed to the worker thread. Exactly one of the two forms
+/// is active: eager bytes already materialized (source string, decoded data:
+/// URL, or a copied buffer input), or a URL to resolve on the worker thread.
+struct WorkerScriptSource {
+  std::shared_ptr<const jsi::Buffer> eagerBuffer;
+  std::string url;
+  bool needsResolve{false};
+};
+
+/// Return the integrator's worker setup registered on \p rt, or
+/// nullptr if none. Obtained via the runtime's ISetWorkerSetup interface.
+IWorkerSetup *getWorkerSetup(jsi::Runtime &rt) {
+  if (auto *setter = jsi::castInterface<ISetWorkerSetup>(&rt))
+    if (jsi::ICast *provider = setter->getWorkerSetup())
+      return jsi::castInterface<IWorkerSetup>(provider);
+  return nullptr;
+}
 /// Stores some resources shared between a specific Worker and the main
 /// thread/event loop thread. Everything in this struct is guarded by the state
 /// mutex;
@@ -78,9 +98,9 @@ class WorkerNativeState : public jsi::NativeState {
         workerRuntime(std::move(workerRuntime)) {}
   ~WorkerNativeState();
 
-  /// Start and assign the Worker a new thread to run \p script using the Worker
-  /// runtime.
-  void startWorkerThread(std::string script);
+  /// Start the worker thread. \p source is eager bytes or a URL to resolve;
+  /// \p provider (may be null) supplies resolveScript/initWorkerRuntime.
+  void startWorkerThread(WorkerScriptSource source, IWorkerSetup *provider);
 
   /// State specific to the Worker. This has shared ownership between the
   /// Worker Native State, the Worker thread, and event-loop task (which can run
@@ -448,55 +468,84 @@ WorkerNativeState::~WorkerNativeState() {
   }
 }
 
-void WorkerNativeState::startWorkerThread(std::string script) {
-  // workerRuntime will outlive this lambda scope because we explicitly join
-  // the worker thread in the WorkerNativeState destructor. Thus, it is safe
-  // to capture the workerRuntime here.
-  workerThread_ = std::thread([scriptCopy = std::move(script),
+void WorkerNativeState::startWorkerThread(
+    WorkerScriptSource source,
+    IWorkerSetup *provider) {
+  workerThread_ = std::thread([source = std::move(source),
+                               provider,
                                workerRuntime = workerRuntime.get(),
                                workerState = workerState]() {
     try {
-      workerRuntime->evaluateJavaScript(
-          std::make_unique<jsi::StringBuffer>(std::move(scriptCopy)), "");
+      std::shared_ptr<const jsi::Buffer> buffer;
+      if (source.needsResolve) {
+        assert(provider && "URL input requires a provider");
+        std::string error;
+        buffer = provider->resolveScript(source.url, error);
+        if (!buffer) {
+          throw jsi::JSError(
+              *workerRuntime,
+              error.empty() ? std::string("Failed to load worker script")
+                            : error);
+        }
+        if (buffer->size() == 0) {
+          // An empty script is a TypeError per the design.
+          throw jsi::JSError(
+              *workerRuntime,
+              workerRuntime->global()
+                  .getPropertyAsFunction(*workerRuntime, "TypeError")
+                  .callAsConstructor(
+                      *workerRuntime,
+                      jsi::String::createFromUtf8(
+                          *workerRuntime,
+                          "Cannot create Worker from empty worker script")));
+        }
+      } else {
+        buffer = source.eagerBuffer;
+      }
+
+      if (provider) {
+        provider->initWorkerRuntime(*workerRuntime);
+      }
+
+      // Use the resolved URL (if any) as the source identifier so worker
+      // stack traces and debugger locations reference it. Empty for the eager
+      // (source string / buffer / data:) paths.
+      workerRuntime->evaluateJavaScript(buffer, source.url);
     } catch (const jsi::JSError &scriptError) {
       postError(*workerRuntime, scriptError.value(), workerState);
     } catch (const jsi::JSINativeException &) {
-      /// evaluateJavaScript can also throw JSINativeException, which isn't
-      /// serializable. In this case, just terminate the Worker.
       ::hermes::hermesLog(
           "HermesWorker",
           "Encountered JSINativeException while running Worker script.");
       setTerminationState(workerState, *workerRuntime, false);
       return;
+    } catch (const std::exception &e) {
+      ::hermes::hermesLog(
+          "HermesWorker",
+          "Encountered C++ exception while starting Worker: %s",
+          e.what());
+      setTerminationState(workerState, *workerRuntime, false);
+      return;
+    } catch (...) {
+      ::hermes::hermesLog(
+          "HermesWorker",
+          "Encountered unknown exception while starting Worker.");
+      setTerminationState(workerState, *workerRuntime, false);
+      return;
     }
 
     std::unique_lock<std::mutex> lock(workerState->stateMutex);
-    // While the Worker isn't terminated, it is allowed to run the event loop.
     while (!workerState->terminated) {
-      // 1. Worker thread went to sleep, and another thread has terminated
-      // the worker. Worker should wake up and terminate. The message queue is
-      // cleared when `terminate` is called. Thus, we also need to check the
-      // `terminated` flag to make sure the thread doesn't immediately go back
-      // to sleep.
-      // 2. Worker thread went to sleep, then another thread posted a message.
-      // Wake up to process the message.
       workerState->toWorkerCondition.wait(lock, [workerState] {
         return workerState->terminated || !workerState->toWorkerQueue.empty();
       });
-      // If the Worker thread woke up because the Worker was terminated,
-      // then break out of the event loop.
       if (workerState->terminated) {
         break;
       }
-
-      // Otherwise, process the next message on the queue, which is guaranteed
-      // to exist.
       Message message = std::move(workerState->toWorkerQueue.front());
       workerState->toWorkerQueue.pop_front();
       lock.unlock();
 
-      // Everything from now on can be processed without the lock as it doesn't
-      // rely on any shared resources between threads.
       auto workerGlobal = workerRuntime->global();
       jsi::Value onMessage = getHandler(
           *workerRuntime,
@@ -509,12 +558,30 @@ void WorkerNativeState::startWorkerThread(std::string script) {
           processMessageWithHandler(
               *workerRuntime, std::move(message), onMessageFunc);
         } catch (const jsi::JSError &error) {
-          // Error processing the message, post the error for the parent to
-          // handle.
           postError(*workerRuntime, error.value(), workerState);
+        } catch (const jsi::JSINativeException &) {
+          ::hermes::hermesLog(
+              "HermesWorker",
+              "Encountered JSINativeException while processing Worker "
+              "message.");
+          setTerminationState(workerState, *workerRuntime, false);
+          return;
+        } catch (const std::exception &e) {
+          ::hermes::hermesLog(
+              "HermesWorker",
+              "Encountered C++ exception while processing Worker message: %s",
+              e.what());
+          setTerminationState(workerState, *workerRuntime, false);
+          return;
+        } catch (...) {
+          ::hermes::hermesLog(
+              "HermesWorker",
+              "Encountered unknown exception while processing Worker "
+              "message.");
+          setTerminationState(workerState, *workerRuntime, false);
+          return;
         }
       }
-      // Lock again for the next tick.
       lock.lock();
     }
   });
@@ -547,13 +614,34 @@ std::string copyBufferBytes(
   return std::string(reinterpret_cast<const char *>(data + offset), length);
 }
 
-/// Create the Worker runtime/thread and attach state to \p self, running the
-/// bytes in \p script (source or bytecode, decided by evaluateJavaScript).
-/// Shared by all constructor input types.
-void startWorker(jsi::Runtime &rt, jsi::Object self, std::string script) {
+/// Create the Worker runtime/thread and attach state to \p self. \p source is
+/// either eager bytes or a URL to resolve on the worker thread; \p provider
+/// (may be null) supplies
+/// resolveScript/initWorkerRuntime/configureWorkerRuntime.
+void startWorker(
+    jsi::Runtime &rt,
+    jsi::Object self,
+    WorkerScriptSource source,
+    IWorkerSetup *provider) {
   auto *api = jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
-  auto workerRuntime = api->makeHermesRuntime(::hermes::vm::RuntimeConfig());
+  // Seed a default config; let the integrator adjust it in place.
+  ::hermes::vm::RuntimeConfig workerConfig;
+  if (provider) {
+    provider->configureWorkerRuntime(workerConfig);
+  }
+  auto workerRuntime = api->makeHermesRuntime(workerConfig);
   auto workerState = std::make_shared<WorkerState>(rt, self);
+
+  // Propagate the provider to the worker runtime so a nested `new Worker`
+  // created inside this worker inherits it. `provider` is an
+  // IWorkerSetup*, i.e. a jsi::ICast*; re-casting it on the child
+  // still reaches every interface the object implements.
+  if (provider) {
+    auto *childSetter =
+        jsi::castInterface<ISetWorkerSetup>(workerRuntime.get());
+    assert(childSetter && "ISetWorkerSetup is not supported");
+    childSetter->setWorkerSetup(provider);
+  }
 
   installPostMessageFromWorker(*workerRuntime, workerState);
   installCloseFromWorker(*workerRuntime, workerState);
@@ -571,62 +659,171 @@ void startWorker(jsi::Runtime &rt, jsi::Object self, std::string script) {
     workerState->id = eventLoopControl->registerTaskQueueSource();
   }
 
-  workerNativeState->startWorkerThread(std::move(script));
+  workerNativeState->startWorkerThread(std::move(source), provider);
 }
 
-/// Called by the JS constructor in `11-Worker.js` to mark the first argument.
-/// The arguments in \p args must be provided in the following order:
-/// 1. the object to be marked as Worker
-/// 2. the script to be executed by the Worker
+/// Percent-decode \p in into \p out. Returns false on a malformed escape.
+bool percentDecode(llvh::StringRef in, std::string &out) {
+  out.clear();
+  auto hex = [](char c) -> int {
+    if (c >= '0' && c <= '9')
+      return c - '0';
+    if (c >= 'a' && c <= 'f')
+      return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F')
+      return c - 'A' + 10;
+    return -1;
+  };
+  for (size_t i = 0; i < in.size(); ++i) {
+    if (in[i] == '%') {
+      if (i + 2 >= in.size())
+        return false;
+      int hi = hex(in[i + 1]), lo = hex(in[i + 2]);
+      if (hi < 0 || lo < 0)
+        return false;
+      out.push_back(static_cast<char>((hi << 4) | lo));
+      i += 2;
+    } else {
+      out.push_back(in[i]);
+    }
+  }
+  return true;
+}
+
+/// If \p url is a data: URL, decode its payload into \p out and return true.
+/// Return false if \p url is not a data: URL. Throw a TypeError (via
+/// throwTypeError) for a malformed data: URL. Format:
+/// data:[<mediatype>][;base64],<payload>
+bool decodeDataUrl(jsi::Runtime &rt, const std::string &url, std::string &out) {
+  llvh::StringRef ref(url);
+  // Strip any URL fragment: everything from the first literal '#'. A literal
+  // '#' in the body must be percent-encoded (%23), which is preserved because
+  // it is not a literal '#'.
+  size_t hash = ref.find('#');
+  if (hash != llvh::StringRef::npos) {
+    ref = ref.take_front(hash);
+  }
+  // The URL scheme is case-insensitive (RFC 3986); accept e.g. "DATA:".
+  if (!ref.startswith_lower("data:"))
+    return false;
+  ref = ref.drop_front(5); // after "data:" (5 chars regardless of case)
+  size_t comma = ref.find(',');
+  if (comma == llvh::StringRef::npos) {
+    throwTypeError(rt, "Malformed data: URL (missing comma)");
+  }
+  llvh::StringRef meta = ref.take_front(comma);
+  llvh::StringRef payload = ref.drop_front(comma + 1);
+  // Per the WHATWG data: URL processor, percent-decode the body first (for both
+  // plain and base64 URLs).
+  if (!percentDecode(payload, out)) {
+    throwTypeError(rt, "Malformed data: URL payload");
+  }
+  // An empty body decodes to empty bytes; skip base64 (hermes::base64Decode
+  // must not be called with empty input) and let the caller report the empty
+  // worker TypeError.
+  if (out.empty()) {
+    return true;
+  }
+  // The ";base64" token is case-insensitive per RFC 2397. For base64 URLs,
+  // base64-decode the (already percent-decoded) body with the vetted Support
+  // decoder.
+  if (meta.endswith_lower(";base64")) {
+    llvh::Optional<std::string> b64 = ::hermes::base64Decode(out);
+    if (!b64) {
+      throwTypeError(rt, "Malformed data: URL payload");
+    }
+    out = std::move(*b64);
+  }
+  return true;
+}
+
+/// Build a WorkerScriptSource from a string argument \p str per the option
+/// flags and whether a \p provider is present.
+WorkerScriptSource sourceFromString(
+    jsi::Runtime &rt,
+    std::string str,
+    bool inlineFlag,
+    bool allowData,
+    IWorkerSetup *provider) {
+  WorkerScriptSource source;
+  std::string decoded;
+  if (!inlineFlag && allowData && decodeDataUrl(rt, str, decoded)) {
+    if (decoded.empty()) {
+      throwTypeError(rt, "Cannot create Worker from empty data: URL");
+    }
+    source.eagerBuffer =
+        std::make_shared<jsi::StringBuffer>(std::move(decoded));
+  } else if (provider && !inlineFlag) {
+    source.url = std::move(str);
+    source.needsResolve = true;
+  } else {
+    source.eagerBuffer = std::make_shared<jsi::StringBuffer>(std::move(str));
+  }
+  return source;
+}
+
 jsi::Value initializeWorker(
     jsi::Runtime &rt,
     const jsi::Value &,
     const jsi::Value *args,
     size_t count) {
-  // This is only called by the Worker extension script in `11-Worker.js`, so we
-  // can guarantee that the argument count is 2.
-  assert(count == 2);
-
-  // The self object is provided by `11-Worker.js`, so it is always an Object.
+  // Called only by 11-Worker.js: (self, script, inline, allowData).
+  assert(count == 4);
   auto self = args[0].asObject(rt);
   const jsi::Value &input = args[1];
+  bool inlineFlag = args[2].getBool();
+  bool allowData = args[3].getBool();
 
-  std::string script;
+  IWorkerSetup *provider = getWorkerSetup(rt);
+
   if (input.isString()) {
-    script = input.asString(rt).utf8(rt);
-  } else if (input.isObject()) {
+    WorkerScriptSource source = sourceFromString(
+        rt, input.asString(rt).utf8(rt), inlineFlag, allowData, provider);
+    startWorker(rt, std::move(self), std::move(source), provider);
+    return jsi::Value::undefined();
+  }
+
+  if (input.isObject()) {
     jsi::Object obj = input.asObject(rt);
+    std::string bytes;
     if (obj.isArrayBuffer(rt)) {
       jsi::ArrayBuffer ab = obj.getArrayBuffer(rt);
       checkBufferAttached(rt, ab);
       size_t size = ab.size(rt);
-      script = copyBufferBytes(rt, std::move(ab), 0, size);
+      bytes = copyBufferBytes(rt, std::move(ab), 0, size);
     } else if (obj.isTypedArray(rt)) {
       jsi::TypedArray ta = obj.getTypedArray(rt);
       jsi::ArrayBuffer ab = ta.buffer(rt);
       checkBufferAttached(rt, ab);
-      size_t offset = ta.byteOffset(rt);
-      size_t length = ta.byteLength(rt);
-      script = copyBufferBytes(rt, std::move(ab), offset, length);
+      bytes = copyBufferBytes(
+          rt, std::move(ab), ta.byteOffset(rt), ta.byteLength(rt));
     } else if (isDataView(rt, obj)) {
       jsi::ArrayBuffer ab = dataViewBuffer(rt, obj);
       checkBufferAttached(rt, ab);
-      size_t offset = dataViewByteOffset(rt, obj);
-      size_t length = dataViewByteLength(rt, obj);
-      script = copyBufferBytes(rt, std::move(ab), offset, length);
-    } else {
-      throwTypeError(
+      bytes = copyBufferBytes(
           rt,
-          "Worker script must be a string, ArrayBuffer, TypedArray, or DataView");
+          std::move(ab),
+          dataViewByteOffset(rt, obj),
+          dataViewByteLength(rt, obj));
+    } else {
+      // Non-buffer object: coerce to string via ToString (invokes toString /
+      // Symbol.toPrimitive), matching the web's USVString coercion, so an RN
+      // URL is used as its href. Reclassify the result as a string.
+      std::string str = input.toString(rt).utf8(rt);
+      WorkerScriptSource source =
+          sourceFromString(rt, std::move(str), inlineFlag, allowData, provider);
+      startWorker(rt, std::move(self), std::move(source), provider);
+      return jsi::Value::undefined();
     }
-  } else {
-    throwTypeError(
-        rt,
-        "Worker script must be a string, ArrayBuffer, TypedArray, or DataView");
+    WorkerScriptSource source;
+    source.eagerBuffer = std::make_shared<jsi::StringBuffer>(std::move(bytes));
+    startWorker(rt, std::move(self), std::move(source), provider);
+    return jsi::Value::undefined();
   }
 
-  startWorker(rt, std::move(self), std::move(script));
-  return jsi::Value::undefined();
+  throwTypeError(
+      rt,
+      "Worker script must be a string, ArrayBuffer, TypedArray, or DataView");
 }
 /// This implements the `terminate` method of the Worker object, which takes in
 /// no arguments. This method marks the Worker as terminated, requests the
@@ -714,7 +911,7 @@ void installWorker(jsi::Runtime &rt, jsi::Object &extensions) {
   jsi::Function setup = extensions.getPropertyAsFunction(rt, "Worker");
 
   jsi::Function initWorker = jsi::Function::createFromHostFunction(
-      rt, jsi::PropNameID::forAscii(rt, "initWorker"), 2, initializeWorker);
+      rt, jsi::PropNameID::forAscii(rt, "initWorker"), 4, initializeWorker);
 
   jsi::Function terminateWorkerFunc = jsi::Function::createFromHostFunction(
       rt, jsi::PropNameID::forAscii(rt, "terminateWorker"), 0, terminateWorker);

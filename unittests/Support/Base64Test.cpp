@@ -49,6 +49,19 @@ TEST(Base64Test, DecodeInvalid) {
   EXPECT_EQ(base64Decode("YQ==="), llvh::None);
 }
 
+TEST(Base64Test, DecodeForgivingWhitespace) {
+  // WHATWG forgiving-base64 ignores ASCII whitespace.
+  EXPECT_EQ(base64Decode("Y Q = =").getValue(), "a");
+  EXPECT_EQ(base64Decode(" YWJj ").getValue(), "abc");
+  EXPECT_EQ(base64Decode("YW\nJj\t").getValue(), "abc");
+}
+
+TEST(Base64Test, DecodeEmpty) {
+  // Empty and whitespace-only inputs decode to empty output (no crash).
+  EXPECT_EQ(base64Decode("").getValue(), "");
+  EXPECT_EQ(base64Decode("   ").getValue(), "");
+}
+
 TEST(DataURLTst, ParseDataURL) {
   EXPECT_EQ(
       parseJSONBase64DataURL("data:application/json;base64,YQ==").getValue(),
@@ -65,6 +78,10 @@ TEST(DataURLTst, ParseDataURL) {
   // Invalid mediatype
   EXPECT_EQ(parseJSONBase64DataURL("data:html,YQ"), llvh::None);
   EXPECT_EQ(parseJSONBase64DataURL("data:text/plain,YQ=="), llvh::None);
+
+  // Empty base64 payload decodes to an empty string (must not crash).
+  EXPECT_EQ(
+      parseJSONBase64DataURL("data:application/json;base64,").getValue(), "");
 }
 
 } // end anonymous namespace

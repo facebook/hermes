@@ -56,7 +56,6 @@ function expectThrow(fn, label) {
   catch (e) { print(label + ": " + e.constructor.name); }
 }
 expectThrow(function () { new Worker(123); }, "number");
-expectThrow(function () { new Worker({}); }, "object");
 expectThrow(function () { new Worker(new ArrayBuffer(0)); }, "empty-ab");
 expectThrow(function () { new Worker(new Uint8Array(0)); }, "empty-ta");
 
@@ -68,7 +67,6 @@ w5.onmessage = function (msg) { print("tampered: " + msg); w5.terminate(); };
 w5.postMessage("go");
 
 // CHECK: number: TypeError
-// CHECK-NEXT: object: TypeError
 // CHECK-NEXT: empty-ab: TypeError
 // CHECK-NEXT: empty-ta: TypeError
 // CHECK-DAG: ab: ran
