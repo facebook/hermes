@@ -2613,10 +2613,19 @@ void NumberFormatApple::initializeNSFormatters() noexcept {
     nsMeasurementFormatter_ = [NSMeasurementFormatter new];
     nsMeasurementFormatter_.numberFormatter = nsNumberFormatter_;
     nsMeasurementFormatter_.locale = nsLocale;
+    // ECMA-402 formats the number as-is in the requested unit, so keep
+    // NSMeasurementFormatter from converting to the locale's preferred unit
+    // for the dimension (which renders 2 hours as "7,200s" or 2 kilometers
+    // as "1.243mi" in en-US).
+    nsMeasurementFormatter_.unitOptions =
+        NSMeasurementFormatterUnitOptionsProvidedUnit;
+    // NSFormattingUnitStyleShort is the symbol-only form CLDR calls "narrow"
+    // ("2h"), and NSFormattingUnitStyleMedium is CLDR "short" ("2 hr"), so
+    // map the ECMA-402 unitDisplay values accordingly.
     if (unitDisplay_ == u"short") {
-      nsMeasurementFormatter_.unitStyle = NSFormattingUnitStyleShort;
-    } else if (unitDisplay_ == u"narrow") {
       nsMeasurementFormatter_.unitStyle = NSFormattingUnitStyleMedium;
+    } else if (unitDisplay_ == u"narrow") {
+      nsMeasurementFormatter_.unitStyle = NSFormattingUnitStyleShort;
     } else if (unitDisplay_ == u"long") {
       nsMeasurementFormatter_.unitStyle = NSFormattingUnitStyleLong;
     }
