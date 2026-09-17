@@ -321,7 +321,8 @@ void Sampler::platformUnregisterRuntime(SamplingProfiler *profiler) {}
 
 void Sampler::platformPostSampleStack(SamplingProfiler *localProfiler) {}
 
-SampleResult Sampler::platformSuspendVMAndWalkStack(SamplingProfiler *profiler) {
+SampleResult Sampler::platformSuspendVMAndWalkStack(
+    SamplingProfiler *profiler) {
   auto *self = static_cast<SamplerPosix *>(this);
   auto *posixProfiler = static_cast<SamplingProfilerPosix *>(profiler);
 

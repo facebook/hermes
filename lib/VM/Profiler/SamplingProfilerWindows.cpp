@@ -86,7 +86,8 @@ void Sampler::platformUnregisterRuntime(SamplingProfiler *profiler) {}
 
 void Sampler::platformPostSampleStack(SamplingProfiler *localProfiler) {}
 
-SampleResult Sampler::platformSuspendVMAndWalkStack(SamplingProfiler *profiler) {
+SampleResult Sampler::platformSuspendVMAndWalkStack(
+    SamplingProfiler *profiler) {
   auto *winProfiler = static_cast<SamplingProfilerWindows *>(profiler);
 
   // Suspend the JS thread. The runtimeDataLock is held by the caller, ensuring
