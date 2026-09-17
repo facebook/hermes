@@ -43,3 +43,51 @@ print(
   ),
 );
 // CHECK-NEXT: วันพฤหัสบดีที่ 2 มกราคม พ.ศ. 2563
+
+// Amete Alem must affect formatting, not just resolvedOptions().
+var ethioaa = new Intl.DateTimeFormat('en-US-u-ca-ethioaa', {
+  timeZone: 'UTC',
+  year: 'numeric',
+});
+print(ethioaa.resolvedOptions().calendar, ethioaa.format(Date.UTC(2020, 0, 2)));
+// CHECK-NEXT: ethioaa 7512 AA
+
+// The calendar option must reach the formatter without changing the resolved
+// locale or losing its other extensions. It must also affect the format
+// template so that the era is included.
+var ethioaaOption = new Intl.DateTimeFormat('en-US', {
+  calendar: 'ethioaa',
+  timeZone: 'UTC',
+  year: 'numeric',
+});
+print(
+  ethioaaOption.resolvedOptions().locale,
+  ethioaaOption.resolvedOptions().calendar,
+  ethioaaOption.format(Date.UTC(2020, 0, 2)),
+);
+// CHECK-NEXT: en-US ethioaa 7512 AA
+
+var gregoryOverride = new Intl.DateTimeFormat('en-US-u-ca-buddhist-hc-h23', {
+  calendar: 'gregory',
+  timeZone: 'UTC',
+  year: 'numeric',
+});
+print(
+  gregoryOverride.resolvedOptions().locale,
+  gregoryOverride.resolvedOptions().calendar,
+  gregoryOverride.format(Date.UTC(2020, 0, 2)),
+);
+// CHECK-NEXT: en-US-u-hc-h23 gregory 2020
+
+// Also exercise the dateStyle path, which does not use a custom format template.
+var ethioaaStyle = new Intl.DateTimeFormat('en-US-u-ca-gregory', {
+  calendar: 'ethioaa',
+  timeZone: 'UTC',
+  dateStyle: 'short',
+});
+print(
+  ethioaaStyle.resolvedOptions().locale,
+  ethioaaStyle.resolvedOptions().calendar,
+  ethioaaStyle.format(Date.UTC(2020, 0, 2)),
+);
+// CHECK-NEXT: en-US ethioaa 4/23/7512 AA
