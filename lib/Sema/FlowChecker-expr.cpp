@@ -238,7 +238,11 @@ class FlowChecker::ExprVisitor {
                        << " in expr context\n");
       llvm_unreachable("invalid node in expression context");
     } else {
+      outer_.sm_.warning(
+          node->getSourceRange(),
+          "ft: expression not supported, assuming 'any'");
       visitESTreeChildren(*this, node, nullptr);
+      outer_.setNodeType(node, outer_.flowContext_.getAny());
     }
   }
 
@@ -1456,6 +1460,84 @@ class FlowChecker::ExprVisitor {
     visitESTreeNodeList(*this, node->_expressions, node, nullptr);
     outer_.setNodeType(node, outer_.flowContext_.getString());
   }
+  void visit(
+      ESTree::SequenceExpressionNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
+    visitESTreeChildren(*this, node, nullptr);
+    // Value is the value of the last expression.
+    ESTree::Node *last = &node->_expressions.back();
+    outer_.setNodeType(node, outer_.getNodeTypeOrAny(last));
+  }
+  void visit(
+      ESTree::YieldExpressionNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
+    visitESTreeChildren(*this, node, nullptr);
+    // The user can provide anything to 'yield', so it has type 'mixed'.
+    outer_.setNodeType(node, outer_.flowContext_.getMixed());
+  }
+  void visit(
+      ESTree::AwaitExpressionNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
+    visitESTreeChildren(*this, node, nullptr);
+    // TODO: Recognize Promise<T>. this node will have type T.
+    outer_.sm_.warning(
+        node->getSourceRange(),
+        "ft: await expression not supported, assuming 'any'");
+    outer_.setNodeType(node, outer_.flowContext_.getAny());
+  }
+  void visit(
+      ESTree::ImportExpressionNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
+    visitESTreeChildren(*this, node, nullptr);
+    outer_.sm_.warning(
+        node->getSourceRange(),
+        "ft: import expression not supported, assuming 'any'");
+    outer_.setNodeType(node, outer_.flowContext_.getAny());
+  }
+  void visit(
+      ESTree::TaggedTemplateExpressionNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
+    visitESTreeChildren(*this, node, nullptr);
+    outer_.sm_.warning(
+        node->getSourceRange(),
+        "ft: tagged template expression not supported, assuming 'any'");
+    outer_.setNodeType(node, outer_.flowContext_.getAny());
+  }
+  void visit(
+      ESTree::AsConstExpressionNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
+    visitESTreeNode(*this, node->_expression, node, nullptr);
+    Type *t = outer_.getNodeTypeOrAny(node->_expression);
+    outer_.sm_.warning(
+        node->getSourceRange(),
+        "ft: 'as const' expression not supported, assuming " +
+            t->messageString());
+    outer_.setNodeType(node, t);
+  }
+#if HERMES_PARSE_JSX
+  void
+  visit(ESTree::JSXElementNode *node, ESTree::Node *parent, Type *constraint) {
+    visitESTreeChildren(*this, node, nullptr);
+    outer_.sm_.warning(
+        node->getSourceRange(),
+        "ft: JSX element not supported, assuming 'any'");
+    outer_.setNodeType(node, outer_.flowContext_.getAny());
+  }
+  void
+  visit(ESTree::JSXFragmentNode *node, ESTree::Node *parent, Type *constraint) {
+    visitESTreeChildren(*this, node, nullptr);
+    outer_.sm_.warning(
+        node->getSourceRange(),
+        "ft: JSX fragment not supported, assuming 'any'");
+    outer_.setNodeType(node, outer_.flowContext_.getAny());
+  }
+#endif
   void visit(
       ESTree::NumericLiteralNode *node,
       ESTree::Node *parent,
