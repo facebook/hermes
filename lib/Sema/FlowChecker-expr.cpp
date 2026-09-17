@@ -884,6 +884,22 @@ class FlowChecker::ExprVisitor {
     return outer_.flowContext_.getAny();
   }
 
+  /// Builtin method access on a number. Only non-computed access reaches here;
+  /// numbers have no indexed access and no named non-method properties.
+  Type *visitMemberNumber(ESTree::MemberExpressionNode *node) {
+    auto *id = llvh::cast<ESTree::IdentifierNode>(node->_property);
+    if (auto *builtinDecl = outer_.flowContext_.findBuiltinMethod(
+            {TypeKind::Number, id->_name, /* isStatic */ false})) {
+      // Found a builtin method - store for CallExpression to use.
+      // The actual type will be determined by CallExpression.
+      outer_.setBuiltinMethodDecl(node, builtinDecl);
+      return outer_.flowContext_.getAny();
+    }
+    outer_.sm_.error(
+        node->_property->getSourceRange(), "ft: unknown number property");
+    return outer_.flowContext_.getAny();
+  }
+
   void visit(
       ESTree::MemberExpressionNode *node,
       ESTree::Node *parent,
@@ -964,6 +980,8 @@ class FlowChecker::ExprVisitor {
       resType = visitMemberTuple(node, tupleType);
     } else if (llvh::isa<StringType>(objType->info)) {
       resType = visitMemberString(node);
+    } else if (llvh::isa<NumberType>(objType->info) && !node->_computed) {
+      resType = visitMemberNumber(node);
     } else if (!llvh::isa<AnyType>(objType->info)) {
       if (node->_computed) {
         outer_.sm_.error(
