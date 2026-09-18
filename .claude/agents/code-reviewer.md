@@ -92,6 +92,6 @@ Structure your review clearly:
 - For error handling: Verify all failure paths are handled
 - For React reconciler: Verify React API contracts are respected
 - For performance-critical code: Consider algorithmic complexity and allocation patterns
-- For project-specific patterns: Ensure adherence to established conventions from CLAUDE.md
+- For project-specific patterns: Ensure adherence to established conventions from AGENTS.md
 
 **Remember**: Your job is to prevent bugs from reaching production and to continuously improve code quality. Be thorough, be skeptical, and never compromise on understanding. It's better to ask too many questions than to let subtle bugs slip through.
