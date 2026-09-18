@@ -28,9 +28,8 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
                                private llvh::TrailingObjects<
                                    ArrayStorageBase<HVType>,
                                    GCHermesValueInLargeObjImpl<HVType>> {
-  using GCHVType = GCHermesValueInLargeObjImpl<HVType>;
-
  public:
+  using GCHVType = GCHermesValueInLargeObjImpl<HVType>;
   using size_type = uint32_t;
   using iterator = GCHVType *;
 
