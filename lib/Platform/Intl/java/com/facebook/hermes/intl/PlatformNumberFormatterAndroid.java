@@ -141,6 +141,12 @@ public class PlatformNumberFormatterAndroid implements IPlatformNumberFormatter 
   }
 
   @Override
+  public String format(String n) {
+    java.math.BigDecimal bigDecimal = new java.math.BigDecimal(n);
+    return mFinalFormat.format(bigDecimal);
+  }
+
+  @Override
   public String fieldToString(AttributedCharacterIterator.Attribute attribute, double x) {
     // Report unsupported/unexpected number fields as literal.
     return "literal";
@@ -149,6 +155,12 @@ public class PlatformNumberFormatterAndroid implements IPlatformNumberFormatter 
   @Override
   public AttributedCharacterIterator formatToParts(double n) {
     return mFinalFormat.formatToCharacterIterator(n);
+  }
+
+  @Override
+  public AttributedCharacterIterator formatToParts(String n) {
+    java.math.BigDecimal bigDecimal = new java.math.BigDecimal(n);
+    return mFinalFormat.formatToCharacterIterator(bigDecimal);
   }
 
   @Override

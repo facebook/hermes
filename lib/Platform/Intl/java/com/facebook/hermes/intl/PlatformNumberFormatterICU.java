@@ -246,6 +246,28 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
 
   @RequiresApi(api = Build.VERSION_CODES.N)
   @Override
+  public String format(String n) {
+    String result;
+    try {
+      BigDecimal bigDecimal = new BigDecimal(n);
+      if (mFinalFormat instanceof MeasureFormat && mMeasureUnit != null) {
+        result = mFinalFormat.format(new Measure(bigDecimal.doubleValue(), mMeasureUnit));
+      } else {
+        result = mFinalFormat.format(bigDecimal);
+      }
+    } catch (NumberFormatException ex) {
+      try {
+        return NumberFormat.getInstance(ULocale.getDefault()).format(new BigDecimal(n));
+      } catch (RuntimeException ex2) {
+        return NumberFormat.getInstance(ULocale.forLanguageTag("en")).format(new BigDecimal(n));
+      }
+    }
+
+    return result;
+  }
+
+  @RequiresApi(api = Build.VERSION_CODES.N)
+  @Override
   public String fieldToString(AttributedCharacterIterator.Attribute attribute, double x) {
     if (attribute == NumberFormat.Field.SIGN) {
       if (Double.compare(x, +0) >= 0) {
@@ -324,6 +346,34 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
       // Scarily, DecimalFormat.formatToCharacterIterator throws NullPointerEsception when parsing
       // 0.0.
       return NumberFormat.getInstance(ULocale.forLanguageTag("en")).formatToCharacterIterator(n);
+    }
+
+    return iterator;
+  }
+
+  @RequiresApi(api = Build.VERSION_CODES.N)
+  @Override
+  public AttributedCharacterIterator formatToParts(String n) {
+    AttributedCharacterIterator iterator;
+    BigDecimal bigDecimal = new BigDecimal(n);
+    try {
+      if (mFinalFormat instanceof MeasureFormat && mMeasureUnit != null) {
+        iterator = mFinalFormat.formatToCharacterIterator(
+            new Measure(bigDecimal.doubleValue(), mMeasureUnit));
+      } else {
+        iterator = mFinalFormat.formatToCharacterIterator(bigDecimal);
+      }
+    } catch (NumberFormatException ex) {
+      try {
+        return NumberFormat.getInstance(ULocale.getDefault())
+            .formatToCharacterIterator(bigDecimal);
+      } catch (RuntimeException ex2) {
+        return NumberFormat.getInstance(ULocale.forLanguageTag("en"))
+            .formatToCharacterIterator(bigDecimal);
+      }
+    } catch (Exception ex) {
+      return NumberFormat.getInstance(ULocale.forLanguageTag("en"))
+          .formatToCharacterIterator(bigDecimal);
     }
 
     return iterator;
