@@ -345,7 +345,12 @@ class HermesRuntimeImpl final : public HermesRuntime,
     runtime_.addCustomWeakRootsFunction(
         [this](vm::GC *, vm::WeakRootAcceptor &acceptor) {
           weakHermesValues_.forEach([&acceptor](WeakRefPointerValue &element) {
-            acceptor.acceptWeak(element.value());
+            // We need to use valueUnsafe() because the refernece count may
+            // be decremented to 0 after we check that it is not free and hence
+            // fires the assertion in value(). It is safe to accept the value
+            // here because it is not freed before the iteration begings and
+            // the iteration will not destroy the WeakRoot.
+            acceptor.acceptWeak(element.valueUnsafe());
           });
         });
 #ifdef HERMES_MEMORY_INSTRUMENTATION
@@ -1208,6 +1213,12 @@ class HermesRuntimeImpl final : public HermesRuntime,
 
     T &value() {
       assert(!isFree() && "Value not present");
+      return value_;
+    }
+
+    /// Returning the value without asserting if it's free. This is only used
+    /// when visiting the weak values by the WeakAcceptor of GC.
+    T &valueUnsafe() {
       return value_;
     }
 

@@ -17,6 +17,8 @@
 #include <jsi/test/testlib.h>
 
 #include <atomic>
+#include <chrono>
+#include <optional>
 #include <thread>
 #include <tuple>
 
@@ -951,6 +953,69 @@ TEST_P(HermesRuntimeTest, NativeStateTest) {
   // point to local variables. Otherwise ASAN will complain.
   eval("gc()");
   waitForDtors(dtors1, 2);
+}
+
+TEST(HermesRuntimeConfigTest, NativeStateWeakObjectFinalization) {
+  struct FinalizationState {
+    const std::thread::id mutatorThread = std::this_thread::get_id();
+    std::atomic<size_t> finalized{0};
+    std::atomic<bool> finalizedOnMutator{false};
+  } state;
+
+  class WeakNativeState final : public NativeState {
+   public:
+    WeakNativeState(
+        Runtime &runtime,
+        const Object &object,
+        FinalizationState &state)
+        : weak_(std::in_place, runtime, object), state_(state) {}
+
+    ~WeakNativeState() override {
+      if (std::this_thread::get_id() == state_.mutatorThread) {
+        state_.finalizedOnMutator = true;
+      }
+      weak_.reset();
+      ++state_.finalized;
+    }
+
+   private:
+    std::optional<WeakObject> weak_;
+    FinalizationState &state_;
+  };
+
+  // Keep the counters alive until runtime teardown has joined the finalizer.
+  auto runtime = makeHermesRuntime();
+  constexpr size_t kNumBatches = 32;
+  constexpr size_t kStatesPerBatch = 16384;
+  for (size_t batch = 0; batch < kNumBatches; ++batch) {
+    {
+      Array owners(*runtime, kStatesPerBatch);
+      for (size_t i = 0; i < kStatesPerBatch; ++i) {
+        Object object(*runtime);
+        object.setNativeState(
+            *runtime,
+            std::make_shared<WeakNativeState>(*runtime, object, state));
+        owners.setValueAtIndex(*runtime, i, object);
+      }
+    }
+
+    // Finalization releases the last reference to each weak-root slot while
+    // collections traverse the same list. This stresses the interval between
+    // checking whether a slot is occupied and visiting its value.
+    const size_t expected = (batch + 1) * kStatesPerBatch;
+    const auto deadline =
+        std::chrono::steady_clock::now() + std::chrono::seconds(10);
+    do {
+      runtime->instrumentation().collectGarbage("NativeStateWeakObject");
+      std::this_thread::yield();
+    } while (state.finalized < expected &&
+             std::chrono::steady_clock::now() < deadline);
+    ASSERT_EQ(state.finalized.load(), expected);
+  }
+
+  runtime.reset();
+  EXPECT_EQ(state.finalized.load(), kNumBatches * kStatesPerBatch);
+  EXPECT_FALSE(state.finalizedOnMutator.load());
 }
 
 TEST_P(HermesRuntimeTest, ExternalMemoryTest) {
