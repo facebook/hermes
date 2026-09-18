@@ -3205,6 +3205,8 @@ typedef struct SHConsoleContext SHConsoleContext;
 SHConsoleContext *init_console_bindings(
     SHRuntime *shr, int scriptArgc, const char *const *scriptArgv);
 
+void release_console_bindings(SHConsoleContext *consoleContext);
+
 void free_console_context(SHConsoleContext *consoleContext);
 
 bool run_event_loop(
@@ -3229,8 +3231,9 @@ int main(int argc, char **argv) {
   bool success =
     _sh_initialize_units(shr, 1, CREATE_THIS_UNIT) &&
     run_event_loop(shr, consoleContext);
-  free_console_context(consoleContext);
+  release_console_bindings(consoleContext);
   _sh_done(shr);
+  free_console_context(consoleContext);
   return success ? 0 : 1;
 }
 )";

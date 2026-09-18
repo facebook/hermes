@@ -17,6 +17,7 @@
 #include <cstring>
 #include <functional>
 #include <mutex>
+#include <optional>
 #include <queue>
 #include <thread>
 #include <vector>
@@ -123,18 +124,18 @@ class EventLoopControl final : public facebook::hermes::IEventLoopControl {
 };
 
 /// Object that contains console state that needs to be preserved between
-/// init_console_bindings and run_event_loop.
+/// init_console_bindings and runtime destruction.
 struct SHConsoleContext {
   /// The JS object that contains the console helpers from the
   /// ConsoleBindings.js.inc file.
-  facebook::jsi::Object helpers;
+  std::optional<facebook::jsi::Object> helpers;
 
   /// Script arguments passed after "--" on the command line.
   int scriptArgc;
   const char *const *scriptArgv;
 
+  /// Must outlive the runtime, whose finalizers join Worker threads.
   EventLoopControl eventLoopControl{};
-  facebook::hermes::HermesRuntime *hermesRuntime{nullptr};
 
   SHConsoleContext(
       facebook::jsi::Object &&helpers,
@@ -143,15 +144,6 @@ struct SHConsoleContext {
       : helpers(std::move(helpers)),
         scriptArgc(scriptArgc),
         scriptArgv(scriptArgv) {}
-
-  ~SHConsoleContext() {
-    if (hermesRuntime) {
-      auto *iface =
-          facebook::jsi::castInterface<facebook::hermes::ISetEventLoopControl>(
-              hermesRuntime);
-      iface->setEventLoopControl(nullptr);
-    }
-  }
 };
 
 /// Init harness symbols used in the test262 testsuite:
@@ -356,7 +348,8 @@ static const char *s_jslib =
     ;
 
 /// \return a SHConsoleContext initialized with the console bindings.
-///   Must be freed by free_console_context.
+///   Release its JSI resources with release_console_bindings before destroying
+///   the runtime, then free it with free_console_context afterwards.
 extern "C" SHERMES_EXPORT SHConsoleContext *init_console_bindings(
     SHRuntime *shr,
     int scriptArgc,
@@ -375,12 +368,7 @@ extern "C" SHERMES_EXPORT SHConsoleContext *init_console_bindings(
 
   initHermesCLIBindings(hrt, consoleContext.get());
 
-  consoleContext->hermesRuntime = &hrt;
-  auto *setEventLoopInterface =
-      jsi::castInterface<facebook::hermes::ISetEventLoopControl>(&hrt);
-  setEventLoopInterface->setEventLoopControl(&consoleContext->eventLoopControl);
-
-  jsi::Object &helpers = consoleContext->helpers;
+  jsi::Object &helpers = *consoleContext->helpers;
 
   jsi::Function runMacroTask = helpers.getPropertyAsFunction(hrt, "run");
 
@@ -394,10 +382,20 @@ extern "C" SHERMES_EXPORT SHConsoleContext *init_console_bindings(
     runMacroTask.call(hrt, curTimeMs);
   }
 
+  auto *setEventLoopInterface =
+      jsi::castInterface<facebook::hermes::ISetEventLoopControl>(&hrt);
+  setEventLoopInterface->setEventLoopControl(&consoleContext->eventLoopControl);
   return consoleContext.release();
 }
 
-/// Free the \p consoleContext.
+/// Release JSI resources before runtime destruction. Keep the controller alive
+/// until the runtime has joined Workers that may still be posting tasks.
+extern "C" SHERMES_EXPORT void release_console_bindings(
+    SHConsoleContext *consoleContext) {
+  consoleContext->helpers.reset();
+}
+
+/// Free the \p consoleContext after destroying its runtime.
 extern "C" SHERMES_EXPORT void free_console_context(
     SHConsoleContext *consoleContext) {
   delete consoleContext;
@@ -415,7 +413,7 @@ extern "C" SHERMES_EXPORT bool run_event_loop(
   try {
     // Register event loop functions and obtain the runMicroTask() helper
     // function.
-    jsi::Object &helpers = consoleContext->helpers;
+    jsi::Object &helpers = *consoleContext->helpers;
     jsi::Function peekMacroTask = helpers.getPropertyAsFunction(hrt, "peek");
     jsi::Function runMacroTask = helpers.getPropertyAsFunction(hrt, "run");
 
