@@ -78,7 +78,7 @@ createLastUseMaps(
     for (const auto &objID : rec->uses()) {
       if (lastUsePerObj.find(objID) == lastUsePerObj.end()) {
         lastUsePerObj.insert({objID, i});
-        lastUses.push_back({i, objID});
+        lastUses.emplace_back(i, objID);
       }
     }
   }
