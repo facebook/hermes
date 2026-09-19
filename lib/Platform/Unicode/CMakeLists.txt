@@ -6,7 +6,6 @@
 set(source_files
    PlatformUnicodeJava.cpp
    PlatformUnicodeCF.cpp
-   PlatformUnicodeICU.cpp
    PlatformUnicodeLite.cpp
    PlatformUnicodeEmscripten.cpp
    PlatformUnicodeHermes.cpp
@@ -34,5 +33,3 @@ elseif(HERMES_IS_ANDROID)
 elseif(APPLE)
   target_link_libraries(hermesPlatformUnicode_obj ${CORE_FOUNDATION})
 endif()
-
-hermes_link_icu(hermesPlatformUnicode_obj)
