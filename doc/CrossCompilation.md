@@ -7,7 +7,7 @@ This document describes how to build Hermes in a cross compilation setting, e.g.
 building for Android, WASM (with Emscripten), or any other platforms different
 than the host development machines.
 
-## Android compilation without ICU
+## Android compilation
 
 Edit paths:
 * `CMAKE_TOOLCHAIN_FILE` should point to whatever `android_ndk` you need.
@@ -24,32 +24,22 @@ cmake ~/fbsource/xplat/static_h \
   -DHERMES_FACEBOOK_BUILD=OFF \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_TOOLCHAIN_FILE=/opt/android_ndk/r17fb2/build/cmake/android.toolchain.cmake \
-  -DHERMES_UNICODE_LITE=ON -DICU_FOUND=1 \
+  -DHERMES_UNICODE_LITE=ON \
   -DIMPORT_HOST_COMPILERS=~/static_h/build_release/ImportHostCompilers.cmake \
   -DHERMES_ENABLE_DEBUGGER=OFF \
   -DANDROID_ABI=arm64-v8a -G Ninja
 ```
 
-## (Optional) Cross-compiling ICU
+`HERMES_UNICODE_LITE=ON` selects the self-contained no-op Unicode backend.
+Without it, an Android build uses the Java backend, which needs a JVM at
+runtime and so is not usable from a binary pushed with `adb push` and run
+under `adb shell`.
 
-1. Make sure that:
-```
-ANDROID_NDK_REPOSITORY=/opt/android_ndk
-ANDROID_NDK=/opt/android_ndk/android-ndk-whatever
-```
-and `$PATH` includes `/opt/android_ndk/android-ndk-whatever`.
-
-2. Clone, patch and build:
-
-```
-git clone https://github.com/SwiftAndroid/libiconv-libicu-android.git
-cd libiconv-libicu-android
-git checkout 4bc78f4646bd54f71fa5fd13322b8ab1e8fe9d2a
-git apply $path_to_hermes/android/cross-compile/swift-libicu.patch
-./build.sh
-```
-
-The libraries will be built in `./armeabi-v7a/`.
+No ICU is needed here, or in any cross-compilation target. The
+`platform_unicode` layer -- case conversion, normalization, collation and
+date formatting -- is self-contained. ICU is used only by the `impl_icu`
+Intl backend, which is off unless `-DHERMES_ENABLE_INTL=ON`, and which
+Android does not use even then: it has its own `PlatformIntlAndroid`.
 
 ## Emscripten
 

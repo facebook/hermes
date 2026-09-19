@@ -944,7 +944,7 @@ static CallResult<HermesValue> convertCase(
   S->appendUTF16String(buff);
   UTF16Ref str = buff.arrayRef();
 
-  if (!useCurrentLocale) {
+  {
     // Try a fast path for ASCII strings.
     // First, bitwise-or all the characters to see if any one isn't ASCII.
     char16_t mask = 0;
@@ -963,7 +963,13 @@ static CallResult<HermesValue> convertCase(
         noop &= !('A' <= c && c <= 'Z');
       }
     }
-    if (mask <= 127) {
+    // localeAffectsCasing() is only consulted once the scan says the fast
+    // path is otherwise available: the ICU and Java backends query the host
+    // locale on every call (a JNI round trip on Java), and a non-ASCII
+    // string can never take this path, so asking first would charge every
+    // locale-sensitive conversion for an answer it cannot use.
+    if (mask <= 127 &&
+        (!useCurrentLocale || !platform_unicode::localeAffectsCasing())) {
       if (noop) {
         // We don't have to allocate anything.
         return S.getHermesValue();
