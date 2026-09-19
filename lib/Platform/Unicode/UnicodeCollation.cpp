@@ -126,6 +126,18 @@ const CollContraction *findContraction(uint32_t a, uint32_t b, uint32_t c) {
   return it;
 }
 
+/// \return true if \p cp is the first code point of some contraction.
+/// COLL_CONTRACTIONS is sorted lexicographically by (cp0, cp1, cp2), so the
+/// rows sharing a cp0 are adjacent and one binary search settles it.
+bool beginsContraction(uint32_t cp) {
+  auto *it = std::lower_bound(
+      std::begin(COLL_CONTRACTIONS),
+      std::end(COLL_CONTRACTIONS),
+      cp,
+      [](const CollContraction &e, uint32_t v) { return e.cp0 < v; });
+  return it != std::end(COLL_CONTRACTIONS) && it->cp0 == cp;
+}
+
 /// Append the elements of \p contraction to \p out.
 void appendContraction(
     const CollContraction &contraction,
@@ -163,9 +175,28 @@ static_assert(
 /// or 0 if no contraction matched at all.
 size_t matchContraction(
     llvh::ArrayRef<uint32_t> cps,
+    llvh::ArrayRef<uint8_t> cccs,
+    llvh::ArrayRef<uint32_t> sameCCCEnd,
     size_t i,
     llvh::SmallVectorImpl<bool> &absorbed,
     llvh::SmallVectorImpl<Weights> &out) {
+  // Neither the contiguous probe nor the S2.1.1 scan below can match unless
+  // cps[i] begins some contraction, so settle that first. Without this the
+  // scan runs at every position and walks to the end of the surrounding
+  // combining run, costing Theta(N^2) with a combining-class binary search
+  // inside: 100,000 copies of U+0301 hang, and that is one line of
+  // JavaScript away. U+0301 is not a contraction lead, so the check retires
+  // that input, and it also short-circuits the common case, since most
+  // characters begin no contraction at all.
+  //
+  // The scan below is linear in the combining run as well, because it skips
+  // each block of equal combining class in one step. Both halves are needed:
+  // without this check a non-lead like U+0301 would enter the scan at every
+  // position, and without the block skipping a lead like U+0F71 would walk
+  // the rest of the run at every position.
+  if (!beginsContraction(cps[i]))
+    return 0;
+
   // S2.1: the longest contiguous match. The key is padded with zeros, which
   // is unambiguous because 0 is never a contraction member. The 3-code-point
   // probe below degenerates into a 2-code-point key when cps[i + 2] is 0
@@ -209,7 +240,7 @@ size_t matchContraction(
   for (size_t k = scanFrom; k < cps.size() && keyLen < 3; ++k) {
     if (absorbed[k])
       continue;
-    uint8_t ccc = getCanonicalCombiningClass(cps[k]);
+    uint8_t ccc = cccs[k];
     // A starter ends the scan: nothing past it can be part of this
     // contraction.
     if (ccc == 0)
@@ -218,6 +249,12 @@ size_t matchContraction(
       // Blocked by an earlier mark of equal or higher class. It stays where
       // it is and becomes a blocker for anything after it.
       blockingCCC = ccc;
+      // Every later mark of this same class is blocked in turn, and blocking
+      // on an equal class leaves blockingCCC unchanged, so visiting them one
+      // by one cannot affect the outcome -- only the running time. Jumping
+      // over the block is what keeps a long combining run linear instead of
+      // quadratic; see the note above about U+0F71.
+      k = sameCCCEnd[k] - 1;
       continue;
     }
     key[keyLen] = cps[k];
@@ -257,13 +294,30 @@ void buildElements(
   for (size_t i = 0; i < buf.size();)
     cps.push_back(nextCodePoint(buf, i));
 
+  // Combining classes are read repeatedly by the discontiguous scan, and
+  // each read is a binary search, so compute them once.
+  llvh::SmallVector<uint8_t, 64> cccs;
+  cccs.reserve(cps.size());
+  for (uint32_t cp : cps)
+    cccs.push_back(getCanonicalCombiningClass(cp));
+
+  // sameCCCEnd[k] is the first index after k whose combining class differs
+  // from cccs[k], letting the scan skip a whole block of equal classes at
+  // once.
+  llvh::SmallVector<uint32_t, 64> sameCCCEnd(cps.size(), 0);
+  for (size_t k = cps.size(); k-- > 0;)
+    sameCCCEnd[k] = (k + 1 < cps.size() && cccs[k + 1] == cccs[k])
+        ? sameCCCEnd[k + 1]
+        : (uint32_t)(k + 1);
+
   llvh::SmallVector<bool, 64> absorbed(cps.size(), false);
   for (size_t i = 0; i < cps.size();) {
     if (absorbed[i]) {
       ++i;
       continue;
     }
-    if (size_t consumed = matchContraction(cps, i, absorbed, out)) {
+    if (size_t consumed =
+            matchContraction(cps, cccs, sameCCCEnd, i, absorbed, out)) {
       i += consumed;
       continue;
     }
