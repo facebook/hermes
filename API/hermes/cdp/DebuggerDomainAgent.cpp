@@ -21,6 +21,29 @@ using namespace facebook::hermes::debugger;
 static const char *const kBreakpointsKey = "breakpoints";
 static const char *const kBreakpointsActiveKey = "breakpointsActive";
 
+/// Compiles \p pattern (a UTF-8 regex) into Hermes regex bytecode, mirroring
+/// the compilation used for blackbox patterns. Returns std::nullopt if the
+/// pattern is invalid.
+static std::optional<std::vector<uint8_t>> compileUrlRegex(
+    const std::string &pattern) {
+  // We expect pattern to be encoded as UTF-8 in accordance with RFC-8259.
+  // See comment in CDPAgent::handleCommand.
+  std::vector<char16_t> patternUTF16;
+  ::hermes::convertUTF8WithSurrogatesToUTF16(
+      std::back_inserter(patternUTF16),
+      pattern.data(),
+      pattern.data() + pattern.size());
+
+  // Use empty regex flags (not ignore case, not multiline), matching how
+  // blackbox patterns are compiled.
+  ::hermes::regex::Regex<::hermes::regex::UTF16RegexTraits> regex{
+      patternUTF16, {}};
+  if (!regex.valid()) {
+    return std::nullopt;
+  }
+  return regex.compile();
+}
+
 DebuggerDomainAgent::DebuggerDomainAgent(
     int32_t executionContextID,
     HermesRuntime &runtime,
@@ -460,13 +483,26 @@ void DebuggerDomainAgent::setBreakpointByUrl(
 
   // TODO: getLocationByBreakpointRequest(req);
   // TODO: failure to parse
-  if (!req.url.has_value()) {
+  if (!req.url.has_value() && !req.urlRegex.has_value()) {
     sendResponseToClient(
         m::makeErrorResponse(
             req.id,
             m::ErrorCode::InvalidRequest,
-            "URL required; regex unsupported"));
+            "Either url or urlRegex must be specified"));
     return;
+  }
+
+  // Compile and validate the URL regex up front so an invalid pattern is
+  // rejected before any breakpoint is created.
+  std::optional<std::vector<uint8_t>> compiledUrlRegex;
+  if (req.urlRegex.has_value()) {
+    compiledUrlRegex = compileUrlRegex(req.urlRegex.value());
+    if (!compiledUrlRegex.has_value()) {
+      sendResponseToClient(
+          m::makeErrorResponse(
+              req.id, m::ErrorCode::InvalidParams, "Invalid regex pattern"));
+      return;
+    }
   }
 
   // Create the CDP breakpoint
@@ -474,9 +510,10 @@ void DebuggerDomainAgent::setBreakpointByUrl(
   description.line = req.lineNumber;
   description.column = req.columnNumber;
   description.condition = req.condition;
-  const std::string &url = req.url.value();
-  description.url = url;
+  description.url = req.url;
+  description.urlRegex = req.urlRegex;
   auto [breakpointID, breakpoint] = createCDPBreakpoint(std::move(description));
+  breakpoint.compiledUrlRegex = std::move(compiledUrlRegex);
 
   // Create the response
   m::debugger::SetBreakpointByUrlResponse resp;
@@ -484,9 +521,11 @@ void DebuggerDomainAgent::setBreakpointByUrl(
   resp.breakpointId = std::to_string(breakpointID);
 
   // Apply the breakpoint to all matching scripts that are already present,
-  // populating the response with any successful applications.
+  // populating the response with any successful applications. If no scripts
+  // match yet, the breakpoint remains pending and is applied later via
+  // processScript when a matching script loads.
   for (auto &srcLoc : runtime_.getDebugger().getLoadedScripts()) {
-    if (srcLoc.fileName == url) {
+    if (scriptMatchesBreakpoint(breakpoint, srcLoc)) {
       if (std::optional<HermesBreakpointLocation> hermesBreakpoint =
               applyBreakpoint(breakpoint, srcLoc.fileId)) {
         resp.locations.emplace_back(
@@ -776,11 +815,53 @@ void DebuggerDomainAgent::processScript(
     const debugger::SourceLocation &srcLoc) {
   sendScriptParsedNotificationToClient(srcLoc);
   for (auto &[cdpBreakpointID, cdpBreakpoint] : cdpBreakpoints_) {
-    if (srcLoc.fileName == cdpBreakpoint.description.url) {
+    if (scriptMatchesBreakpoint(cdpBreakpoint, srcLoc)) {
       applyBreakpointAndSendNotification(
           cdpBreakpointID, cdpBreakpoint, srcLoc);
     }
   }
+}
+
+bool DebuggerDomainAgent::scriptMatchesBreakpoint(
+    CDPBreakpoint &breakpoint,
+    const debugger::SourceLocation &srcLoc) {
+  const CDPBreakpointDescription &description = breakpoint.description;
+
+  if (description.url.has_value()) {
+    return srcLoc.fileName == description.url.value();
+  }
+
+  if (!description.urlRegex.has_value()) {
+    return false;
+  }
+
+  // Lazily compile and cache the regex bytecode. After a reload the breakpoint
+  // is reconstructed from its description, so the cache may be empty here.
+  if (!breakpoint.compiledUrlRegex.has_value()) {
+    breakpoint.compiledUrlRegex = compileUrlRegex(description.urlRegex.value());
+    if (!breakpoint.compiledUrlRegex.has_value()) {
+      return false;
+    }
+  }
+
+  // We expect fileName to be encoded as UTF-8 in accordance with RFC-8259.
+  // See comment in CDPAgent::handleCommand.
+  std::vector<char16_t> fileNameUTF16;
+  ::hermes::convertUTF8WithSurrogatesToUTF16(
+      std::back_inserter(fileNameUTF16),
+      srcLoc.fileName.data(),
+      srcLoc.fileName.data() + srcLoc.fileName.size());
+
+  uint32_t searchStart = 0;
+  std::vector<::hermes::regex::CapturedRange> captures{};
+  return ::hermes::regex::searchWithBytecode(
+             *breakpoint.compiledUrlRegex,
+             fileNameUTF16.data(),
+             searchStart,
+             fileNameUTF16.size(),
+             &captures,
+             ::hermes::regex::constants::MatchFlagType::matchDefault) ==
+      ::hermes::regex::MatchRuntimeResult::Match;
 }
 
 } // namespace cdp

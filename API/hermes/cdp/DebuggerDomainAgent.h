@@ -41,18 +41,20 @@ struct CDPBreakpointDescription : public StateValue {
     value->column = column;
     value->condition = condition;
     value->url = url;
+    value->urlRegex = urlRegex;
     return value;
   }
 
   /// Determines whether this breakpoint can be persisted across sessions
   bool persistable() const {
     // Only persist breakpoints that can apply to future scripts (i.e.
-    // breakpoints set on a set of files specified by script URL, not
-    // breakpoints set on an exact, session-specific script ID).
-    return url.has_value();
+    // breakpoints set on a set of files specified by script URL or URL regex,
+    // not breakpoints set on an exact, session-specific script ID).
+    return url.has_value() || urlRegex.has_value();
   }
 
   std::optional<std::string> url;
+  std::optional<std::string> urlRegex;
   long long line;
   std::optional<long long> column;
   std::optional<std::string> condition;
@@ -69,6 +71,10 @@ struct CDPBreakpoint {
 
   // Registered breakpoints in Hermes
   std::vector<HermesBreakpoint> hermesBreakpoints;
+
+  // Lazily-compiled bytecode for description.urlRegex. Cached in memory only
+  // (not persisted); recompiled from description.urlRegex after a reload.
+  std::optional<std::vector<uint8_t>> compiledUrlRegex;
 };
 
 struct HermesBreakpointLocation {
@@ -209,6 +215,13 @@ class DebuggerDomainAgent : public DomainAgent {
   std::optional<HermesBreakpointLocation> applyBreakpoint(
       CDPBreakpoint &cdpBreakpoint,
       debugger::ScriptID scriptID);
+
+  /// Determines whether the script at \p srcLoc matches \p breakpoint, either
+  /// by exact URL or by the breakpoint's URL regex. Lazily compiles and caches
+  /// the URL regex bytecode on \p breakpoint.
+  bool scriptMatchesBreakpoint(
+      CDPBreakpoint &breakpoint,
+      const debugger::SourceLocation &srcLoc);
 
   /// Holds a boolean that determines if scripts without a script url
   /// (e.g. anonymous scripts) should be blackboxed.

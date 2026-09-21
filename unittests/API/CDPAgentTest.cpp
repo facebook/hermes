@@ -3283,6 +3283,182 @@ TEST_F(CDPAgentTest, DebuggerBreakpointsPauseVMAfterDomainReload) {
   ensurePaused(waitForMessage(), "other", {{"global", 5, 0}});
 }
 
+TEST_F(CDPAgentTest, DebuggerSetBreakpointByUrlRegexPending) {
+  int msgId = 1;
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  // A regex breakpoint is accepted and held as a pending breakpoint, returning
+  // a valid breakpoint id with no resolved locations (no script is loaded that
+  // it could bind to).
+  sendRequest(
+      "Debugger.setBreakpointByUrl", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("urlRegex", ".*");
+        json.emitKeyValue("lineNumber", 1);
+        json.emitKeyValue("columnNumber", 0);
+      });
+  ensureSetBreakpointByUrlResponse(waitForMessage(), msgId++, {});
+}
+
+TEST_F(CDPAgentTest, DebuggerSetBreakpointByUrlRequiresUrlOrRegex) {
+  int msgId = 1;
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  // A setBreakpointByUrl request with neither url nor urlRegex is rejected.
+  sendRequest(
+      "Debugger.setBreakpointByUrl", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("lineNumber", 1);
+        json.emitKeyValue("columnNumber", 0);
+      });
+  ensureErrorResponse(waitForMessage(), msgId++);
+}
+
+TEST_F(CDPAgentTest, DebuggerSetBreakpointByUrlRegexResolves) {
+  int msgId = 1;
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(
+      R"(
+    var a = 1 + 2;
+    debugger;      // line 2
+    var b = a / 2; // line 3 - regex breakpoint resolves here
+  )",
+      "http://example.com/foo.js");
+  expectNotification("Debugger.scriptParsed");
+
+  // Hit the debugger statement on line 2.
+  ensurePaused(waitForMessage(), "other", {{"global", 2, 1}});
+
+  // A URL regex with metacharacters (escaped `.`, end anchor) matches the
+  // loaded script's url and binds immediately, resolving to a location on
+  // line 3.
+  sendRequest(
+      "Debugger.setBreakpointByUrl", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("urlRegex", "foo\\.js$");
+        json.emitKeyValue("lineNumber", 3);
+        json.emitKeyValue("columnNumber", 0);
+      });
+  ensureSetBreakpointByUrlResponse(waitForMessage(), msgId++, {{3}});
+
+  // Resume and hit the regex breakpoint on line 3.
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  ensurePaused(waitForMessage(), "other", {{"global", 3, 1}});
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  waitForScheduledScripts();
+}
+
+TEST_F(CDPAgentTest, DebuggerSetBreakpointByUrlRegexResolvesOnMatchingScript) {
+  int msgId = 1;
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  // A pending regex breakpoint that only matches script urls containing
+  // "Match".
+  sendRequest(
+      "Debugger.setBreakpointByUrl", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("urlRegex", "Match");
+        json.emitKeyValue("lineNumber", 2);
+        json.emitKeyValue("columnNumber", 0);
+      });
+  ensureSetBreakpointByUrlResponse(waitForMessage(), msgId++, {});
+
+  // A script whose url does not match the regex: no breakpointResolved.
+  scheduleScript(
+      R"(
+        var a = 1;
+        var b = 2;
+        var c = a + b;
+  )",
+      "OtherFile");
+  expectNotification("Debugger.scriptParsed");
+  expectNothing();
+
+  // A script whose url matches the regex: breakpoint resolves to line 2.
+  scheduleScript(
+      R"(
+        var x = 1;
+        var y = 2;
+        var z = x + y;
+  )",
+      "MatchFile");
+  auto parsed = expectNotification("Debugger.scriptParsed");
+  auto scriptId = jsonScope_.getString(parsed, {"params", "scriptId"});
+  auto resolution = expectNotification("Debugger.breakpointResolved");
+  EXPECT_EQ(
+      jsonScope_.getString(resolution, {"params", "location", "scriptId"}),
+      scriptId);
+  EXPECT_EQ(
+      jsonScope_.getNumber(resolution, {"params", "location", "lineNumber"}),
+      2);
+
+  // Line 2 runs at top level, so the VM pauses on the resolved breakpoint.
+  ensurePaused(waitForMessage(), "other", {{"global", 2, 1}});
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  waitForScheduledScripts();
+}
+
+TEST_F(CDPAgentTest, DebuggerSetBreakpointByUrlRegexInvalid) {
+  int msgId = 1;
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  // An invalid regex pattern is rejected.
+  sendRequest(
+      "Debugger.setBreakpointByUrl", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("urlRegex", "(");
+        json.emitKeyValue("lineNumber", 1);
+        json.emitKeyValue("columnNumber", 0);
+      });
+  ensureErrorResponse(waitForMessage(), msgId++);
+}
+
+TEST_F(CDPAgentTest, DebuggerRestoreStateRegex) {
+  int msgId = 1;
+
+  // Create a regex breakpoint that will be persisted across reload.
+  sendAndCheckResponse("Debugger.enable", msgId++);
+  sendRequest(
+      "Debugger.setBreakpointByUrl", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("urlRegex", "rl");
+        json.emitKeyValue("lineNumber", 3);
+        json.emitKeyValue("columnNumber", 0);
+      });
+  ensureSetBreakpointByUrlResponse(waitForMessage(), msgId++, {});
+
+  for (int i = 0; i < 2; i++) {
+    if (i == 0) {
+      // Save CDPAgent state on non-runtime thread and shut everything down.
+      preserveStateAndResetTestEnv(false);
+    } else {
+      // Save CDPAgent state on the runtime thread and shut everything down.
+      preserveStateAndResetTestEnv(true);
+    }
+
+    sendAndCheckResponse("Debugger.enable", msgId++);
+    scheduleScript(R"(
+      var a = 1 + 2;
+      var b = a / 2;
+      var c = a + b; // (line 3) hit breakpoint
+      var d = b - c;
+    )");
+    ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+
+    // The persisted regex breakpoint recompiles from its description and binds
+    // to the newly loaded script.
+    auto resolution = expectNotification("Debugger.breakpointResolved");
+    auto resolvedLineNumber =
+        jsonScope_.getNumber(resolution, {"params", "location", "lineNumber"});
+    EXPECT_EQ(resolvedLineNumber, 3);
+    ensurePaused(waitForMessage(), "other", {{"global", 3, 1}});
+
+    sendAndCheckResponse("Debugger.resume", msgId++);
+    ensureNotification(waitForMessage(), "Debugger.resumed");
+  }
+}
+
 TEST_F(CDPAgentTest, DebuggerRestoreState) {
   int msgId = 1;
 
