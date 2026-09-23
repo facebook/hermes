@@ -568,7 +568,7 @@ struct ParserContext {
     if (diag.getKind() <= llvh::SourceMgr::DK_Error && !firstError_)
       firstError_ = ourMessages_.size();
     ourMessages_.push_back(diag);
-    convertedMessages_.push_back(ourMessages_.back());
+    convertedMessages_.emplace_back(ourMessages_.back());
   }
 
   void addError(const char *msg) {
