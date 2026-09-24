@@ -193,6 +193,7 @@ CallResult<PseudoHandle<BigIntPrimitive>> deserializeBigInt(
     const uint8_t *&content) {
   uint32_t dataSize = deserializeUInt32(content);
   auto dataBytes = llvh::makeArrayRef(content, dataSize);
+  content += dataSize;
   auto bigIntPrimRes = BigIntPrimitive::fromBytes(runtime, dataBytes);
   if (LLVM_UNLIKELY(bigIntPrimRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;

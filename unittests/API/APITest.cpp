@@ -2266,6 +2266,24 @@ TEST_P(HermesSerializationTest, SerializePrimitives) {
   EXPECT_THROW(serializationInterface->serialize(sym), JSError);
 }
 
+TEST_P(HermesSerializationTest, SerializeBigInt) {
+  auto serialized = evalAndSerialize("[18446744073709551615n, new Object(7n)]");
+  auto arr = deserializeAsObject(serialized).getArray(*rt);
+  ASSERT_EQ(arr.size(*rt), 2);
+  EXPECT_EQ(
+      arr.getValueAtIndex(*rt, 0).getBigInt(*rt).toString(*rt).utf8(*rt),
+      "18446744073709551615");
+
+  auto bigIntObj = arr.getValueAtIndex(*rt, 1).getObject(*rt);
+  EXPECT_EQ(
+      bigIntObj.getPropertyAsFunction(*rt, "valueOf")
+          .callWithThis(*rt, bigIntObj)
+          .getBigInt(*rt)
+          .toString(*rt)
+          .utf8(*rt),
+      "7");
+}
+
 TEST_P(HermesSerializationTest, SerializeSimpleObjectTypes) {
   auto serialized = evalAndSerialize("new Boolean(true)");
   auto deserializedObj = deserializeAsObject(serialized);
