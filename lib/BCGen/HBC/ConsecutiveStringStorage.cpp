@@ -795,7 +795,10 @@ void ConsecutiveStringStorage::appendStorage(ConsecutiveStringStorage &&rhs) {
   // incoming storage. Don't bother to offset if the string is empty; this
   // ensures that the empty string doesn't get pushed to strange places.
   uint32_t storageDelta = storage_.size();
-  strTable_.reserve(strTable_.size() + rhs.strTable_.size());
+  // NOTE: Do NOT reserve() here.
+  // This is called once per function in lazy compilation,
+  // and we don't want to reserve the exact size.
+  // Let the emplace_back grow for amortized constant cost.
   for (const StringTableEntry &entry : rhs.strTable_) {
     uint32_t length = entry.getLength();
     uint32_t offset = entry.getOffset() + (length ? storageDelta : 0);
