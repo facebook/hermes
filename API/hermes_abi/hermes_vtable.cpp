@@ -732,6 +732,11 @@ HermesABIVoidOrError set_object_external_memory_pressure(
         vm::JSObject::getNamedSlotValueUnsafe(*objHandle, rt, desc)
             .getObject(rt));
   } else {
+    // An object without the property implicitly has no external memory, so
+    // setting it to 0 is a no-op.
+    if (amt == 0)
+      return abi::createVoidOrError();
+
     auto debitMem = [](vm::GC &gc, vm::NativeState *ns) {
       auto amt = reinterpret_cast<uintptr_t>(ns->context());
       gc.debitExternalMemory(ns, amt);
@@ -763,6 +768,10 @@ HermesABIVoidOrError set_object_external_memory_pressure(
 
   auto curAmt = reinterpret_cast<uintptr_t>(ns->context());
   assert(llvh::isUInt<32>(curAmt) && "Amount is too large.");
+
+  // Nothing to do if the amount is unchanged.
+  if (amt == curAmt)
+    return abi::createVoidOrError();
 
   // The GC does not support adding more than a 32 bit amount.
   if (!llvh::isUInt<32>(amt)) {
