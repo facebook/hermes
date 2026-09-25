@@ -236,6 +236,10 @@ class RuntimeDecorator : public Base, private jsi::Instrumentation {
     return plain_.utf8(s);
   }
 
+  Value createValueFromJsonUtf8(const uint8_t* json, size_t length) override {
+    return plain_.createValueFromJsonUtf8(json, length);
+  }
+
   std::u16string utf16(const String& str) override {
     return plain_.utf16(str);
   }
