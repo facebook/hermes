@@ -121,7 +121,7 @@ jobs:
               '- **Root Cause**: (Technical explanation)',
               'Do not put these in a todo plan, just output your analysis directly.',
               '',
-              'Refer to CLAUDE.md for details on how to build and run Hermes using CMake.',
+              'Refer to AGENTS.md for details on how to build and run Hermes using CMake.',
               'Place the CMake builds under cmake-build/',
             ].join('\n');
 

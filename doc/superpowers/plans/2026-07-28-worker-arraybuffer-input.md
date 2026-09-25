@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- Copyright header (Meta MIT, from `CLAUDE.md`) on every new file.
+- Copyright header (Meta MIT, from `AGENTS.md`) on every new file.
 - C++ style: 80-column lines, 2-space indent, doc comment on every declaration.
 - Feature is gated by `JSI_UNSTABLE` (Worker already is) and, for C++ tests, `HERMES_ENABLE_CORE_EXTENSIONS`.
 - Run `arc f` after editing any `.cpp`/`.h` before committing.
