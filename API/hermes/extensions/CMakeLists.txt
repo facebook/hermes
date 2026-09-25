@@ -92,6 +92,7 @@ set(EXTENSIONS_CPP_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/JSIUtils.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/Dummy.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/TextEncoder.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/Worker.cpp
 )
 
 # Append contrib sources if enabled (set by contrib/CMakeLists.txt).
