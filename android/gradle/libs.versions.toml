@@ -4,11 +4,11 @@ minSdk = "24"
 targetSdk = "36"
 compileSdk = "36"
 buildTools = "36.0.0"
-ndkVersion = "27.1.12297006"
+ndkVersion = "28.2.13676358"
 # CMake version
 cmake = "3.31.6"
 # Dependencies versions
-agp = "8.11.0"
+agp = "9.2.1"
 androidx-annotation = "1.6.0"
 download = "5.4.0"
 fbjni = "0.7.0"
