@@ -82,6 +82,9 @@ bool tryPromoteObject(
     return false;
   };
 
+  const bool isTypedObject = llvh::isa<AllocTypedObjectInst>(alloc) ||
+      llvh::isa<AllocTypedNonEnumObjectInst>(alloc);
+
   for (auto *U : alloc->getUsers()) {
     // Loading from the object does not escape.
     if ([[maybe_unused]] auto *L = llvh::dyn_cast<PrLoadInst>(U)) {
@@ -107,6 +110,11 @@ bool tryPromoteObject(
     }
 
     if (auto *SP = llvh::dyn_cast<StorePropertyInst>(U)) {
+      // Untyped property stores on typed objects can throw at runtime.
+      // Replacing them with stack operations would remove that observable
+      // behavior.
+      if (isTypedObject)
+        return false;
       if (SP->getStoredValue() == alloc)
         return false;
       if (!isInLayout(SP->getProperty()))
@@ -115,6 +123,10 @@ bool tryPromoteObject(
     }
 
     if (auto *SOP = llvh::dyn_cast<DefineOwnPropertyInst>(U)) {
+      // Typed object properties are non-configurable, redefining fails at
+      // runtime.
+      if (isTypedObject)
+        return false;
       if (SOP->getStoredValue() == alloc)
         return false;
       if (!isInLayout(SOP->getProperty()))
