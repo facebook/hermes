@@ -6,10 +6,10 @@
  */
 
 #include "hermes/VM/JIT/Config.h"
-#if HERMESVM_JIT
+#if HERMESVM_JIT_ARM64
 #include "JitEmitter-internal.h"
 #include "JitEmitter.h"
-#include "JitHandlers.h"
+#include "../JitHandlers.h"
 
 #include "hermes/VM/CellKind.h"
 
@@ -80,23 +80,20 @@ void Emitter::throwIfEmptyUndefinedImpl(FR frRes, FR frInput, bool empty) {
   movHWFromHW<false>(hwRes, hwInput);
   frUpdatedWithHW(frRes, hwRes);
 
-  slowPaths_.push_back(
-      {.slowPathLab = slowPathLab,
-       .name = empty ? "ThrowIfEmpty" : "ThrowIfUndefined",
-       .frRes = frRes,
-       .frInput1 = frInput,
-       .emittingIP = emittingIP,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment(
-             "// Slow path: %s r%u, r%u",
-             sl.name,
-             sl.frRes.index(),
-             sl.frInput1.index());
-         em.a.bind(sl.slowPathLab);
-         em.a.mov(a64::x0, xRuntime);
-         EMIT_RUNTIME_CALL(em, void (*)(SHRuntime *), _sh_throw_empty);
-         // Call does not return.
-       }});
+  slowPaths_.emplace_back(
+      slowPathLab,
+      emittingIP,
+      [empty, frRes, frInput](Emitter &em, SlowPath &sp) {
+        em.comment(
+            "// Slow path: %s r%u, r%u",
+            empty ? "ThrowIfEmpty" : "ThrowIfUndefined",
+            frRes.index(),
+            frInput.index());
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(a64::x0, xRuntime);
+        EMIT_RUNTIME_CALL(em, void (*)(SHRuntime *), _sh_throw_empty);
+        // Call does not return.
+      });
 }
 
 void Emitter::throwIfThisInitialized(FR frInput) {
@@ -129,19 +126,15 @@ void Emitter::throwIfThisInitialized(FR frInput) {
   emit_sh_ljs_is_empty(a, hwTemp.a64GpX(), hwInput.a64GpX());
   a.b_ne(slowPathLab);
 
-  slowPaths_.push_back(
-      {.slowPathLab = slowPathLab,
-       .frInput1 = frInput,
-       .emittingIP = emittingIP,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment(
-             "// Slow path: ThrowIfThisInitialized r%u", sl.frInput1.index());
-         em.a.bind(sl.slowPathLab);
-         em.a.mov(a64::x0, xRuntime);
-         EMIT_RUNTIME_CALL(
-             em, void (*)(SHRuntime *), _sh_throw_this_already_initialized);
-         // Call does not return.
-       }});
+  slowPaths_.emplace_back(
+      slowPathLab, emittingIP, [frInput](Emitter &em, SlowPath &sp) {
+        em.comment("// Slow path: ThrowIfThisInitialized r%u", frInput.index());
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(a64::x0, xRuntime);
+        EMIT_RUNTIME_CALL(
+            em, void (*)(SHRuntime *), _sh_throw_this_already_initialized);
+        // Call does not return.
+      });
 }
 
 void Emitter::jmpTypeOfIs(
@@ -508,7 +501,9 @@ void Emitter::uintSwitchImm(
   comment(
       "// uintSwitchImm r%u, min %u, max %u", frInput.index(), minVal, maxVal);
 
-  asmjit::Error err;
+  // minVal is compared against and subtracted below; both are add/sub
+  // immediate forms with the same encoding limit.
+  const bool minValIsImm = a64::Utils::isAddSubImm(minVal);
 
   // End of the basic block.
   syncAllFRTempExcept({});
@@ -534,8 +529,9 @@ void Emitter::uintSwitchImm(
 
   // Check if the integer value in xTemp is in range.
   // First check minVal.
-  EXPECT_ERROR(asmjit::kErrorInvalidImmediate, err = a.cmp(wTempInput, minVal));
-  if (err) {
+  if (minValIsImm) {
+    a.cmp(wTempInput, minVal);
+  } else {
     a.mov(hwTempTarget.a64GpX().w(), minVal);
     a.cmp(wTempInput, hwTempTarget.a64GpX().w());
   }
@@ -543,8 +539,9 @@ void Emitter::uintSwitchImm(
   a.b_lo(defaultLabel);
 
   // Now check maxVal.
-  EXPECT_ERROR(asmjit::kErrorInvalidImmediate, err = a.cmp(wTempInput, maxVal));
-  if (err) {
+  if (a64::Utils::isAddSubImm(maxVal)) {
+    a.cmp(wTempInput, maxVal);
+  } else {
     a.mov(hwTempTarget.a64GpX().w(), maxVal);
     a.cmp(wTempInput, hwTempTarget.a64GpX().w());
   }
@@ -554,10 +551,9 @@ void Emitter::uintSwitchImm(
   // Compute the offset into the jump table, dereference, and jump.
   // Offset by the minVal if necessary.
   if (minVal != 0) {
-    EXPECT_ERROR(
-        asmjit::kErrorInvalidImmediate,
-        err = a.sub(wTempInput, wTempInput, minVal));
-    if (err) {
+    if (minValIsImm) {
+      a.sub(wTempInput, wTempInput, minVal);
+    } else {
       a.mov(hwTempTarget.a64GpX().w(), minVal);
       a.sub(wTempInput, wTempInput, hwTempTarget.a64GpX().w());
     }
@@ -637,6 +633,7 @@ void Emitter::jmpTrueFalse(
 
   if (isFRKnownType(frInput, FRType::Number)) {
     HWReg hwInput = getOrAllocFRInVecD(frInput, true);
+    emitTypeAssert(frInput, hwInput, TypePred::IsNumber);
     a.fcmp(hwInput.a64VecD(), 0.0);
     if (onTrue) {
       // Branch on < 0 and > 0. All that remains is 0 and NaN.
@@ -652,6 +649,7 @@ void Emitter::jmpTrueFalse(
   } else if (isFRKnownType(frInput, FRType::Bool)) {
     HWReg hwInput = getOrAllocFRInGpX(frInput, true);
     a64::GpX xInput = hwInput.a64GpX();
+    emitTypeAssert(frInput, hwInput, TypePred::IsBool);
 
     static_assert(
         HERMESVALUE_VERSION == 2, "bool is encoded as a bit at kHV_BoolBitIdx");
@@ -688,6 +686,10 @@ void Emitter::jmpUndefined(const asmjit::Label &target, FR frInput) {
 
   if (isFRKnownType(frInput, FRType::Number) ||
       isFRKnownType(frInput, FRType::Bool)) {
+    emitTypeAssertFR(
+        frInput,
+        isFRKnownType(frInput, FRType::Number) ? TypePred::IsNumber
+                                               : TypePred::IsBool);
     return;
   }
 
@@ -779,6 +781,11 @@ void Emitter::jCond(
   hwLeft = getOrAllocFRInVecD(frLeft, true);
   hwRight = getOrAllocFRInVecD(frRight, true);
 
+  if (leftIsNum)
+    emitTypeAssert(frLeft, hwLeft, TypePred::IsNumber);
+  if (rightIsNum)
+    emitTypeAssert(frRight, hwRight, TypePred::IsNumber);
+
   a.fcmp(hwLeft.a64VecD(), hwRight.a64VecD());
 
   // If the condition is not inverted, then it can only produce true if both
@@ -811,41 +818,40 @@ void Emitter::jCond(
   // Do this always, since this is the end of the BB.
   freeAllFRTempExcept(FR());
 
-  slowPaths_.push_back(
-      {.slowPathLab = slowPathLab,
-       .contLab = contLab,
-       .target = target,
-       .name = name,
-       .frInput1 = frLeft,
-       .frInput2 = frRight,
-       .invert = invert,
-       .passArgsByVal = passArgsByVal,
-       .slowCall = slowCall,
-       .slowCallName = slowCallName,
-       .emittingIP = emittingIP,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment(
-             "// Slow path: j_%s%s Lx, r%u, r%u",
-             sl.invert ? "not_" : "",
-             sl.name,
-             sl.frInput1.index(),
-             sl.frInput2.index());
-         em.a.bind(sl.slowPathLab);
-         if (sl.passArgsByVal) {
-           em._loadFrame(HWReg::gpX(0), sl.frInput1);
-           em._loadFrame(HWReg::gpX(1), sl.frInput2);
-         } else {
-           em.a.mov(a64::x0, xRuntime);
-           em.loadFrameAddr(a64::x1, sl.frInput1);
-           em.loadFrameAddr(a64::x2, sl.frInput2);
-         }
-         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
-         if (!sl.invert)
-           em.a.cbnz(a64::w0, sl.target);
-         else
-           em.a.cbz(a64::w0, sl.target);
-         em.a.b(sl.contLab);
-       }});
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      emittingIP,
+      [name,
+       slowCall,
+       slowCallName,
+       target,
+       frLeft,
+       frRight,
+       invert,
+       passArgsByVal](Emitter &em, SlowPath &sp) {
+        em.comment(
+            "// Slow path: j_%s%s Lx, r%u, r%u",
+            invert ? "not_" : "",
+            name,
+            frLeft.index(),
+            frRight.index());
+        em.a.bind(sp.slowPathLab);
+        if (passArgsByVal) {
+          em._loadFrame(HWReg::gpX(0), frLeft);
+          em._loadFrame(HWReg::gpX(1), frRight);
+        } else {
+          em.a.mov(a64::x0, xRuntime);
+          em.loadFrameAddr(a64::x1, frLeft);
+          em.loadFrameAddr(a64::x2, frRight);
+        }
+        em.callRuntimeWithSavedIP(slowCall, slowCallName);
+        if (!invert)
+          em.a.cbnz(a64::w0, target);
+        else
+          em.a.cbz(a64::w0, target);
+        em.a.b(sp.contLab);
+      });
 }
 
 void Emitter::jStrictEqual(
@@ -869,6 +875,11 @@ void Emitter::jStrictEqual(
     HWReg hwRight = getOrAllocFRInGpX(frRight, true);
     freeAllFRTempExcept({});
 
+    if (isFRKnownBool(frLeft) || isFRKnownOtherNonPtr(frLeft))
+      emitTypeAssert(frLeft, hwLeft, TypePred::BitComparable);
+    if (isFRKnownBool(frRight) || isFRKnownOtherNonPtr(frRight))
+      emitTypeAssert(frRight, hwRight, TypePred::BitComparable);
+
     a.cmp(hwLeft.a64GpX(), hwRight.a64GpX());
     a.b(!invert ? a64::CondCode::kEQ : a64::CondCode::kNE, target);
     return;
@@ -885,6 +896,12 @@ void Emitter::jStrictEqual(
     HWReg hwLeftD = getOrAllocFRInVecD(frLeft, true);
     HWReg hwRightD = getOrAllocFRInVecD(frRight, true);
     freeAllFRTempExcept({});
+
+    if (isFRKnownNumber(frLeft))
+      emitTypeAssert(frLeft, hwLeftD, TypePred::IsNumber);
+    if (isFRKnownNumber(frRight))
+      emitTypeAssert(frRight, hwRightD, TypePred::IsNumber);
+
     a.fcmp(hwLeftD.a64VecD(), hwRightD.a64VecD());
     a.b(!invert ? a64::CondCode::kEQ : a64::CondCode::kNE, target);
     return;
@@ -985,34 +1002,28 @@ void Emitter::jStrictEqual(
 
   a.bind(contLab);
 
-  slowPaths_.push_back(
-      {.slowPathLab = slowPathLab,
-       .contLab = contLab,
-       .target = target,
-       .name = invert ? "j_strict_not_eq" : "j_strict_eq",
-       .frInput1 = frLeft,
-       .frInput2 = frRight,
-       .invert = invert,
-       .slowCall = (void *)_sh_ljs_strict_equal,
-       .slowCallName = "_sh_ljs_strict_equal",
-       .emittingIP = emittingIP,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment(
-             "// Slow path: %s Lx, r%u, r%u",
-             sl.name,
-             sl.frInput1.index(),
-             sl.frInput2.index());
-         em.a.bind(sl.slowPathLab);
-         em._loadFrame(HWReg::gpX(0), sl.frInput1);
-         em._loadFrame(HWReg::gpX(1), sl.frInput2);
-         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
-         if (!sl.invert)
-           em.a.cbnz(a64::w0, sl.target);
-         else
-           em.a.cbz(a64::w0, sl.target);
-         em.a.b(sl.contLab);
-       }});
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      emittingIP,
+      [target, frLeft, frRight, invert](Emitter &em, SlowPath &sp) {
+        em.comment(
+            "// Slow path: %s Lx, r%u, r%u",
+            invert ? "j_strict_not_eq" : "j_strict_eq",
+            frLeft.index(),
+            frRight.index());
+        em.a.bind(sp.slowPathLab);
+        em._loadFrame(HWReg::gpX(0), frLeft);
+        em._loadFrame(HWReg::gpX(1), frRight);
+        em.callRuntimeWithSavedIP(
+            (void *)_sh_ljs_strict_equal, "_sh_ljs_strict_equal");
+        if (!invert)
+          em.a.cbnz(a64::w0, target);
+        else
+          em.a.cbz(a64::w0, target);
+        em.a.b(sp.contLab);
+      });
 }
 
 } // namespace hermes::vm::arm64
-#endif // HERMESVM_JIT
+#endif // HERMESVM_JIT_ARM64
