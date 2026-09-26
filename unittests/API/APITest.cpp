@@ -1081,6 +1081,55 @@ TEST_P(HermesRuntimeTest, ExternalMemoryTest) {
   waitForFinalized(2 * kNumIter);
 }
 
+TEST_P(HermesRuntimeTest, ExternalMemoryNoOpTest) {
+  auto heapInfo = [&](const char *key) {
+    return rt->instrumentation().getHeapInfo(false)[key];
+  };
+  auto externalBytes = [&] { return heapInfo("hermes_externalBytes"); };
+  auto allocatedBytes = [&] { return heapInfo("hermes_totalAllocatedBytes"); };
+
+  // The first property lookup on a fresh object may lazily allocate the
+  // property map of its hidden class, so do one lookup up front to keep that
+  // out of the measurements below.
+  Object{*rt}.setExternalMemoryPressure(*rt, 0);
+
+  Object o{*rt};
+  const auto baseExternal = externalBytes();
+
+  // Setting 0 on an object without external memory is a no-op, and must not
+  // allocate anything on the JS heap.
+  auto allocBefore = allocatedBytes();
+  o.setExternalMemoryPressure(*rt, 0);
+  o.setExternalMemoryPressure(*rt, 0);
+  EXPECT_EQ(allocatedBytes(), allocBefore);
+  EXPECT_EQ(externalBytes(), baseExternal);
+
+  // Setting a real amount afterwards still works.
+  o.setExternalMemoryPressure(*rt, 1024);
+  EXPECT_EQ(externalBytes(), baseExternal + 1024);
+
+  // Setting the same amount again is a no-op.
+  allocBefore = allocatedBytes();
+  o.setExternalMemoryPressure(*rt, 1024);
+  EXPECT_EQ(allocatedBytes(), allocBefore);
+  EXPECT_EQ(externalBytes(), baseExternal + 1024);
+
+  // Going back to 0 and up again is accounted for correctly.
+  o.setExternalMemoryPressure(*rt, 0);
+  EXPECT_EQ(externalBytes(), baseExternal);
+  o.setExternalMemoryPressure(*rt, 0);
+  EXPECT_EQ(externalBytes(), baseExternal);
+  o.setExternalMemoryPressure(*rt, 1024);
+  EXPECT_EQ(externalBytes(), baseExternal + 1024);
+  o.setExternalMemoryPressure(*rt, 512);
+  EXPECT_EQ(externalBytes(), baseExternal + 512);
+
+  // Proxies are rejected, even when the amount is 0.
+  auto proxy = eval("new Proxy({}, {})").getObject(*rt);
+  EXPECT_THROW(proxy.setExternalMemoryPressure(*rt, 0), JSINativeException);
+  EXPECT_THROW(proxy.setExternalMemoryPressure(*rt, 1024), JSINativeException);
+}
+
 TEST_P(HermesRuntimeTest, PropNameIDFromSymbol) {
   auto strProp = PropNameID::forAscii(*rt, "a");
   auto secretProp = PropNameID::forSymbol(
