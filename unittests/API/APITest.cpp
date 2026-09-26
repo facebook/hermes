@@ -13,6 +13,7 @@
 #include <hermes/VM/sh_config.h>
 #include <hermes/hermes.h>
 #include <hermes_sandbox/HermesSandboxRuntime.h>
+#include <jsi/decorator.h>
 #include <jsi/instrumentation.h>
 #include <jsi/test/testlib.h>
 
@@ -328,6 +329,51 @@ TEST_F(HermesRuntimeTestMethodsTest, ArrayBufferDetached) {
                         .getObject(*rt)
                         .getArrayBuffer(*rt);
   EXPECT_TRUE(detachedAb.detached(*rt));
+}
+
+TEST(HermesRuntimeDecoratorTest, CreateArrayBufferCallsWith) {
+  // Counts calls into a WithRuntimeDecorator.
+  struct Count {
+    void before() {
+      ++entered;
+    }
+    void after() {
+      ++exited;
+    }
+
+    int entered = 0;
+    int exited = 0;
+  };
+
+  class CountRuntime final : public WithRuntimeDecorator<Count> {
+   public:
+    explicit CountRuntime(std::unique_ptr<Runtime> rt)
+        : WithRuntimeDecorator<Count>(*rt, count), rt_(std::move(rt)) {}
+
+    Count count;
+
+   private:
+    std::unique_ptr<Runtime> rt_;
+  };
+
+  struct FixedBuffer : MutableBuffer {
+    size_t size() const override {
+      return sizeof(arr);
+    }
+    uint8_t *data() override {
+      return arr.data();
+    }
+
+    std::array<uint8_t, 8> arr{};
+  };
+
+  CountRuntime crt(makeHermesRuntime());
+  auto arrayBuffer = ArrayBuffer(crt, std::make_shared<FixedBuffer>());
+
+  // Creating the ArrayBuffer must go through the With hooks exactly once, like
+  // every other call into the decorated runtime.
+  EXPECT_EQ(crt.count.entered, 1);
+  EXPECT_EQ(crt.count.exited, 1);
 }
 
 TEST_P(HermesRuntimeTest, BytecodeTest) {
