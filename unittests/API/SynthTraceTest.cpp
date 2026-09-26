@@ -2259,6 +2259,26 @@ TEST_F(SynthTraceReplayTest, CreateJSErrorReplay) {
   }
 }
 
+/// JSON parsed from native code must be recorded, so that the tracing runtime
+/// knows the resulting object when native code uses it afterwards.
+TEST_F(SynthTraceReplayTest, CreateValueFromJsonUtf8Replay) {
+  {
+    auto &rt = *traceRt;
+    uint8_t json[] = "{\"a\": 1, \"b\": \"str\"}";
+    jsi::Object obj = jsi::Value::createFromJsonUtf8(rt, json, sizeof(json) - 1)
+                          .getObject(rt);
+    rt.global().setProperty(rt, "a", obj.getProperty(rt, "a"));
+    rt.global().setProperty(rt, "parsed", obj);
+  }
+  replay();
+  {
+    auto &rt = *replayRt;
+    EXPECT_EQ(rt.global().getProperty(rt, "a").getNumber(), 1);
+    jsi::Object parsed = rt.global().getPropertyAsObject(rt, "parsed");
+    EXPECT_EQ(parsed.getProperty(rt, "b").getString(rt).utf8(rt), "str");
+  }
+}
+
 /// This test is here to make sure that the replayed string match is happening
 /// during replay.
 TEST_F(SynthTraceReplayTest, PropNameIDUtf8) {
