@@ -8,6 +8,7 @@
 #include "hermes/Platform/Intl/BCP47Parser.h"
 #include "hermes/Platform/Intl/PlatformIntl.h"
 #include "hermes/Platform/Intl/PlatformIntlShared.h"
+#include "SupportedValues.h"
 #include "impl_icu/Collator.h"
 #include "impl_icu/IntlUtils.h"
 #include "impl_icu/LocaleBCP47Object.h"
@@ -26,7 +27,10 @@
 #include "unicode/dtptngen.h"
 #include "unicode/strenum.h"
 #include "unicode/timezone.h"
+#include "unicode/ucal.h"
+#include "unicode/ucurr.h"
 #include "unicode/udat.h"
+#include "unicode/uenum.h"
 #include "unicode/unistr.h"
 
 using namespace U_ICU_NAMESPACE;
@@ -152,6 +156,63 @@ vm::CallResult<std::unique_ptr<BaseT>> createInstance(
 }
 
 } // namespace
+
+namespace {
+
+std::vector<std::u16string> availableTimeZonesICU() {
+  std::vector<std::u16string> result;
+  UErrorCode status = U_ZERO_ERROR;
+  std::unique_ptr<StringEnumeration> iter(
+      TimeZone::createTimeZoneIDEnumeration(
+          UCAL_ZONE_TYPE_CANONICAL, nullptr, nullptr, status));
+  if (U_FAILURE(status) || !iter) {
+    status = U_ZERO_ERROR;
+    iter.reset(TimeZone::createEnumeration());
+  }
+  if (!iter)
+    return result;
+
+  const UChar *zoneId = iter->unext(nullptr, status);
+  while (zoneId != nullptr && U_SUCCESS(status)) {
+    result.emplace_back(zoneId);
+    zoneId = iter->unext(nullptr, status);
+  }
+  finalizeSupportedTimeZones(result);
+  return result;
+}
+
+std::vector<std::u16string> availableCurrenciesICU() {
+  std::vector<std::u16string> result;
+  UErrorCode status = U_ZERO_ERROR;
+  UEnumeration *en = ucurr_openISOCurrencies(UCURR_ALL, &status);
+  if (U_FAILURE(status) || !en)
+    return result;
+
+  const char *code = uenum_next(en, nullptr, &status);
+  while (code != nullptr && U_SUCCESS(status)) {
+    result.push_back(impl_icu::toUTF16ASCII(code));
+    code = uenum_next(en, nullptr, &status);
+  }
+  uenum_close(en);
+  sortAndUnique(result);
+  return result;
+}
+
+} // namespace
+
+// https://tc39.es/ecma402/#sec-intl.supportedvaluesof
+vm::CallResult<std::vector<std::u16string>> supportedValuesOf(
+    vm::Runtime &runtime,
+    const std::u16string &key) {
+  if (auto common = trySupportedValuesOfCommon(key))
+    return std::move(*common);
+  if (key == u"timeZone")
+    return availableTimeZonesICU();
+  if (key == u"currency")
+    return availableCurrenciesICU();
+  return runtime.raiseRangeError(
+      vm::TwineChar16("Invalid key: ") + vm::TwineChar16(key.c_str()));
+}
 
 // Not yet implemented.
 vm::CallResult<std::u16string> toLocaleLowerCase(

@@ -31,6 +31,8 @@ One popular implementation strategy followed by other engines, is to bundle an i
 
 - `Intl.getCanonicalLocales`
 
+- `Intl.supportedValuesOf`
+
 - `String.prototype`
   - `localeCompare`
   - `toLocaleLowerCase`
