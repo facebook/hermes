@@ -2735,6 +2735,10 @@ CallResult<bool> JSObject::preventExtensions(
 }
 
 ExecutionStatus JSObject::seal(Handle<JSObject> selfHandle, Runtime &runtime) {
+  if (selfHandle->isLazy()) {
+    initializeLazyObject(runtime, selfHandle);
+  }
+
   CallResult<bool> statusRes = JSObject::preventExtensions(
       selfHandle, runtime, PropOpFlags().plusThrowOnError());
   if (LLVM_UNLIKELY(statusRes == ExecutionStatus::EXCEPTION)) {
@@ -2759,6 +2763,10 @@ ExecutionStatus JSObject::seal(Handle<JSObject> selfHandle, Runtime &runtime) {
 ExecutionStatus JSObject::freeze(
     Handle<JSObject> selfHandle,
     Runtime &runtime) {
+  if (selfHandle->isLazy()) {
+    initializeLazyObject(runtime, selfHandle);
+  }
+
   CallResult<bool> statusRes = JSObject::preventExtensions(
       selfHandle, runtime, PropOpFlags().plusThrowOnError());
   if (LLVM_UNLIKELY(statusRes == ExecutionStatus::EXCEPTION)) {
