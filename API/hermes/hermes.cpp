@@ -3424,7 +3424,8 @@ const void *HermesRuntimeImpl::getRuntimeDataImpl(const jsi::UUID &uuid) {
 
 std::shared_ptr<jsi::MutableBuffer> HermesRuntimeImpl::tryGetMutableBuffer(
     const jsi::ArrayBuffer &arrayBuffer) {
-  vm::NoMutatorScope noMutatorScope{runtime_};
+  ExecutionScopeRAII scopeRAII(mutatorScope);
+  vm::GCScope gcScope(runtime_);
   auto abHandle = arrayBufferHandle(arrayBuffer);
   if (LLVM_UNLIKELY(!abHandle->attached())) {
     return nullptr;

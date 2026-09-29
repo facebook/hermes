@@ -338,7 +338,6 @@ std::shared_ptr<void> JSArrayBuffer::getExternalDataContext(
   assert(
       self->attached() && self->external() &&
       "There must be an external buffer attached.");
-  NoAllocScope noAlloc(runtime);
   NativeState *ns = getExternalFinalizerNativeState(runtime, self).get();
   auto *contextPtr = static_cast<const std::shared_ptr<void> *>(ns->context());
   return std::shared_ptr<void>(*contextPtr);

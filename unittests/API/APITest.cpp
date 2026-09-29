@@ -2046,6 +2046,26 @@ TEST_P(HermesRuntimeTest, TryGetMutableBuffer) {
   EXPECT_EQ(arrayBufferData[2], 2);
 }
 
+TEST_P(HermesRuntimeTest, TryGetMutableBufferAfterHiddenClassTransition) {
+  struct TestBuffer : MutableBuffer {
+    size_t size() const override {
+      return sizeof(arr);
+    }
+    uint8_t *data() override {
+      return arr.data();
+    }
+    std::array<uint8_t, 8> arr{};
+  };
+
+  // Adding a property to an external ArrayBuffer steals the DictPropertyMap
+  // so the lookup for the next one has to allocate.
+  ArrayBuffer a(*rt, std::make_shared<TestBuffer>());
+  a.setExternalMemoryPressure(*rt, 8);
+
+  ArrayBuffer b(*rt, std::make_shared<TestBuffer>());
+  EXPECT_NE(b.tryGetMutableBuffer(*rt), nullptr);
+}
+
 TEST_P(HermesRuntimeTest, UInt8Array) {
   // Test creating a UInt8Array with a specific length
   {
