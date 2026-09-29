@@ -130,6 +130,14 @@ class JAndroidUnicodeUtils
     abortOnJavaException();
     copyStringTo(env, javaNormalized, buf);
   }
+
+  /// \return whether the host's current locale changes the result of case
+  /// conversion.
+  static bool localeAffectsCasing() noexcept {
+    static const auto jLocaleAffectsCasing =
+        javaClassStatic()->getStaticMethod<jboolean()>("localeAffectsCasing");
+    return jLocaleAffectsCasing(javaClassStatic());
+  }
 };
 
 int localeCompare(
@@ -155,6 +163,10 @@ void convertToCase(
 
 void normalize(llvh::SmallVectorImpl<char16_t> &buf, NormalizationForm form) {
   JAndroidUnicodeUtils::normalize(buf, form);
+}
+
+bool localeAffectsCasing() {
+  return JAndroidUnicodeUtils::localeAffectsCasing();
 }
 
 } // namespace platform_unicode

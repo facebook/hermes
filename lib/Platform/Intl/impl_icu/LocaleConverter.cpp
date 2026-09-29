@@ -8,7 +8,7 @@
 #include "LocaleConverter.h"
 
 #include "IntlUtils.h"
-#include "hermes/Platform/Unicode/icu.h"
+#include "icu.h"
 
 #include <vector>
 

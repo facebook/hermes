@@ -9,6 +9,10 @@
 
 #if HERMES_PLATFORM_UNICODE == HERMES_PLATFORM_UNICODE_EMSCRIPTEN
 
+#include "hermes/Platform/Unicode/PlatformDateFormat.h"
+#include "hermes/Platform/Unicode/UnicodeCaseConversion.h"
+#include "hermes/Platform/Unicode/UnicodeNormalization.h"
+
 #include <emscripten.h>
 
 namespace hermes {
@@ -45,20 +49,26 @@ void dateFormat(
     bool formatDate,
     bool formatTime,
     llvh::SmallVectorImpl<char16_t> &buf) {
-  // FIXME: implement this.
-  llvh::ArrayRef<char> str{"dateFormat not implemented"};
-  buf.assign(str.begin(), str.end());
+  // The fixed formatter takes no locale and reads no system state beyond the
+  // timezone; there is no locale source on this platform yet.
+  formatDateTimeFixed(unixtimeMs, formatDate, formatTime, buf);
 }
 
 void convertToCase(
     llvh::SmallVectorImpl<char16_t> &str,
     CaseConversion targetCase,
     bool useCurrentLocale) {
-  // FIXME: implement this.
+  // Root is deliberate: there is no locale source on this platform yet.
+  unicode::convertCaseUTF16(str, targetCase, unicode::CaseLocale::Root);
+}
+
+bool localeAffectsCasing() {
+  // There is no locale source on this platform yet.
+  return false;
 }
 
 void normalize(llvh::SmallVectorImpl<char16_t> &buf, NormalizationForm form) {
-  // FIXME: implement this.
+  unicode::normalizeUTF16(buf, form);
 }
 
 } // namespace platform_unicode

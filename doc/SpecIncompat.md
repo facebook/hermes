@@ -45,6 +45,24 @@ Motivation: similar to assigning to `arguments`, this is a very rare case, with 
 
 This is "implementable", but with very low priority.
 
+## `String.prototype.localeCompare` Ignores the Locale
+
+`localeCompare` ignores its `locales` and `options` arguments. Its ordering is the DUCET root collation of Unicode Technical Standard #10, not the host locale's.
+
+```javascript
+// Swedish sorts "z" before "ä"; the root collation does not.
+print("ä".localeCompare("z", "sv")); // Prints -1 in Static Hermes
+```
+
+ECMA-262 permits this: without ECMA-402, `localeCompare` need only be a consistent comparison function. It is still worth knowing about, and it is a change from earlier versions, which forwarded to ICU and so did pick up the host locale on Linux and Windows.
+
+Two further properties of the ordering:
+
+- It is plain DUCET, not the CLDR root that ICU and the platform collators use. CLDR retailors the root in a few places, so some pairs sort differently on Android and Apple, which still use their platform collators.
+- Comparison stops at the tertiary level; there is no identical level. Canonically equivalent strings compare equal, as do strings differing only by a completely ignorable character such as U+0000.
+
+Motivation: locale-tailored collation means shipping CLDR tailoring data and a locale database. The root collation table is about 110 KB, needs no system library, and removes the last dependency on ICU for string comparison.
+
 ## Full Scoped Function Promotion Semantics in Loose Mode
 
 Static Hermes implements most of the scoped function promotion semantics in loose mode, but some corner cases are not spec compliant yet.

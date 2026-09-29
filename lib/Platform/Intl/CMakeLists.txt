@@ -34,6 +34,6 @@ if(HERMES_ENABLE_INTL)
         hermesBCP47Parser
         hermesPublic
     )
-    hermes_link_icu(hermesPlatformIntl)
+    hermes_link_icu(hermesPlatformIntl_obj)
   endif()
 endif()
