@@ -3628,6 +3628,249 @@ TEST_F(CDPAgentTest, DebuggerMultipleCDPAgents) {
   ensureEvalResponse(secondMessages->waitForMessage(), msgId++, "foobar");
 }
 
+TEST_F(CDPAgentTest, DebuggerGetScriptSourceForEvaluatedScript) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Runtime.enable", msgId++);
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  // Evaluating an expression emits a scriptParsed notification announcing the
+  // script it was compiled into.
+  sendRequest("Runtime.evaluate", msgId, [](::hermes::JSONEmitter &params) {
+    params.emitKeyValue("expression", "40 + 2");
+  });
+  auto scriptParsed = expectNotification("Debugger.scriptParsed");
+  std::string scriptId =
+      jsonScope_.getString(scriptParsed, {"params", "scriptId"});
+  auto evalResp = expectResponse(std::nullopt, msgId++);
+  EXPECT_EQ(jsonScope_.getNumber(evalResp, {"result", "result", "value"}), 42);
+
+  sendRequest(
+      "Debugger.getScriptSource",
+      msgId,
+      [&scriptId](::hermes::JSONEmitter &params) {
+        params.emitKeyValue("scriptId", scriptId);
+      });
+  auto sourceResp = expectResponse(std::nullopt, msgId++);
+  EXPECT_EQ(
+      jsonScope_.getString(sourceResp, {"result", "scriptSource"}), "40 + 2");
+}
+
+TEST_F(CDPAgentTest, DebuggerGetScriptSourceForScriptEvaluatedByTheProgram) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Runtime.enable", msgId++);
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  sendRequest("Runtime.evaluate", msgId, [](::hermes::JSONEmitter &params) {
+    params.emitKeyValue("expression", "eval('40 + 2')");
+  });
+  auto outerParsed = expectNotification("Debugger.scriptParsed");
+  std::string outerId =
+      jsonScope_.getString(outerParsed, {"params", "scriptId"});
+  auto innerParsed = expectNotification("Debugger.scriptParsed");
+  std::string innerId =
+      jsonScope_.getString(innerParsed, {"params", "scriptId"});
+  expectResponse(std::nullopt, msgId++);
+
+  sendRequest(
+      "Debugger.getScriptSource",
+      msgId,
+      [&outerId](::hermes::JSONEmitter &params) {
+        params.emitKeyValue("scriptId", outerId);
+      });
+  auto sourceResp = expectResponse(std::nullopt, msgId++);
+  EXPECT_EQ(
+      jsonScope_.getString(sourceResp, {"result", "scriptSource"}),
+      "eval('40 + 2')");
+
+  // The script the program itself evaluated is not ours to describe; reporting
+  // the expression that ran it would be reporting the wrong source.
+  sendRequest(
+      "Debugger.getScriptSource",
+      msgId,
+      [&innerId](::hermes::JSONEmitter &params) {
+        params.emitKeyValue("scriptId", innerId);
+      });
+  expectErrorMessageContaining("No script for id: " + innerId, msgId++);
+}
+
+TEST_F(CDPAgentTest, DebuggerGetScriptSourceWhilePausedInEvaluatedScript) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+  sendAndCheckResponse("Runtime.enable", msgId++);
+
+  const std::string expression = R"(
+      function aa() {
+        debugger;       // (line 2)
+        return 12;
+      };
+      aa();             // (line 5)
+    )";
+  int evalMsgId = msgId++;
+  sendRequest(
+      "Runtime.evaluate", evalMsgId, [&expression](::hermes::JSONEmitter &p) {
+        p.emitKeyValue("expression", expression);
+      });
+  auto scriptParsed = expectNotification("Debugger.scriptParsed");
+  std::string scriptId =
+      jsonScope_.getString(scriptParsed, {"params", "scriptId"});
+
+  // The debugger statement pauses the evaluation part way through, which is
+  // exactly when the client asks for the source.
+  ensurePaused(waitForMessage(), "other", {{"aa", 2, 2}, {"global", 5, 1}});
+
+  sendRequest(
+      "Debugger.getScriptSource",
+      msgId,
+      [&scriptId](::hermes::JSONEmitter &params) {
+        params.emitKeyValue("scriptId", scriptId);
+      });
+  auto sourceResp = expectResponse(std::nullopt, msgId++);
+  EXPECT_EQ(
+      jsonScope_.getString(sourceResp, {"result", "scriptSource"}), expression);
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  expectResponse(std::nullopt, evalMsgId);
+}
+
+TEST_F(CDPAgentTest, DebuggerGetScriptSourceRetainsManySources) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Runtime.enable", msgId++);
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  // A console session accumulates scripts without bound; every one stays
+  // readable while under the retention budget.
+  std::vector<std::string> scriptIds;
+  for (int i = 0; i < 30; i++) {
+    std::string expression = std::to_string(i) + " + 1";
+    sendRequest(
+        "Runtime.evaluate", msgId, [&expression](::hermes::JSONEmitter &p) {
+          p.emitKeyValue("expression", expression);
+        });
+    auto scriptParsed = expectNotification("Debugger.scriptParsed");
+    scriptIds.push_back(
+        jsonScope_.getString(scriptParsed, {"params", "scriptId"}));
+    expectResponse(std::nullopt, msgId++);
+  }
+
+  for (size_t i = 0; i < scriptIds.size(); i++) {
+    std::string expected = std::to_string(i) + " + 1";
+    sendRequest(
+        "Debugger.getScriptSource",
+        msgId,
+        [&scriptIds, i](::hermes::JSONEmitter &params) {
+          params.emitKeyValue("scriptId", scriptIds[i]);
+        });
+    auto sourceResp = expectResponse(std::nullopt, msgId++);
+    EXPECT_EQ(
+        jsonScope_.getString(sourceResp, {"result", "scriptSource"}), expected);
+  }
+}
+
+TEST_F(CDPAgentTest, DebuggerGetScriptSourceDropsOldestSources) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Runtime.enable", msgId++);
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  // Each of these expressions is most of the retained-source budget on its
+  // own, so holding the later ones means dropping the first.
+  std::vector<std::string> scriptIds;
+  std::vector<std::string> expressions;
+  for (int i = 0; i < 3; i++) {
+    expressions.push_back(
+        "var v" + std::to_string(i) + " = '" + std::string(600 * 1024, 'a') +
+        "';");
+    sendRequest(
+        "Runtime.evaluate", msgId, [&expressions](::hermes::JSONEmitter &p) {
+          p.emitKeyValue("expression", expressions.back());
+        });
+    auto scriptParsed = expectNotification("Debugger.scriptParsed");
+    scriptIds.push_back(
+        jsonScope_.getString(scriptParsed, {"params", "scriptId"}));
+    expectResponse(std::nullopt, msgId++);
+  }
+
+  sendRequest(
+      "Debugger.getScriptSource",
+      msgId,
+      [&scriptIds](::hermes::JSONEmitter &params) {
+        params.emitKeyValue("scriptId", scriptIds.front());
+      });
+  expectErrorMessageContaining(
+      "No script for id: " + scriptIds.front(), msgId++);
+
+  sendRequest(
+      "Debugger.getScriptSource",
+      msgId,
+      [&scriptIds](::hermes::JSONEmitter &params) {
+        params.emitKeyValue("scriptId", scriptIds.back());
+      });
+  auto sourceResp = expectResponse(std::nullopt, msgId++);
+  EXPECT_EQ(
+      jsonScope_.getString(sourceResp, {"result", "scriptSource"}),
+      expressions.back());
+}
+
+TEST_F(CDPAgentTest, DebuggerGetScriptSourceKeepsOversizedSource) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Runtime.enable", msgId++);
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  // An expression larger than the whole budget is still readable afterwards;
+  // evicting it would put the client back where it started.
+  std::string expression =
+      "var v = '" + std::string(2 * 1024 * 1024, 'a') + "';";
+  sendRequest(
+      "Runtime.evaluate", msgId, [&expression](::hermes::JSONEmitter &params) {
+        params.emitKeyValue("expression", expression);
+      });
+  auto scriptParsed = expectNotification("Debugger.scriptParsed");
+  std::string scriptId =
+      jsonScope_.getString(scriptParsed, {"params", "scriptId"});
+  expectResponse(std::nullopt, msgId++);
+
+  sendRequest(
+      "Debugger.getScriptSource",
+      msgId,
+      [&scriptId](::hermes::JSONEmitter &params) {
+        params.emitKeyValue("scriptId", scriptId);
+      });
+  auto sourceResp = expectResponse(std::nullopt, msgId++);
+  EXPECT_EQ(
+      jsonScope_.getString(sourceResp, {"result", "scriptSource"}), expression);
+}
+
+TEST_F(CDPAgentTest, DebuggerGetScriptSourceErrors) {
+  int msgId = 1;
+
+  sendRequest(
+      "Debugger.getScriptSource", msgId, [](::hermes::JSONEmitter &params) {
+        params.emitKeyValue("scriptId", "0");
+      });
+  expectErrorMessageContaining("Debugger domain not enabled", msgId++);
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  sendRequest(
+      "Debugger.getScriptSource", msgId, [](::hermes::JSONEmitter &params) {
+        params.emitKeyValue("scriptId", "9999");
+      });
+  expectErrorMessageContaining("No script for id: 9999", msgId++);
+
+  // Script IDs come from the client, so they need not be numeric.
+  sendRequest(
+      "Debugger.getScriptSource", msgId, [](::hermes::JSONEmitter &params) {
+        params.emitKeyValue("scriptId", "userScript0");
+      });
+  expectErrorMessageContaining("No script for id: userScript0", msgId++);
+}
+
 TEST_F(CDPAgentTest, RuntimeEnableDisable) {
   int msgId = 1;
 

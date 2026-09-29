@@ -10,6 +10,7 @@
 #include <hermes/AsyncDebuggerAPI.h>
 #include <hermes/cdp/ConsoleMessage.h>
 #include <hermes/cdp/DebuggerDomainCoordinator.h>
+#include <hermes/cdp/EvaluatedScriptSources.h>
 
 namespace facebook {
 namespace hermes {
@@ -52,7 +53,7 @@ class HERMES_EXPORT CDPDebugAPI {
 
  private:
   /// Allow CDPAgentImpl (but not integrators) to access
-  /// consoleMessageStorage_.
+  /// consoleMessageStorage_ and evaluatedScriptSources_.
   friend class CDPAgentImpl;
 
   CDPDebugAPI(HermesRuntime &runtime, size_t maxCachedMessages);
@@ -63,6 +64,7 @@ class HERMES_EXPORT CDPDebugAPI {
   /// debuggerDomainCoordinator_).
   ConsoleMessageStorage consoleMessageStorage_;
   ConsoleMessageDispatcher consoleMessageDispatcher_;
+  EvaluatedScriptSources evaluatedScriptSources_;
   HermesRuntime &runtime_;
   DebuggerDomainCoordinator debuggerDomainCoordinator_;
   debugger::AsyncDebuggerAPI asyncDebuggerAPI_;

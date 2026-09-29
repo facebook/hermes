@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved.
-// @generated SignedSource<<330a0049c8eb8453a49b0b402e63aa47>>
+// @generated SignedSource<<55ef59b87204df9eff9a5bd23b342bfe>>
 
 #include "MessageTypes.h"
 
@@ -96,6 +96,7 @@ std::unique_ptr<Request> Request::fromJson(const std::string &str) {
        tryMake<debugger::EvaluateOnCallFrameRequest>},
       {"Debugger.getPossibleBreakpoints",
        tryMake<debugger::GetPossibleBreakpointsRequest>},
+      {"Debugger.getScriptSource", tryMake<debugger::GetScriptSourceRequest>},
       {"Debugger.pause", tryMake<debugger::PauseRequest>},
       {"Debugger.removeBreakpoint", tryMake<debugger::RemoveBreakpointRequest>},
       {"Debugger.resume", tryMake<debugger::ResumeRequest>},
@@ -853,6 +854,48 @@ JSONValue *debugger::GetPossibleBreakpointsRequest::toJsonVal(
 
 void debugger::GetPossibleBreakpointsRequest::accept(
     RequestHandler &handler) const {
+  handler.handle(*this);
+}
+
+debugger::GetScriptSourceRequest::GetScriptSourceRequest()
+    : Request("Debugger.getScriptSource") {}
+
+std::unique_ptr<debugger::GetScriptSourceRequest>
+debugger::GetScriptSourceRequest::tryMake(const JSONObject *obj) {
+  std::unique_ptr<debugger::GetScriptSourceRequest> req =
+      std::make_unique<debugger::GetScriptSourceRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *params = *convertResult;
+  TRY_ASSIGN(req->scriptId, params, "scriptId");
+  return req;
+}
+
+JSONValue *debugger::GetScriptSourceRequest::toJsonVal(
+    JSONFactory &factory) const {
+  llvh::SmallVector<JSONFactory::Prop, 1> paramsProps;
+  put(paramsProps, "scriptId", scriptId, factory);
+
+  llvh::SmallVector<JSONFactory::Prop, 1> props;
+  put(props, "id", id, factory);
+  put(props, "method", method, factory);
+  put(props,
+      "params",
+      factory.newObject(paramsProps.begin(), paramsProps.end()),
+      factory);
+  return factory.newObject(props.begin(), props.end());
+}
+
+void debugger::GetScriptSourceRequest::accept(RequestHandler &handler) const {
   handler.handle(*this);
 }
 
@@ -2303,6 +2346,41 @@ JSONValue *debugger::GetPossibleBreakpointsResponse::toJsonVal(
     JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 1> resProps;
   put(resProps, "locations", locations, factory);
+
+  llvh::SmallVector<JSONFactory::Prop, 2> props;
+  put(props, "id", id, factory);
+  put(props,
+      "result",
+      factory.newObject(resProps.begin(), resProps.end()),
+      factory);
+  return factory.newObject(props.begin(), props.end());
+}
+
+std::unique_ptr<debugger::GetScriptSourceResponse>
+debugger::GetScriptSourceResponse::tryMake(const JSONObject *obj) {
+  std::unique_ptr<debugger::GetScriptSourceResponse> resp =
+      std::make_unique<debugger::GetScriptSourceResponse>();
+  TRY_ASSIGN(resp->id, obj, "id");
+
+  JSONValue *v = obj->get("result");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *res = *convertResult;
+  TRY_ASSIGN(resp->scriptSource, res, "scriptSource");
+  TRY_ASSIGN(resp->bytecode, res, "bytecode");
+  return resp;
+}
+
+JSONValue *debugger::GetScriptSourceResponse::toJsonVal(
+    JSONFactory &factory) const {
+  llvh::SmallVector<JSONFactory::Prop, 2> resProps;
+  put(resProps, "scriptSource", scriptSource, factory);
+  put(resProps, "bytecode", bytecode, factory);
 
   llvh::SmallVector<JSONFactory::Prop, 2> props;
   put(props, "id", id, factory);

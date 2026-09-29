@@ -10,6 +10,7 @@
 #include <vector>
 
 #include <hermes/AsyncDebuggerAPI.h>
+#include <hermes/cdp/EvaluatedScriptSources.h>
 #include <hermes/hermes.h>
 
 namespace facebook {
@@ -36,7 +37,9 @@ class DebuggerDomainCoordinator {
  public:
   /// Constructs a DebuggerDomainCoordinator for use with the provided
   /// HermesRuntime.
-  explicit DebuggerDomainCoordinator(HermesRuntime &runtime);
+  DebuggerDomainCoordinator(
+      HermesRuntime &runtime,
+      EvaluatedScriptSources &evaluatedScriptSources);
   ~DebuggerDomainCoordinator();
 
   // Rule of Five: Non-copyable, non-movable (stable references required)
@@ -102,6 +105,7 @@ class DebuggerDomainCoordinator {
   bool isTopFrameLocationBlackboxed();
 
   HermesRuntime &runtime_;
+  EvaluatedScriptSources &evaluatedScriptSources_;
 
   /// The set of agents that are currently enabled.
   std::vector<DebuggerDomainAgent *> enabledAgents_;

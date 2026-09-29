@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved.
-// @generated SignedSource<<727dcfe67419625e56b2acb525424108>>
+// @generated SignedSource<<e95bf75bc93dc2bbaa06fb1e04e5bff6>>
 
 #pragma once
 
@@ -31,6 +31,8 @@ struct EvaluateOnCallFrameRequest;
 struct EvaluateOnCallFrameResponse;
 struct GetPossibleBreakpointsRequest;
 struct GetPossibleBreakpointsResponse;
+struct GetScriptSourceRequest;
+struct GetScriptSourceResponse;
 struct Location;
 struct PauseRequest;
 struct PausedNotification;
@@ -137,6 +139,7 @@ struct RequestHandler {
   virtual void handle(const debugger::EnableRequest &req) = 0;
   virtual void handle(const debugger::EvaluateOnCallFrameRequest &req) = 0;
   virtual void handle(const debugger::GetPossibleBreakpointsRequest &req) = 0;
+  virtual void handle(const debugger::GetScriptSourceRequest &req) = 0;
   virtual void handle(const debugger::PauseRequest &req) = 0;
   virtual void handle(const debugger::RemoveBreakpointRequest &req) = 0;
   virtual void handle(const debugger::ResumeRequest &req) = 0;
@@ -185,6 +188,7 @@ struct NoopRequestHandler : public RequestHandler {
   void handle(const debugger::EnableRequest &req) override {}
   void handle(const debugger::EvaluateOnCallFrameRequest &req) override {}
   void handle(const debugger::GetPossibleBreakpointsRequest &req) override {}
+  void handle(const debugger::GetScriptSourceRequest &req) override {}
   void handle(const debugger::PauseRequest &req) override {}
   void handle(const debugger::RemoveBreakpointRequest &req) override {}
   void handle(const debugger::ResumeRequest &req) override {}
@@ -660,6 +664,16 @@ struct debugger::GetPossibleBreakpointsRequest : public Request {
   std::optional<bool> restrictToFunction;
 };
 
+struct debugger::GetScriptSourceRequest : public Request {
+  GetScriptSourceRequest();
+  static std::unique_ptr<GetScriptSourceRequest> tryMake(const JSONObject *obj);
+
+  JSONValue *toJsonVal(JSONFactory &factory) const override;
+  void accept(RequestHandler &handler) const override;
+
+  runtime::ScriptId scriptId{};
+};
+
 struct debugger::PauseRequest : public Request {
   PauseRequest();
   static std::unique_ptr<PauseRequest> tryMake(const JSONObject *obj);
@@ -1071,6 +1085,16 @@ struct debugger::GetPossibleBreakpointsResponse : public Response {
   JSONValue *toJsonVal(JSONFactory &factory) const override;
 
   std::vector<debugger::BreakLocation> locations;
+};
+
+struct debugger::GetScriptSourceResponse : public Response {
+  GetScriptSourceResponse() = default;
+  static std::unique_ptr<GetScriptSourceResponse> tryMake(
+      const JSONObject *obj);
+  JSONValue *toJsonVal(JSONFactory &factory) const override;
+
+  std::string scriptSource;
+  std::optional<std::string> bytecode;
 };
 
 struct debugger::SetBreakpointResponse : public Response {

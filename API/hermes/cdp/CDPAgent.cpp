@@ -104,6 +104,7 @@ class CDPAgentImpl {
         DebuggerDomainCoordinator &debuggerDomainCoordinator,
         ConsoleMessageStorage &consoleMessageStorage,
         ConsoleMessageDispatcher &consoleMessageDispatcher,
+        EvaluatedScriptSources &evaluatedScriptSources,
         SynchronizedOutboundCallback messageCallback,
         std::unique_ptr<DomainState> debuggerAgentState,
         std::shared_ptr<std::atomic_bool> destroyedDomainAgentsImpl);
@@ -137,6 +138,7 @@ class CDPAgentImpl {
     DebuggerDomainCoordinator &debuggerDomainCoordinator_;
     ConsoleMessageStorage &consoleMessageStorage_;
     ConsoleMessageDispatcher &consoleMessageDispatcher_;
+    EvaluatedScriptSources &evaluatedScriptSources_;
 
     /// Callback function for sending CDP response back. Same as the one in
     /// CDPAgentImpl.
@@ -317,6 +319,7 @@ CDPAgentImpl::DomainAgentsImpl::DomainAgentsImpl(
     DebuggerDomainCoordinator &debuggerDomainCoordinator,
     ConsoleMessageStorage &consoleMessageStorage,
     ConsoleMessageDispatcher &consoleMessageDispatcher,
+    EvaluatedScriptSources &evaluatedScriptSources,
     SynchronizedOutboundCallback messageCallback,
     std::unique_ptr<DomainState> debuggerAgentState,
     std::shared_ptr<std::atomic_bool> destroyedDomainAgentsImpl)
@@ -326,6 +329,7 @@ CDPAgentImpl::DomainAgentsImpl::DomainAgentsImpl(
       debuggerDomainCoordinator_(debuggerDomainCoordinator),
       consoleMessageStorage_(consoleMessageStorage),
       consoleMessageDispatcher_(consoleMessageDispatcher),
+      evaluatedScriptSources_(evaluatedScriptSources),
       messageCallback_(std::move(messageCallback)),
       objTable_(std::make_shared<RemoteObjectsTable>()),
       debuggerAgentState_(std::move(debuggerAgentState)),
@@ -343,7 +347,8 @@ void CDPAgentImpl::DomainAgentsImpl::initialize() {
       debuggerDomainCoordinator_,
       messageCallback_,
       objTable_,
-      *debuggerAgentState_);
+      *debuggerAgentState_,
+      evaluatedScriptSources_);
   runtimeAgent_ = std::make_unique<RuntimeDomainAgent>(
       executionContextID_,
       runtime_,
@@ -351,7 +356,8 @@ void CDPAgentImpl::DomainAgentsImpl::initialize() {
       messageCallback_,
       objTable_,
       consoleMessageStorage_,
-      consoleMessageDispatcher_);
+      consoleMessageDispatcher_,
+      evaluatedScriptSources_);
   profilerAgent_ = std::make_unique<ProfilerDomainAgent>(
       executionContextID_, runtime_, messageCallback_, objTable_);
   heapProfilerAgent_ = std::make_unique<HeapProfilerDomainAgent>(
@@ -422,6 +428,9 @@ void CDPAgentImpl::DomainAgentsImpl::handleCommand(
     } else if (method == "evaluateOnCallFrame") {
       debuggerAgent_->evaluateOnCallFrame(
           static_cast<m::debugger::EvaluateOnCallFrameRequest &>(*command));
+    } else if (method == "getScriptSource") {
+      debuggerAgent_->getScriptSource(
+          static_cast<m::debugger::GetScriptSourceRequest &>(*command));
     } else if (method == "setBreakpoint") {
       debuggerAgent_->setBreakpoint(
           static_cast<m::debugger::SetBreakpointRequest &>(*command));
@@ -559,6 +568,7 @@ CDPAgentImpl::DomainAgents::DomainAgents(
               cdpDebugAPI.debuggerDomainCoordinator(),
               cdpDebugAPI.consoleMessageStorage_,
               cdpDebugAPI.consoleMessageDispatcher_,
+              cdpDebugAPI.evaluatedScriptSources_,
               std::move(messageCallback),
               std::move(debuggerAgentState),
               std::move(destroyedDomainAgentsImpl)))) {}

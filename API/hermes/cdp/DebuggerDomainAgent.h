@@ -13,6 +13,7 @@
 #include <hermes/cdp/DebuggerDomainCoordinator.h>
 #include <hermes/cdp/DomainAgent.h>
 #include <hermes/cdp/DomainState.h>
+#include <hermes/cdp/EvaluatedScriptSources.h>
 #include <hermes/cdp/MessageConverters.h>
 #include <hermes/hermes.h>
 
@@ -89,7 +90,8 @@ class DebuggerDomainAgent : public DomainAgent {
       DebuggerDomainCoordinator &debuggerDomainAPI,
       SynchronizedOutboundCallback messageCallback,
       std::shared_ptr<RemoteObjectsTable> objTable_,
-      DomainState &state);
+      DomainState &state,
+      EvaluatedScriptSources &evaluatedScriptSources);
   ~DebuggerDomainAgent();
 
   // ------ CDP API (used by CDPAgent) ------
@@ -126,6 +128,11 @@ class DebuggerDomainAgent : public DomainAgent {
 
   /// Handles Debugger.evaluateOnCallFrame
   void evaluateOnCallFrame(const m::debugger::EvaluateOnCallFrameRequest &req);
+
+  /// @cdp Debugger.getScriptSource Not allowed if domain is not enabled. Only
+  /// scripts compiled from debug client expressions have a source to return;
+  /// the sources of scripts the runtime loaded itself live with the client.
+  void getScriptSource(const m::debugger::GetScriptSourceRequest &req);
 
   /// @cdp Debugger.setBreakpoint creates a CDP breakpoint that applies to
   /// exactly one script (identified by script ID) that does not survive
@@ -264,6 +271,7 @@ class DebuggerDomainAgent : public DomainAgent {
   HermesRuntime &runtime_;
   debugger::AsyncDebuggerAPI &asyncDebugger_;
   DebuggerDomainCoordinator &debuggerDomainCoordinator_;
+  EvaluatedScriptSources &evaluatedScriptSources_;
 
   /// Details of each CDP breakpoint that has been created, and not
   /// yet destroyed.

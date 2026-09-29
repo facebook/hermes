@@ -16,8 +16,13 @@ namespace cdp {
 
 using namespace facebook::hermes::debugger;
 
-DebuggerDomainCoordinator::DebuggerDomainCoordinator(HermesRuntime &runtime)
-    : runtime_(runtime), breakpointsActive_(false), paused_(false) {}
+DebuggerDomainCoordinator::DebuggerDomainCoordinator(
+    HermesRuntime &runtime,
+    EvaluatedScriptSources &evaluatedScriptSources)
+    : runtime_(runtime),
+      evaluatedScriptSources_(evaluatedScriptSources),
+      breakpointsActive_(false),
+      paused_(false) {}
 
 DebuggerDomainCoordinator::~DebuggerDomainCoordinator() {
   // All DebuggerDomainAgent instances must be cleaned up before
@@ -246,18 +251,28 @@ bool DebuggerDomainCoordinator::isPaused(
 void DebuggerDomainCoordinator::processNewLoadedScript() {
   auto stackTrace = runtime_.getDebugger().getProgramState().getStackTrace();
 
-  if (stackTrace.callFrameCount() > 0) {
-    debugger::SourceLocation loc = stackTrace.callFrameForIndex(0).location;
+  if (stackTrace.callFrameCount() == 0) {
+    // No call frames: nothing to announce, but a parked evaluation source
+    // must not leak into a later script of the same evaluation.
+    evaluatedScriptSources_.popAndAssignSource(debugger::kInvalidLocation);
+    return;
+  }
 
-    // Invalid fileId indicates debug info isn't included when compilation took
-    // place. E.g. compiling to bytecode without -g.
-    if (loc.fileId == debugger::kInvalidLocation) {
-      return;
-    }
+  debugger::SourceLocation loc = stackTrace.callFrameForIndex(0).location;
 
-    for (auto &agent : enabledAgents_) {
-      agent->processScript(loc);
-    }
+  // This runs part way through the evaluation that loaded the script, so the
+  // source is retained before the evaluation can pause on a debugger
+  // statement and the client can ask for it.
+  evaluatedScriptSources_.popAndAssignSource(loc.fileId);
+
+  // Invalid fileId indicates debug info isn't included when compilation took
+  // place. E.g. compiling to bytecode without -g.
+  if (loc.fileId == debugger::kInvalidLocation) {
+    return;
+  }
+
+  for (auto &agent : enabledAgents_) {
+    agent->processScript(loc);
   }
 }
 

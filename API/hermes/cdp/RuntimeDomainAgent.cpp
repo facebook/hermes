@@ -5,7 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include <memory>
 #include <sstream>
+#include <string_view>
 #include <unordered_set>
 
 #include <hermes/cdp/MessageConverters.h>
@@ -374,7 +376,8 @@ RuntimeDomainAgent::RuntimeDomainAgent(
     SynchronizedOutboundCallback messageCallback,
     std::shared_ptr<RemoteObjectsTable> objTable,
     ConsoleMessageStorage &consoleMessageStorage,
-    ConsoleMessageDispatcher &consoleMessageDispatcher)
+    ConsoleMessageDispatcher &consoleMessageDispatcher,
+    EvaluatedScriptSources &evaluatedScriptSources)
     : DomainAgent(
           executionContextID,
           std::move(messageCallback),
@@ -383,6 +386,7 @@ RuntimeDomainAgent::RuntimeDomainAgent(
       asyncDebuggerAPI_(asyncDebuggerAPI),
       consoleMessageStorage_(consoleMessageStorage),
       consoleMessageDispatcher_(consoleMessageDispatcher),
+      evaluatedScriptSources_(evaluatedScriptSources),
       enabled_(false),
       helpers_(runtime_) {
   consoleMessageRegistration_ = consoleMessageDispatcher_.subscribe(
@@ -636,12 +640,7 @@ void RuntimeDomainAgent::evaluate(const m::runtime::EvaluateRequest &req) {
       *objTable_,
       objectGroup,
       serializationOptions,
-      [&req](jsi::Runtime &runtime) {
-        return runtime.evaluateJavaScript(
-            std::unique_ptr<jsi::StringBuffer>(
-                new jsi::StringBuffer(req.expression)),
-            kEvaluatedCodeUrl);
-      });
+      [this, &req](jsi::Runtime &) { return evaluateScript(req.expression); });
 
   sendResponseToClient(resp);
 }
@@ -685,9 +684,7 @@ void RuntimeDomainAgent::callFunctionOn(
 
   jsi::Value evalResult;
   try {
-    evalResult = runtime_.evaluateJavaScript(
-        std::unique_ptr<jsi::StringBuffer>(new jsi::StringBuffer(expression)),
-        kEvaluatedCodeUrl);
+    evalResult = evaluateScript(expression);
   } catch (const jsi::JSIException &) {
     sendResponseToClient(
         m::makeErrorResponse(
@@ -714,6 +711,13 @@ void RuntimeDomainAgent::callFunctionOn(
       });
 
   sendResponseToClient(resp);
+}
+
+jsi::Value RuntimeDomainAgent::evaluateScript(std::string_view expression) {
+  auto buffer = std::make_shared<jsi::StringBuffer>(
+      std::string(expression.data(), expression.size()));
+  auto pendingSource = evaluatedScriptSources_.push(buffer);
+  return runtime_.evaluateJavaScript(buffer, kEvaluatedCodeUrl);
 }
 
 bool RuntimeDomainAgent::checkRuntimeEnabled(const m::Request &req) {

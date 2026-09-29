@@ -36,6 +36,7 @@ if(HERMES_ENABLE_DEBUGGER)
     cdp/ConsoleMessage.cpp
     cdp/DebuggerDomainAgent.cpp
     cdp/DebuggerDomainCoordinator.cpp
+    cdp/EvaluatedScriptSources.cpp
     cdp/HeapProfilerDomainAgent.cpp
     cdp/ProfilerDomainAgent.cpp
     cdp/RemoteObjectConverters.cpp

@@ -23,7 +23,7 @@ CDPDebugAPI::~CDPDebugAPI() = default;
 CDPDebugAPI::CDPDebugAPI(HermesRuntime &runtime, size_t maxCachedMessages)
     : consoleMessageStorage_(maxCachedMessages),
       runtime_(runtime),
-      debuggerDomainCoordinator_(runtime),
+      debuggerDomainCoordinator_(runtime, evaluatedScriptSources_),
       asyncDebuggerAPI_(runtime) {}
 
 void CDPDebugAPI::addConsoleMessage(ConsoleMessage message) {

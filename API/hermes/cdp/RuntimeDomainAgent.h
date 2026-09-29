@@ -8,9 +8,11 @@
 #pragma once
 
 #include <optional>
+#include <string_view>
 
 #include <hermes/cdp/CDPDebugAPI.h>
 #include <hermes/cdp/DomainAgent.h>
+#include <hermes/cdp/EvaluatedScriptSources.h>
 #include <hermes/cdp/RemoteObjectConverters.h>
 
 namespace facebook {
@@ -32,7 +34,8 @@ class RuntimeDomainAgent : public DomainAgent {
       SynchronizedOutboundCallback messageCallback,
       std::shared_ptr<RemoteObjectsTable> objTable,
       ConsoleMessageStorage &consoleMessageStorage,
-      ConsoleMessageDispatcher &consoleMessageDispatcher);
+      ConsoleMessageDispatcher &consoleMessageDispatcher,
+      EvaluatedScriptSources &evaluatedScriptSources);
   ~RuntimeDomainAgent();
 
   /// Enables the Runtime domain without processing CDP message or sending a CDP
@@ -96,6 +99,10 @@ class RuntimeDomainAgent : public DomainAgent {
       m::runtime::ExecutionContextId executionContextId,
       long long commandId);
 
+  /// Evaluates \p expression, retaining its source so that the Debugger domain
+  /// can serve it back via Debugger.getScriptSource.
+  jsi::Value evaluateScript(std::string_view expression);
+
   std::optional<std::vector<m::runtime::PropertyDescriptor>> makePropsFromScope(
       std::pair<uint32_t, uint32_t> frameAndScopeIndex,
       const std::string &objectGroup,
@@ -117,6 +124,7 @@ class RuntimeDomainAgent : public DomainAgent {
   const debugger::AsyncDebuggerAPI &asyncDebuggerAPI_;
   ConsoleMessageStorage &consoleMessageStorage_;
   ConsoleMessageDispatcher &consoleMessageDispatcher_;
+  EvaluatedScriptSources &evaluatedScriptSources_;
 
   /// Whether Runtime.enable was received and wasn't disabled by receiving
   /// Runtime.disable
