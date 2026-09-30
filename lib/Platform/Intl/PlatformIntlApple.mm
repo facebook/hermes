@@ -188,8 +188,8 @@ ResolvedLocale resolveLocale(
     // and remove this temporary once we have constexpr std::u16string.
     std::u16string key{keyView};
     // a. Let foundLocaleData be localeData.[[<foundLocale>]].
-    // NOTE: We don't actually have access to the underlying locale data, so we
-    // accept everything and defer to NSLocale.
+    // NOTE: We don't have the underlying locale data. Reject unsupported hour
+    // cycles here and defer other extension values to NSLocale.
     // b. Assert: Type(foundLocaleData) is Record.
     // c. Let keyLocaleData be foundLocaleData.[[<key>]].
     // d. Assert: Type(keyLocaleData) is List.
@@ -201,7 +201,9 @@ ResolvedLocale resolveLocale(
     std::optional<std::u16string> value;
     std::u16string supportedExtensionAddition;
     // i. If keywords contains an element whose [[Key]] is the same as key, then
-    if (extIt != r.extensions.end()) {
+    if (extIt != r.extensions.end() &&
+        (key != u"hc" || extIt->second == u"h11" || extIt->second == u"h12" ||
+         extIt->second == u"h23" || extIt->second == u"h24")) {
       // 1. Let entry be the element of keywords whose [[Key]] is the same as
       // key.
       // 2. Let requestedValue be entry.[[Value]].
@@ -696,9 +698,9 @@ static bool isValidTimeZoneName(std::u16string_view tz) {
 }
 
 // https://www.unicode.org/reports/tr35/tr35-31/tr35-dates.html#Date_Field_Symbol_Table
-std::u16string getDefaultHourCycle(NSLocale *locale) {
+std::u16string getHourCycle(NSLocale *locale, NSString *formatTemplate) {
   auto dateFormatPattern =
-      nsStringToU16String([NSDateFormatter dateFormatFromTemplate:@"j"
+      nsStringToU16String([NSDateFormatter dateFormatFromTemplate:formatTemplate
                                                           options:0
                                                            locale:locale]);
   for (char16_t c16 : dateFormatPattern) {
@@ -1635,7 +1637,7 @@ vm::ExecutionStatus DateTimeFormatApple::initialize(
   // 39. If dateTimeFormat.[[Hour]] is undefined, then
   NSLocale *nsLocale =
       [NSLocale localeWithLocaleIdentifier:u16StringToNSString(locale_)];
-  if (!hour_.has_value()) {
+  if (!hour_.has_value() && !timeStyle_.has_value()) {
     // a. Set dateTimeFormat.[[HourCycle]] to undefined.
     hourCycle_ = std::nullopt;
     // b. Let pattern be bestFormat.[[pattern]].
@@ -1643,7 +1645,7 @@ vm::ExecutionStatus DateTimeFormatApple::initialize(
     // 40. Else,
   } else {
     // a. Let hcDefault be dataLocaleData.[[hourCycle]].
-    auto hcDefault = getDefaultHourCycle(nsLocale);
+    auto hcDefault = getHourCycle(nsLocale, @"j");
     // b. Let hc be dateTimeFormat.[[HourCycle]].
     auto hc = hourCycle_;
     // c. If hc is null, then
@@ -1651,32 +1653,10 @@ vm::ExecutionStatus DateTimeFormatApple::initialize(
       // i. Set hc to hcDefault.
       hc = hcDefault;
     // d. If hour12 is not undefined, then
-    if (hour12.has_value()) {
-      // i. If hour12 is true, then
-      if (*hour12 == true) {
-        // 1. If hcDefault is "h11" or "h23", then
-        if (hcDefault == u"h11" || hcDefault == u"h23") {
-          // a. Set hc to "h11".
-          hc = u"h11";
-          // 2. Else,
-        } else {
-          // a. Set hc to "h12".
-          hc = u"h12";
-        }
-        // ii. Else,
-      } else {
-        // 1. Assert: hour12 is false.
-        // 2. If hcDefault is "h11" or "h23", then
-        if (hcDefault == u"h11" || hcDefault == u"h23") {
-          // a. Set hc to "h23".
-          hc = u"h23";
-          // 3. Else,
-        } else {
-          // a. Set hc to "h24".
-          hc = u"h24";
-        }
-      }
-    }
+    if (hour12.has_value())
+      // Use the locale's preferred 12- or 24-hour cycle, not the start hour
+      // of its default cycle (which differs for en-GB and ja-JP).
+      hc = getHourCycle(nsLocale, *hour12 ? @"h" : @"H");
     // e. Set dateTimeFormat.[[HourCycle]] to hc.
     hourCycle_ = hc;
     // f. If dateTimeformat.[[HourCycle]] is "h11" or "h12", then
@@ -1785,6 +1765,16 @@ void DateTimeFormatApple::initializeNSDateFormatter(
   }
   nsDateFormatter_.timeZone =
       [[NSTimeZone alloc] initWithName:u16StringToNSString(timeZone_)];
+  if (timeStyle_.has_value() && hourCycle_.has_value()) {
+    // NSDateFormatter's styles use the locale's hour cycle, so include the
+    // resolved cycle in its locale even when it came from an option.
+    auto formatterLocale = ParsedLocaleIdentifier::parse(locale_);
+    assert(formatterLocale && "Resolved locale must be valid");
+    formatterLocale->unicodeExtensionKeywords[u"hc"] = *hourCycle_;
+    nsLocale = [NSLocale
+        localeWithLocaleIdentifier:u16StringToNSString(
+                                       formatterLocale->canonicalize())];
+  }
   nsDateFormatter_.locale = nsLocale;
   if (calendar_)
     nsDateFormatter_.calendar = [[NSCalendar alloc]
