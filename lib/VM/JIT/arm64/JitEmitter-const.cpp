@@ -6,10 +6,10 @@
  */
 
 #include "hermes/VM/JIT/Config.h"
-#if HERMESVM_JIT
+#if HERMESVM_JIT_ARM64
 #include "JitEmitter-internal.h"
 #include "JitEmitter.h"
-#include "JitHandlers.h"
+#include "../JitHandlers.h"
 
 namespace hermes::vm::arm64 {
 
@@ -146,4 +146,4 @@ void Emitter::loadConstBigInt(
 
 } // namespace hermes::vm::arm64
 
-#endif // HERMESVM_JIT
+#endif // HERMESVM_JIT_ARM64

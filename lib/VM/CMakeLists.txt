@@ -172,7 +172,21 @@ if (HERMESVM_ALLOW_JIT)
           JIT/arm64/JitEmitter-arith.cpp
           JIT/arm64/JitEmitter-control.cpp
           JIT/arm64/JIT.cpp
-          JIT/arm64/JitHandlers.cpp JIT/arm64/JitHandlers.h
+          JIT/x86-64/JitEmitter.cpp JIT/x86-64/JitEmitter.h
+          JIT/x86-64/JitEmitter-internal.cpp JIT/x86-64/JitEmitter-internal.h
+          JIT/x86-64/JitEmitter-regalloc.cpp
+          JIT/x86-64/JitEmitter-alloc.cpp
+          JIT/x86-64/JitEmitter-const.cpp
+          JIT/x86-64/JitEmitter-object.cpp
+          JIT/x86-64/JitEmitter-property.cpp
+          JIT/x86-64/JitEmitter-call.cpp
+          JIT/x86-64/JitEmitter-env.cpp
+          JIT/x86-64/JitEmitter-array.cpp
+          JIT/x86-64/JitEmitter-arith.cpp
+          JIT/x86-64/JitEmitter-control.cpp
+          JIT/x86-64/JIT.cpp
+          JIT/JitHandlers.cpp JIT/JitHandlers.h
+          JIT/JitCompiler.cpp JIT/JitCurArch.h
           JIT/PerfJitDump.cpp
   )
   set(JITLIBS asmjit)

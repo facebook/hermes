@@ -6,10 +6,10 @@
  */
 
 #include "hermes/VM/JIT/Config.h"
-#if HERMESVM_JIT
+#if HERMESVM_JIT_ARM64
 #include "JitEmitter-internal.h"
 #include "JitEmitter.h"
-#include "JitHandlers.h"
+#include "../JitHandlers.h"
 
 #include "hermes/VM/JSObject-inline.h"
 #include "llvh/ADT/Statistic.h"
@@ -50,7 +50,7 @@ void Emitter::putByValImpl(
   loadFrameAddr(a64::x1, frTarget);
   loadFrameAddr(a64::x2, frKey);
   loadFrameAddr(a64::x3, frValue);
-  callThunkWithSavedIP((void *)shImpl, shImplName);
+  callRuntimeWithSavedIP((void *)shImpl, shImplName);
 }
 
 void Emitter::putByValWithReceiver(
@@ -318,7 +318,7 @@ class HERMES_ATTRIBUTE_INTERNAL_LINKAGE Emitter::GetByIdImpl {
         emit_add_imm_u24(
             a, a64::x3, sizeof(SHReadPropertyCacheEntry) * cacheIdx);
     }
-    _.callThunkWithSavedIP((void *)shImpl, shImplName);
+    _.callRuntimeWithSavedIP((void *)shImpl, shImplName);
 
     _.movHWFromHW<false>(hwRes, HWReg::gpX(0));
     _.frUpdatedWithHW(frRes, hwRes);
@@ -1104,4 +1104,4 @@ void Emitter::createPrivateName(FR frRes, SHSymbolID symID) {
 
 } // namespace hermes::vm::arm64
 
-#endif // HERMESVM_JIT
+#endif // HERMESVM_JIT_ARM64
