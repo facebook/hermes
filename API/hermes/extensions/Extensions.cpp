@@ -15,6 +15,7 @@
 #include "contrib/ContribExtensions.h"
 #endif
 
+#include "Worker.h"
 #include "jsi/jsi.h"
 
 namespace facebook {
@@ -27,6 +28,11 @@ void installExtensions(jsi::Runtime &rt, jsi::Object extensions) {
   // Delegate to each extension's install function.
   installTextEncoder(rt, extensions);
   installDummy(rt, extensions);
+
+#ifdef JSI_UNSTABLE
+  // Workers rely on features in JSI_UNSTABLE currently.
+  installWorker(rt, extensions);
+#endif
 
 #if HERMES_ENABLE_CONTRIB_EXTENSIONS
   // Install community-contributed extensions.
