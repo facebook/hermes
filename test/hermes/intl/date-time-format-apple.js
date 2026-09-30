@@ -105,7 +105,7 @@ numericOptions.forEach(element => print(new Intl.DateTimeFormat('en-GB', {second
 // CHECK-NEXT: 3
 
 numericOptions.forEach(element => print(new Intl.DateTimeFormat('de-DE', {hour: element, minute: element}).format(date)));
-// CHECK-NEXT: 03:45
+// CHECK-NEXT: 3:45
 // CHECK-NEXT: 03:45
 
 lengthOptions.concat(numericOptions).forEach(element => print(new Intl.DateTimeFormat('en-GB', {month: element}).format(date)));
@@ -117,11 +117,11 @@ lengthOptions.concat(numericOptions).forEach(element => print(new Intl.DateTimeF
 
 numericOptions.forEach(element => print(new Intl.DateTimeFormat('ja-JP', {hour: element, minute: element}).format(date)));
 // CHECK-NEXT: 3:45
-// CHECK-NEXT: 3:45
+// CHECK-NEXT: 03:45
 
 numericOptions.forEach(element => print(new Intl.DateTimeFormat('ja-JP', {hour: element, minute: element, hourCycle: "h12"}).format(date)));
 // CHECK-NEXT: 午前3:45
-// CHECK-NEXT: 午前3:45
+// CHECK-NEXT: 午前03:45
 
 var timeZoneNameOptions = [
   'short',
