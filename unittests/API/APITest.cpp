@@ -185,6 +185,16 @@ TEST_P(HermesRuntimeTest, StrictHostFunctionBindTest) {
                   .getBool());
 }
 
+TEST_P(HermesRuntimeTest, CreateValueFromJsonUtf8IgnoresGlobalJSON) {
+  // Hermes parses JSON natively, so replacing the global JSON.parse must not
+  // change the result, also when the runtime is decorated (e.g. thread-safe).
+  eval("JSON.parse = function() { return 'hijacked'; }");
+  uint8_t json[] = "{\"a\": 1}";
+  Value v = Value::createFromJsonUtf8(*rt, json, sizeof(json) - 1);
+  ASSERT_TRUE(v.isObject());
+  EXPECT_EQ(v.getObject(*rt).getProperty(*rt, "a").getNumber(), 1);
+}
+
 TEST_P(HermesRuntimeTest, DrainMicrotasksThrowsFinalizationRegistryError) {
   eval(R"(
     var target = {};
