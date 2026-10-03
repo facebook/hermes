@@ -38,6 +38,7 @@ CallResult<HermesValue> iterableToArrayLike(Runtime &runtime, Handle<> items) {
     PinnedValue<> iteratorSymbol;
     PinnedValue<> usingIterator;
     PinnedValue<> nextValue;
+    PinnedValue<JSArray> sourceArray;
     PinnedValue<JSArray> A;
   } lv;
   LocalsRAII lraii{runtime, &lv};
@@ -56,6 +57,70 @@ CallResult<HermesValue> iterableToArrayLike(Runtime &runtime, Handle<> items) {
   // an array-like object and return ToObject(items).
   if (lv.usingIterator->isUndefined()) {
     return toObject(runtime, items);
+  }
+
+  // Avoid allocating iterator and iterator-result objects for ordinary arrays.
+  // Both methods must be unmodified because the generic iterator protocol
+  // observes each of them.
+  auto sourceArray = Handle<JSArray>::dyn_vmcast(items);
+  if (sourceArray && lv.usingIterator->isObject() &&
+      lv.usingIterator->getObject() == *runtime.arrayPrototypeValues) {
+    lv.sourceArray = sourceArray;
+    auto iteratorPrototype =
+        Handle<JSObject>::vmcast(&runtime.arrayIteratorPrototype);
+    NamedPropertyDescriptor desc;
+    JSObject *propObj = JSObject::getNamedDescriptorPredefined(
+        iteratorPrototype, runtime, Predefined::next, desc);
+    if (LLVM_LIKELY(propObj) && LLVM_LIKELY(!desc.flags.accessor) &&
+        LLVM_LIKELY(!desc.flags.proxyObject) &&
+        LLVM_LIKELY(!desc.flags.hostObject)) {
+      SmallHermesValue nextMethod =
+          JSObject::getNamedSlotValueUnsafe(propObj, runtime, desc);
+      auto *nativeNext = nextMethod.isObject()
+          ? dyn_vmcast<NativeFunction>(nextMethod.getObject(runtime))
+          : nullptr;
+      if (LLVM_LIKELY(nativeNext) &&
+          LLVM_LIKELY(
+              nativeNext->getFunctionPtr() == arrayIteratorPrototypeNext) &&
+          LLVM_LIKELY(nativeNext->getContext() == nullptr)) {
+        auto arrRes = JSArray::create(runtime, 0, 0);
+        if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        lv.A = std::move(*arrRes);
+
+        uint32_t k = 0;
+        while (k < JSArray::getLength(*lv.sourceArray, runtime)) {
+          GCScopeMarkerRAII marker{gcScope};
+
+          lv.nextValue = lv.sourceArray->at(runtime, k).unboxToHV(runtime);
+          if (LLVM_UNLIKELY(lv.nextValue->isEmpty())) {
+            auto valueRes = getIndexed_RJS(runtime, lv.sourceArray, k);
+            if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
+              return ExecutionStatus::EXCEPTION;
+            }
+            lv.nextValue = std::move(*valueRes);
+          }
+
+          if (LLVM_UNLIKELY(k == UINT32_MAX)) {
+            return runtime.raiseRangeError("iterable too long for TypedArray");
+          }
+          if (LLVM_UNLIKELY(
+                  JSArray::setElementAt(lv.A, runtime, k, lv.nextValue) ==
+                  ExecutionStatus::EXCEPTION)) {
+            return ExecutionStatus::EXCEPTION;
+          }
+          ++k;
+        }
+
+        if (LLVM_UNLIKELY(
+                JSArray::setLengthProperty(lv.A, runtime, k) ==
+                ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        return lv.A.getHermesValue();
+      }
+    }
   }
 
   // 3. Let iteratorRecord be ? GetIterator(items, sync, usingIterator).
