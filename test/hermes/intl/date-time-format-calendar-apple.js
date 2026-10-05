@@ -45,12 +45,13 @@ print(
 // CHECK-NEXT: วันพฤหัสบดีที่ 2 มกราคม พ.ศ. 2563
 
 // Amete Alem must affect formatting, not just resolvedOptions().
+// Apple versions differ in the era label: AA or ERA0.
 var ethioaa = new Intl.DateTimeFormat('en-US-u-ca-ethioaa', {
   timeZone: 'UTC',
   year: 'numeric',
 });
 print(ethioaa.resolvedOptions().calendar, ethioaa.format(Date.UTC(2020, 0, 2)));
-// CHECK-NEXT: ethioaa 7512 AA
+// CHECK-NEXT: ethioaa 7512 {{AA|ERA0}}
 
 // The calendar option must reach the formatter without changing the resolved
 // locale or losing its other extensions. It must also affect the format
@@ -65,7 +66,7 @@ print(
   ethioaaOption.resolvedOptions().calendar,
   ethioaaOption.format(Date.UTC(2020, 0, 2)),
 );
-// CHECK-NEXT: en-US ethioaa 7512 AA
+// CHECK-NEXT: en-US ethioaa 7512 {{AA|ERA0}}
 
 var gregoryOverride = new Intl.DateTimeFormat('en-US-u-ca-buddhist-hc-h23', {
   calendar: 'gregory',
@@ -90,4 +91,4 @@ print(
   ethioaaStyle.resolvedOptions().calendar,
   ethioaaStyle.format(Date.UTC(2020, 0, 2)),
 );
-// CHECK-NEXT: en-US ethioaa 4/23/7512 AA
+// CHECK-NEXT: en-US ethioaa 4/23/7512 {{AA|ERA0}}
