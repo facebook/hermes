@@ -899,6 +899,16 @@ uint8_t getCurrencyDigits(std::u16string_view code) {
     return *digitsOpt;
   return 2;
 }
+
+/// Convert an NSCalendar identifier to the corresponding UTS-35 calendar
+/// identifier. Only Gregorian and Ethiopic Amete Alem use different names.
+std::u16string bcp47CalendarIdentifierFor(NSString *nsIdentifier) {
+  if ([nsIdentifier isEqualToString:NSCalendarIdentifierGregorian])
+    return u"gregory";
+  if ([nsIdentifier isEqualToString:NSCalendarIdentifierEthiopicAmeteAlem])
+    return u"ethioaa";
+  return nsStringToU16String(nsIdentifier);
+}
 } // namespace
 
 /// https://402.ecma-international.org/8.0/#sec-intl.getcanonicallocales
@@ -1785,10 +1795,23 @@ void DateTimeFormatApple::initializeNSDateFormatter(
   }
   nsDateFormatter_.timeZone =
       [[NSTimeZone alloc] initWithName:u16StringToNSString(timeZone_)];
+  if (calendar_) {
+    // Set the calendar through the locale so it is used for both formatting
+    // and pattern selection. Do not change locale_: calendar options need not
+    // appear in the locale returned by resolvedOptions().
+    auto parsed = ParsedLocaleIdentifier::parse(locale_);
+    parsed->unicodeExtensionKeywords[u"ca"] = *calendar_;
+    nsLocale = [NSLocale
+        localeWithLocaleIdentifier:u16StringToNSString(parsed->canonicalize())];
+  }
   nsDateFormatter_.locale = nsLocale;
-  if (calendar_)
-    nsDateFormatter_.calendar = [[NSCalendar alloc]
-        initWithCalendarIdentifier:u16StringToNSString(*calendar_)];
+  if (!calendar_) {
+    // ECMA-402 requires [[Calendar]] to always be defined. The formatter
+    // resolves the locale's default calendar on demand, so take it from
+    // there to stay consistent with what is actually used for formatting.
+    calendar_ = bcp47CalendarIdentifierFor(
+        nsDateFormatter_.calendar.calendarIdentifier);
+  }
   if (timeStyle_.has_value() || dateStyle_.has_value())
     return;
   // The following options cannot be used in conjunction with timeStyle or
