@@ -2944,6 +2944,176 @@ arr;
   EXPECT_EQ(arrLen, 3);
 }
 
+TEST_P(HermesSerializationTest, SerializeManyValues) {
+  // https://github.com/facebook/hermes/issues/2189: the number of properties,
+  // elements and entries must not be bounded by the handle limit of a GCScope.
+  // Errors are included because serializing and deserializing them creates
+  // handles.
+  auto code = R"(
+var objs = [];
+var dict = {};
+var errors = [];
+var map = new Map();
+var set = new Set();
+for (var i = 0; i < 100; ++i) {
+  objs.push({albumId: 1, id: i, title: 'test', url: 'https://example.com'});
+  dict['key' + i] = i;
+  errors.push(new Error('error' + i));
+  map.set(i, new Error('error' + i));
+  set.add(new Error('error' + i));
+}
+[objs, dict, errors, map, set];
+)";
+  auto serialized = evalAndSerialize(code);
+  auto deserializedArr = deserializeAsObject(serialized).getArray(*rt);
+  auto objs =
+      deserializedArr.getValueAtIndex(*rt, 0).getObject(*rt).getArray(*rt);
+  auto dict = deserializedArr.getValueAtIndex(*rt, 1).getObject(*rt);
+  auto errors =
+      deserializedArr.getValueAtIndex(*rt, 2).getObject(*rt).getArray(*rt);
+  auto map = deserializedArr.getValueAtIndex(*rt, 3).getObject(*rt);
+  auto set = deserializedArr.getValueAtIndex(*rt, 4).getObject(*rt);
+  ASSERT_EQ(objs.length(*rt), 100);
+  ASSERT_EQ(errors.length(*rt), 100);
+  EXPECT_EQ(map.getProperty(*rt, "size").getNumber(), 100);
+  EXPECT_EQ(set.getProperty(*rt, "size").getNumber(), 100);
+  auto getFn = map.getPropertyAsFunction(*rt, "get");
+  for (int i = 0; i < 100; ++i) {
+    auto obj = objs.getValueAtIndex(*rt, i).getObject(*rt);
+    EXPECT_EQ(obj.getProperty(*rt, "id").getNumber(), i);
+    EXPECT_EQ(
+        obj.getProperty(*rt, "url").getString(*rt).utf8(*rt),
+        "https://example.com");
+    auto key = "key" + std::to_string(i);
+    EXPECT_EQ(dict.getProperty(*rt, key.c_str()).getNumber(), i);
+    auto message = "error" + std::to_string(i);
+    auto error = errors.getValueAtIndex(*rt, i).getObject(*rt);
+    EXPECT_EQ(
+        error.getProperty(*rt, "message").getString(*rt).utf8(*rt), message);
+    auto mapValue = getFn.callWithThis(*rt, map, i).getObject(*rt);
+    EXPECT_EQ(
+        mapValue.getProperty(*rt, "message").getString(*rt).utf8(*rt), message);
+  }
+}
+
+TEST_P(HermesSerializationTest, SerializeManyValuesRunJavaScript) {
+  // The getters delete the remaining properties and elements while the
+  // values are being serialized, so they are skipped.
+  auto code = R"(
+var obj = {
+  get first() {
+    for (var i = 0; i < 100; ++i) delete this['key' + i];
+    return 'first';
+  },
+};
+var arr = [];
+for (var i = 0; i < 100; ++i) {
+  obj['key' + i] = i;
+  arr.push(i);
+}
+Object.defineProperty(arr, 0, {
+  enumerable: true,
+  get: function () {
+    arr.length = 1;
+    return 'first';
+  },
+});
+[obj, arr];
+)";
+  auto serialized = evalAndSerialize(code);
+  auto deserializedArr = deserializeAsObject(serialized).getArray(*rt);
+  auto obj = deserializedArr.getValueAtIndex(*rt, 0).getObject(*rt);
+  auto arr = deserializedArr.getValueAtIndex(*rt, 1).getObject(*rt);
+  EXPECT_EQ(obj.getPropertyNames(*rt).size(*rt), 1);
+  EXPECT_EQ(obj.getProperty(*rt, "first").getString(*rt).utf8(*rt), "first");
+  EXPECT_EQ(arr.getProperty(*rt, "0").getString(*rt).utf8(*rt), "first");
+  EXPECT_FALSE(arr.hasProperty(*rt, "1"));
+}
+
+TEST_P(HermesSerializationTest, SerializeDeeplyNestedValues) {
+  // Neither should the nesting depth be bounded by the handle limit.
+  auto code = R"(
+function slowPair(first, second) {
+  var pair = [first, second];
+  // The accessor makes the elements of pair take the slow path.
+  Object.defineProperty(pair, 0, {enumerable: true, get: () => first});
+  return pair;
+}
+var obj = null;
+var arr = null;
+var named = null;
+for (var i = 0; i < 100; ++i) {
+  obj = {depth: i, child: obj};
+  arr = slowPair(i, arr);
+  // An array without elements, nested through a named property.
+  var wrapper = [];
+  wrapper.child = named;
+  named = wrapper;
+}
+[obj, arr, named];
+)";
+  auto serialized = evalAndSerialize(code);
+  auto deserializedArr = deserializeAsObject(serialized).getArray(*rt);
+  auto obj = deserializedArr.getValueAtIndex(*rt, 0);
+  auto arr = deserializedArr.getValueAtIndex(*rt, 1);
+  auto named = deserializedArr.getValueAtIndex(*rt, 2);
+  for (int i = 99; i >= 0; --i) {
+    EXPECT_EQ(obj.getObject(*rt).getProperty(*rt, "depth").getNumber(), i);
+    obj = obj.getObject(*rt).getProperty(*rt, "child");
+    auto elems = arr.getObject(*rt).getArray(*rt);
+    EXPECT_EQ(elems.getValueAtIndex(*rt, 0).getNumber(), i);
+    arr = elems.getValueAtIndex(*rt, 1);
+    EXPECT_TRUE(named.getObject(*rt).isArray(*rt));
+    named = named.getObject(*rt).getProperty(*rt, "child");
+  }
+  EXPECT_TRUE(obj.isNull());
+  EXPECT_TRUE(arr.isNull());
+  EXPECT_TRUE(named.isNull());
+}
+
+TEST_P(HermesSerializationTest, DeserializeDeeplyNestedValues) {
+  // Deserializing a boxed string, or a one-character string outside Latin-1,
+  // creates a handle. Such values must not make handles accumulate with the
+  // nesting depth either.
+  auto code = R"(
+var map = null;
+var obj = null;
+var arr = null;
+var keyMap = null;
+for (var i = 0; i < 100; ++i) {
+  map = new Map([[new String('key'), map]]);
+  var o = {};
+  o[String.fromCharCode(0x100 + i)] = obj;
+  obj = o;
+  var a = [new String('element')];
+  a.child = arr;
+  arr = a;
+  // Nested through a key, after an entry whose value creates a handle.
+  keyMap = new Map([['key', new String('value')], [keyMap, 'next']]);
+}
+[map, obj, arr, keyMap];
+)";
+  auto serialized = evalAndSerialize(code);
+  auto deserialized = deserializeAsObject(serialized);
+  auto countLevels = eval(R"((function (values) {
+  function count(value, next) {
+    var levels = 0;
+    for (; value !== null; value = next(value)) ++levels;
+    return levels;
+  }
+  return [
+    count(values[0], m => m.values().next().value),
+    count(values[1], o => o[Object.keys(o)[0]]),
+    count(values[2], a => a.child),
+    count(values[3], m => Array.from(m.keys())[1]),
+  ].join();
+}))")
+                         .getObject(*rt)
+                         .getFunction(*rt);
+  auto levels = countLevels.call(*rt, deserialized);
+  EXPECT_EQ(levels.getString(*rt).utf8(*rt), "100,100,100,100");
+}
+
 TEST_P(HermesSerializationTest, SerializeUnsupported) {
   // Go through known unsupported values for serialization and make sure we
   // throw
@@ -3203,6 +3373,40 @@ TEST_P(HermesSerializationTest, SerializeWithTransferThrows) {
   auto val = Value::undefined();
   EXPECT_THROW(
       serializationInterface->serializeWithTransfer(val, transferArr), JSError);
+}
+
+TEST_P(HermesSerializationTest, SerializeManyExternalBuffersWithTransfer) {
+  // Transferring an external ArrayBuffer creates handles, which must not
+  // accumulate with the number of transferred buffers.
+  struct FixedBuffer : MutableBuffer {
+    size_t size() const override {
+      return arr.size();
+    }
+    uint8_t *data() override {
+      return arr.data();
+    }
+
+    std::array<uint8_t, 8> arr{};
+  };
+
+  Array buffers(*rt, 100);
+  for (size_t i = 0; i < 100; ++i) {
+    auto buf = std::make_shared<FixedBuffer>();
+    buf->arr[0] = i;
+    buffers.setValueAtIndex(*rt, i, ArrayBuffer(*rt, buf));
+  }
+  auto serialized = serializationInterface->serializeWithTransfer(
+      Value(*rt, buffers), buffers);
+  auto deserialized =
+      serializationInterface2->deserializeWithTransfer(serialized);
+  // The deserialized value is followed by the transferred buffers.
+  ASSERT_EQ(deserialized.length(*rt2), 101);
+  for (size_t i = 0; i < 100; ++i) {
+    auto buffer = deserialized.getValueAtIndex(*rt2, i + 1)
+                      .getObject(*rt2)
+                      .getArrayBuffer(*rt2);
+    EXPECT_EQ(buffer.data(*rt2)[0], i);
+  }
 }
 
 INSTANTIATE_TEST_CASE_P(
