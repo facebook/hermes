@@ -453,6 +453,15 @@ void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
   checkTripwire(allocatedBytes_ + externalBytes_);
 }
 
+void MallocGC::collectWithOptions(
+    std::string &&cause,
+    const GCOptions & /*options*/) {
+  // MallocGC does not have generations, so both Minor and Major GC types
+  // perform a full collection. The execution policy is also ignored since
+  // MallocGC is always synchronous.
+  collect(std::move(cause));
+}
+
 void MallocGC::drainMarkStack(MarkingAcceptor &acceptor) {
   while (!acceptor.worklist_.empty()) {
     CellHeader *header = acceptor.worklist_.back();

@@ -1481,6 +1481,27 @@ void HadesGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
   youngGenCollection(std::move(cause), /*forceOldGenCollection*/ false);
 }
 
+void HadesGC::collectWithOptions(
+    std::string &&cause,
+    const GCOptions &options) {
+  if (options.type == GCType::Major &&
+      options.executionPolicy == GCExecutionPolicy::Sync) {
+    // Run full collection on the mutator thread.
+    collect(std::move(cause));
+    return;
+  }
+
+  std::lock_guard<Mutex> lk = ensureBackgroundTaskPaused();
+  // A forced collection should reclaim YG garbage even in promotion mode.
+  promoteYGToOG_ = false;
+  // For minor GC, we do YG collection and let it determine if we should start
+  // a new OG collection cycle. For async Major GC, we force a new OG
+  // collection.
+  youngGenCollection(
+      std::move(cause),
+      /*forceOldGenCollection*/ options.type == GCType::Major);
+}
+
 void HadesGC::waitForCollectionToFinish(std::string cause) {
   assert(
       gcMutex_ &&

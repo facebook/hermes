@@ -248,6 +248,35 @@ class GCBase {
   static const char kNaturalCauseForAnalytics[];
   static const char kHandleSanCauseForAnalytics[];
 
+  /// The type of GC to perform.
+  enum class GCType : uint8_t {
+    /// Minor GC work. In the context of HadesGC, this means YG collection. For
+    /// MallocGC, this would be the same as Major, which is to perform full
+    /// collection.
+    Minor,
+    /// Major GC work that may block the JS execution. In HadesGC, this means OG
+    /// collection.
+    Major,
+  };
+
+  /// Execution policy for a GC operation. MallocGC does not support this since
+  /// it's always synchronous.
+  enum class GCExecutionPolicy : uint8_t {
+    /// Run the GC work synchronously in the JS execution thread.
+    Sync,
+    /// Run the GC work asynchronously either in background thread or in the JS
+    /// execution thread as a queued job. Note that for HadesGC, this may still
+    /// start with a synchronous YG collection (which is a short pause) and run
+    /// the OG work in background thread.
+    Async,
+  };
+
+  /// Options for a GC request, defaulting to synchronous minor collection.
+  struct GCOptions {
+    GCType type = GCType::Minor;
+    GCExecutionPolicy executionPolicy = GCExecutionPolicy::Sync;
+  };
+
   /// An interface enabling the garbage collector to mark roots and free
   /// symbols.
   struct GCCallbacks {
@@ -1058,6 +1087,11 @@ class GCBase {
   /// Force a garbage collection cycle. The provided cause will be used in
   /// logging.
   virtual void collect(std::string cause, bool canEffectiveOOM = false) = 0;
+
+  /// Collect with the requested type and execution policy.
+  virtual void collectWithOptions(
+      std::string &&cause,
+      const GCOptions &options) = 0;
 
   /// Iterate over all objects in the heap, and call \p callback on them.
   /// \param callback A function to call on each found object.

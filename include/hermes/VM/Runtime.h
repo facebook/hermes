@@ -410,6 +410,13 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
     getHeap().collect(std::move(cause));
   }
 
+  /// Request garbage collection with specific options.
+  void collectWithOptions(
+      std::string &&cause,
+      const GCBase::GCOptions &options) {
+    getHeap().collectWithOptions(std::move(cause), options);
+  }
+
   /// Potentially move the heap if handle sanitization is on.
   void potentiallyMoveHeap();
 

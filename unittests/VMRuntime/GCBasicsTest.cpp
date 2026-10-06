@@ -15,8 +15,10 @@
 #include "hermes/VM/WeakRef.h"
 #include "hermes/VM/WeakRoot-inline.h"
 
+#include <chrono>
 #include <functional>
 #include <new>
+#include <thread>
 #include <vector>
 
 #include "gtest/gtest.h"
@@ -623,5 +625,181 @@ TEST(LargeAllocationBigHeapTest, SuperLargeAlloc) {
   rt.getHeap().getHeapInfo(heapInfo);
   ASSERT_EQ(heapInfo.allocatedBytes, (uint64_t)size1 + size2);
 }
+
+/// We do not test with MallocGC since GCOptions does not have any effect there.
+/// Handle-SAN collects on allocation, which breaks the exact heap size
+/// assertions below.
+#if HERMESVM_GCKIND == _HERMESVM_GCVALUE_HADES && HERMESVM_SANITIZE_HANDLES == 0
+/// Use a slightly larger initial heap size so that the first YG collection
+/// doesn't always trigger an OG collection.
+class GCBasicsTestGCOptions : public ::testing::Test {
+ protected:
+  std::shared_ptr<DummyRuntime> runtime{DummyRuntime::create(
+      TestGCConfigFixedSize(4 * FixedSizeHeapSegment::storageSize()))};
+  DummyRuntime &rt{*runtime};
+};
+
+/// Test that collectWithOptions works correctly for different GCType and
+/// GCExecutionPolicy combinations.
+TEST_F(GCBasicsTestGCOptions, CollectWithGCOptionsMinorSync) {
+  auto &gc = rt.getHeap();
+  GCBase::HeapInfo info;
+
+  // Allocate an object without holding a reference to it.
+  DummyObject::create(gc, rt);
+  // Allocate a long lived object, which can't be collected by Minor GC in
+  // HadesGC.
+  DummyObject::createLongLived(gc);
+  gc.getHeapInfo(info);
+  EXPECT_EQ(cellSize<DummyObject>() * 2, info.allocatedBytes);
+
+  constexpr GCBase::GCOptions options;
+  EXPECT_EQ(GCBase::GCType::Minor, options.type);
+  EXPECT_EQ(GCBase::GCExecutionPolicy::Sync, options.executionPolicy);
+  gc.collectWithOptions("test", options);
+
+  gc.getHeapInfo(info);
+  // The unreachable object in YG should be collected.
+  EXPECT_EQ(cellSize<DummyObject>(), info.allocatedBytes);
+}
+
+TEST_F(GCBasicsTestGCOptions, CollectWithGCOptionsMajorSync) {
+  auto &gc = rt.getHeap();
+  GCBase::HeapInfo info;
+
+  // Allocate an object without holding a reference to it.
+  DummyObject::create(gc, rt);
+  // Allocate a long lived object, which can't be collected by Minor GC in
+  // HadesGC.
+  DummyObject::createLongLived(gc);
+  gc.getHeapInfo(info);
+  EXPECT_EQ(cellSize<DummyObject>() * 2, info.allocatedBytes);
+
+  // Collect with Major GC type and Sync execution policy.
+  GCBase::GCOptions options{
+      GCBase::GCType::Major, GCBase::GCExecutionPolicy::Sync};
+  gc.collectWithOptions("test", options);
+
+  gc.getHeapInfo(info);
+  // The unreachable objects in both YG and OG should be collected.
+  EXPECT_EQ(0u, info.allocatedBytes);
+}
+
+TEST_F(GCBasicsTestGCOptions, CollectWithGCOptionsMajorAsync) {
+  auto &gc = rt.getHeap();
+  GCBase::HeapInfo info;
+
+  // Allocate an object without holding a reference to it.
+  DummyObject::create(gc, rt);
+  // Allocate a long lived object, which can't be collected by Minor GC in
+  // HadesGC.
+  DummyObject::createLongLived(gc);
+  gc.getHeapInfo(info);
+  // Two objects allocated: one in YG, one in OG.
+  EXPECT_EQ(cellSize<DummyObject>() * 2, info.allocatedBytes);
+
+  // Collect with Major GC type and Async execution policy.
+  // This triggers a YG collection synchronously, which collects the
+  // unreachable object in young gen. The OG collection runs asynchronously.
+  GCBase::GCOptions options{
+      GCBase::GCType::Major, GCBase::GCExecutionPolicy::Async};
+  gc.collectWithOptions("test", options);
+  gc.getHeapInfo(info);
+  // The YG object is collected; the long-lived OG object remains until
+  // the async OG collection completes.
+  EXPECT_EQ(cellSize<DummyObject>(), info.allocatedBytes);
+
+  const auto deadline =
+      std::chrono::steady_clock::now() + std::chrono::seconds(30);
+  while (info.allocatedBytes != 0 &&
+         std::chrono::steady_clock::now() < deadline) {
+    gc.collectWithOptions("test", options);
+    gc.getHeapInfo(info);
+    std::this_thread::yield();
+  }
+  // Sweeping may finish during the last yield, even if the deadline expires.
+  gc.getHeapInfo(info);
+  EXPECT_EQ(0u, info.allocatedBytes);
+}
+
+/// Test that collectWithOptions preserves reachable objects.
+TEST_F(GCBasicsTestGCOptions, CollectWithGCOptionsPreservesReachable) {
+  auto &gc = rt.getHeap();
+  GCBase::HeapInfo info;
+  struct : Locals {
+    PinnedValue<DummyObject> handle;
+  } lv;
+  DummyLocalsRAII lraii{rt, &lv};
+
+  // Allocate a reachable object.
+  lv.handle = DummyObject::create(gc, rt);
+  gc.getHeapInfo(info);
+  EXPECT_EQ(cellSize<DummyObject>(), info.allocatedBytes);
+
+  // Collect with Minor GC.
+  GCBase::GCOptions minorOptions{
+      GCBase::GCType::Minor, GCBase::GCExecutionPolicy::Sync};
+  gc.collectWithOptions("test", minorOptions);
+
+  gc.getHeapInfo(info);
+  // The reachable object should still be present.
+  EXPECT_EQ(cellSize<DummyObject>(), info.allocatedBytes);
+
+  // Collect with Major GC.
+  GCBase::GCOptions majorOptions{
+      GCBase::GCType::Major, GCBase::GCExecutionPolicy::Sync};
+  gc.collectWithOptions("test", majorOptions);
+
+  gc.getHeapInfo(info);
+  // The reachable object should still be present.
+  EXPECT_EQ(cellSize<DummyObject>(), info.allocatedBytes);
+}
+
+TEST_F(GCBasicsTestGCOptions, CollectWithGCOptionsMajorAsyncCoalesces) {
+  auto &gc = rt.getHeap();
+  GCBase::HeapInfo info;
+  struct : Locals {
+    PinnedValue<DummyObject> object;
+  } lv;
+  DummyLocalsRAII lraii{rt, &lv};
+
+  lv.object = DummyObject::createLongLived(gc);
+  GCBase::GCOptions options{
+      GCBase::GCType::Major, GCBase::GCExecutionPolicy::Async};
+  gc.collectWithOptions("test", options);
+  lv.object = nullptr;
+
+  // The second request assists marking without finishing the entire first
+  // collection and starting another one.
+  gc.collectWithOptions("test", options);
+  gc.getHeapInfo(info);
+  // OG statistics are published by a later YG collection, so this stays zero
+  // even if background sweeping has already finished.
+  ASSERT_EQ(0u, info.fullStats.numCollections);
+
+  const auto collectUntilCompleted = [&](unsigned numCollections) {
+    const auto deadline =
+        std::chrono::steady_clock::now() + std::chrono::seconds(30);
+    do {
+      gc.collectWithOptions("test", options);
+      gc.getHeapInfo(info);
+      if (info.fullStats.numCollections >= numCollections)
+        return true;
+      std::this_thread::yield();
+    } while (std::chrono::steady_clock::now() < deadline);
+    return false;
+  };
+
+  ASSERT_TRUE(collectUntilCompleted(1));
+  ASSERT_EQ(1u, info.fullStats.numCollections);
+  // The object was reachable when the first collection began, so it survives
+  // that collection even though the root has since been cleared.
+  EXPECT_EQ(cellSize<DummyObject>(), info.allocatedBytes);
+
+  ASSERT_TRUE(collectUntilCompleted(2));
+  EXPECT_EQ(2u, info.fullStats.numCollections);
+  EXPECT_EQ(0u, info.allocatedBytes);
+}
+#endif
 
 } // namespace

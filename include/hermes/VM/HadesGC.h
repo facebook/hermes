@@ -224,6 +224,8 @@ class HadesGC final : public GCBase {
   /// Force a garbage collection cycle.
   /// (Part of general GC API defined in GCBase.h).
   void collect(std::string cause, bool canEffectiveOOM = false) override;
+  void collectWithOptions(std::string &&cause, const GCOptions &options)
+      override;
 
   /// Run the finalizers for all heap objects.
   void finalizeAll() override;

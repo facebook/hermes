@@ -197,6 +197,8 @@ class MallocGC final : public GCBase {
   /// Collect all of the dead objects and symbols in the heap. Also invalidate
   /// weak pointers that point to dead objects.
   void collect(std::string cause, bool canEffectiveOOM = false) override;
+  void collectWithOptions(std::string &&cause, const GCOptions &options)
+      override;
 
   /// The minimum allocation size.
   static constexpr uint32_t minAllocationSize() {
