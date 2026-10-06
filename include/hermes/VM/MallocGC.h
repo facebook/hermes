@@ -200,6 +200,12 @@ class MallocGC final : public GCBase {
   void collectWithOptions(std::string &&cause, const GCOptions &options)
       override;
 
+  /// Total number of collections; MallocGC has no separate young generation.
+  /// Requires exclusive runtime access.
+  unsigned getNumYGGCs() const {
+    return getNumGCs();
+  }
+
   /// The minimum allocation size.
   static constexpr uint32_t minAllocationSize() {
     // MallocGC imposes no limit on individual allocations.

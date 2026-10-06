@@ -10,6 +10,7 @@
 #include <hermes/CompileJS.h>
 #include <hermes/Public/JSOutOfMemoryError.h>
 #include <hermes/VM/TimeLimitMonitor.h>
+#include <hermes/VM/VMExperiments.h>
 #include <hermes/VM/sh_config.h>
 #include <hermes/hermes.h>
 #include <hermes_sandbox/HermesSandboxRuntime.h>
@@ -18,7 +19,9 @@
 
 #include <atomic>
 #include <chrono>
+#include <mutex>
 #include <optional>
+#include <queue>
 #include <thread>
 #include <tuple>
 
@@ -143,6 +146,281 @@ TEST(HermesRuntimeConfigTest, EmptyFinalizerThreadRunner) {
 
   EXPECT_TRUE(finalized);
 }
+
+#if HERMESVM_GCKIND == _HERMESVM_GCVALUE_HADES
+/// Event-loop control whose queued work runs only when requested by a test.
+class IdleTimeGCEventLoopControl final : public IEventLoopControl {
+ public:
+  /// Copy the callback unless this controller is configured to drop tasks.
+  void scheduleTask(const std::function<void()> &task) override;
+
+  /// These tests do not create external task sources.
+  uint64_t registerTaskQueueSource() override {
+    return 0;
+  }
+
+  /// These tests do not create external task sources.
+  void unregisterTaskQueueSource(uint64_t) override {}
+
+  /// Configure whether subsequent scheduling attempts retain their callbacks.
+  void dropTasks(bool drop);
+
+  /// Return the number of scheduling attempts, including dropped tasks.
+  size_t scheduledTaskCount() const;
+
+  /// Return the number of retained callbacks.
+  size_t queuedTaskCount() const;
+
+  /// Execute one queued callback while the runtime is alive and exclusively
+  /// owned by the calling thread.
+  void runNext();
+
+ private:
+  mutable std::mutex mutex_;
+  std::queue<std::function<void()>> tasks_;
+  size_t scheduledTaskCount_{0};
+  bool dropTasks_{false};
+};
+
+void IdleTimeGCEventLoopControl::scheduleTask(
+    const std::function<void()> &task) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  ++scheduledTaskCount_;
+  if (!dropTasks_) {
+    tasks_.push(task);
+  }
+}
+
+void IdleTimeGCEventLoopControl::dropTasks(bool drop) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  dropTasks_ = drop;
+}
+
+size_t IdleTimeGCEventLoopControl::scheduledTaskCount() const {
+  std::lock_guard<std::mutex> lock(mutex_);
+  return scheduledTaskCount_;
+}
+
+size_t IdleTimeGCEventLoopControl::queuedTaskCount() const {
+  std::lock_guard<std::mutex> lock(mutex_);
+  return tasks_.size();
+}
+
+void IdleTimeGCEventLoopControl::runNext() {
+  std::function<void()> task;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    ASSERT_FALSE(tasks_.empty());
+    task = std::move(tasks_.front());
+    tasks_.pop();
+  }
+  task();
+}
+
+/// Exercise idle GC through public JSI calls and collection statistics.
+class IdleTimeGCTest : public ::testing::Test {
+ protected:
+  /// The experiment's scope-entry budget between scheduling attempts.
+  static constexpr size_t kEntryBudget = 10000;
+
+  /// Create a runtime with independently configurable experiment and scheduler.
+  void createRuntime(bool enabled = true, bool attachEventLoop = true);
+
+  /// Enter execution scopes without allocating JavaScript objects.
+  void enterScopes(size_t count);
+
+  /// Advance until one task is submitted without assuming a bootstrap count.
+  void enterUntilTaskScheduled();
+
+  /// Allocate through JavaScript until a natural young collection occurs.
+  void collectNaturally();
+
+  /// Read the collection count without entering an execution scope.
+  int64_t youngCollections();
+
+  // The controller must outlive the runtime, including its finalizers.
+  IdleTimeGCEventLoopControl eventLoop_;
+  std::unique_ptr<HermesRuntime> runtime_;
+};
+
+void IdleTimeGCTest::createRuntime(bool enabled, bool attachEventLoop) {
+  runtime_ = makeHermesRuntime(
+      ::hermes::vm::RuntimeConfig::Builder()
+          .withVMExperimentFlags(
+              enabled ? ::hermes::vm::experiments::IdleTimeGC : 0)
+          .withGCConfig(
+              ::hermes::vm::GCConfig::Builder()
+                  .withInitHeapSize(8 << 20)
+                  .withMaxHeapSize(32 << 20)
+                  .withShouldRecordStats(false)
+                  .build())
+          .build());
+  if (attachEventLoop) {
+    auto *control = castInterface<ISetEventLoopControl>(runtime_.get());
+    ASSERT_NE(control, nullptr);
+    control->setEventLoopControl(&eventLoop_);
+  }
+}
+
+void IdleTimeGCTest::enterScopes(size_t count) {
+  for (size_t i = 0; i < count; ++i) {
+    runtime_->global();
+  }
+}
+
+void IdleTimeGCTest::enterUntilTaskScheduled() {
+  const auto before = eventLoop_.scheduledTaskCount();
+  for (size_t i = 0;
+       i <= kEntryBudget && eventLoop_.scheduledTaskCount() == before;
+       ++i) {
+    enterScopes(1);
+  }
+  ASSERT_EQ(eventLoop_.scheduledTaskCount(), before + 1);
+}
+
+void IdleTimeGCTest::collectNaturally() {
+  const auto before = youngCollections();
+  auto script = std::make_shared<StringBuffer>(R"(
+    for (let i = 0; i < 1024; ++i) {
+      globalThis.idleTimeGCGarbage = new Array(128).fill(i);
+    }
+  )");
+  for (size_t i = 0; i < 64 && youngCollections() == before; ++i) {
+    runtime_->evaluateJavaScript(script, "idle-time-gc.js");
+  }
+  ASSERT_GT(youngCollections(), before);
+}
+
+int64_t IdleTimeGCTest::youngCollections() {
+  return runtime_->instrumentation().getHeapInfo(false).at(
+      "hermes_yg_numCollections");
+}
+
+TEST_F(IdleTimeGCTest, Disabled) {
+  createRuntime(false);
+  const auto before = youngCollections();
+  enterScopes(3 * kEntryBudget);
+  EXPECT_EQ(eventLoop_.scheduledTaskCount(), 0);
+  EXPECT_EQ(youngCollections(), before);
+}
+
+TEST_F(IdleTimeGCTest, NoEventLoopControl) {
+  createRuntime(true, false);
+  const auto before = youngCollections();
+  enterScopes(3 * kEntryBudget);
+  EXPECT_EQ(eventLoop_.scheduledTaskCount(), 0);
+  EXPECT_EQ(youngCollections(), before);
+}
+
+TEST_F(IdleTimeGCTest, DeferredCollection) {
+  createRuntime();
+  const auto before = youngCollections();
+  enterUntilTaskScheduled();
+  ASSERT_EQ(eventLoop_.queuedTaskCount(), 1);
+  EXPECT_EQ(youngCollections(), before);
+
+  eventLoop_.runNext();
+  EXPECT_EQ(youngCollections(), before + 1);
+  const auto scheduled = eventLoop_.scheduledTaskCount();
+  enterScopes(kEntryBudget - 1);
+  EXPECT_EQ(eventLoop_.scheduledTaskCount(), scheduled);
+  enterScopes(1);
+  EXPECT_EQ(eventLoop_.scheduledTaskCount(), scheduled + 1);
+}
+
+TEST_F(IdleTimeGCTest, NaturalCollectionPostponesTask) {
+  createRuntime();
+  enterUntilTaskScheduled();
+  eventLoop_.runNext();
+  const auto scheduled = eventLoop_.scheduledTaskCount();
+  enterScopes(kEntryBudget / 2);
+  collectNaturally();
+  const auto afterNatural = youngCollections();
+
+  enterScopes(kEntryBudget / 2);
+  EXPECT_EQ(eventLoop_.scheduledTaskCount(), scheduled);
+  EXPECT_EQ(eventLoop_.queuedTaskCount(), 0);
+  enterUntilTaskScheduled();
+  eventLoop_.runNext();
+  EXPECT_EQ(youngCollections(), afterNatural + 1);
+}
+
+TEST_F(IdleTimeGCTest, NaturalCollectionSkipsQueuedTask) {
+  createRuntime();
+  enterUntilTaskScheduled();
+  collectNaturally();
+  const auto afterNatural = youngCollections();
+  ASSERT_EQ(eventLoop_.queuedTaskCount(), 1);
+  eventLoop_.runNext();
+  EXPECT_EQ(youngCollections(), afterNatural);
+
+  const auto scheduled = eventLoop_.scheduledTaskCount();
+  enterScopes(kEntryBudget - 1);
+  EXPECT_EQ(eventLoop_.scheduledTaskCount(), scheduled);
+  enterUntilTaskScheduled();
+  eventLoop_.runNext();
+  EXPECT_EQ(youngCollections(), afterNatural + 1);
+}
+
+TEST_F(IdleTimeGCTest, DroppedTasksRemainRateLimited) {
+  eventLoop_.dropTasks(true);
+  createRuntime();
+  const auto before = youngCollections();
+  enterUntilTaskScheduled();
+  const auto scheduled = eventLoop_.scheduledTaskCount();
+  ASSERT_EQ(eventLoop_.queuedTaskCount(), 0);
+
+  enterScopes(kEntryBudget - 1);
+  EXPECT_EQ(eventLoop_.scheduledTaskCount(), scheduled);
+  enterScopes(1);
+  EXPECT_EQ(eventLoop_.scheduledTaskCount(), scheduled + 1);
+  EXPECT_EQ(eventLoop_.queuedTaskCount(), 0);
+  EXPECT_EQ(youngCollections(), before);
+
+  eventLoop_.dropTasks(false);
+  enterScopes(kEntryBudget - 1);
+  EXPECT_EQ(eventLoop_.scheduledTaskCount(), scheduled + 1);
+  enterScopes(1);
+  EXPECT_EQ(eventLoop_.scheduledTaskCount(), scheduled + 2);
+  ASSERT_EQ(eventLoop_.queuedTaskCount(), 1);
+  eventLoop_.runNext();
+  EXPECT_EQ(youngCollections(), before + 1);
+}
+
+TEST_F(IdleTimeGCTest, QueuedTasksCollectOnlyOnce) {
+  createRuntime();
+  const auto before = youngCollections();
+  enterUntilTaskScheduled();
+  enterScopes(2 * kEntryBudget);
+  ASSERT_EQ(eventLoop_.queuedTaskCount(), 3);
+  EXPECT_EQ(youngCollections(), before);
+
+  eventLoop_.runNext();
+  EXPECT_EQ(youngCollections(), before + 1);
+  eventLoop_.runNext();
+  eventLoop_.runNext();
+  EXPECT_EQ(youngCollections(), before + 1);
+  EXPECT_EQ(eventLoop_.queuedTaskCount(), 0);
+}
+
+TEST_F(IdleTimeGCTest, QueuedTaskDoesNotRetainRuntime) {
+  createRuntime();
+  UUID key{0xe67ab3d6, 0x09a0, 0x11f0, 0xa641, 0x325096b39f47};
+  auto data = std::make_shared<int>(0);
+  std::weak_ptr<int> dataLifetime = data;
+  runtime_->setRuntimeData(key, data);
+  data.reset();
+
+  enterUntilTaskScheduled();
+  ASSERT_EQ(eventLoop_.queuedTaskCount(), 1);
+  ASSERT_FALSE(dataLifetime.expired());
+
+  runtime_.reset();
+  ASSERT_TRUE(dataLifetime.expired());
+  ASSERT_EQ(eventLoop_.queuedTaskCount(), 1);
+  // The controller must discard queued callbacks without running them now.
+}
+#endif
 
 class HermesRuntimeTest : public ::testing::TestWithParam<RuntimeFactory>,
                           public HermesRuntimeTestBase {

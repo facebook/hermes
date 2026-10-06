@@ -227,6 +227,12 @@ class HadesGC final : public GCBase {
   void collectWithOptions(std::string &&cause, const GCOptions &options)
       override;
 
+  /// Total number of completed YG collections.
+  /// Requires exclusive runtime access.
+  unsigned getNumYGGCs() const {
+    return ygCumulativeStats_.numCollections;
+  }
+
   /// Run the finalizers for all heap objects.
   void finalizeAll() override;
 

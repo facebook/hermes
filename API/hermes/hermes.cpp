@@ -46,6 +46,7 @@
 #include "hermes/VM/StringView.h"
 #include "hermes/VM/SymbolID.h"
 #include "hermes/VM/TimeLimitMonitor.h"
+#include "hermes/VM/VMExperiments.h"
 #include "hermes/VM/WeakRoot-inline.h"
 
 #if HERMES_ENABLE_CORE_EXTENSIONS
@@ -310,7 +311,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
             0,
             ::hermes::SerialExecutor::kDefaultTimeout,
             finalizerThreadRunner(runtimeConfig)),
-        mutatorScope{runtime_} {
+        mutatorScope{*this} {
 #ifdef HERMES_ENABLE_DEBUGGER
     compileFlags_.debug = true;
 #endif
@@ -1420,16 +1421,23 @@ class HermesRuntimeImpl final : public HermesRuntime,
   /// thread to check a posted message.
   IEventLoopControl *eventLoopControl_{nullptr};
 
+  /// Observe a new YG collection or schedule idle GC after the entry budget.
+  LLVM_ATTRIBUTE_NOINLINE void maybeScheduleIdleGC();
+
   /// Tracking status when the current execution enters/exits the mutator from
   /// JSI.
   struct MutatorScope {
-    vm::Runtime &rt;
+    HermesRuntimeImpl &jsiRuntime;
     /// Tracks how many times we have (potentially) entered mutator. This may be
     /// useful in heuristics for running certain tasks when entering mutator
     /// in the future.
     /// This is allowed to overflow (which will wrap around) since we don't need
     /// the exact accumulated counter.
     uint64_t counter{0};
+    /// Counter at the last GC observation or scheduling check.
+    uint64_t lastGCActivityCounter{0};
+    /// Number of collections last observed on the mutator.
+    unsigned lastObservedGCCount{0};
   };
 
   /// RAII for managing MutatorScope when entering/exiting the mutator from JSI.
@@ -1440,6 +1448,11 @@ class HermesRuntimeImpl final : public HermesRuntime,
    public:
     explicit ExecutionScopeRAII(MutatorScope &scope) : scope_(scope) {
       scope_.counter++;
+      if ((scope_.jsiRuntime.runtime_.getVMExperimentFlags() &
+           ::hermes::vm::experiments::IdleTimeGC) &&
+          scope_.jsiRuntime.eventLoopControl_) {
+        scope_.jsiRuntime.maybeScheduleIdleGC();
+      }
     }
 
     ~ExecutionScopeRAII() = default;
@@ -1454,6 +1467,38 @@ class HermesRuntimeImpl final : public HermesRuntime,
   /// ExecutionScope for this Runtime.
   MutatorScope mutatorScope;
 };
+
+void HermesRuntimeImpl::maybeScheduleIdleGC() {
+  const auto numGCs = runtime_.getHeap().getNumYGGCs();
+  const bool gcOccurred = mutatorScope.lastObservedGCCount != numGCs;
+  if (LLVM_LIKELY(
+          !gcOccurred &&
+          mutatorScope.counter - mutatorScope.lastGCActivityCounter < 10000)) {
+    return;
+  }
+
+  mutatorScope.lastObservedGCCount = numGCs;
+  // A controller may drop tasks, so scheduling checks also restart the budget.
+  mutatorScope.lastGCActivityCounter = mutatorScope.counter;
+  if (gcOccurred) {
+    return;
+  }
+
+  eventLoopControl_->scheduleTask([&runtime = runtime_,
+                                   &scope = mutatorScope,
+                                   numGCs]() {
+    auto &gc = runtime.getHeap();
+    if (gc.getNumYGGCs() != numGCs) {
+      return;
+    }
+    gc.collectWithOptions(
+        "EnterMutator",
+        vm::GCBase::GCOptions{
+            vm::GCBase::GCType::Minor, vm::GCBase::GCExecutionPolicy::Sync});
+    scope.lastObservedGCCount = gc.getNumYGGCs();
+    scope.lastGCActivityCounter = scope.counter;
+  });
+}
 } // namespace
 
 jsi::ICast *HermesRootAPI::castInterface(const jsi::UUID &interfaceUUID) {
