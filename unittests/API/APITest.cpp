@@ -13,6 +13,7 @@
 #include <hermes/VM/sh_config.h>
 #include <hermes/hermes.h>
 #include <hermes_sandbox/HermesSandboxRuntime.h>
+#include <jsi/decorator.h>
 #include <jsi/instrumentation.h>
 #include <jsi/test/testlib.h>
 
@@ -1475,6 +1476,18 @@ TEST_F(HermesRuntimeTestSmallHeap, HostFunctionPropagatesOOMExceptionTest) {
 }
 
 TEST_F(HermesRuntimeTestSmallHeap, CreateJSErrorPropagatesOOMExceptionTest) {
+  // Use the default createError implementation so the overridden global Error
+  // constructor below triggers the OOM.
+  class RD : public RuntimeDecorator<Runtime, Runtime> {
+   public:
+    explicit RD(Runtime &rt) : RuntimeDecorator(rt) {}
+
+    Value createError(const String &msg) override {
+      return Runtime::createError(msg);
+    }
+  };
+  RD drt(*rt);
+
   eval(R"#(
 globalThis.Error = function (){
   var outer = [];
@@ -1485,7 +1498,7 @@ globalThis.Error = function (){
   }
 };
 )#");
-  EXPECT_THROW(throw JSError(*rt, "Foo"), ::hermes::vm::JSOutOfMemoryError);
+  EXPECT_THROW(throw JSError(drt, "Foo"), ::hermes::vm::JSOutOfMemoryError);
 }
 
 TEST_F(HermesRuntimeTestSmallHeap, InterpreterUnwindOOM) {
