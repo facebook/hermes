@@ -1968,7 +1968,7 @@ TEST_P(JSITest, CreateValueFromJsonUtf8Test) {
 
   CountingRD counting(rt);
   OuterRD outer(counting);
-  obj = Value::createFromJsonUtf8(outer, jsonText, sizeof(jsonText) - 1)
+  obj = outer.createValueFromJsonUtf8(jsonText, sizeof(jsonText) - 1)
             .getObject(outer);
   EXPECT_EQ(counting.count, 1);
   EXPECT_EQ(obj.getProperty(outer, "a").getNumber(), 1);

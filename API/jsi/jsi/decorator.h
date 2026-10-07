@@ -148,6 +148,9 @@ class RuntimeDecorator : public Base, private jsi::Instrumentation {
   Instrumentation& instrumentation() override {
     return *this;
   }
+  Value createValueFromJsonUtf8(const uint8_t* json, size_t length) override {
+    return plain_.createValueFromJsonUtf8(json, length);
+  }
 
  protected:
   // plain is generally going to be a reference to an object managed
@@ -234,10 +237,6 @@ class RuntimeDecorator : public Base, private jsi::Instrumentation {
   }
   std::string utf8(const String& s) override {
     return plain_.utf8(s);
-  }
-
-  Value createValueFromJsonUtf8(const uint8_t* json, size_t length) override {
-    return plain_.createValueFromJsonUtf8(json, length);
   }
 
   std::u16string utf16(const String& str) override {
