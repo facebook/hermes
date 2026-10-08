@@ -60,6 +60,10 @@ struct WorkerState {
   /// The ID assigned when the Worker was registered with the integrator
   /// event-loop.
   uint64_t id;
+  /// Runtime executing this Worker. It is owned by the WorkerNativeState,
+  /// which terminates the Worker before destroying the runtime. Reset upon
+  /// termination.
+  jsi::Runtime *workerRuntime{nullptr};
 };
 
 /// Worker-specific Native state, used to mark an Object as a Worker instance.
@@ -147,13 +151,12 @@ void processMessageWithHandler(
 }
 
 /// Acquires the \p workerState.mutex and resources in \p workerState to
-/// indicate the Worker is terminated. Request the \p workerRuntime to stop
+/// indicate the Worker is terminated. Request the Worker runtime to stop
 /// execution. If \p notifyWorker is called, then also notifies the worker to
 /// wake up. May be called by the Worker thread or main thread/event loop
 /// thread, and may be called multiple times.
 void setTerminationState(
     const std::shared_ptr<WorkerState> &workerState,
-    jsi::Runtime &workerRuntime,
     bool notifyWorker) {
   std::lock_guard<std::mutex> lock(workerState->stateMutex);
   if (workerState->terminated) {
@@ -168,9 +171,14 @@ void setTerminationState(
   // Request the Worker runtime to terminate the execution at a convenient
   // time. The timeout exception thrown doesn't matter because the Worker
   // will be terminated.
-  auto *hermesInterface = jsi::castInterface<IHermes>(&workerRuntime);
+  // workerState->workerRuntime is set in startWorker() and only reset below in
+  // this function, so it must be valid at this point.
+  assert(workerState->workerRuntime && "workerRuntime can't be null");
+  auto *hermesInterface =
+      jsi::castInterface<IHermes>(workerState->workerRuntime);
   assert(hermesInterface && "IHermes is not supported");
   hermesInterface->asyncTriggerTimeout();
+  workerState->workerRuntime = nullptr;
 
   // Once terminated, no messages will be processed by the Worker. Discard
   // queue.
@@ -349,7 +357,7 @@ void installCloseFromWorker(
                              const jsi::Value &,
                              const jsi::Value *args,
                              size_t) {
-    setTerminationState(workerState, runtime, false);
+    setTerminationState(workerState, false);
     return jsi::Value::undefined();
   };
   auto closePropId = jsi::PropNameID::forAscii(workerRuntime, "close");
@@ -441,7 +449,7 @@ void postError(
 }
 
 WorkerNativeState::~WorkerNativeState() {
-  setTerminationState(workerState, *workerRuntime, true);
+  setTerminationState(workerState, true);
   // If the Worker thread is still active, wait for it to finish.
   if (workerThread_.joinable()) {
     workerThread_.join();
@@ -466,7 +474,7 @@ void WorkerNativeState::startWorkerThread(std::string script) {
       ::hermes::hermesLog(
           "HermesWorker",
           "Encountered JSINativeException while running Worker script.");
-      setTerminationState(workerState, *workerRuntime, false);
+      setTerminationState(workerState, false);
       return;
     }
 
@@ -554,6 +562,7 @@ void startWorker(jsi::Runtime &rt, jsi::Object self, std::string script) {
   auto *api = jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
   auto workerRuntime = api->makeHermesRuntime(::hermes::vm::RuntimeConfig());
   auto workerState = std::make_shared<WorkerState>(rt, self);
+  workerState->workerRuntime = workerRuntime.get();
 
   installPostMessageFromWorker(*workerRuntime, workerState);
   installCloseFromWorker(*workerRuntime, workerState);
@@ -640,7 +649,7 @@ jsi::Value terminateWorker(
     throwTypeError(rt, "'this' object must be a Worker");
   }
   auto worker = self.asObject(rt).getNativeState<WorkerNativeState>(rt);
-  setTerminationState(worker->workerState, *worker->workerRuntime, true);
+  setTerminationState(worker->workerState, true);
   return jsi::Value::undefined();
 }
 
