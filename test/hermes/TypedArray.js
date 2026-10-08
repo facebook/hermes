@@ -223,6 +223,24 @@ cons.forEach(function(TypedArray) {
 });
 
 (function testArrayIteratorFastPathSemantics() {
+  var dense = [1, 2, 3];
+  var view = new Float64Array(dense);
+  assert.arrayEqual([view[0], view[1], view[2]], dense);
+
+  var sparse = [1, , 3];
+  view = new Float64Array(sparse);
+  assert.equal(view[0], 1);
+  assert.equal(view[1], NaN);
+  assert.equal(view[2], 3);
+
+  Array.prototype[1] = 7;
+  try {
+    view = new Float64Array(sparse);
+    assert.equal(view[1], 7);
+  } finally {
+    delete Array.prototype[1];
+  }
+
   var growing = [1, 2];
   Object.defineProperty(growing, 0, {
     get: function() {
@@ -230,7 +248,7 @@ cons.forEach(function(TypedArray) {
       return 1;
     },
   });
-  var view = new Float64Array(growing);
+  view = new Float64Array(growing);
   assert.equal(view.length, 3);
   assert.equal(view[2], 3);
 
