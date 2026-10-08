@@ -105,7 +105,7 @@ numericOptions.forEach(element => print(new Intl.DateTimeFormat('en-GB', {second
 // CHECK-NEXT: 3
 
 numericOptions.forEach(element => print(new Intl.DateTimeFormat('de-DE', {hour: element, minute: element}).format(date)));
-// CHECK-NEXT: 3:45
+// CHECK-NEXT: 03:45
 // CHECK-NEXT: 03:45
 
 lengthOptions.concat(numericOptions).forEach(element => print(new Intl.DateTimeFormat('en-GB', {month: element}).format(date)));

@@ -1933,9 +1933,9 @@ void DateTimeFormatApple::initializeNSDateFormatter(
   // empty
   if (customFormattedDate.length > 0) {
     [nsDateFormatter_ setLocalizedDateFormatFromTemplate:customFormattedDate];
-    if (hour_.has_value()) {
+    if (hour_.has_value() && *hour_ == kTwoDigit) {
       // Foundation can choose a different hour width than the template asks
-      // for. Keep its localized field order, but restore the requested width.
+      // for. Keep its localized field order, but restore two-digit hours.
       NSMutableString *pattern = [nsDateFormatter_.dateFormat mutableCopy];
       bool inLiteral = false;
       for (NSUInteger i = 0; i < pattern.length; ++i) {
@@ -1954,7 +1954,7 @@ void DateTimeFormatApple::initializeNSDateFormatter(
         NSUInteger end = i + 1;
         while (end < pattern.length && [pattern characterAtIndex:end] == c)
           ++end;
-        NSUInteger width = *hour_ == kTwoDigit ? 2 : 1;
+        NSUInteger width = 2;
         if (end - i != width) {
           unichar hourPattern[2] = {c, c};
           NSString *hourFormat = [NSString stringWithCharacters:hourPattern
