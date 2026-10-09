@@ -172,6 +172,62 @@ class HERMES_EXPORT IHermesTestHelpers : public jsi::ICast {
   ~IHermesTestHelpers() = default;
 };
 
+/// Creates ASCII strings by letting the caller write the characters directly
+/// into the string's storage, avoiding an intermediate copy. Obtained through
+/// castInterface, so its absence can be detected at runtime; tracing runtimes
+/// don't provide it, since they must record every string they create. The
+/// layout and UUID are a contract with out-of-tree users: change the UUID on
+/// any change.
+class HERMES_EXPORT IAsciiStringWriter : public jsi::ICast {
+ public:
+  static constexpr jsi::UUID uuid{
+      0x6a2caff6,
+      0xc3ca,
+      0x11f1,
+      0xa8e5,
+      0x1683052e5da6};
+
+  /// Fills exactly the requested number of ASCII chars at \p dst. Must not
+  /// call into the runtime. Returns false to reject the output.
+  using WriteFn = bool (*)(void *ctx, char *dst) noexcept;
+
+  /// \return a string of \p length chars written in place by \p write.
+  /// Throws a JSError if \p write returns false, or a RangeError if \p length
+  /// is too large.
+  virtual jsi::String
+  createStringFromAsciiWriter(size_t length, void *ctx, WriteFn write) = 0;
+
+ protected:
+  ~IAsciiStringWriter() = default;
+};
+
+/// Like IAsciiStringWriter, for UTF-16 code units: lets the caller convert
+/// text (e.g. from UTF-8) straight into the string's storage. The result is
+/// always stored as UTF-16, so use IAsciiStringWriter for ASCII text: it takes
+/// half the memory.
+class HERMES_EXPORT IUtf16StringWriter : public jsi::ICast {
+ public:
+  static constexpr jsi::UUID uuid{
+      0x6a2cb096,
+      0xc3ca,
+      0x11f1,
+      0xa8e5,
+      0x1683052e5da6};
+
+  /// Fills exactly the requested number of UTF-16 code units at \p dst. Must
+  /// not call into the runtime. Returns false to reject the output.
+  using WriteFn = bool (*)(void *ctx, char16_t *dst) noexcept;
+
+  /// \return a string of \p length code units written in place by \p write.
+  /// Throws a JSError if \p write returns false, or a RangeError if \p length
+  /// is too large.
+  virtual jsi::String
+  createStringFromUtf16Writer(size_t length, void *ctx, WriteFn write) = 0;
+
+ protected:
+  ~IUtf16StringWriter() = default;
+};
+
 #ifdef JSI_UNSTABLE
 // Interface for methods that are exposed for tracing purposes.
 class IHermesTracingHelpers : public jsi::ICast {

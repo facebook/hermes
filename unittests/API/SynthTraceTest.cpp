@@ -110,6 +110,13 @@ TEST_F(SynthTraceTest, CreateObject) {
       SynthTrace::CreateObjectRecord(records[0]->time_, objID), *records[0]);
 }
 
+TEST_F(SynthTraceTest, StringWritersAreHidden) {
+  // Strings made by the writers would bypass the trace, so callers must fall
+  // back to the recorded createStringFrom* methods.
+  EXPECT_EQ(jsi::castInterface<IAsciiStringWriter>(rt.get()), nullptr);
+  EXPECT_EQ(jsi::castInterface<IUtf16StringWriter>(rt.get()), nullptr);
+}
+
 TEST_F(SynthTraceTest, PropNameIDUtf8) {
   const std::string ascii = "foo";
   const jsi::PropNameID name = jsi::PropNameID::forAscii(*rt, ascii);
