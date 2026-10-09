@@ -270,7 +270,7 @@ CallResult<HermesValue> typedArrayConstructorFromArrayBuffer(
   } else {
     // 5. If length is not undefined, then
     //   a. Let newLength be ? ToIndex(length).
-    auto res2 = toLength(runtime, length);
+    auto res2 = toIndex(runtime, length);
     if (res2 == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
