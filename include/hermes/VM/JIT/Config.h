@@ -32,8 +32,11 @@
 
 // If the JIT is allowed by configuration, enable it on platforms that support
 // it.
-#if !defined(HERMESVM_JIT) && (defined(__aarch64__) || defined(_M_ARM64)) && \
-    (!defined(HERMESVM_COMPRESSED_POINTERS) ||                               \
+#if !defined(HERMESVM_JIT) &&                                  \
+    (defined(__aarch64__) || defined(_M_ARM64) ||              \
+     ((defined(__x86_64__) || defined(_M_X64)) &&              \
+      !defined(_WIN32))) &&                                    \
+    (!defined(HERMESVM_COMPRESSED_POINTERS) ||                 \
      defined(HERMESVM_CONTIGUOUS_HEAP))
 #define HERMESVM_JIT 1
 #else
@@ -42,6 +45,21 @@
 
 #else
 #error HERMESVM_ALLOW_JIT must have a value of 1 or 2
+#endif
+
+// Per-architecture JIT selectors. Exactly one is 1 when HERMESVM_JIT is 1;
+// both are 0 when the JIT is disabled. Arch-specific sources self-guard on
+// these so that both backend subtrees can be listed in the build
+// unconditionally.
+#if HERMESVM_JIT && (defined(__aarch64__) || defined(_M_ARM64))
+#define HERMESVM_JIT_ARM64 1
+#else
+#define HERMESVM_JIT_ARM64 0
+#endif
+#if HERMESVM_JIT && (defined(__x86_64__) || defined(_M_X64)) && !defined(_WIN32)
+#define HERMESVM_JIT_X86_64 1
+#else
+#define HERMESVM_JIT_X86_64 0
 #endif
 
 // Only enable perf profiling support on Linux/Android when JIT is enabled and

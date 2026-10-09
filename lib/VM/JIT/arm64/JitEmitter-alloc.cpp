@@ -6,7 +6,7 @@
  */
 
 #include "hermes/VM/JIT/Config.h"
-#if HERMESVM_JIT
+#if HERMESVM_JIT_ARM64
 #include "JitEmitter-internal.h"
 #include "JitEmitter.h"
 
@@ -44,7 +44,7 @@ void Emitter::bumpAllocAndUnpoison(
   a.mov(a64::x0, xOut);
   a.mov(a64::x1, sz);
   // Unpoison the newly allocated memory.
-  EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(
+  EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(
       *this,
       void (*)(void const volatile *, size_t),
       __asan_unpoison_memory_region);
@@ -137,4 +137,4 @@ void Emitter::alloc2InYoung(
 
 } // namespace hermes::vm::arm64
 
-#endif // HERMESVM_JIT
+#endif // HERMESVM_JIT_ARM64

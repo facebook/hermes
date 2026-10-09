@@ -9,7 +9,7 @@
 #if HERMESVM_JIT
 #include "JitHandlers.h"
 
-#include "../../JSLib/JSLibInternal.h"
+#include "../JSLib/JSLibInternal.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/Interpreter.h"
