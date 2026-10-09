@@ -29,7 +29,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   // for validity (for performance purposes).
   // Discard inputs that would be interpreted as bytecode to avoid reporting
   // those as errors.
-  if (HermesRuntime::isHermesBytecode(data, size)) {
+  if (facebook::jsi::castInterface<facebook::hermes::IHermesRootAPI>(
+          facebook::hermes::makeHermesRootAPI())
+          ->isHermesBytecode(data, size)) {
     return 0;
   }
 
