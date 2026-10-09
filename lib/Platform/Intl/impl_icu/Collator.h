@@ -10,7 +10,7 @@
 
 #include "LocaleBCP47Object.h"
 #include "hermes/Platform/Intl/PlatformIntl.h"
-#include "hermes/Platform/Unicode/icu.h"
+#include "icu.h"
 
 #include <string_view>
 
