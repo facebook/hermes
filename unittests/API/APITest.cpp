@@ -487,6 +487,92 @@ TEST_P(HermesRuntimeTest, ResetTimezoneCache) {
   }
 }
 
+/// Copies the std::string passed as \p ctx; for the string writer tests.
+static bool writeAscii(void *ctx, char *dst) noexcept {
+  const auto &src = *static_cast<const std::string *>(ctx);
+  for (size_t i = 0; i < src.size(); ++i)
+    dst[i] = src[i];
+  return true;
+}
+
+/// Copies the std::u16string passed as \p ctx; for the string writer tests.
+static bool writeUtf16(void *ctx, char16_t *dst) noexcept {
+  const auto &src = *static_cast<const std::u16string *>(ctx);
+  for (size_t i = 0; i < src.size(); ++i)
+    dst[i] = src[i];
+  return true;
+}
+
+TEST_P(HermesRuntimeTest, StringWriterTest) {
+  auto *ascii = castInterface<IAsciiStringWriter>(rt.get());
+  auto *utf16 = castInterface<IUtf16StringWriter>(rt.get());
+  if (!castInterface<IHermes>(rt.get())) {
+    // Only runtimes backed by HermesRuntime provide the writers.
+    return;
+  }
+  ASSERT_NE(ascii, nullptr);
+  ASSERT_NE(utf16, nullptr);
+
+  // Around the interned (0/1 chars) and external (64K chars) thresholds.
+  const size_t lengths[] = {0, 1, 2, 65535, 65536, 100000};
+  // ASCII, Cyrillic and a surrogate pair, which a cut can leave unpaired.
+  const char16_t pattern[] = {u'a', u'ж', 0xD83D, 0xDE42};
+  for (size_t length : lengths) {
+    std::string chars(length, '\0');
+    std::u16string units(length, u'\0');
+    for (size_t i = 0; i < length; ++i) {
+      chars[i] = static_cast<char>('a' + i % 26);
+      units[i] = pattern[i % 4];
+    }
+    String fromAscii =
+        ascii->createStringFromAsciiWriter(length, &chars, writeAscii);
+    EXPECT_TRUE(
+        String::strictEquals(
+            *rt, fromAscii, String::createFromAscii(*rt, chars)));
+    String fromUtf16 =
+        utf16->createStringFromUtf16Writer(length, &units, writeUtf16);
+    EXPECT_TRUE(
+        String::strictEquals(
+            *rt, fromUtf16, String::createFromUtf16(*rt, units)));
+    EXPECT_EQ(fromUtf16.utf16(*rt), units);
+  }
+
+  // ASCII text through the UTF-16 writer still equals and keys like ASCII.
+  std::u16string keyUnits = u"writerKey";
+  String key = utf16->createStringFromUtf16Writer(
+      keyUnits.size(), &keyUnits, writeUtf16);
+  EXPECT_TRUE(
+      String::strictEquals(
+          *rt, key, String::createFromAscii(*rt, "writerKey")));
+  Object obj(*rt);
+  obj.setProperty(*rt, PropNameID::forString(*rt, key), 42);
+  EXPECT_EQ(obj.getProperty(*rt, "writerKey").getNumber(), 42);
+
+  // A writer that rejects its output.
+  auto rejectAscii = [](void *, char *) noexcept { return false; };
+  auto rejectUtf16 = [](void *, char16_t *) noexcept { return false; };
+  EXPECT_THROW(
+      ascii->createStringFromAsciiWriter(1, nullptr, rejectAscii), JSError);
+  EXPECT_THROW(
+      ascii->createStringFromAsciiWriter(100, nullptr, rejectAscii), JSError);
+  EXPECT_THROW(
+      utf16->createStringFromUtf16Writer(100, nullptr, rejectUtf16), JSError);
+
+  // Too long: a RangeError, and the writer is never called.
+  auto unreachable = [](void *, char *) noexcept {
+    ADD_FAILURE() << "writer called";
+    return false;
+  };
+  const size_t tooLong = size_t(256) * 1024 * 1024 + 1;
+  try {
+    ascii->createStringFromAsciiWriter(tooLong, nullptr, unreachable);
+    ADD_FAILURE() << "expected a RangeError";
+  } catch (const JSError &e) {
+    EXPECT_TRUE(e.value().asObject(*rt).instanceOf(
+        *rt, rt->global().getPropertyAsFunction(*rt, "RangeError")));
+  }
+}
+
 TEST_P(HermesRuntimeTest, DescriptionTest) {
   // Minimally, if the description doesn't include "Hermes", something
   // is wrong.
