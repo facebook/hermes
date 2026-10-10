@@ -11,7 +11,11 @@ import android.os.Build;
 import com.facebook.proguard.annotations.DoNotStrip;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Currency;
 import java.util.List;
+import java.util.Locale;
+import java.util.TimeZone;
+import java.util.TreeSet;
 
 @DoNotStrip
 public class Intl {
@@ -76,6 +80,52 @@ public class Intl {
   public static List<String> getCanonicalLocales(List<String> locales)
       throws JSRangeErrorException {
     return canonicalizeLocaleList(locales);
+  }
+
+  // https://tc39.es/ecma402/#sec-availableprimarytimezoneidentifiers
+  @DoNotStrip
+  public static List<String> availableTimeZones() {
+    TreeSet<String> ids = new TreeSet<>();
+    // Use the same ID source as DateTimeFormat.normalizeTimeZone so
+    // every returned value is accepted by Intl.DateTimeFormat.
+    for (String id : TimeZone.getAvailableIDs()) {
+      if ("Etc/UTC".equals(id) || "Etc/GMT".equals(id)) {
+        ids.add("UTC");
+      } else {
+        ids.add(id);
+      }
+    }
+    ids.add("UTC");
+    return new ArrayList<>(ids);
+  }
+
+  // https://tc39.es/ecma402/#sec-availablecanonicalcurrencies
+  @DoNotStrip
+  public static List<String> availableCurrencies() {
+    TreeSet<String> codes = new TreeSet<>();
+    for (Currency currency : Currency.getAvailableCurrencies()) {
+      String code = currency.getCurrencyCode();
+      if (code != null) {
+        code = code.toUpperCase(Locale.US);
+        if (isWellFormedCurrencyCode(code)) {
+          codes.add(code);
+        }
+      }
+    }
+    return new ArrayList<>(codes);
+  }
+
+  private static boolean isWellFormedCurrencyCode(String code) {
+    if (code == null || code.length() != 3) {
+      return false;
+    }
+    for (int i = 0; i < 3; i++) {
+      char c = code.charAt(i);
+      if (c < 'A' || c > 'Z') {
+        return false;
+      }
+    }
+    return true;
   }
 
   // Implementer note: This method corresponds roughly to
