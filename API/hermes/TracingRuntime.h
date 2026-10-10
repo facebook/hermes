@@ -69,6 +69,13 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime>
   jsi::String createStringFromUtf8(const uint8_t *utf8, size_t length) override;
   jsi::String createStringFromUtf16(const char16_t *utf16, size_t length)
       override;
+  /// Parse JSON with the JS-based default implementation in jsi::Runtime
+  /// rather than forwarding to the plain runtime. The default calls back into
+  /// this runtime for global(), getProperty() and call(), so parsing is
+  /// recorded as ordinary records and the returned value gets a def, without
+  /// needing a dedicated record type.
+  jsi::Value createValueFromJsonUtf8(const uint8_t *json, size_t length)
+      override;
   std::string utf8(const jsi::PropNameID &) override;
 
   jsi::PropNameID createPropNameIDFromAscii(const char *str, size_t length)

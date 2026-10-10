@@ -757,6 +757,14 @@ jsi::String TracingRuntime::createStringFromUtf16(
   return res;
 }
 
+jsi::Value TracingRuntime::createValueFromJsonUtf8(
+    const uint8_t *json,
+    size_t length) {
+  // Deliberately not RD::createValueFromJsonUtf8, which would parse in the
+  // plain runtime and return a value that was never recorded. See the header.
+  return jsi::Runtime::createValueFromJsonUtf8(json, length);
+}
+
 jsi::PropNameID TracingRuntime::createPropNameIDFromAscii(
     const char *str,
     size_t length) {
