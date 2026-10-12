@@ -2498,8 +2498,25 @@ uint32_t HadesGC::OldGen::getFreelistBucket(uint32_t size) {
 GCCell *HadesGC::OldGen::search(uint32_t sz) {
   // Once we're examining the rest of the free list, it's a first-fit algorithm.
   // This approach approximates finding the smallest possible fit.
-  size_t bucket =
-      freelistBucketBitArray_.findNextSetBitFrom(getFreelistBucket(sz));
+  //
+  // A free cell serves sz either as an exact fit or by splitting off a
+  // remainder of at least minAllocationSize(); a cell sized strictly between
+  // the two is dead, being neither takeable nor splittable. So when the exact
+  // bucket is empty, resume at bucket(sz + minAllocationSize()) rather than
+  // examine every cell of a bucket that cannot possibly satisfy the request.
+  //
+  // That skips a bucket only where minAllocationSize() > HeapAlign, which
+  // today means HV64 alone: there minAllocationSize() is 2 * HeapAlign, so
+  // exactly one small bucket is passed over and it holds cells of size
+  // sz + HeapAlign, dead by the above. Under HV32 minAllocationSize() equals
+  // HeapAlign and no bucket lies strictly between the two. Large buckets are
+  // never passed over in either mode: sz + minAllocationSize() <= 2 * sz
+  // bounds bucket(sz + minAllocationSize()) at bucket(sz) + 1, and bucket(sz)
+  // is empty whenever this resume point is used.
+  size_t bucket = getFreelistBucket(sz);
+  if (!freelistBucketBitArray_.at(bucket))
+    bucket = freelistBucketBitArray_.findNextSetBitFrom(
+        getFreelistBucket(sz + minAllocationSize()));
   for (; bucket < kNumFreelistBuckets;
        bucket = freelistBucketBitArray_.findNextSetBitFrom(bucket + 1)) {
     auto *segBucket = buckets_[bucket].next;
