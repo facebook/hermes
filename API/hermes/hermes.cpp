@@ -2651,7 +2651,6 @@ jsi::String HermesRuntimeImpl::createStringFromWriter(
     }
   }
   ExecutionScopeRAII scopeRAII(mutatorScope);
-  vm::GCScope gcScope(runtime_);
   if (length > vm::StringPrimitive::MAX_STRING_LENGTH) {
     // The same error the other createStringFrom* methods give.
     checkStatus(runtime_.raiseRangeError("String length exceeds limit"));
@@ -2661,8 +2660,14 @@ jsi::String HermesRuntimeImpl::createStringFromWriter(
     // the zero-fill of StringPrimitive::create, which for char16_t is a scalar
     // loop that costs more than the copy this writer saves (for char it is a
     // fast memset, so ASCII keeps the regular path).
+    // Reject requests that exceed the limit before allocating native memory.
+    if (!runtime_.getHeap().canAllocExternalMemory(length * sizeof(CharT))) {
+      checkStatus(runtime_.raiseRangeError(
+          "Cannot allocate an external string primitive."));
+    }
     std::basic_string<CharT> storage;
     resizeUninitialized(storage, length);
+    // Check the actual capacity too: std::basic_string may over-allocate.
     if (!runtime_.getHeap().canAllocExternalMemory(
             storage.capacity() * sizeof(CharT))) {
       checkStatus(runtime_.raiseRangeError(

@@ -208,8 +208,9 @@ class HERMES_EXPORT IStringWriter : public jsi::ICast {
 
   /// Like createStringFromAsciiWriter, for UTF-16 code units: lets the caller
   /// convert text (e.g. from UTF-8) straight into the string's storage. The
-  /// result is always stored as UTF-16, so use createStringFromAsciiWriter for
-  /// ASCII text: it takes half the memory.
+  /// result is stored as UTF-16, except that empty strings and single ASCII
+  /// characters use the runtime's interned ASCII representation. Use
+  /// createStringFromAsciiWriter for ASCII text to halve character storage.
   virtual jsi::String
   createStringFromUtf16Writer(size_t length, void *ctx, Utf16WriteFn write) = 0;
 
