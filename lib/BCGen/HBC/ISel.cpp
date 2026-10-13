@@ -1151,9 +1151,10 @@ void HBCISel::generateDefineOwnInDenseArrayInst(
   uint32_t index = arrayIndex->asUInt32();
   if (index <= UINT8_MAX) {
     BCFGen_->emitDefineOwnInDenseArray(objReg, valueReg, index);
-  } else if (index <= UINT16_MAX) {
-    // Dense arrays can only be UINT16_MAX because NewArray doesn't accept
-    // lengths over UINT16_MAX.
+  } else if (index < UINT16_MAX) {
+    // NewArray caps the storage at UINT16_MAX elements (indices
+    // 0..UINT16_MAX-1), so index UINT16_MAX must take the growing
+    // DefineOwnByIndex path.
     BCFGen_->emitDefineOwnInDenseArrayL(objReg, valueReg, index);
   } else {
     // Fallback: use DefineOwnByIndex.
