@@ -298,6 +298,15 @@ struct VMOnlyRuntimeFlags {
 #endif
   };
 
+  llvh::cl::opt<bool> JITEmitTypeAsserts{
+      "Xjit-emit-type-asserts",
+      llvh::cl::Hidden,
+      llvh::cl::cat(RuntimeCategory),
+      llvh::cl::desc(
+          "(default false) Whether to verify FR type assumptions in JIT "
+          "compiled code"),
+      llvh::cl::init(false)};
+
   llvh::cl::opt<bool> JITEmitCounters{
       "Xjit-emit-counters",
       llvh::cl::Hidden,
