@@ -363,7 +363,8 @@ class CodeBlock final : private llvh::TrailingObjects<
   /// CodeBlock.
   size_t additionalMemorySize() const {
     return (readPropertyCacheSize_ * sizeof(ReadPropertyCacheEntry)) +
-        (writePropertyCacheSize_ * sizeof(WritePropertyCacheEntry));
+        (writePropertyCacheSize_ * sizeof(WritePropertyCacheEntry)) +
+        (privateNameCacheSize_ * sizeof(PrivateNameCacheEntry));
   }
 
 #ifdef HERMES_ENABLE_DEBUGGER
