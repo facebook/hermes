@@ -569,14 +569,14 @@ CallResult<HermesValue> hermesBuiltinCopyRestArgs(void *, Runtime &runtime) {
 /// /endcode
 /// ES9.0 12.2.5.2
 /// Iterate the iterable source (as if using a for-of) and copy the values from
-/// the spread source into the target array, starting at `nextIndex`.
+/// the spread source into the target array, starting at `nextIndex`. Then set
+/// the length of the target array to the next empty index.
 /// \return the next empty index in the array to use for additional properties.
 CallResult<HermesValue> hermesBuiltinArraySpread(void *, Runtime &runtime) {
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   struct : public Locals {
     PinnedValue<> nextValue;
     PinnedValue<> idxHandle;
-    PinnedValue<> nextIndex;
   } lv;
   LocalsRAII lraii(runtime, &lv);
 
@@ -654,7 +654,7 @@ CallResult<HermesValue> hermesBuiltinArraySpread(void *, Runtime &runtime) {
   }
   CheckedIteratorRecord iteratorRecord = *iteratorRecordRes;
 
-  lv.nextIndex = args.getArg(2);
+  auto nextIndex = args.getArg(2).getNumberAs<JSArray::size_type>();
 
   // 4. Repeat,
   for (GCScopeMarkerRAII marker{runtime}; /* nothing */; marker.flush()) {
@@ -667,7 +667,14 @@ CallResult<HermesValue> hermesBuiltinArraySpread(void *, Runtime &runtime) {
 
     // b. If next is false, return nextIndex.
     if (!next) {
-      return lv.nextIndex.getHermesValue();
+      // Set the length even if nothing was copied, so that it also covers any
+      // elisions right before the spread.
+      if (LLVM_UNLIKELY(
+              JSArray::setLengthProperty(target, runtime, nextIndex) ==
+              ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      return HermesValue::encodeTrustedNumberValue(nextIndex);
     }
     // c. Let nextValue be ? IteratorValue(next).
     auto nextItemRes = JSObject::getNamed_RJS(
@@ -680,19 +687,16 @@ CallResult<HermesValue> hermesBuiltinArraySpread(void *, Runtime &runtime) {
     // d. Let status be CreateDataProperty(array,
     //    ToString(ToUint32(nextIndex)), nextValue).
     // e. Assert: status is true.
+    // setElementAt is valid here for the same reason as in the fast path. It
+    // doesn't update the length, which is set once the iterator is done.
     if (LLVM_UNLIKELY(
-            JSArray::defineOwnComputed(
-                target,
-                runtime,
-                lv.nextIndex,
-                DefinePropertyFlags::getDefaultNewPropertyFlags(),
-                lv.nextValue) == ExecutionStatus::EXCEPTION)) {
+            JSArray::setElementAt(target, runtime, nextIndex, lv.nextValue) ==
+            ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
 
     // f. Let nextIndex be nextIndex + 1.
-    lv.nextIndex =
-        HermesValue::encodeTrustedNumberValue(lv.nextIndex->getNumber() + 1);
+    ++nextIndex;
   }
 }
 
