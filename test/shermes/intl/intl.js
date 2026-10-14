@@ -70,6 +70,8 @@ function testParts(parts) {
 assert(Intl !== undefined);
 
 assert(Array.isArray(Intl.getCanonicalLocales('en-US')));
+assert(typeof Intl.supportedValuesOf === 'function');
+assert(Array.isArray(Intl.supportedValuesOf('timeZone')));
 
 testServiceTypes(Intl.Collator);
 testServiceGetterTypes(Intl.Collator, 'compare');
