@@ -301,7 +301,7 @@ spec does not assume either case. On an EdenFS checkout, such as one under
 `~/fbsource`, in-tree CMake build directories do not work, so the build
 directory has to sit outside the repository. On an ordinary filesystem
 checkout the usual in-tree `cmake -B cmake-build-...` is fine and is what
-`CLAUDE.md` describes.
+`AGENTS.md` describes.
 
 Check which one applies before configuring anything, and if it is not
 obvious, ask rather than guessing. The two cases need different commands,

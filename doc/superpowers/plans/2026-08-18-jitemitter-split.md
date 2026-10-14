@@ -74,7 +74,7 @@ This applies to Tasks 2-14. Task 15 measures and changes no code.
   parameter docs naming a type or linkage the move changes. A reviewer
   should be able to diff the concatenation of the new files against the
   old one and see only motion.
-- Copyright header (Meta MIT, from `CLAUDE.md`) at the top of every new
+- Copyright header (Meta MIT, from `AGENTS.md`) at the top of every new
   file, followed by a trailing newline at end of file.
 - Every new `.cpp` opens with `#include "hermes/VM/JIT/Config.h"` then
   `#if HERMESVM_JIT`, and closes with `#endif // HERMESVM_JIT`. BUCK globs

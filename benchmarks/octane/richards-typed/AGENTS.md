@@ -22,7 +22,7 @@ Hermes. Set it once per shell, e.g.:
 
 ```bash
 export SH_BUILD=$(pwd)/cmake-build-release   # default when configured per
-                                             # the project root CLAUDE.md
+                                             # the project root AGENTS.md
 ```
 
 ### hermes (interpreter / JIT)
