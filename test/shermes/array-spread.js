@@ -64,3 +64,30 @@ var iterator = {
 var arr = [...iterator];
 print(arr, arr.length)
 // CHECK-NEXT: 3,2,1,0 4
+
+var arr = ['a', , ...'bc', 'd'];
+print(arr, arr.length);
+// CHECK-NEXT: a,,b,c,d 5
+
+var arr = [...'x'.repeat(1000)];
+print(arr.length, arr[999]);
+// CHECK-NEXT: 1000 x
+
+var arr = [...'', 'a', , 'b'];
+print(arr, arr.length);
+// CHECK-NEXT: a,,b 3
+
+// Holes right before spreads that add no elements still count.
+var arr = [...[1], , ...''];
+print(arr, arr.length);
+// CHECK-NEXT: 1, 2
+print(JSON.stringify(arr));
+// CHECK-NEXT: [1,null]
+
+var arr = [...[], , ...''];
+print(arr.length);
+// CHECK-NEXT: 1
+
+var arr = [...'a', , , ...new Set()];
+print(arr, arr.length);
+// CHECK-NEXT: a,, 3
