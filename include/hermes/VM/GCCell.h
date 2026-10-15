@@ -48,8 +48,8 @@ class KindAndSize {
   static constexpr size_t kNumSizeBits =
       std::min<size_t>(kNumBits - kNumKindBits, 32);
   static_assert(
-      kNumCellKinds < 256,
-      "More cell kinds than available kind bits.");
+      sizeof(CellKind) * 8 <= kNumKindBits,
+      "CellKind size wider than available kind bits.");
 
   /// The size of the cell. Due to heap alignment, we are guaranteed that the
   /// least significant bit will always be zero, so it can be used for the

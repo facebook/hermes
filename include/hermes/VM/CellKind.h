@@ -9,13 +9,14 @@
 #define HERMES_VM_CELLKIND_H
 
 #include <cstddef>
+#include <cstdint>
 #include <type_traits>
 
 namespace hermes {
 namespace vm {
 
 /// Define all cell kinds known to the garbage collector.
-enum class CellKind {
+enum class CellKind : uint8_t {
 #define CELL_KIND(name) name##Kind,
 #define SHARED_CELL_KIND(name) name##Kind,
 #define CELL_RANGE(rangeName, first, last) \
