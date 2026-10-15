@@ -222,6 +222,83 @@ cons.forEach(function(TypedArray) {
   assert.equal(view[2], 3);
 });
 
+(function testArrayIteratorFastPathSemantics() {
+  var dense = [1, 2, 3];
+  var view = new Float64Array(dense);
+  assert.arrayEqual([view[0], view[1], view[2]], dense);
+
+  var sparse = [1, , 3];
+  view = new Float64Array(sparse);
+  assert.equal(view[0], 1);
+  assert.equal(view[1], NaN);
+  assert.equal(view[2], 3);
+
+  Array.prototype[1] = 7;
+  try {
+    view = new Float64Array(sparse);
+    assert.equal(view[1], 7);
+  } finally {
+    delete Array.prototype[1];
+  }
+
+  var growing = [1, 2];
+  Object.defineProperty(growing, 0, {
+    get: function() {
+      growing.push(3);
+      return 1;
+    },
+  });
+  view = new Float64Array(growing);
+  assert.equal(view.length, 3);
+  assert.equal(view[2], 3);
+
+  var shrinking = [];
+  shrinking.length = 0xffffffff;
+  Object.defineProperty(shrinking, 0, {
+    get: function() {
+      shrinking.length = 1;
+      return 7;
+    },
+  });
+  view = new Float64Array(shrinking);
+  assert.equal(view.length, 1);
+  assert.equal(view[0], 7);
+
+  var source = [
+    {
+      valueOf: function() {
+        source[1] = 9;
+        return 1;
+      },
+    },
+    2,
+  ];
+  view = new Float64Array(source);
+  assert.equal(view[0], 1);
+  assert.equal(view[1], 2);
+
+  source = [1, 2];
+  source[Symbol.iterator] = function*() {
+    yield 7;
+    yield 8;
+  };
+  view = new Float64Array(source);
+  assert.equal(view[0], 7);
+  assert.equal(view[1], 8);
+
+  var iteratorPrototype = Object.getPrototypeOf([][Symbol.iterator]());
+  var originalNext = iteratorPrototype.next;
+  iteratorPrototype.next = function() {
+    return {value: 11, done: true};
+  };
+  try {
+    view = new Float64Array([1, 2]);
+    assert.equal(view.length, 0);
+  } finally {
+    iteratorPrototype.next = originalNext;
+  }
+})();
+
 // Check constructor from Array with arbitrary types
 cons.forEach(function(TypedArray) {
   var view = new TypedArray(['1', {}, false]);
@@ -632,6 +709,31 @@ cons.forEach(function(c, i) {
   assert.equal(ta[1], 4);
   assert.equal(ta[2], 6);
 });
+
+(function testFromArrayIteratorFastPathSemantics() {
+  var source = [
+    {
+      valueOf: function() {
+        source[1] = 9;
+        return 1;
+      },
+    },
+    2,
+  ];
+  var ta = Float64Array.from(source);
+  assert.equal(ta[0], 1);
+  assert.equal(ta[1], 2);
+
+  source = [1, 2];
+  ta = Float64Array.from(source, function(value, index) {
+    if (index === 0) {
+      source[1] = 9;
+    }
+    return value;
+  });
+  assert.equal(ta[0], 1);
+  assert.equal(ta[1], 2);
+})();
 
 /// @}
 
