@@ -289,6 +289,13 @@ print(Date.parse('Tue MayG 05 2020 00:00:00'));
 // CHECK-NEXT: 1588662000000
 print(Date.parse('Tue May G 05 2020 00:00:00'));
 // CHECK-NEXT: NaN
+// Non-ASCII code units are not treated as whitespace.
+print(Date.parse('Tue 05 May\u3000 2020 00:00:00'));
+// CHECK-NEXT: 1588662000000
+print(Date.parse('Tue 05\u00a0May 2020 00:00:00'));
+// CHECK-NEXT: NaN
+print(Date.parse('Tue 05 May 2020 00:00:00\u3000'));
+// CHECK-NEXT: NaN
 
 // Fault tolerance on spaces.
 print(Date.parse('Tue  05 May 2020 00:00:00'));
