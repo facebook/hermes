@@ -17,6 +17,7 @@ namespace vm {
 /// Define all cell kinds known to the garbage collector.
 enum class CellKind {
 #define CELL_KIND(name) name##Kind,
+#define SHARED_CELL_KIND(name) name##Kind,
 #define CELL_RANGE(rangeName, first, last) \
   rangeName##Kind_first = first##Kind, rangeName##Kind_last = last##Kind,
 #include "hermes/VM/CellKinds.def"
@@ -43,8 +44,14 @@ static_assert(
 
 /// \return true if the specified kind \p value is in the inclusive range
 /// between \p from and \p to.
-inline bool kindInRange(CellKind value, CellKind from, CellKind to) {
+constexpr bool kindInRange(CellKind value, CellKind from, CellKind to) {
   return value >= from && value <= to;
+}
+
+/// \return whether \p kind belongs to a cell in the shared heap.
+constexpr bool isSharedCellKind(CellKind kind) {
+  return kindInRange(
+      kind, CellKind::SharedCellKind_first, CellKind::SharedCellKind_last);
 }
 
 /// \return whether a sequence of CellKinds is contiguous ascending
@@ -63,10 +70,17 @@ cellKindsContiguousAscending(CellKind v1, CellKind v2, T... rest) {
 
 const char *cellKindStr(CellKind kind);
 
+/// Count of all CELL_KINDs. This does not include SHARED_CELL_KIND since shared
+/// cells will not have VTable, Metadata, etc.
 static constexpr size_t kNumCellKinds = 0
 #define CELL_KIND(name) +1
 #include "hermes/VM/CellKinds.def"
     ;
+
+/// Shared kinds must be put after every normal cell kind.
+static_assert(
+    static_cast<size_t>(CellKind::SharedCellKind_first) == kNumCellKinds,
+    "New shared cell kind must be put after all normal cell kinds");
 
 } // namespace vm
 } // namespace hermes

@@ -14,6 +14,7 @@ namespace vm {
 
 static const char *cellKinds[] = {
 #define CELL_KIND(name) #name,
+#define SHARED_CELL_KIND(name) #name,
 #include "hermes/VM/CellKinds.def"
 };
 

@@ -12,6 +12,14 @@
 #define CELL_KIND(name)
 #endif
 
+// This is intentionally a separate macro from CELL_KIND.
+// Metadata::metadataTable and VTable::vtableArray require that the cell type
+// for a CELL_KIND must have a VTable. But shared cells do not have it. It only
+// has an arm in the CellKind enum.
+#ifndef SHARED_CELL_KIND
+#define SHARED_CELL_KIND(name)
+#endif
+
 #ifndef CELL_JS_NAME
 #define CELL_JS_NAME(name, jsClassName)
 #endif
@@ -113,11 +121,18 @@ CELL_KIND(JSClass)
 CELL_CLASS(JSFunction, "Function")
 CELL_KIND(NativeJSFunction)
 
+// Cells in the shared heap. In the same CellKind enum so that a shared kind
+// can never hold the same integer value as a local one, but last, after every
+// local kind, so the values fall past the end of the CELL_KIND-indexed tables
+// rather than aliasing an entry in one.
+SHARED_CELL_KIND(SharedArray)
+
 // Update AllCells, below, if new CellKinds are added.
 // (AllCells is useful for checking that a CellKind is valid.)
 
 // Define inheritance ranges.
 CELL_RANGE(AllCells, Uninitialized, NativeJSFunction)
+CELL_RANGE(SharedCell, SharedArray, SharedArray)
 CELL_RANGE(Object, JSObject, NativeJSFunction)
 CELL_RANGE(DecoratedObject, DecoratedObject, HostObject)
 CELL_RANGE(ArrayImpl, Arguments, JSArray)
@@ -145,5 +160,6 @@ CELL_RANGE(
 
 #undef CELL_KIND
 #undef CELL_JS_NAME
+#undef SHARED_CELL_KIND
 #undef CELL_RANGE
 #undef CELL_CLASS
