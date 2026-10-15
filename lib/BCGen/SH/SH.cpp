@@ -25,6 +25,7 @@
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRVerifier.h"
 #include "hermes/IR/Instrs.h"
+#include "hermes/Regex/RegexSerialization.h"
 #include "hermes/Support/BigIntSupport.h"
 #include "hermes/Support/DenseMapInfoSpecializations.h"
 #include "hermes/Support/HashString.h"
@@ -432,6 +433,10 @@ struct ModuleGen {
 
   /// Literal buffers for objects and arrays.
   SHLiteralBuffers literalBuffers;
+
+  /// Bytecode of the regexp literals in the module, uniqued by pattern and
+  /// flags.
+  UniquingRegExpTable regexpTable{};
 
   /// Maintain a table of all unique source file locations used by throwing
   /// instructions.
@@ -1797,25 +1802,24 @@ class InstrGen {
     uint32_t flagsStrID =
         moduleGen_.stringTable.add(inst.getFlags()->getValue().str());
 
-    // Compile the regexp. We expect this to succeed because the AST went
-    // through the SemanticValidator. This is a bit of a hack: what we would
-    // really like to do is have the Parser emit a CompiledRegExp that can be
-    // threaded through the AST and then through the IR to this instruction
-    // selection, but that is too awkward, so we compile again here.
-    // uint32_t reBytecodeID = UINT32_MAX;
-    // if (auto regexp = CompiledRegExp::tryCompile(
-    //         inst.getPattern()->getValue().str(),
-    //         inst.getFlags()->getValue().str())) {
-    //   reBytecodeID = moduleGen_.regexpTable.addRegExp(std::move(*regexp));
-    // }
+    // The SemanticResolver already validated and compiled the regexp. Emit
+    // its bytecode so the runtime does not have to compile it again every
+    // time the instruction runs.
+    CompiledRegExp &regexp = F_.getContext().getCompiledRegExp(
+        inst.getPattern()->getValue().getUnderlyingPointer(),
+        inst.getFlags()->getValue().getUnderlyingPointer());
+    uint32_t regexpID = moduleGen_.regexpTable.addRegExp(&regexp);
+    const RegExpTableEntry &entry =
+        moduleGen_.regexpTable.getEntryList()[regexpID];
 
-    // TODO(T132343328): Compile the regexp bytecode ahead of time.
     generateValue(inst);
     os_ << " = ";
     os_ << "_sh_ljs_create_regexp(shr, ";
     os_ << llvh::format("get_symbols(shUnit)[%u]", patternStrID);
     os_ << ", ";
     os_ << llvh::format("get_symbols(shUnit)[%u]", flagsStrID);
+    os_ << llvh::format(
+        ", s_regexp_bytecode + %u, %u", entry.offset, entry.length);
     os_ << ");\n";
   }
   void generateTryEndInst(TryEndInst &inst) {
@@ -3106,6 +3110,7 @@ static inline SHReadPropertyCacheEntry* get_read_prop_cache(SHUnit *);
 static inline SHPrivateNameCacheEntry* get_private_name_cache(SHUnit *);
 static const SHSrcLoc s_source_locations[];
 static SHNativeFuncInfo s_function_info_table[];
+static const uint8_t s_regexp_bytecode[];
 )";
 
     // Declare extern functions.
@@ -3136,6 +3141,11 @@ static SHNativeFuncInfo s_function_info_table[];
 
   if (options.format == DumpBytecode || options.format == EmitBundle) {
     moduleGen.literalBuffers.generate(OS);
+    OS << "static const uint8_t s_regexp_bytecode["
+       << moduleGen.regexpTable.getBytecodeBuffer().size() << "] = {";
+    for (uint8_t c : moduleGen.regexpTable.getBytecodeBuffer())
+      OS << (int)c << ",";
+    OS << "};\n";
     moduleGen.srcLocationTable.generate(
         OS, M->getContext().getSourceErrorManager());
     moduleGen.nativeFunctionTable.generate(OS);

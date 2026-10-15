@@ -875,8 +875,14 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_del_by_val_loose(
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_get_string(SHRuntime *shr, SHSymbolID symID);
 
-SHERMES_EXPORT SHLegacyValue
-_sh_ljs_create_regexp(SHRuntime *shr, SHSymbolID pattern, SHSymbolID flags);
+/// Create a RegExp object from precompiled regexp bytecode. The bytecode is
+/// copied, and it must have been compiled from \p pattern and \p flags.
+SHERMES_EXPORT SHLegacyValue _sh_ljs_create_regexp(
+    SHRuntime *shr,
+    SHSymbolID pattern,
+    SHSymbolID flags,
+    const uint8_t *bytecode,
+    uint32_t bytecodeSize);
 
 /// \param value the string of the BigInt.
 /// \param size  the size of the string \c value.
