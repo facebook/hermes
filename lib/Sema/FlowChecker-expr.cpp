@@ -709,20 +709,23 @@ class FlowChecker::ExprVisitor {
       // Compound assignment (+=, -=, etc) reads and writes.
       // `=` is handled via the isWrite flag set by visitAssignmentTarget.
       k.write = true;
-    } else if (auto *upd = llvh::dyn_cast<ESTree::UpdateExpressionNode>(parent);
-               upd && upd->_argument == node) {
+    } else if (
+        auto *upd = llvh::dyn_cast<ESTree::UpdateExpressionNode>(parent);
+        upd && upd->_argument == node) {
       k.write = true;
-    } else if (auto *forIn = llvh::dyn_cast<ESTree::ForInStatementNode>(parent);
-               forIn && forIn->_left == node) {
-      k.write = true;
-      k.read = false;
-    } else if (auto *forOf = llvh::dyn_cast<ESTree::ForOfStatementNode>(parent);
-               forOf && forOf->_left == node) {
+    } else if (
+        auto *forIn = llvh::dyn_cast<ESTree::ForInStatementNode>(parent);
+        forIn && forIn->_left == node) {
       k.write = true;
       k.read = false;
-    } else if (auto *un = llvh::dyn_cast<ESTree::UnaryExpressionNode>(parent);
-               un && un->_argument == node &&
-               un->_operator == outer_.kw_.identDelete) {
+    } else if (
+        auto *forOf = llvh::dyn_cast<ESTree::ForOfStatementNode>(parent);
+        forOf && forOf->_left == node) {
+      k.write = true;
+      k.read = false;
+    } else if (
+        auto *un = llvh::dyn_cast<ESTree::UnaryExpressionNode>(parent); un &&
+        un->_argument == node && un->_operator == outer_.kw_.identDelete) {
       k.read = false;
       k.write = true;
     }
@@ -2424,9 +2427,10 @@ class FlowChecker::ExprVisitor {
               node, identCallee, typeArgs, decl);
         }
       }
-    } else if (auto *memCallee =
-                   llvh::dyn_cast<ESTree::MemberExpressionNode>(node->_callee);
-               memCallee && node->_typeArguments && !memCallee->_computed) {
+    } else if (
+        auto *memCallee =
+            llvh::dyn_cast<ESTree::MemberExpressionNode>(node->_callee);
+        memCallee && node->_typeArguments && !memCallee->_computed) {
       // Handle explicit type arguments on generic method calls.
       // Visit the object early to determine the class type, unless the
       // callee has already been visited above (in which case its object
@@ -2456,6 +2460,16 @@ class FlowChecker::ExprVisitor {
         field =
             outer_.lookupPropertyOnClass(classType, name, memCallee->_property)
                 .second;
+        if (!field) {
+          // Explicit type-argument calls skip the normal member-expression
+          // visit, by setting shouldVisitCallee to false above, so report
+          // missing members here.
+          outer_.sm_.error(
+              memCallee->_property->getStartLoc(),
+              "ft: property " + name.str() + " not defined in class " +
+                  classType->getClassNameOrDefault());
+          return;
+        }
       } else if (
           auto *consType =
               llvh::dyn_cast<ClassConstructorType>(objType->info)) {
@@ -2464,8 +2478,18 @@ class FlowChecker::ExprVisitor {
         if (auto *staticInfo = classTypeInfo->getStaticObjectTypeInfo()) {
           auto optMethod = isPrivate ? staticInfo->findPrivateField(name)
                                      : staticInfo->findPublicField(name);
-          if (optMethod)
+          if (optMethod) {
             field = optMethod->getField();
+          }
+        }
+        if (!field) {
+          // Explicit type-argument calls skip the normal member-expression
+          // visit, by setting shouldVisitCallee to false above, so report
+          // missing members here.
+          outer_.sm_.error(
+              memCallee->_property->getStartLoc(),
+              "ft: static property " + name.str() + " not defined in class " +
+                  classTypeInfo->getClassNameOrDefault());
         }
       }
 
@@ -2679,7 +2703,14 @@ class FlowChecker::ExprVisitor {
                 "ft: 'super' call outside class");
             return;
           }
-          thisArgType = outer_.curClassContext_->classType;
+
+          // As long as the current function context is set to the appropriate
+          // 'this', this line will grab the correct 'this' type,  so for static
+          // methods it will be the constructor object, and for normal methods
+          // it will be the class isntance object.
+          // Now you can do  "super.methodName()" from static methods and
+          // correctly access parents static  methods
+          thisArgType = outer_.curFunctionContext_->thisParamType;
         } else {
           thisArgType = outer_.getNodeTypeOrAny(methodCallee->_object);
         }
@@ -3435,8 +3466,25 @@ class FlowChecker::ExprVisitor {
       // super() call calls the constructor of the super class.
       outer_.setNodeType(node, superClassType->getConstructorType());
     } else if (llvh::isa<ESTree::MemberExpressionNode>(parent)) {
-      // super.property lookup is on the super class.
-      outer_.setNodeType(node, curClassType->getSuperClass());
+      // If we are using 'super' in a static method or otrher static context,
+      // then super must be able to access parents values that are accesseible
+      // in a static context. thisParamType will be  ClassConstructorType if we
+      // are currently in a static context
+      if (llvh::isa<ClassConstructorType>(
+              outer_.curFunctionContext_->thisParamType->info)) {
+        Type *superClassConstructorType =
+            curClassType->getSuperClassConstructorType();
+        assert(
+            superClassConstructorType &&
+            "class with a superclass must have superclass constructor type metadata ");
+
+        // ensure super.property lookup is on the super classes static values
+        outer_.setNodeType(node, superClassConstructorType);
+      } else {
+        // super.property lookup is on the super class.
+        outer_.setNodeType(node, curClassType->getSuperClass());
+      }
+
     } else {
       outer_.sm_.error(node->getSourceRange(), "ft: invalid usage of super");
       outer_.flowContext_.setNodeType(node, outer_.flowContext_.getAny());

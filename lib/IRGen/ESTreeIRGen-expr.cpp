@@ -1043,8 +1043,8 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genMemberExpression(
           nullptr,
           Builder.getLiteralUndefined()};
     }
-    if (llvh::isa<flow::ClassType>(
-            flowContext_.getNodeTypeOrAny(superNode)->info)) {
+    auto *superTypeInfo = flowContext_.getNodeTypeOrAny(superNode)->info;
+    if (llvh::isa<flow::ClassType>(superTypeInfo)) {
       auto *property = llvh::dyn_cast<ESTree::IdentifierNode>(mem->_property);
       if (!property || mem->_computed) {
         // We can only handle super.foo, where foo is an identifier.
@@ -1056,6 +1056,18 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genMemberExpression(
             Builder.getLiteralUndefined()};
       }
       return emitTypedSuperLoad(superNode, property);
+    } else if (llvh::isa<flow::ClassConstructorType>(superTypeInfo)) {
+      auto *property = llvh::dyn_cast<ESTree::IdentifierNode>(mem->_property);
+      if (!property || mem->_computed) {
+        // We can only handle super.foo, where foo is an identifier.
+        Mod->getContext().getSourceErrorManager().error(
+            mem->getSourceRange(), "unsupported use of 'super'");
+        return MemberExpressionResult{
+            Builder.getLiteralUndefined(),
+            nullptr,
+            Builder.getLiteralUndefined()};
+      }
+      return emitStaticTypedSuperLoad(superNode, property);
     }
     // Generate `this` value first. This handles the case where we are in a
     // derived constructor but no call to `super` has been made. We must throw
@@ -1095,7 +1107,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genMemberExpression(
 
   switch (op) {
     case MemberExpressionOperation::Load:
-      return emitMemberLoad(mem, baseValue, prop);
+      return emitMemberLoad(mem, baseValue, prop, nullptr);
     case MemberExpressionOperation::Delete:
       return MemberExpressionResult{
           Builder.createDeletePropertyInst(baseValue, prop),
@@ -1212,7 +1224,8 @@ void ESTreeIRGen::emitTypedFinalMethodClosureStore(
 ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
     ESTree::MemberExpressionNode *mem,
     Value *baseValue,
-    Value *propValue) {
+    Value *propValue,
+    Value *thisValue) {
   // Final methods and static fields/methods are lowered to scope variables.
   // Getters never have their Decl propagated to the call-site, so they
   // won't be caught here — they are handled below.
@@ -1232,19 +1245,34 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
         auto optField = findFieldForMemberProp(mem, staticInfo);
         if (optField && optField->getField()->hasGetter()) {
           const auto *field = optField->getField();
-          assert(
-              field->staticKeyNode && "static getter must have staticKeyNode");
-          sema::Decl *decl = semCtx_.getExpressionDecl(field->staticKeyNode);
+          assert(field->method && "static getter must have method definition");
+
+          sema::Decl *decl = semCtx_.getExpressionDecl(
+              ESTree::getPropertyIdentifier(field->method->_key));
+
           Value *call = emitTypedGetterCall(
               decl,
-              Builder.getLiteralUndefined(),
+              thisValue ? thisValue : Builder.getLiteralUndefined(),
               flowContext_.getNodeTypeOrAny(mem));
           return MemberExpressionResult{call, nullptr, baseValue};
         }
       }
     }
   }
-
+  // Typed static super loads must have been handled above as frame-variable
+  // loads or getter calls. Their references have no runtime lookup base,
+  // so they cannot fall through to ordinary property-load instructions.
+  if (llvh::isa<ESTree::SuperNode>(mem->_object) &&
+      llvh::isa<flow::ClassConstructorType>(
+          flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
+    Mod->getContext().getSourceErrorManager().error(
+        mem->getSourceRange(),
+        "cannot generate a load for this typed static super access");
+    // baseValue would be a nullptr here. createLRef would set it to nullptr for
+    // static super nodes
+    return MemberExpressionResult{
+        Builder.getLiteralUndefined(), nullptr, thisValue};
+  }
   // Check if we are loading from a FastArray, and generate the typed IR.
   // This must be checked before the general ClassType case because Array<T>
   // is a ClassType but needs special handling for computed access.
@@ -1522,7 +1550,40 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitTypedSuperLoad(
       nullptr,
       thisValue};
 }
+ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitStaticTypedSuperLoad(
+    ESTree::SuperNode *superNode,
+    ESTree::IdentifierNode *property) {
+  auto *classType = llvh::cast<flow::ClassConstructorType>(
+      flowContext_.getNodeTypeOrAny(superNode)->info);
+  auto propName = Identifier::getFromPointer(
+      llvh::cast<ESTree::IdentifierNode>(property)->_name);
+  Value *thisValue = genThisExpression();
 
+  auto *staticType = classType->getClassTypeInfo()->getStaticObjectTypeInfo();
+  assert(
+      staticType != nullptr &&
+      "static type information must exist in order to be resolved during super handling");
+
+  // Final methods (both generic specializations and non-generic) have a
+  // Decl set on the call-site property by the FlowChecker. Load the
+  // closure from the Variable stored in the Decl's data.
+  if (auto *decl = semCtx_.getExpressionDecl(property)) {
+    Value *closure = emitLoad(getDeclData(decl), false);
+    return MemberExpressionResult{
+        closure, declFunctions_.lookup(decl), thisValue};
+  }
+
+  auto lookup = staticType->findPublicField(propName);
+  assert(lookup && "static super member must exist after typechecking");
+  const auto *field = lookup->getField();
+  assert(
+      field->hasGetter() &&
+      "static super load must have a declaration or a getter");
+  auto *methodKey = ESTree::getPropertyIdentifier(field->method->_key);
+  sema::Decl *decl = semCtx_.getExpressionDecl(methodKey);
+  Value *call = emitTypedGetterCall(decl, thisValue, field->type);
+  return MemberExpressionResult{call, nullptr, thisValue};
+}
 void ESTreeIRGen::emitTypedFieldStore(
     flow::ClassType *classType,
     ESTree::Node *prop,
@@ -1562,7 +1623,42 @@ void ESTreeIRGen::emitMemberStore(
     emitStore(storedValue, getDeclData(decl), false);
     return;
   }
-
+  // Static setter: the Decl is not propagated to the call-site, so
+  // look up the setter on the static type and emit the call.
+  if (auto *consType = llvh::dyn_cast<flow::ClassConstructorType>(
+          flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
+    if (!mem->_computed) {
+      auto *classTypeInfo =
+          llvh::cast<flow::ClassType>(consType->getClassType()->info);
+      if (auto *staticInfo = classTypeInfo->getStaticObjectTypeInfo()) {
+        auto optField = findFieldForMemberProp(mem, staticInfo);
+        if (optField && optField->getField()->hasSetter()) {
+          const auto *field = optField->getField();
+          auto *setterKeyId =
+              ESTree::getPropertyIdentifier(field->setterMethod->_key);
+          sema::Decl *decl = semCtx_.getExpressionDecl(setterKeyId);
+          // For super assignments, pass the current method's saved receiver
+          emitTypedSetterCall(
+              decl,
+              thisValue ? thisValue : Builder.getLiteralUndefined(),
+              storedValue);
+          return;
+        }
+      }
+    }
+  }
+  // Typed static super stores must have been handled above as frame-variable
+  // stores or setter calls. createLRef leaves their runtime lookup base, \p
+  // baseValue, null, so they cannot fall through to ordinary property-store
+  // instructions.
+  if (llvh::isa<ESTree::SuperNode>(mem->_object) &&
+      llvh::isa<flow::ClassConstructorType>(
+          flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
+    Mod->getContext().getSourceErrorManager().error(
+        mem->getSourceRange(),
+        "cannot generate a store for this typed static super access");
+    return;
+  }
   // If \p thisValue is set, this is a store to `super`.
   if (thisValue) {
     // Check for typed accessor setter on super.
@@ -1601,27 +1697,6 @@ void ESTreeIRGen::emitMemberStore(
             flowContext_.getNodeTypeOrAny(mem->_property)->info)) {
       Builder.createFastArrayStoreInst(storedValue, baseValue, propValue);
       return;
-    }
-  }
-
-  // Static setter: the Decl is not propagated to the call-site, so
-  // look up the setter on the static type and emit the call.
-  if (auto *consType = llvh::dyn_cast<flow::ClassConstructorType>(
-          flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
-    if (!mem->_computed) {
-      auto *classTypeInfo =
-          llvh::cast<flow::ClassType>(consType->getClassType()->info);
-      if (auto *staticInfo = classTypeInfo->getStaticObjectTypeInfo()) {
-        auto optField = findFieldForMemberProp(mem, staticInfo);
-        if (optField && optField->getField()->hasSetter()) {
-          const auto *field = optField->getField();
-          auto *setterKeyId =
-              ESTree::getPropertyIdentifier(field->setterMethod->_key);
-          sema::Decl *decl = semCtx_.getExpressionDecl(setterKeyId);
-          emitTypedSetterCall(decl, Builder.getLiteralUndefined(), storedValue);
-          return;
-        }
-      }
     }
   }
 
