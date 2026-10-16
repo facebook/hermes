@@ -710,6 +710,15 @@ static inline bool isAlpha(char16_t c) {
   return 'a' <= c && c <= 'z';
 }
 
+/// \return true if c is an ASCII whitespace character, i.e. one of the
+/// characters std::isspace accepts in the C locale. This avoids passing UTF-16
+/// code units to std::isspace, whose behavior is undefined for values that
+/// don't fit in an unsigned char.
+static inline bool isSpace(char16_t c) {
+  return c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' ||
+      c == '\r';
+}
+
 /// Read a number from the iterator at \p it into \p x.
 /// Can read integers that consist entirely of digits.
 /// \param[in,out] it is modified to the new start point of the scan if
@@ -908,7 +917,7 @@ static double parseESDate(
     if (it + len > str.end())
       return false;
     tok = str.slice(it, it + len);
-    while (it != str.end() && !std::isspace(*it) && *it != '-')
+    while (it != str.end() && !isSpace(*it) && *it != '-')
       it++;
     return true;
   };
@@ -922,7 +931,7 @@ static double parseESDate(
   };
 
   auto consumeSpaces = [&]() {
-    while (it != str.end() && std::isspace(*it))
+    while (it != str.end() && isSpace(*it))
       ++it;
   };
 
@@ -932,7 +941,7 @@ static double parseESDate(
   auto consumeSpacesOrDash = [&]() {
     auto first = true;
     while (it != str.end()) {
-      if (std::isspace(*it) || (first && *it == '-')) {
+      if (isSpace(*it) || (first && *it == '-')) {
         ++it;
       } else {
         return;
