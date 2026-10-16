@@ -164,6 +164,12 @@ TEST(CaseConversion, WtfSixteenHazards) {
 TEST(CaseConversion, SupplementaryPlane) {
   // U+10428 DESERET SMALL LETTER LONG I uppercases to U+10400.
   // \x rather than \u: \u forbids surrogate code points, even paired ones.
+  // WARNING: a \x escape consumes every hex digit that follows it, so these
+  // literals are well-formed only because a non-hex-digit (the next
+  // backslash, or the closing quote) immediately follows each 4-digit
+  // escape. Do not append text after \xDC00/\xDC28 that starts with a hex
+  // digit ('0'-'9', 'a'-'f', 'A'-'F') -- it would silently be absorbed into
+  // the preceding escape instead of becoming a separate character.
   EXPECT_EQ(u"\xD801\xDC00", convert(u"\xD801\xDC28", CaseConversion::ToUpper));
 }
 
