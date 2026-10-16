@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <tuple>
+#include <utility>
 
 namespace hermes {
 namespace unicode {
@@ -77,24 +78,33 @@ bool lookupExpansion(uint32_t cp, llvh::SmallVectorImpl<Weights> &out) {
   return true;
 }
 
-/// Append the implicit weights of \p cp to \p out, per UTS #10 section
-/// 10.1.3. Every implicitly weighted code point yields two elements.
-void appendImplicit(uint32_t cp, llvh::SmallVectorImpl<Weights> &out) {
-  uint16_t base = COLL_UNASSIGNED_BASE;
-  bool found = false;
+/// \return the two primary weights UTS #10 section 10.1.3 assigns to \p cp,
+/// which is assumed to have no entry in the collation table.
+std::pair<uint16_t, uint16_t> implicitPrimaries(uint32_t cp) {
+  // An @implicitweights range uses its base verbatim as the first primary
+  // and measures the second one from the base's anchor -- the start of the
+  // first range using that base, which is not this range's own start when
+  // two ranges share a base. It does not use the cp >> 15 / cp & 0x7FFF
+  // split below, which would spread a single base over several primaries
+  // and land the following ranges' bases inside it.
   for (const CollImplicitRange &r : COLL_IMPLICIT_RANGES) {
-    if (cp >= r.first && cp <= r.last) {
-      base = r.base;
-      found = true;
-      break;
-    }
+    if (cp >= r.first && cp <= r.last)
+      return {r.base, (uint16_t)((cp - r.anchor) | 0x8000)};
   }
-  if (!found && inRanges(COLL_UNIFIED_IDEOGRAPHS, cp)) {
+  uint16_t base = COLL_UNASSIGNED_BASE;
+  if (inRanges(COLL_UNIFIED_IDEOGRAPHS, cp)) {
     base = inRanges(COLL_HAN_CORE_BLOCKS, cp) ? COLL_HAN_CORE_BASE
                                               : COLL_HAN_OTHER_BASE;
   }
-  out.push_back({(uint16_t)(base + (cp >> 15)), 0x0020, 0x02});
-  out.push_back({(uint16_t)((cp & 0x7FFF) | 0x8000), 0x0000, 0x00});
+  return {(uint16_t)(base + (cp >> 15)), (uint16_t)((cp & 0x7FFF) | 0x8000)};
+}
+
+/// Append the implicit weights of \p cp to \p out, per UTS #10 section
+/// 10.1.3. Every implicitly weighted code point yields two elements.
+void appendImplicit(uint32_t cp, llvh::SmallVectorImpl<Weights> &out) {
+  std::pair<uint16_t, uint16_t> primaries = implicitPrimaries(cp);
+  out.push_back({primaries.first, 0x0020, 0x02});
+  out.push_back({primaries.second, 0x0000, 0x00});
 }
 
 /// \return the offset into COLL_CONTRACTIONS of the contraction whose key is
@@ -368,6 +378,10 @@ int compareUTF16(
   if (isAllASCII(left) && isAllASCII(right))
     return compareASCII(left, right);
   return compareGeneral(left, right);
+}
+
+std::pair<uint16_t, uint16_t> implicitPrimariesForTesting(uint32_t cp) {
+  return implicitPrimaries(cp);
 }
 
 } // namespace unicode
