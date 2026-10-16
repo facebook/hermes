@@ -660,6 +660,14 @@ public class NumberFormat {
   }
 
   // Implementer note: This method corresponds roughly to
+  // https://tc39.es/ecma402/#sec-formatnumber
+  // String overload for BigInt values passed as decimal strings.
+  @DoNotStrip
+  public String format(String n) throws JSRangeErrorException {
+    return mPlatformNumberFormatter.format(n);
+  }
+
+  // Implementer note: This method corresponds roughly to
   // https://tc39.es/ecma402/#sec-formatnumbertoparts
   @DoNotStrip
   public List<Map<String, String>> formatToParts(double n) throws JSRangeErrorException {
@@ -676,6 +684,38 @@ public class NumberFormat {
 
         if (keyIterator.hasNext()) {
           key = mPlatformNumberFormatter.fieldToString(keyIterator.next(), n);
+        } else {
+          key = "literal";
+        }
+        String value = sb.toString();
+        sb.setLength(0);
+
+        HashMap<String, String> part = new HashMap<>();
+        part.put("type", key);
+        part.put("value", value);
+        parts.add(part);
+      }
+    }
+
+    return parts;
+  }
+
+  // String overload for BigInt values passed as decimal strings.
+  @DoNotStrip
+  public List<Map<String, String>> formatToParts(String n) throws JSRangeErrorException {
+    ArrayList<Map<String, String>> parts = new ArrayList<>();
+
+    AttributedCharacterIterator iterator = mPlatformNumberFormatter.formatToParts(n);
+    StringBuilder sb = new StringBuilder();
+    for (char ch = iterator.first(); ch != CharacterIterator.DONE; ch = iterator.next()) {
+      sb.append(ch);
+      if (iterator.getIndex() + 1 == iterator.getRunLimit()) {
+        Iterator<AttributedCharacterIterator.Attribute> keyIterator =
+            iterator.getAttributes().keySet().iterator();
+        String key;
+
+        if (keyIterator.hasNext()) {
+          key = mPlatformNumberFormatter.fieldToString(keyIterator.next(), 0);
         } else {
           key = "literal";
         }

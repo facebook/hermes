@@ -1014,6 +1014,11 @@ std::u16string NumberFormat::format(double number) noexcept {
   return std::u16string(s.begin(), s.end());
 }
 
+std::u16string NumberFormat::format(
+    const std::string &numberString) noexcept {
+  return std::u16string(numberString.begin(), numberString.end());
+}
+
 std::vector<std::unordered_map<std::u16string, std::u16string>>
 NumberFormat::formatToParts(double number) noexcept {
   std::unordered_map<std::u16string, std::u16string> part;
@@ -1021,6 +1026,14 @@ NumberFormat::formatToParts(double number) noexcept {
   // This isn't right, but I didn't want to do more work for a stub.
   std::string s = std::to_string(number);
   part[u"value"] = {s.begin(), s.end()};
+  return std::vector<std::unordered_map<std::u16string, std::u16string>>{part};
+}
+
+std::vector<std::unordered_map<std::u16string, std::u16string>>
+NumberFormat::formatToParts(const std::string &numberString) noexcept {
+  std::unordered_map<std::u16string, std::u16string> part;
+  part[u"type"] = u"integer";
+  part[u"value"] = std::u16string(numberString.begin(), numberString.end());
   return std::vector<std::unordered_map<std::u16string, std::u16string>>{part};
 }
 
