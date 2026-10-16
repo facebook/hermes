@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_SUPPORT_ICU_H
-#define HERMES_SUPPORT_ICU_H
+#ifndef HERMES_PLATFORMINTL_IMPLICU_ICU_H
+#define HERMES_PLATFORMINTL_IMPLICU_ICU_H
 
 /// This header includes the correct ICU headers: system headers on Linux or
 /// externally-supplied on Apple platforms.
@@ -54,4 +54,4 @@
 #include <unicode/ustring.h>
 #endif
 
-#endif // HERMES_SUPPORT_ICU_H
+#endif // HERMES_PLATFORMINTL_IMPLICU_ICU_H
