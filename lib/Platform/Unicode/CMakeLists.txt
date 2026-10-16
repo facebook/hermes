@@ -9,6 +9,7 @@ set(source_files
    PlatformUnicodeICU.cpp
    PlatformUnicodeLite.cpp
    PlatformUnicodeEmscripten.cpp
+   PlatformUnicodeHermes.cpp
    CharacterProperties.cpp
 )
 
