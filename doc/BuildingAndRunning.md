@@ -7,17 +7,19 @@ This document describes how to build and run Hermes as a standalone compiler and
 
 ## Dependencies
 
-Hermes is a C++17 project. clang, gcc, and Visual C++ are supported. Hermes also requires cmake, git, ICU, Python. It builds with [CMake](https://cmake.org) and [ninja](https://ninja-build.org).
+Hermes is a C++17 project. clang, gcc, and Visual C++ are supported. Hermes also requires cmake, git, Python. It builds with [CMake](https://cmake.org) and [ninja](https://ninja-build.org).
 
 The Hermes REPL will also use libreadline, if available.
 
+ICU is not required for a default build: Unicode case conversion, normalization, collation and date formatting are all self-contained. ICU is needed only for `-DHERMES_ENABLE_INTL=ON` (off by default), and even then only on Linux and Windows, since Apple and Android builds use their platform's own Intl implementation. Install `libicu-dev` (Ubuntu) or `icu` (Arch) if you are enabling Intl.
+
 To install dependencies on Ubuntu:
 
-    apt install build-essential cmake git ninja-build libicu-dev python3 tzdata libreadline-dev
+    apt install build-essential cmake git ninja-build python3 tzdata libreadline-dev
 
 On Arch Linux:
 
-    pacman -S cmake git ninja icu python zip readline
+    pacman -S cmake git ninja python zip readline
 
 On Mac via Homebrew:
 

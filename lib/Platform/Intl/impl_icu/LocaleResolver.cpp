@@ -12,7 +12,7 @@
 #include "LocaleBCP47Object.h"
 #include "LocaleConverter.h"
 #include "OptionHelpers.h"
-#include "hermes/Platform/Unicode/icu.h"
+#include "icu.h"
 
 #include <unordered_set>
 

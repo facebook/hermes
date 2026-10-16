@@ -73,6 +73,20 @@ inline uint32_t utf16SurrogatePairToCodePoint(uint32_t lead, uint32_t trail) {
       0x10000;
 }
 
+/// Decode the code point of \p buf beginning at index \p i, advancing \p i
+/// past it. An unpaired surrogate decodes to its own value, so the input is
+/// treated as WTF-16 rather than strict UTF-16.
+/// \pre \p i is a valid index into \p buf.
+inline uint32_t nextCodePoint(llvh::ArrayRef<char16_t> buf, size_t &i) {
+  assert(i < buf.size() && "index out of range");
+  uint32_t cp = buf[i++];
+  if (isHighSurrogate(cp) && i < buf.size() && isLowSurrogate(buf[i])) {
+    cp = utf16SurrogatePairToCodePoint(cp, buf[i]);
+    ++i;
+  }
+  return cp;
+}
+
 /// \return true if the codepoint is not ASCII and is a Unicode letter.
 bool isUnicodeOnlyLetter(uint32_t cp);
 /// \return true if the codepoint is not ASCII and is a Unicode ID_Start.

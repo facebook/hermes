@@ -160,6 +160,21 @@ void convertToCase(
   CFRelease(cfstr);
 }
 
+bool localeAffectsCasing() {
+  CFLocaleRef locale = copyLocale();
+  CFStringRef language =
+      (CFStringRef)CFLocaleGetValue(locale, kCFLocaleLanguageCode);
+  bool result = language &&
+      (CFStringCompare(language, CFSTR("tr"), kCFCompareCaseInsensitive) ==
+           kCFCompareEqualTo ||
+       CFStringCompare(language, CFSTR("az"), kCFCompareCaseInsensitive) ==
+           kCFCompareEqualTo ||
+       CFStringCompare(language, CFSTR("lt"), kCFCompareCaseInsensitive) ==
+           kCFCompareEqualTo);
+  CFRelease(locale);
+  return result;
+}
+
 void normalize(llvh::SmallVectorImpl<char16_t> &buf, NormalizationForm form) {
   // UniChar is 16 bits, so a cast works.
   static_assert(sizeof(UniChar) == sizeof(char16_t), "Unexpected UniChar size");
