@@ -21,6 +21,7 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <ios>
 #include <iterator>
 #include <string>
 
@@ -51,6 +52,12 @@ std::u16string parseRow(const char *s) {
     }
     char *end = nullptr;
     unsigned long cp = std::strtoul(s, &end, 16);
+    // strtoul leaves end == s on a byte that starts no hex number, so
+    // without this the loop would spin forever. The generator strips the
+    // trailing ';' every row of the upstream file carries, but a row that
+    // reached here with any other stray byte must stop rather than hang.
+    if (end == s)
+      break;
     s = end;
     appendCodePoint(out, (uint32_t)cp);
   }
@@ -126,8 +133,13 @@ std::string dump(const std::u16string &s) {
 ///
 /// compareUTF16 deliberately stops at the tertiary level, so rows that are
 /// correctly equal there would otherwise appear out of order. The tie-break
-/// is applied only when the UCA result is 0, so it cannot mask a real
-/// ordering failure at any of the three levels.
+/// runs only when the UCA result is 0, so it can never turn a non-zero
+/// result into the wrong sign. It can still absorb a comparison that
+/// wrongly returns 0, whenever NFD code point order happens to agree with
+/// the order the row pair expects. Nothing rules that out in principle; the
+/// bound on it is empirical. Disabling the primary, the secondary and the
+/// tertiary comparison in turn each makes this suite fail, so the tie-break
+/// is not standing in for any whole level.
 int compareWithIdenticalLevel(
     const std::u16string &left,
     const std::u16string &right) {
@@ -185,8 +197,8 @@ TEST(CollationConformance, SingleElementWeightsRoundTrip) {
     int expected = a.primary < b.primary ? -1 : 1;
     EXPECT_EQ(
         compareUTF16({sa.data(), sa.size()}, {sb.data(), sb.size()}), expected)
-        << "U+" << std::hex << a.cp << " (primary " << a.primary << ") vs U+"
-        << b.cp << " (primary " << b.primary << ")";
+        << "U+" << std::hex << a.cp << " (primary 0x" << a.primary << ") vs U+"
+        << b.cp << " (primary 0x" << b.primary << ")";
   }
 }
 
