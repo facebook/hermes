@@ -629,12 +629,13 @@ class FlowChecker::ParseClassType {
       fieldType = outer_.parseTypeAnnotation(
           llvh::cast<ESTree::TypeAnnotationNode>(typeAnnotation)
               ->_typeAnnotation);
-    } else if ((llvh::isa<ESTree::NullLiteralNode>(value) ||
-                llvh::isa<ESTree::NumericLiteralNode>(value) ||
-                llvh::isa<ESTree::BooleanLiteralNode>(value) ||
-                llvh::isa<ESTree::StringLiteralNode>(value) ||
-                llvh::isa<ESTree::RegExpLiteralNode>(value) ||
-                llvh::isa<ESTree::BigIntLiteralNode>(value))) {
+    } else if (
+        (llvh::isa<ESTree::NullLiteralNode>(value) ||
+         llvh::isa<ESTree::NumericLiteralNode>(value) ||
+         llvh::isa<ESTree::BooleanLiteralNode>(value) ||
+         llvh::isa<ESTree::StringLiteralNode>(value) ||
+         llvh::isa<ESTree::RegExpLiteralNode>(value) ||
+         llvh::isa<ESTree::BigIntLiteralNode>(value))) {
       // TODO: Figure out a more general-purpose way to do inference here.
       // We likely need to share some of the logic of AnnotateScopeDecls,
       // given that there's IDZ considerations during the inference of each
@@ -1346,12 +1347,25 @@ void FlowChecker::visit(ESTree::MethodDefinitionNode *node) {
         }
       }
     }
+    Type *thisParamType = curClassContext_->classType;
+    // if the method is static  the 'this' type needs to be set to the
+    // constructor type
+    if (node->_static) {
+      thisParamType = curClassContext_->newTargetType;
+      // uses the function signature's 'this' type when present
+      if (auto *typedFuncType =
+              llvh::dyn_cast<TypedFunctionType>(funcType->info)) {
+        if (auto *thisParam = typedFuncType->getThisParam()) {
+          thisParamType = thisParam;
+        }
+      }
+    }
 
     FunctionContext functionContext(
         *this,
         fe,
         funcType,
-        curClassContext_->classType,
+        thisParamType,
         /* newTargetType */ flowContext_.getVoid());
 
     // For static methods on generic classes, replace the class type
@@ -4090,15 +4104,27 @@ FlowChecker::specializeGenericMethodWithParsedTypes(
     // Unwrap ClassConstructorType for class/function context since they
     // expect the underlying ClassType.
     Type *classTypeForContext = classType;
-    if (auto *ct = llvh::dyn_cast<ClassConstructorType>(classType->info))
+    if (auto *ct = llvh::dyn_cast<ClassConstructorType>(classType->info)) {
       classTypeForContext = ct->getClassType();
+    }
+    Type *thisParamType = classTypeForContext;
+
+    // if the method is static we need 'this' type  to be the  constructor type
+    // that contains static members
+    if (method->_static) {
+      thisParamType = classType;
+      // uses the function signatures 'this'  type when present
+      if (auto *typedFuncType =
+              llvh::dyn_cast<TypedFunctionType>(ftype->info)) {
+        if (auto *thisParam = typedFuncType->getThisParam()) {
+          thisParamType = thisParam;
+        }
+      }
+    }
+
     ClassContext classContext(*this, classTypeForContext, classType, nullptr);
     FunctionContext functionContext(
-        *this,
-        specializedFE,
-        ftype,
-        classTypeForContext,
-        flowContext_.getVoid());
+        *this, specializedFE, ftype, thisParamType, flowContext_.getVoid());
     visitFunctionLike(
         specializedFE, specializedFE->_body, specializedFE->_params);
   } else {
