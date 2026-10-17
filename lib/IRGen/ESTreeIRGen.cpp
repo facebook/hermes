@@ -53,7 +53,10 @@ Value *LReference::emitLoad() {
     case Kind::Member:
       return irgen_
           ->emitMemberLoad(
-              llvh::cast<ESTree::MemberExpressionNode>(ast_), base_, property_)
+              llvh::cast<ESTree::MemberExpressionNode>(ast_),
+              base_,
+              property_,
+              thisValue_)
           .result;
     case Kind::VarOrGlobal:
       return irgen_->emitLoad(base_, false);
@@ -480,11 +483,52 @@ LReference ESTreeIRGen::createLRef(ESTree::Node *node, bool declInit) {
     LLVM_DEBUG(llvh::dbgs() << "Creating an LRef for member expression.\n");
 
     Value *obj;
-    if (llvh::isa<ESTree::SuperNode>(ME->_object)) {
-      auto *homeObjectVar = curFunction()->capturedState.homeObject;
-      auto *RSI = emitResolveScopeInstIfNeeded(homeObjectVar->getParent());
-      Value *homeObjectVal = Builder.createLoadFrameInst(RSI, homeObjectVar);
-      obj = Builder.createLoadParentNoTrapsInst(homeObjectVal);
+    if (auto *superNode = llvh::dyn_cast<ESTree::SuperNode>(ME->_object)) {
+      auto *superTypeInfo = flowContext_.getNodeTypeOrAny(superNode)->info;
+      // setters in static contexts require special handling
+      if (auto *constructorType =
+              llvh::dyn_cast<flow::ClassConstructorType>(superTypeInfo)) {
+        bool supported = getTypedMemberExpressionDeclIfExists(ME) != nullptr;
+
+        if (!supported && !ME->_computed) {
+          auto *staticType =
+              constructorType->getClassTypeInfo()->getStaticObjectTypeInfo();
+          auto *property =
+              llvh::dyn_cast<ESTree::IdentifierNode>(ME->_property);
+
+          if (staticType && property) {
+            auto name = Identifier::getFromPointer(property->_name);
+            if (auto lookup = staticType->findPublicField(name)) {
+              supported = lookup->getField()->isAccessor();
+            }
+          }
+        }
+
+        if (!supported) {
+          Mod->getContext().getSourceErrorManager().error(
+              ME->getSourceRange(),
+              "unsupported assignment target in typed static super access");
+          return LReference(
+              LReference::Kind::Error,
+              this,
+              false,
+              ME,
+              nullptr,
+              nullptr,
+              sourceLoc);
+        }
+
+        // Static fields use frame variables; accessors call their
+        // getter/setter. Neither operation needs a runtime superclass lookup
+        // object.
+        obj = nullptr;
+      } else {
+        auto *homeObjectVar = curFunction()->capturedState.homeObject;
+        auto *RSI = emitResolveScopeInstIfNeeded(homeObjectVar->getParent());
+        Value *homeObjectVal = Builder.createLoadFrameInst(RSI, homeObjectVar);
+        obj = Builder.createLoadParentNoTrapsInst(homeObjectVal);
+      }
+
     } else {
       obj = genExpression(ME->_object);
     }

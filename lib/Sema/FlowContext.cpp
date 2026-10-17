@@ -777,10 +777,12 @@ void ClassType::init(
     Type *homeObjectType,
     Type *staticObjectType,
     Type *superClass,
+    Type *superClassConstructorType,
     size_t numLayoutSlots) {
   fields_.reserve(fields.size());
   fields_.append(fields.begin(), fields.end());
 
+  superClassConstructorType_ = superClassConstructorType;
   constructorType_ = constructorType;
   homeObjectType_ = homeObjectType;
   staticObjectType_ = staticObjectType;

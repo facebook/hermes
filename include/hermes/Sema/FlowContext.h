@@ -893,6 +893,9 @@ class ClassType : public TypeWithId {
   /// The type encoding static properties and methods of the class.
   /// Null if the class has no static elements.
   Type *staticObjectType_ = nullptr;
+  /// The super class's ClassConstructorTYpe, used for static super access.
+  /// Null for classes without a superclass and synthetic member-table types.
+  Type *superClassConstructorType_ = nullptr;
   /// Map from field name to field lookup entry.
   /// Contains all fields in this class and all superClasses.
   /// This allows us to quickly check how many fields to allocate for the class,
@@ -951,6 +954,7 @@ class ClassType : public TypeWithId {
       Type *homeObjectType,
       Type *staticObjectType,
       Type *superClass,
+      Type *superClassConstructorType,
       size_t numLayoutSlots);
 
   static bool classof(const TypeInfo *t) {
@@ -993,6 +997,10 @@ class ClassType : public TypeWithId {
     assert(isInitialized());
     return llvh::cast_or_null<ClassType>(
         staticObjectType_ ? staticObjectType_->info : nullptr);
+  }
+  Type *getSuperClassConstructorType() const {
+    assert(isInitialized());
+    return superClassConstructorType_;
   }
   /// \return the public field name lookup table.
   const llvh::SmallMapVector<Identifier, FieldLookupEntry, 4> &getFieldNameMap()

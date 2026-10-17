@@ -387,6 +387,9 @@ class FlowChecker::ParseClassType {
   llvh::SmallDenseMap<UniqueString *, size_t> staticFieldIdx{};
 
   Type *constructorType = nullptr;
+  /// The super class constructor type, used to type check uses of super in
+  /// static contexts.
+  Type *superConstructorType = nullptr;
   /// The ClassConstructorType wrapping the class, used as the 'this' type for
   /// static methods. May be nullptr.
   Type *classConsType_ = nullptr;
@@ -410,15 +413,18 @@ class FlowChecker::ParseClassType {
         classTypeParams_(
             llvh::cast_or_null<ESTree::TypeParameterDeclarationNode>(
                 classTypeParameters)),
-        classConsType_(classConsType),
-        superClassType(
-            resolveSuperClass(outer, superClass, superTypeArguments)) {
+        classConsType_(classConsType) {
     LLVM_DEBUG(
         llvh::dbgs()
         << "ParseClassType for: "
         << llvh::cast<ClassType>(classType->info)->getClassNameOrDefault().str()
         << '\n');
 
+    auto [resolvedSuperClassType, resolvedSuperConstructorType] =
+        resolveSuperClass(outer, superClass, superTypeArguments);
+
+    superClassType = resolvedSuperClassType;
+    superConstructorType = resolvedSuperConstructorType;
     ClassType *superClassTypeInfo = nullptr;
     if (superClassType) {
       superClassTypeInfo = llvh::cast<ClassType>(superClassType->info);
@@ -484,6 +490,7 @@ class FlowChecker::ParseClassType {
             /* staticObjectType */ nullptr,
             superClassTypeInfo ? superClassTypeInfo->getHomeObjectType()
                                : nullptr,
+            superConstructorType,
             nextMethodLayoutSlotIR);
 
     // Create the staticObjectType if there are static elements or the
@@ -501,6 +508,7 @@ class FlowChecker::ParseClassType {
               /* staticObjectType */ nullptr,
               superClassTypeInfo ? superClassTypeInfo->getStaticObjectType()
                                  : nullptr,
+              superConstructorType,
               0);
     }
 
@@ -511,6 +519,7 @@ class FlowChecker::ParseClassType {
             homeObjectType,
             staticObjectType,
             superClassType,
+            superConstructorType,
             nextFieldLayoutSlotIR);
   }
 
@@ -526,19 +535,23 @@ class FlowChecker::ParseClassType {
           typeParam->_name, TypeDecl{empty, classScope_, &param});
     }
   }
+  struct ResolvedSuperClassTypes {
+    Type *classType;
+    Type *constructorType;
+  };
 
-  Type *resolveSuperClass(
+  ResolvedSuperClassTypes resolveSuperClass(
       FlowChecker &outer_,
       ESTree::Node *superClass,
       ESTree::Node *superTypeArguments) {
     if (!superClass)
-      return nullptr;
+      return {nullptr, nullptr};
     auto *superClassIdent = llvh::dyn_cast<ESTree::IdentifierNode>(superClass);
     if (!superClassIdent) {
       outer_.sm_.error(
           superClass->getStartLoc(),
           "ft: only identifiers may be extended as superclasses");
-      return nullptr;
+      return {nullptr, nullptr};
     }
 
     sema::Decl *superDecl = outer_.getDecl(superClassIdent);
@@ -558,7 +571,7 @@ class FlowChecker::ParseClassType {
         outer_.sm_.error(
             superClassIdent->getSourceRange(),
             "ft: missing type arguments for superclass");
-        return nullptr;
+        return {nullptr, nullptr};
       }
       outer_.resolveGenericClassSpecialization(
           superClassIdent, superTypeArgs, superDecl);
@@ -566,22 +579,22 @@ class FlowChecker::ParseClassType {
       outer_.sm_.error(
           superTypeArguments->getStartLoc(),
           "ft: type arguments are not allowed for non-generic classes");
-      return nullptr;
+      return {nullptr, nullptr};
     }
 
     Type *superType = outer_.flowContext_.findNodeType(superClass);
     if (!superType) {
       outer_.sm_.error(superClass->getStartLoc(), "ft: super type unknown");
-      return nullptr;
+      return {nullptr, nullptr};
     }
     auto *superClassConsType =
         llvh::dyn_cast<ClassConstructorType>(superType->info);
     if (!superClassConsType) {
       outer_.sm_.error(
           superClass->getStartLoc(), "ft: super type must be a class");
-      return nullptr;
+      return {nullptr, nullptr};
     }
-    return superClassConsType->getClassType();
+    return {superClassConsType->getClassType(), superType};
   }
 
   Type *parseClassProperty(ESTree::ClassPropertyNode *prop) {
@@ -629,12 +642,13 @@ class FlowChecker::ParseClassType {
       fieldType = outer_.parseTypeAnnotation(
           llvh::cast<ESTree::TypeAnnotationNode>(typeAnnotation)
               ->_typeAnnotation);
-    } else if ((llvh::isa<ESTree::NullLiteralNode>(value) ||
-                llvh::isa<ESTree::NumericLiteralNode>(value) ||
-                llvh::isa<ESTree::BooleanLiteralNode>(value) ||
-                llvh::isa<ESTree::StringLiteralNode>(value) ||
-                llvh::isa<ESTree::RegExpLiteralNode>(value) ||
-                llvh::isa<ESTree::BigIntLiteralNode>(value))) {
+    } else if (
+        (llvh::isa<ESTree::NullLiteralNode>(value) ||
+         llvh::isa<ESTree::NumericLiteralNode>(value) ||
+         llvh::isa<ESTree::BooleanLiteralNode>(value) ||
+         llvh::isa<ESTree::StringLiteralNode>(value) ||
+         llvh::isa<ESTree::RegExpLiteralNode>(value) ||
+         llvh::isa<ESTree::BigIntLiteralNode>(value))) {
       // TODO: Figure out a more general-purpose way to do inference here.
       // We likely need to share some of the logic of AnnotateScopeDecls,
       // given that there's IDZ considerations during the inference of each
@@ -857,7 +871,7 @@ class FlowChecker::ParseClassType {
             classBody,
             outer_.bindingTable_.getCurrentScope(),
             classScope_,
-            llvh::cast<ClassType>(classType->info));
+            classType);
       } else {
         // Create a Decl for non-generic final methods and all static
         // methods, and store it on the method key IdentifierNode.
@@ -1346,12 +1360,25 @@ void FlowChecker::visit(ESTree::MethodDefinitionNode *node) {
         }
       }
     }
+    Type *thisParamType = curClassContext_->classType;
+    // if the method is static  the 'this' type needs to be set to the
+    // constructor type
+    if (node->_static) {
+      thisParamType = curClassContext_->newTargetType;
+      // uses the function signature's 'this' type when present
+      if (auto *typedFuncType =
+              llvh::dyn_cast<TypedFunctionType>(funcType->info)) {
+        if (auto *thisParam = typedFuncType->getThisParam()) {
+          thisParamType = thisParam;
+        }
+      }
+    }
 
     FunctionContext functionContext(
         *this,
         fe,
         funcType,
-        curClassContext_->classType,
+        thisParamType,
         /* newTargetType */ flowContext_.getVoid());
 
     // For static methods on generic classes, replace the class type
@@ -3324,7 +3351,8 @@ std::pair<ESTree::Node *, bool> FlowChecker::specializeGenericImpl(
     GenericInfo<ESTree::Node> &generic,
     sema::LexicalScope *cloneScope,
     SMRange errorRange,
-    llvh::ArrayRef<Type *> typeArgTypes) {
+    llvh::ArrayRef<Type *> typeArgTypes,
+    flow::Type *receiverThisType) {
   assert(cloneScope && "must have cloneScope");
 
   // Extract info from types.
@@ -3334,6 +3362,19 @@ std::pair<ESTree::Node *, bool> FlowChecker::specializeGenericImpl(
     typeArgs.push_back(type->info);
   }
 
+  if (receiverThisType) {
+    assert(
+        receiverThisType->info &&
+        "missing call receiver type info for generic specialization");
+    // This forces a new generic specialization to be generated per call
+    // receiver 'this' type. This prevents an issue with 'this' types where the
+    // first call to a generic method would record the  receivers 'this' and any
+    // subsequent calls would check their receivers 'this' against the first
+    // call. This meant you could not call a  generic method with a base class
+    // receiver  after calling a derived class receiver with the same generic
+    // type parameters.
+    typeArgs.push_back(receiverThisType->info);
+  }
   // Retrieve specialization if it exists.
   GenericInfo<ESTree::Node>::TypeArgsRef typeArgsRef = typeArgs;
   ESTree::Node *specialization = generic.getSpecialization(typeArgsRef);
@@ -3901,7 +3942,7 @@ void FlowChecker::registerGenericMethod(
     ESTree::ClassBodyNode *classBody,
     const TypeBindingTableScopePtrTy &bindingScope,
     sema::LexicalScope *classScope,
-    flow::ClassType *classTypeInfo) {
+    flow::Type *classType) {
   assert(classScope && "expected class scope");
   assert(
       llvh::cast<ESTree::FunctionExpressionNode>(method->_value)
@@ -3910,7 +3951,7 @@ void FlowChecker::registerGenericMethod(
   GenericInfo<ESTree::Node> &info =
       generics_.emplace_back(method, classBody, bindingScope);
   info.classScope = classScope;
-  info.containingClassType = classTypeInfo;
+  info.containingClassType = classType;
   [[maybe_unused]] auto [it, inserted] =
       genericMethodsMap_.try_emplace(method, &info);
   assert(inserted && "duplicate generic method");
@@ -3940,11 +3981,16 @@ void FlowChecker::resolveCallToGenericMethodSpecialization(
     typeArgTypes.push_back(type);
   }
 
-  // Get the object type to use as the 'this' type.
-  Type *objType = getNodeTypeOrAny(callee->_object);
+  // Get the object type to use as the 'this' type. Ensure that the 'this' type
+  // is the call receiver type. In the case of a 'super' node the super node
+  // will be typed as the expected super class type, so we need to get actual
+  // 'this' from the function context
+  Type *receiverThisType = llvh::isa<ESTree::SuperNode>(callee->_object)
+      ? curFunctionContext_->thisParamType
+      : getNodeTypeOrAny(callee->_object);
 
   auto result = specializeGenericMethodWithParsedTypes(
-      method, node->getSourceRange(), typeArgTypes, objType);
+      method, node->getSourceRange(), typeArgTypes, receiverThisType);
 
   if (result.type) {
     setNodeType(callee, result.type);
@@ -3962,11 +4008,15 @@ void FlowChecker::resolveCallToGenericMethodSpecializationWithParsedTypes(
     ESTree::MethodDefinitionNode *method) {
   assert(method && "expected valid method");
 
-  // Get the object type to use as the 'this' type.
-  Type *objType = getNodeTypeOrAny(callee->_object);
-
+  // Get the object type to use as the 'this' type. Ensure that the 'this' type
+  // is the call receiver type. In the case of a 'super' node the super node
+  // will be typed as the expected super class type, so we need to get actual
+  // 'this' from the function context
+  Type *receiverThisType = llvh::isa<ESTree::SuperNode>(callee->_object)
+      ? curFunctionContext_->thisParamType
+      : getNodeTypeOrAny(callee->_object);
   auto result = specializeGenericMethodWithParsedTypes(
-      method, node->getSourceRange(), typeArgTypes, objType);
+      method, node->getSourceRange(), typeArgTypes, receiverThisType);
 
   if (result.type) {
     setNodeType(callee, result.type);
@@ -4035,7 +4085,7 @@ FlowChecker::specializeGenericMethodWithParsedTypes(
   GenericInfo<ESTree::Node> &generic = getGenericMethodInfoMustExist(method);
 
   auto [specialization, wasNewlyCreated] = specializeGenericImpl(
-      generic, generic.classScope, errorRange, typeArgTypes);
+      generic, generic.classScope, errorRange, typeArgTypes, classType);
   if (!specialization) {
     return {};
   }
@@ -4080,7 +4130,7 @@ FlowChecker::specializeGenericMethodWithParsedTypes(
       auto *methodId = ESTree::getPropertyIdentifier(specializedMethod->_key);
       decl = semContext_.newDeclInScope(
           methodId->_name, sema::Decl::Kind::Const, generic.classScope);
-      generic.containingClassType->addSpecializedMethodDecl(
+      generic.resolveContainingClassType()->addSpecializedMethodDecl(
           specializedMethod, decl);
     }
 
@@ -4090,22 +4140,35 @@ FlowChecker::specializeGenericMethodWithParsedTypes(
     // Unwrap ClassConstructorType for class/function context since they
     // expect the underlying ClassType.
     Type *classTypeForContext = classType;
-    if (auto *ct = llvh::dyn_cast<ClassConstructorType>(classType->info))
+    if (auto *ct = llvh::dyn_cast<ClassConstructorType>(classType->info)) {
       classTypeForContext = ct->getClassType();
-    ClassContext classContext(*this, classTypeForContext, classType, nullptr);
+    }
+    Type *thisParamType = classTypeForContext;
+
+    // if the method is static we need 'this' type  to be the  constructor type
+    // that contains static members
+    if (method->_static) {
+      thisParamType = classType;
+      // uses the function signatures 'this'  type when present
+      if (auto *typedFuncType =
+              llvh::dyn_cast<TypedFunctionType>(ftype->info)) {
+        if (auto *thisParam = typedFuncType->getThisParam()) {
+          thisParamType = thisParam;
+        }
+      }
+    }
+
+    ClassContext classContext(
+        *this, generic.containingClassType, classType, nullptr);
     FunctionContext functionContext(
-        *this,
-        specializedFE,
-        ftype,
-        classTypeForContext,
-        flowContext_.getVoid());
+        *this, specializedFE, ftype, thisParamType, flowContext_.getVoid());
     visitFunctionLike(
         specializedFE, specializedFE->_body, specializedFE->_params);
   } else {
     ftype = getNodeTypeOrAny(specializedMethod);
     // Look up the existing Decl for this specialization.
     if (generic.containingClassType) {
-      decl = generic.containingClassType->findSpecializedMethodDecl(
+      decl = generic.resolveContainingClassType()->findSpecializedMethodDecl(
           specializedMethod);
     }
   }

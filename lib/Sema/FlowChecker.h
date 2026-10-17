@@ -165,15 +165,18 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
     /// Null for non-method generics.
     sema::LexicalScope *classScope = nullptr;
 
-    /// The ClassType containing this generic method.
+    /// The Type of the class containing this generic method.
     /// Null for non-method generics.
-    flow::ClassType *containingClassType = nullptr;
-
+    flow::Type *containingClassType = nullptr;
     /// Map from the list of type arguments to the specialization.
     llvh::DenseMap<TypeArgsRef, Spec *, TypeArrayDenseMapInfo>
         specializations{};
 
    public:
+    /// Returns the ClassType contained in the containingClassType field;
+    flow::ClassType *resolveContainingClassType() const {
+      return llvh::cast<flow::ClassType>(containingClassType->info);
+    }
     /// \param bindingTableScope takes shared ownership of the binding table
     ///   scope.
     GenericInfo(
@@ -941,7 +944,7 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
       ESTree::ClassBodyNode *classBody,
       const TypeBindingTableScopePtrTy &bindingTableScope,
       sema::LexicalScope *classScope,
-      flow::ClassType *classTypeInfo);
+      flow::Type *classType);
 
   /// \pre \p method is a generic method that has been registered.
   /// \return the generic info associated with \p method.
@@ -1009,13 +1012,15 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// \param cloneScope scope for cloning (passed to cloneNode).
   /// \param errorRange for error reporting.
   /// \param typeArgTypes the type arguments to specialize with.
+  /// \param receiverThisType the type of the receivers current 'this'
   /// \return {specialization node, wasNewlyCreated}, or {nullptr, false} on
   /// error.
   std::pair<ESTree::Node *, bool> specializeGenericImpl(
       GenericInfo<ESTree::Node> &generic,
       sema::LexicalScope *cloneScope,
       SMRange errorRange,
-      llvh::ArrayRef<Type *> typeArgTypes);
+      llvh::ArrayRef<Type *> typeArgTypes,
+      flow::Type *receiverThisType = nullptr);
 
   /// \param key the property key to attempt to convert to an identifier,
   ///   e.g. StringLiteralNode, IdentifierNode, or NumericLiteralNode.
