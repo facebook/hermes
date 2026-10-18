@@ -2679,7 +2679,9 @@ class FlowChecker::ExprVisitor {
                 "ft: 'super' call outside class");
             return;
           }
-          thisArgType = outer_.curClassContext_->classType;
+          thisArgType = outer_.curFunctionContext_->thisParamType
+              ? outer_.curFunctionContext_->thisParamType
+              : outer_.curClassContext_->classType;
         } else {
           thisArgType = outer_.getNodeTypeOrAny(methodCallee->_object);
         }
@@ -3435,8 +3437,21 @@ class FlowChecker::ExprVisitor {
       // super() call calls the constructor of the super class.
       outer_.setNodeType(node, superClassType->getConstructorType());
     } else if (llvh::isa<ESTree::MemberExpressionNode>(parent)) {
-      // super.property lookup is on the super class.
-      outer_.setNodeType(node, curClassType->getSuperClass());
+      // A static method's home object is the class constructor, so static
+      // super.property lookup is on the superclass constructor. Instance
+      // methods use the superclass instance type.
+      if (outer_.curFunctionContext_ &&
+          outer_.curFunctionContext_->thisParamType &&
+          llvh::isa<ClassConstructorType>(
+              outer_.curFunctionContext_->thisParamType->info)) {
+        outer_.setNodeType(
+            node,
+            outer_.flowContext_.createType(
+                outer_.flowContext_.createClassConstructor(
+                    curClassType->getSuperClass())));
+      } else {
+        outer_.setNodeType(node, curClassType->getSuperClass());
+      }
     } else {
       outer_.sm_.error(node->getSourceRange(), "ft: invalid usage of super");
       outer_.flowContext_.setNodeType(node, outer_.flowContext_.getAny());
@@ -3646,8 +3661,18 @@ class FlowChecker::ExprVisitor {
             continue;
           typeArgs = std::move(inferred);
         }
+        Type *thisType = objType;
+        if (llvh::isa<ESTree::SuperNode>(callee->_object) &&
+            outer_.curFunctionContext_ &&
+            outer_.curFunctionContext_->thisParamType) {
+          thisType = outer_.curFunctionContext_->thisParamType;
+        }
         auto result = outer_.specializeGenericMethodWithParsedTypes(
-            overloadMethod, node->getSourceRange(), typeArgs, objType);
+            overloadMethod,
+            node->getSourceRange(),
+            typeArgs,
+            objType,
+            thisType);
         if (!result.type)
           continue;
         overloadType = result.type;

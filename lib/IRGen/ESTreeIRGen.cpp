@@ -480,11 +480,21 @@ LReference ESTreeIRGen::createLRef(ESTree::Node *node, bool declInit) {
     LLVM_DEBUG(llvh::dbgs() << "Creating an LRef for member expression.\n");
 
     Value *obj;
+    Value *thisVal = nullptr;
     if (llvh::isa<ESTree::SuperNode>(ME->_object)) {
-      auto *homeObjectVar = curFunction()->capturedState.homeObject;
-      auto *RSI = emitResolveScopeInstIfNeeded(homeObjectVar->getParent());
-      Value *homeObjectVal = Builder.createLoadFrameInst(RSI, homeObjectVar);
-      obj = Builder.createLoadParentNoTrapsInst(homeObjectVal);
+      auto *superType = flowContext_.getNodeTypeOrAny(ME->_object)->info;
+      if (llvh::isa<flow::ClassConstructorType>(superType)) {
+        // Typed static members are resolved through their Decl or static
+        // accessor metadata. Do not load the instance home object here: static
+        // methods don't have one. The receiver is supplied separately below.
+        thisVal = genThisExpression();
+        obj = thisVal;
+      } else {
+        auto *homeObjectVar = curFunction()->capturedState.homeObject;
+        auto *RSI = emitResolveScopeInstIfNeeded(homeObjectVar->getParent());
+        Value *homeObjectVal = Builder.createLoadFrameInst(RSI, homeObjectVar);
+        obj = Builder.createLoadParentNoTrapsInst(homeObjectVal);
+      }
     } else {
       obj = genExpression(ME->_object);
     }
@@ -508,10 +518,10 @@ LReference ESTreeIRGen::createLRef(ESTree::Node *node, bool declInit) {
       prop = genMemberExpressionProperty(ME);
     }
 
-    Value *thisVal = nullptr;
     // `thisVal` should only be set for `super` references.
     if (llvh::isa<ESTree::SuperNode>(ME->_object)) {
-      thisVal = genThisExpression();
+      if (!thisVal)
+        thisVal = genThisExpression();
     }
     return LReference(
         LReference::Kind::Member,
