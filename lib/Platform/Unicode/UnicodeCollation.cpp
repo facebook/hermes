@@ -293,9 +293,9 @@ int compareLevel(
   return i == left.size() ? -1 : 1;
 }
 
-} // namespace
-
-int compareUTF16(
+/// Compare \p left and \p right by the full UTS #10 algorithm: normalize to
+/// NFD, build collation element arrays, then walk the three levels.
+int compareGeneral(
     llvh::ArrayRef<char16_t> left,
     llvh::ArrayRef<char16_t> right) {
   llvh::SmallVector<Weights, 64> l, r;
@@ -310,6 +310,64 @@ int compareUTF16(
     return c;
   return compareLevel(
       l, r, [](const Weights &w) { return (uint32_t)w.tertiary; });
+}
+
+/// \return true if every code unit of \p s is ASCII.
+bool isAllASCII(llvh::ArrayRef<char16_t> s) {
+  for (char16_t c : s)
+    if (c >= 0x80)
+      return false;
+  return true;
+}
+
+/// Compare two all-ASCII strings at the primary level without normalizing or
+/// building collation element arrays.
+///
+/// This is sound because ASCII's NFD-stability is guaranteed by Unicode's
+/// stability policy. The other two preconditions -- that every ASCII code
+/// point has a single-element mapping, and that no contraction is entirely
+/// ASCII -- are properties of the DUCET data rather than of Unicode itself,
+/// so the generator asserts both rather than assuming them. Sorting ASCII
+/// strings is the common use of localeCompare, and the general path
+/// allocates two element arrays for every comparison.
+///
+/// Strings that tie at the primary level fall through to \c compareGeneral,
+/// which redoes the primary-level walk from scratch, so a case-only
+/// difference such as "a" vs "A" does strictly more work than skipping the
+/// fast path entirely would; the trade-off is accepted because it keeps the
+/// level 2 and 3 walks in exactly one place.
+int compareASCII(
+    llvh::ArrayRef<char16_t> left,
+    llvh::ArrayRef<char16_t> right) {
+  // Some ASCII code points are completely ignorable, so this skips zero
+  // primaries exactly as compareLevel does.
+  size_t i = 0, j = 0;
+  Weights lw{}, rw{};
+  for (;;) {
+    while (i < left.size() && (!lookupRun(left[i], lw) || lw.primary == 0))
+      ++i;
+    while (j < right.size() && (!lookupRun(right[j], rw) || rw.primary == 0))
+      ++j;
+    if (i == left.size() || j == right.size())
+      break;
+    if (lw.primary != rw.primary)
+      return lw.primary < rw.primary ? -1 : 1;
+    ++i;
+    ++j;
+  }
+  if (i != left.size() || j != right.size())
+    return i == left.size() ? -1 : 1;
+  return compareGeneral(left, right);
+}
+
+} // namespace
+
+int compareUTF16(
+    llvh::ArrayRef<char16_t> left,
+    llvh::ArrayRef<char16_t> right) {
+  if (isAllASCII(left) && isAllASCII(right))
+    return compareASCII(left, right);
+  return compareGeneral(left, right);
 }
 
 } // namespace unicode
