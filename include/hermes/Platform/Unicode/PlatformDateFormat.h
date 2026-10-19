@@ -26,8 +26,11 @@ namespace platform_unicode {
 /// their own. Apple, through CoreFoundation, and Android, through
 /// java.text.DateFormat, have one and do not call this.
 ///
-/// \p unixtimeMs must be finite. Non-finite timestamps are turned into
-/// "Invalid Date" by the caller in Date.cpp and never reach here.
+/// \p unixtimeMs must be finite; the behavior is undefined otherwise. The
+/// debug assert that checks this is compiled out under NDEBUG, and converting
+/// a non-finite double to int64_t is itself undefined behavior. Non-finite
+/// timestamps are turned into "Invalid Date" by the caller in Date.cpp and
+/// never reach here.
 void formatDateTimeFixed(
     double unixtimeMs,
     bool formatDate,
