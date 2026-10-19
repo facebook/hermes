@@ -14,7 +14,10 @@ struct NormTestRow {
 };
 
 // clang-format off
-static constexpr NormTestRow NORM_TEST_ROWS[] = {
+// const, not constexpr: MSVC folds distinct string literals in a constexpr
+// initializer (e.g. "0F19 003F" and "296F 0021") into one, silently giving a
+// few rows another row's text. A const table is unaffected.
+static const NormTestRow NORM_TEST_ROWS[] = {
   {"1E0A;1E0A;0044 0307;1E0A;0044 0307", 0},
   {"1E0C;1E0C;0044 0323;1E0C;0044 0323", 0},
   {"1E0A 0323;1E0C 0307;0044 0323 0307;1E0C 0307;0044 0323 0307", 0},
