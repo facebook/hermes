@@ -59,6 +59,12 @@ public class AndroidUnicodeUtils {
   }
 
   @DoNotStrip
+  public static boolean localeAffectsCasing() {
+    String language = Locale.getDefault().getLanguage();
+    return language.equals("tr") || language.equals("az") || language.equals("lt");
+  }
+
+  @DoNotStrip
   public static String normalize(String input, int form) {
     // Values must match NormalizationForm in PlatformUnicode.h.
     final int formC = 0;
