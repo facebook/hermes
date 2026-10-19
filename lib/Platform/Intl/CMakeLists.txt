@@ -21,19 +21,9 @@ if(HERMES_ENABLE_INTL)
     set_target_properties(hermesPlatformIntl_obj PROPERTIES UNITY_BUILD false)
     target_compile_options(hermesPlatformIntl_obj PRIVATE -fobjc-arc)
   else()
-    add_hermes_library(hermesPlatformIntl
-        PlatformIntlICU.cpp
-        PlatformIntlShared.cpp
-        impl_icu/Collator.cpp
-        impl_icu/IntlUtils.cpp
-        impl_icu/LocaleConverter.cpp
-        impl_icu/LocaleBCP47Object.cpp
-        impl_icu/LocaleResolver.cpp
-        impl_icu/OptionHelpers.cpp
-        LINK_OBJLIBS
-        hermesBCP47Parser
-        hermesPublic
-    )
-    hermes_link_icu(hermesPlatformIntl_obj)
+    # The ICU-backed implementation was deleted along with the ICU dependency.
+    # Apple and Android have native Intl backends; nothing else does.
+    message(FATAL_ERROR
+      "HERMES_ENABLE_INTL is only supported on Apple and Android platforms.")
   endif()
 endif()

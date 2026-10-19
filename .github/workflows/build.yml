@@ -106,20 +106,16 @@ jobs:
         git clone https://github.com/tc39/test262
         cd test262
         git checkout c9aa6126e8f6fe2c6f668c65bfba771ffc8a6096
-    - name: Run test262 with Intl
+    - name: Run test262
       env:
         LIT_HERMES_EXTRA_FLAGS: ${{ matrix.lit_flags }}
       run: |-
         cmake -S hermes -GNinja -B build -DCMAKE_BUILD_TYPE=Debug ${{ matrix.cmake_flags }}
         cmake --build build --target check-hermes all
 
-        cmake -S hermes -GNinja -B build_intl -DHERMES_ENABLE_INTL=ON -DCMAKE_CXX_FLAGS=-O2 -DCMAKE_C_FLAGS=-O2 -DCMAKE_BUILD_TYPE=Debug ${{ matrix.cmake_flags }}
-        cmake --build ./build_intl
-        # Not running Hermes test with -DHERMES_ENABLE_INTL=ON  until more of
-        # Intl is built out: toLocaleLowerCase and toLocaleUpperCase are the two
-        # main ones.
-        # cmake --build ./build_intl --target check-hermes
-        python3 hermes/utils/test_runner.py --test-intl test262/test -b build_intl/bin ${{ matrix.test_runner_flags }}
+        # Intl is unavailable on Linux: the ICU-backed implementation was
+        # removed with the ICU dependency, so intl402 is not run here.
+        python3 hermes/utils/test_runner.py test262/test -b build/bin ${{ matrix.test_runner_flags }}
 
   test-linux-armv7:
     runs-on: ubuntu-24.04-arm
@@ -148,15 +144,9 @@ jobs:
             -DCMAKE_SYSTEM_PROCESSOR=arm -DCMAKE_SYSTEM_NAME=Linux
           cmake --build build --target check-hermes all
 
-          cmake -S "${{ github.event.repository.name }}" -GNinja -B build_intl -DHERMES_ENABLE_INTL=ON \
-            -DCMAKE_CXX_FLAGS=-O2 -DCMAKE_C_FLAGS=-O2 -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_SYSTEM_PROCESSOR=arm -DCMAKE_SYSTEM_NAME=Linux
-          cmake --build ./build_intl
-          # Not running Hermes test with -DHERMES_ENABLE_INTL=ON  until more of
-          # Intl is built out: toLocaleLowerCase and toLocaleUpperCase are the two
-          # main ones.
-          # cmake --build ./build_intl --target check-hermes
-          python3 "${{ github.event.repository.name }}/utils/test_runner.py" --test-intl test262/test -b build_intl/bin
+          # Intl is unavailable on Linux: the ICU-backed implementation was
+          # removed with the ICU dependency, so intl402 is not run here.
+          python3 "${{ github.event.repository.name }}/utils/test_runner.py" test262/test -b build/bin
 
   test-windows-test262:
     strategy:
@@ -195,7 +185,7 @@ jobs:
           MSYS2_ARG_CONV_EXCL: "*"
       run: |
         # Configure with Visual Studio generator
-        # Use system version 10.0.15063 or newer for VS2026 compatibility and built-in ICU
+        # Use system version 10.0.15063 or newer for VS2026 compatibility
         cmake -S hermes -B build -G "Visual Studio 18 2026" \
           -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_SYSTEM_VERSION=10.0.15063 \
           -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.target_cpu }} \

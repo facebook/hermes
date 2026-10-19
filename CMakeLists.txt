@@ -230,9 +230,6 @@ set(HERMES_HARDENED OFF CACHE BOOL
 set(HERMES_STATIC_LINK OFF CACHE BOOL
   "Link Hermes statically. May only work on GNU/Linux.")
 
-set(HERMES_USE_STATIC_ICU OFF CACHE BOOL
-  "Force static linking of ICU. May only work on GNU/Linux.")
-
 set(HERMES_UNICODE_LITE OFF CACHE BOOL
   "Enable to use internal no-op unicode functionality instead of relying on underlying system libraries")
 
@@ -271,9 +268,6 @@ set(HERMES_ENABLE_WERROR OFF CACHE BOOL
 
 set(HERMES_THREAD_SAFETY_ANALYSIS OFF CACHE BOOL
   "Whether to compile with clang's -Wthread-safety")
-
-set(HERMES_ENABLE_WIN10_ICU_FALLBACK ON CACHE BOOL
-  "Whether to allow falling back on Win10 ICU")
 
 set(HERMES_GITHUB_RESOURCE_DIR "" CACHE STRING
   "A directory with additional files to bundle in the GitHub release")
@@ -359,7 +353,6 @@ endif()
 
 if (HERMES_STATIC_LINK)
   append("-static" CMAKE_EXE_LINKER_FLAGS)
-  set(HERMES_USE_STATIC_ICU ON)
   set(CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_STATIC_LIBRARY_SUFFIX}")
 endif()
 
@@ -631,84 +624,6 @@ endif()
 # to analyze the source code of the project.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# ICU is needed only by the impl_icu Intl backend (HERMES_ENABLE_INTL), and
-# only where that backend is actually used: Apple and Android have their own
-# native Intl implementations and never need it. The platform_unicode layer
-# is self-contained and never needs ICU.
-if (NOT HERMES_ENABLE_INTL OR APPLE OR EMSCRIPTEN OR HERMES_IS_ANDROID)
-  set(ICU_FOUND 1)
-endif()
-
-if (NOT ICU_FOUND)
-  set(CMAKE_FIND_LIBRARY_SUFFIXES_OLD "${CMAKE_FIND_LIBRARY_SUFFIXES}")
-  if (HERMES_USE_STATIC_ICU)
-    add_definitions(-DU_STATIC_IMPLEMENTATION)
-    set(CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  endif()
-
-  # Attempt to locate a system-installed ICU. A minimum version of 65 is
-  # required because our ICU-based Intl implementation relies on APIs introduced
-  # in version 65.
-  # Include 'uc' twice for static libraries that depend on each other.
-  find_global_package(ICU 65 COMPONENTS uc i18n data uc)
-
-  set(CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_FIND_LIBRARY_SUFFIXES_OLD}")
-
-  if (ICU_FOUND)
-    foreach(LIB_FILE ${ICU_LIBRARIES})
-      get_filename_component(LIB_DIR ${LIB_FILE} DIRECTORY)
-      list(APPEND ICU_RPATH ${LIB_DIR})
-    endforeach(LIB_FILE)
-    list(REMOVE_DUPLICATES ICU_RPATH)
-    message("icu dir: ${ICU_RPATH}")
-    include_directories(${ICU_INCLUDE_DIRS})
-  endif()
-endif()
-
-# ICU is available on Windows, but only since Windows 10 v1703.
-# Therefore, use it only as fallback.
-if (NOT ICU_FOUND AND HERMES_ENABLE_WIN10_ICU_FALLBACK AND
-    WIN32 AND # Windows 32 or 64 bit
-    # At least Windows 10 version 1703 (aka Creators Update)
-    NOT ${CMAKE_SYSTEM_VERSION} VERSION_LESS "10.0.15063")
-  add_definitions(-DUSE_WIN10_ICU)
-  set(ICU_FOUND 1)
-  set(ICU_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/external/icu_decls)
-  set(ICU_LIBRARIES
-    icuuc icuin
-  )
-  include_directories(${ICU_INCLUDE_DIRS})
-  message("Using Windows 10 built-in ICU")
-endif()
-
-# If we have no ICU, then error out.
-if (NOT ICU_FOUND)
-  message(FATAL_ERROR "Unable to find ICU.")
-endif()
-
-# Declare a function that links ICU for the given target.
-# This adds the correct -rpath link flag as necessary.
-function(hermes_link_icu target_name)
-  if(ICU_LIBRARIES)
-    get_target_property(target_type ${target_name} TYPE)
-    target_link_libraries(${target_name} ${ICU_LIBRARIES})
-
-    if (HERMES_USE_STATIC_ICU)
-      if ((NOT EMSCRIPTEN) AND target_type MATCHES "EXECUTABLE|STATIC_LIBRARY")
-        target_link_libraries(${target_name} dl pthread)
-      elseif(target_type MATCHES "MODULE_LIBRARY|SHARED_LIBRARY")
-        message(WARNING "ICU cannot be statically linked against shared library target ${target_name}")
-      endif()
-    endif()
-
-    if (ICU_RPATH)
-      set_property(TARGET ${target_name} APPEND PROPERTY
-                    INSTALL_RPATH ${ICU_RPATH})
-      set_property(TARGET ${target_name} PROPERTY
-                    BUILD_WITH_INSTALL_RPATH TRUE)
-    endif()
-  endif()
-endfunction()
 
 if (APPLE)
   find_library(CORE_FOUNDATION CoreFoundation)

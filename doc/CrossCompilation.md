@@ -35,11 +35,12 @@ Without it, an Android build uses the Java backend, which needs a JVM at
 runtime and so is not usable from a binary pushed with `adb push` and run
 under `adb shell`.
 
-No ICU is needed here, or in any cross-compilation target. The
-`platform_unicode` layer -- case conversion, normalization, collation and
-date formatting -- is self-contained. ICU is used only by the `impl_icu`
-Intl backend, which is off unless `-DHERMES_ENABLE_INTL=ON`, and which
-Android does not use even then: it has its own `PlatformIntlAndroid`.
+No ICU is needed here, or in any cross-compilation target. Hermes no
+longer depends on ICU at all. The `platform_unicode` layer -- case
+conversion, normalization, collation and date formatting -- is
+self-contained, and the ICU-backed Intl backend has been removed.
+`-DHERMES_ENABLE_INTL=ON` is now supported only on Apple and Android,
+which have their own native Intl implementations.
 
 ## Emscripten
 
