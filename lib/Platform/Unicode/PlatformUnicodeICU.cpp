@@ -5,9 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/Platform/Unicode/PlatformUnicode.h"
+#include "hermes/Platform/Unicode/PlatformUnicodeICUImpl.h"
 
-#if HERMES_PLATFORM_UNICODE == HERMES_PLATFORM_UNICODE_ICU
+#if HERMES_PLATFORM_UNICODE == HERMES_PLATFORM_UNICODE_ICU || \
+    HERMES_PLATFORM_UNICODE == HERMES_PLATFORM_UNICODE_HERMES
 
 #include "hermes/Platform/Unicode/icu.h"
 
@@ -55,6 +56,8 @@ const UCollator *getUCollatorInstance() {
   return coll.get();
 }
 } // namespace
+
+namespace icu_impl {
 
 int localeCompare(
     llvh::ArrayRef<char16_t> left,
@@ -215,7 +218,36 @@ void normalize(llvh::SmallVectorImpl<char16_t> &buf, NormalizationForm form) {
   buf = dest;
 }
 
+} // namespace icu_impl
+
+#if HERMES_PLATFORM_UNICODE == HERMES_PLATFORM_UNICODE_ICU
+int localeCompare(
+    llvh::ArrayRef<char16_t> left,
+    llvh::ArrayRef<char16_t> right) {
+  return icu_impl::localeCompare(left, right);
+}
+
+void dateFormat(
+    double unixtimeMs,
+    bool formatDate,
+    bool formatTime,
+    llvh::SmallVectorImpl<char16_t> &buf) {
+  icu_impl::dateFormat(unixtimeMs, formatDate, formatTime, buf);
+}
+
+void convertToCase(
+    llvh::SmallVectorImpl<char16_t> &cs,
+    CaseConversion targetCase,
+    bool useCurrentLocale) {
+  icu_impl::convertToCase(cs, targetCase, useCurrentLocale);
+}
+
+void normalize(llvh::SmallVectorImpl<char16_t> &buf, NormalizationForm form) {
+  icu_impl::normalize(buf, form);
+}
+#endif // HERMES_PLATFORM_UNICODE_ICU
+
 } // namespace platform_unicode
 } // namespace hermes
 
-#endif // HERMES_PLATFORM_UNICODE_ICU
+#endif // ICU or HERMES
