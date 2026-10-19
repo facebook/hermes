@@ -9,7 +9,7 @@
 
 #if HERMES_PLATFORM_UNICODE == HERMES_PLATFORM_UNICODE_HERMES
 
-#include "hermes/Platform/Unicode/PlatformUnicodeICUImpl.h"
+#include "hermes/Platform/Unicode/PlatformDateFormat.h"
 #include "hermes/Platform/Unicode/UnicodeCollation.h"
 #include "hermes/Platform/Unicode/UnicodeNormalization.h"
 
@@ -68,13 +68,12 @@ int localeCompare(
   return unicode::compareUTF16(left, right);
 }
 
-// TODO(icu-removal): implement natively and drop the ICU forwarding.
 void dateFormat(
     double unixtimeMs,
     bool formatDate,
     bool formatTime,
     llvh::SmallVectorImpl<char16_t> &buf) {
-  icu_impl::dateFormat(unixtimeMs, formatDate, formatTime, buf);
+  formatDateTimeFixed(unixtimeMs, formatDate, formatTime, buf);
 }
 
 void convertToCase(
