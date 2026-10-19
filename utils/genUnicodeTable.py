@@ -19,6 +19,7 @@
 import argparse
 import datetime
 import hashlib
+import re
 import sys
 import urllib.request
 from collections import defaultdict, OrderedDict
@@ -26,7 +27,7 @@ from functools import reduce
 from itertools import islice
 from string import Template
 from textwrap import indent
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Tuple
 
 
 class UnicodeDataFiles:
@@ -47,6 +48,7 @@ class UnicodeDataFiles:
         "PropList.txt": f"http://unicode.org/Public/{VERSION}/ucd/PropList.txt",
         "emoji-data.txt": f"http://unicode.org/Public/{VERSION}/ucd/emoji/emoji-data.txt",
         "NormalizationTest.txt": f"http://unicode.org/Public/{VERSION}/ucd/NormalizationTest.txt",
+        "allkeys.txt": f"http://unicode.org/Public/UCA/{VERSION}/allkeys.txt",
     }
     # Set to True to keep the downloaded files in the local directory.
     KEEP_LOCAL_CACHE = False
@@ -101,7 +103,11 @@ class UnicodeDataFiles:
 # Which UCD files each generated table derives from. Only these are hashed
 # into a file's provenance header, and only these are downloaded, so adding a
 # data file for one table cannot perturb another table's output.
-PROPERTIES_FILES = [f for f in UnicodeDataFiles.URLS if f != "NormalizationTest.txt"]
+PROPERTIES_FILES = [
+    f
+    for f in UnicodeDataFiles.URLS
+    if f not in ("NormalizationTest.txt", "allkeys.txt")
+]
 NORMALIZATION_FILES = ["UnicodeData.txt", "DerivedNormalizationProps.txt"]
 NORMTEST_FILES = ["NormalizationTest.txt"]
 CASING_FILES = [
@@ -111,11 +117,13 @@ CASING_FILES = [
     "PropList.txt",
 ]
 CASETEST_FILES = ["UnicodeData.txt", "SpecialCasing.txt"]
+COLLATION_FILES = ["allkeys.txt", "UnicodeData.txt", "PropList.txt"]
 
 
 # Unicode data field indexes. See UnicodeData.txt.
 CODEPOINT_FIELD = 0
 GENERAL_CATEGORY_FIELD = 2
+DECOMPOSITION_FIELD = 5
 UPPERCASE_FIELD = 12
 LOWERCASE_FIELD = 13
 
@@ -466,6 +474,358 @@ def binary_property_ranges(lines, prop):
         out.append(parse_range(f[0]))
     out.sort()
     return merge_adjacent_ranges(out)
+
+
+# One collation element: (variable, primary, secondary, tertiary).
+CollationElement = Tuple[bool, int, int, int]
+
+ALLKEYS_CE_RE = re.compile(
+    r"\[([.*])([0-9A-Fa-f]{4,6})\.([0-9A-Fa-f]{4,6})\.([0-9A-Fa-f]{4,6})\]"
+)
+
+
+def parse_allkeys(lines):
+    """Parse allkeys.txt into (single, multi, contractions, implicit).
+
+    single:       cp -> one collation element
+    multi:        cp -> list of collation elements (an expansion)
+    contractions: tuple of cps -> list of collation elements
+    implicit:     list of (first, last, base) from @implicitweights
+
+    Entries unreachable after NFD are dropped by the caller, not here, so
+    this function stays a faithful reading of the file."""
+    single, multi, contractions, implicit = {}, {}, {}, []
+    for line in lines:
+        text = line.split("#")[0].strip()
+        if not text:
+            continue
+        if text.startswith("@implicitweights"):
+            body = text.split(None, 1)[1]
+            rng, base = body.split(";")
+            first, last = rng.strip().split("..")
+            implicit.append((int(first, 16), int(last, 16), int(base, 16)))
+            continue
+        if text.startswith("@") or ";" not in text:
+            continue
+        lhs, rhs = text.split(";", 1)
+        cps = tuple(int(x, 16) for x in lhs.split())
+        ces = [
+            (
+                m.group(1) == "*",
+                int(m.group(2), 16),
+                int(m.group(3), 16),
+                int(m.group(4), 16),
+            )
+            for m in ALLKEYS_CE_RE.finditer(rhs)
+        ]
+        assert ces, f"no collation elements parsed from: {text}"
+        if len(cps) > 1:
+            contractions[cps] = ces
+        elif len(ces) == 1:
+            single[cps[0]] = ces[0]
+        else:
+            multi[cps[0]] = ces
+    assert implicit, "no @implicitweights ranges found"
+    return single, multi, contractions, implicit
+
+
+def canonically_decomposable(unicode_data_lines):
+    """\\return the set of code points that cannot survive NFD, so their
+    collation entries need never be generated.
+
+    Only *canonical* decompositions count: compatibility decompositions
+    survive NFD, so ligatures and compatibility forms stay in the table.
+    Hangul syllables decompose arithmetically and are not listed in
+    UnicodeData.txt, so they are added explicitly."""
+    result = set()
+    for line in unicode_data_lines:
+        fields = line.split(";")
+        decomp = fields[DECOMPOSITION_FIELD]
+        if decomp and not decomp.startswith("<"):
+            result.add(int(fields[CODEPOINT_FIELD], 16))
+    result.update(range(0xAC00, 0xD7A4))
+    return result
+
+
+# A run's count is stored in 10 bits, so runs are split at this length.
+MAX_COLL_RUN = 1023
+
+
+def build_collation_runs(single, style_index):
+    """Run-encode the single-element mappings.
+
+    Within a script block DUCET primary weights advance in step with the code
+    point, so 34,787 mappings collapse to roughly 6,660 runs. A run covers
+    consecutive code points that share a style and whose primary advances by a
+    constant step of 0 or 1."""
+    runs = []
+    items = sorted(single.items())
+    i = 0
+    while i < len(items):
+        cp, (var, prim, sec, ter) = items[i]
+        style = style_index[(var, sec, ter)]
+        step = None
+        j = i + 1
+        while j < len(items) and (j - i) < MAX_COLL_RUN:
+            cp2, (var2, prim2, sec2, ter2) = items[j]
+            if cp2 != cp + (j - i):
+                break
+            if style_index[(var2, sec2, ter2)] != style:
+                break
+            if step is None:
+                step = prim2 - prim
+                if step not in (0, 1):
+                    break
+            elif prim2 != prim + (j - i) * step:
+                break
+            j += 1
+        # A run that failed to extend past its first code point can still
+        # have `step` set to the rejected (non-0/1) delta that caused the
+        # `break` above; a lone code point never uses `step`, so it must be
+        # forced back to 0 here rather than passed through.
+        runs.append((cp, j - i, prim, style, step if step in (0, 1) else 0))
+        i = j
+    return runs
+
+
+def verify_collation_runs(runs, single, styles):
+    """Assert the run encoding reproduces every input mapping exactly.
+
+    The encoder relies on primary weights advancing predictably; a data
+    change that broke that assumption would otherwise emit silently wrong
+    weights rather than failing."""
+    rebuilt = {}
+    for first, count, prim, style, step in runs:
+        assert step in (0, 1), f"run at {first:04X} has invalid step {step}"
+        last_prim = prim + (count - 1) * step
+        assert last_prim < 65536, (
+            f"run at {first:04X} overflows uint16_t primary: {last_prim}"
+        )
+        var, sec, ter = styles[style]
+        for k in range(count):
+            rebuilt[first + k] = (var, prim + k * step, sec, ter)
+    assert rebuilt == single, (
+        f"run encoding lost data: {len(rebuilt)} rebuilt vs {len(single)} input"
+    )
+
+
+def print_collation_tables(
+    single, multi, contractions, implicit, decomposable, unified_ideographs
+):
+    """Emit CollationData.inc."""
+    # Entries a code point can never reach after NFD are omitted entirely.
+    single = {k: v for k, v in single.items() if k not in decomposable}
+    multi = {k: v for k, v in multi.items() if k not in decomposable}
+    contractions = {
+        k: v for k, v in contractions.items() if not any(c in decomposable for c in k)
+    }
+
+    # The secondary and tertiary weights come from a tiny alphabet, so they
+    # are pooled and referenced by index instead of stored per element.
+    styles = sorted(
+        {(v, s, t) for (v, p, s, t) in single.values()}
+        | {
+            (v, s, t)
+            for ces in list(multi.values()) + list(contractions.values())
+            for (v, p, s, t) in ces
+        }
+    )
+    style_index = {k: i for i, k in enumerate(styles)}
+    assert len(styles) < 65536, "style index must fit in uint16_t"
+    assert max(s for _, s, _ in styles) < 65536, "secondary must fit in uint16_t"
+    assert max(t for _, _, t in styles) < 256, "tertiary must fit in uint8_t"
+
+    runs = build_collation_runs(single, style_index)
+    verify_collation_runs(runs, single, styles)
+    assert max(r[0] for r in runs) < (1 << 21), "code point must fit in 21 bits"
+    assert max(r[2] for r in runs) < 65536, "primary must fit in uint16_t"
+
+    for first, last, _ in implicit:
+        for cp in range(first, last + 1):
+            assert cp not in single and cp not in multi, (
+                f"U+{cp:04X} is in an @implicitweights range but also has an "
+                "explicit entry; the lookup order would be ambiguous"
+            )
+
+    print_template(
+        """
+/// The secondary weight, tertiary weight, and variable flag shared by many
+/// collation elements. All of DUCET uses only a few hundred combinations, so
+/// elements store an index into this table rather than the weights.
+struct CollStyle {
+  uint16_t secondary;
+  uint8_t tertiary;
+  uint8_t variable;
+};
+
+/// A run of consecutive code points that share a style and whose primary
+/// weight advances by \\c step per code point. Code point \\c cp in
+/// [first, first + count) has primary weight
+/// \\c primary + (cp - first) * step.
+struct CollRun {
+  uint32_t first : 21;
+  uint32_t count : 10;
+  uint32_t step : 1;
+  uint16_t primary;
+  uint16_t style;
+};
+"""
+    )
+
+    print("static constexpr CollStyle COLL_STYLES[] = {")
+    for var, sec, ter in styles:
+        print(f"    {{0x{sec:04X}, 0x{ter:02X}, {1 if var else 0}}},")
+    print("};")
+    print("")
+
+    print("/// Sorted by `first`, so lookup is a binary search.")
+    print("static constexpr CollRun COLL_RUNS[] = {")
+    for first, count, prim, style, step in runs:
+        print(f"    {{0x{first:04X}, {count}, {step}, 0x{prim:04X}, {style}}},")
+    print("};")
+    print("")
+
+    # Expansions and contractions share one pool of collation elements, so a
+    # repeated element sequence costs nothing extra to reference twice.
+    pool = []
+    pool_offsets = {}
+
+    def intern(ces):
+        """\\return the offset of \\p ces in the shared pool, appending it if
+        it is not already present. Sequences repeat often enough between
+        expansions and contractions to be worth deduplicating."""
+        key = tuple(ces)
+        if key not in pool_offsets:
+            pool_offsets[key] = len(pool)
+            pool.extend(ces)
+        return pool_offsets[key]
+
+    expansions = []
+    for cp in sorted(multi):
+        ces = multi[cp]
+        expansions.append((cp, intern(ces), len(ces)))
+
+    contraction_rows = []
+    for cps in sorted(contractions):
+        ces = contractions[cps]
+        contraction_rows.append((cps, intern(ces), len(ces)))
+
+    assert len(pool) < 65536, "pool offset must fit in uint16_t"
+    assert all(length < 256 for _, _, length in expansions), (
+        "expansion length must fit in uint8_t"
+    )
+    max_contraction = max(len(cps) for cps, _, _ in contraction_rows)
+    assert max_contraction <= 3, (
+        f"contractions of {max_contraction} code points exceed the fixed "
+        "three-code-point key; the C++ matcher would truncate them"
+    )
+
+    print_template(
+        """
+/// One collation element: a primary weight plus an index into COLL_STYLES for
+/// its secondary weight, tertiary weight, and variable flag.
+struct CollElem {
+  uint16_t primary;
+  uint16_t style;
+};
+
+/// A code point whose mapping is an expansion: \\c length collation elements
+/// beginning at \\c offset in COLL_CE_POOL.
+struct CollExpansion {
+  uint32_t cp;
+  uint16_t offset;
+  uint8_t length;
+};
+
+/// A contraction. The sequence cp0, cp1, cp2 maps to \\c length collation
+/// elements beginning at \\c offset in COLL_CE_POOL. \\c cp2 is 0 for a
+/// two-code-point contraction; 0 is never a contraction member.
+struct CollContraction {
+  uint32_t cp0;
+  uint32_t cp1;
+  uint32_t cp2;
+  uint16_t offset;
+  uint8_t length;
+};
+
+/// An inclusive code point range.
+struct CollRange {
+  uint32_t first;
+  uint32_t last;
+};
+
+/// An @implicitweights range and the primary weight base it uses.
+struct CollImplicitRange {
+  uint32_t first;
+  uint32_t last;
+  uint16_t base;
+};
+"""
+    )
+
+    print("/// Collation elements referenced by COLL_EXPANSIONS and")
+    print("/// COLL_CONTRACTIONS.")
+    print("static constexpr CollElem COLL_CE_POOL[] = {")
+    for var, prim, sec, ter in pool:
+        print(f"    {{0x{prim:04X}, {style_index[(var, sec, ter)]}}},")
+    print("};")
+    print("")
+
+    print("/// Sorted by `cp`, so lookup is a binary search. Disjoint from")
+    print("/// COLL_RUNS: a code point appears in one or the other.")
+    print("static constexpr CollExpansion COLL_EXPANSIONS[] = {")
+    for cp, offset, length in expansions:
+        print(f"    {{0x{cp:04X}, {offset}, {length}}},")
+    print("};")
+    print("")
+
+    print("/// Sorted lexicographically by (cp0, cp1, cp2).")
+    print("static constexpr CollContraction COLL_CONTRACTIONS[] = {")
+    for cps, offset, length in contraction_rows:
+        padded = list(cps) + [0] * (3 - len(cps))
+        cols = ", ".join(f"0x{c:04X}" for c in padded)
+        print(f"    {{{cols}, {offset}, {length}}},")
+    print("};")
+    print("")
+    print("/// The longest contraction in the generated data.")
+    print(f"static constexpr size_t COLL_MAX_CONTRACTION_LENGTH = {max_contraction};")
+    print("")
+
+    print("/// Ranges given explicit primary weight bases by")
+    print("/// @implicitweights in allkeys.txt.")
+    print("static constexpr CollImplicitRange COLL_IMPLICIT_RANGES[] = {")
+    for first, last, base in sorted(implicit):
+        print(f"    {{0x{first:04X}, 0x{last:04X}, 0x{base:04X}}},")
+    print("};")
+    print("")
+
+    print("/// Code points with the Unified_Ideograph property, sorted.")
+    print("static constexpr CollRange COLL_UNIFIED_IDEOGRAPHS[] = {")
+    for first, last in unified_ideographs:
+        print(f"    {{0x{first:04X}, 0x{last:04X}}},")
+    print("};")
+    print("")
+
+    print_template(
+        """
+/// Primary weight bases for code points with no table entry, from UTS #10
+/// section 10.1.3. A Unified_Ideograph in the CJK Unified Ideographs or CJK
+/// Compatibility Ideographs blocks uses the core base, any other
+/// Unified_Ideograph uses the other base, and everything else, including
+/// unassigned code points, uses the unassigned base.
+static constexpr uint16_t COLL_HAN_CORE_BASE = 0xFB40;
+static constexpr uint16_t COLL_HAN_OTHER_BASE = 0xFB80;
+static constexpr uint16_t COLL_UNASSIGNED_BASE = 0xFBC0;
+
+/// The CJK Unified Ideographs and CJK Compatibility Ideographs blocks, which
+/// select COLL_HAN_CORE_BASE. Block boundaries are stable, so they are
+/// constants rather than generated.
+static constexpr CollRange COLL_HAN_CORE_BLOCKS[] = {
+    {0x4E00, 0x9FFF},
+    {0xF900, 0xFAFF},
+};
+"""
+    )
 
 
 def parse_property_aliases(
@@ -1871,7 +2231,14 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--table",
-        choices=("properties", "normalization", "normtest", "casing", "casetest"),
+        choices=(
+            "properties",
+            "normalization",
+            "normtest",
+            "casing",
+            "casetest",
+            "collation",
+        ),
         default="properties",
         help="which generated file to emit (default: properties)",
     )
@@ -1910,6 +2277,23 @@ if __name__ == "__main__":
                 UnicodeDataFiles.get_lines("SpecialCasing.txt"),
             )
         )
-    else:
+    elif args.table == "collation":
+        print_header(COLLATION_FILES, structs=False)
+        single, multi, contractions, implicit = parse_allkeys(
+            UnicodeDataFiles.get_lines("allkeys.txt")
+        )
+        print_collation_tables(
+            single,
+            multi,
+            contractions,
+            implicit,
+            canonically_decomposable(UnicodeDataFiles.get_lines("UnicodeData.txt")),
+            binary_property_ranges(
+                UnicodeDataFiles.get_lines("PropList.txt"), "Unified_Ideograph"
+            ),
+        )
+    elif args.table == "normtest":
         print_header(NORMTEST_FILES, structs=False)
         print_normalization_test_data()
+    else:
+        raise AssertionError(f"unhandled --table {args.table}")
