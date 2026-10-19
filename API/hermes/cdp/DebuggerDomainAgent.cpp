@@ -250,11 +250,10 @@ void DebuggerDomainAgent::setBlackboxedRanges(
 
   auto blackboxedRanges = std::vector<std::pair<int, int>>();
   for (auto &position : req.positions) {
-    blackboxedRanges.push_back(
-        std::pair<int, int>(
-            /* cdp line and column numbers are 0 based */
-            position.lineNumber + 1,
-            position.columnNumber + 1));
+    blackboxedRanges.emplace_back(
+        /* cdp line and column numbers are 0 based */
+        position.lineNumber + 1,
+        position.columnNumber + 1);
   }
 
   assert(
