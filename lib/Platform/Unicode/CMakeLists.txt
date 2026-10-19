@@ -18,7 +18,8 @@ set(source_files
 # so they must not pay for these tables. HERMES_UNICODE_LITE wins over the
 # platform check because the LITE backend calls them on every platform.
 if(HERMES_UNICODE_LITE OR (NOT APPLE AND NOT HERMES_IS_ANDROID))
-  list(APPEND source_files UnicodeNormalization.cpp UnicodeCaseConversion.cpp)
+  list(APPEND source_files UnicodeNormalization.cpp UnicodeCaseConversion.cpp
+       UnicodeCollation.cpp)
 endif()
 
 add_hermes_library(hermesPlatformUnicode ${source_files})
