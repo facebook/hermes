@@ -33,6 +33,11 @@ void normalizeUTF16(
     llvh::SmallVectorImpl<char16_t> &buf,
     NormalizationForm form);
 
+/// \return the canonical combining class of \p cp, or 0 if it has none.
+/// Exposed because the case conversion conditional rules need it and should
+/// not duplicate the table.
+uint8_t getCanonicalCombiningClass(uint32_t cp);
+
 } // namespace unicode
 } // namespace hermes
 
