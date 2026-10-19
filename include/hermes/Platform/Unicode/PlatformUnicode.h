@@ -8,6 +8,7 @@
 #ifndef HERMES_PLATFORMUNICODE_PLATFORMUNICODE_H
 #define HERMES_PLATFORMUNICODE_PLATFORMUNICODE_H
 
+#include "hermes/Platform/Unicode/UnicodeNormalization.h"
 #include "llvh/ADT/ArrayRef.h"
 #include "llvh/ADT/SmallVector.h"
 
@@ -60,10 +61,10 @@ void convertToCase(
     CaseConversion targetCase,
     bool useCurrentLocale);
 
-/// Options for normalizing Unicode strings.
-/// NOTE: If these change, then AndroidUnicodeUtils.java must be updated.
-/// http://www.unicode.org/reports/tr15/
-enum class NormalizationForm { C, D, KC, KD };
+/// Options for normalizing Unicode strings. Defined in
+/// UnicodeNormalization.h so that the table-driven normalizer does not have to
+/// depend on backend selection.
+using NormalizationForm = unicode::NormalizationForm;
 
 /// Normalize Unicode string \p buf into the given \p form, returning in place.
 /// Use the normalization forms described in Technical Report #15.
