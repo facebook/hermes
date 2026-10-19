@@ -17,7 +17,9 @@
 
 #include "gtest/gtest.h"
 
+#include <ios>
 #include <string>
+#include <utility>
 
 namespace {
 
@@ -186,6 +188,58 @@ TEST(Collation, UsesImplicitWeightsForUntabledCodePoints) {
   // 0xFBC0, so every Han character sorts before every unassigned one.
   const char16_t unassigned[] = {0x0378};
   EXPECT_LT(cmp(han1, 1, unassigned, 1), 0);
+}
+
+TEST(Collation, ImplicitWeightsFollowUTS10) {
+  // The implicit weights of UTS #10 section 10.1.3 cannot be checked through
+  // compareUTF16: DUCET assigns no reachable code point an explicit primary
+  // anywhere in 0xFAFA..0xFB3F, so any assignment of the @implicitweights
+  // bases that keeps them in that gap and stays monotonic orders identically
+  // and passes even the 208,070-row UCA conformance suite. The weights are
+  // therefore asserted directly.
+  //
+  // An @implicitweights range takes its base verbatim as the first primary
+  // and measures the second from the base's *anchor*, the start of the first
+  // range using that base. Bases 0xFB00 and 0xFB01 are each shared by two
+  // ranges, so the second range of each continues its predecessor's offsets
+  // instead of restarting at 0x8000.
+  //
+  // Every expectation below is the sort key the upstream
+  // CollationTest_NON_IGNORABLE.txt records for that code point.
+  struct Case {
+    uint32_t cp;
+    uint16_t first;
+    uint16_t second;
+    const char *why;
+  };
+  static const Case kCases[] = {
+      // 17000..187FF; FB00 -- the first range on base 0xFB00, so it is also
+      // that base's anchor.
+      {0x17000, 0xFB00, 0x8000, "first range on FB00, at its anchor"},
+      {0x187FF, 0xFB00, 0x97FF, "first range on FB00, at its end"},
+      // 18D00..18D7F; FB00 -- a *second* range on base 0xFB00. Its offsets
+      // are measured from U+17000, not from U+18D00; a naive implementation
+      // restarts them at 0x8000 and gets this one wrong.
+      {0x18D00, 0xFB00, 0x9D00, "second range on FB00, anchored at 17000"},
+      // 18800..18AFF; FB01 -- the anchor of base 0xFB01.
+      {0x18800, 0xFB01, 0x8000, "first range on FB01, at its anchor"},
+      // 18D80..18DFF; FB01 -- the second range on base 0xFB01.
+      {0x18D80, 0xFB01, 0x8580, "second range on FB01, anchored at 18800"},
+      // Bases used by exactly one range each.
+      {0x1B170, 0xFB02, 0x8000, "only range on FB02"},
+      {0x18B00, 0xFB03, 0x8000, "only range on FB03"},
+      // The Han and unassigned paths are unaffected by the anchor rule and
+      // do use the base + (cp >> 15) split, so they are pinned here too.
+      {0x4E00, 0xFB40, 0xCE00, "Unified_Ideograph in a core block"},
+      {0x20000, 0xFB84, 0x8000, "Unified_Ideograph outside the core blocks"},
+      {0x0378, 0xFBC0, 0x8378, "unassigned"},
+  };
+  for (const Case &c : kCases) {
+    std::pair<uint16_t, uint16_t> got = implicitPrimariesForTesting(c.cp);
+    EXPECT_EQ(got.first, c.first) << "U+" << std::hex << c.cp << ": " << c.why;
+    EXPECT_EQ(got.second, c.second)
+        << "U+" << std::hex << c.cp << ": " << c.why;
+  }
 }
 
 TEST(Collation, HandlesSupplementaryPlaneAndUnpairedSurrogates) {
