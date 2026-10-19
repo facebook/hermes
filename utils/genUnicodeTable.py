@@ -561,6 +561,13 @@ def canonically_decomposable(unicode_data_lines):
 # A run's count is stored in 10 bits, so runs are split at this length.
 MAX_COLL_RUN = 1023
 
+# Primary weight bases for code points with no explicit entry, from UTS #10
+# section 10.1.3. Emitted into the generated table and also used to check
+# that no `@implicitweights` base collides with them.
+HAN_CORE_BASE = 0xFB40
+HAN_OTHER_BASE = 0xFB80
+UNASSIGNED_BASE = 0xFBC0
+
 
 def build_collation_runs(single, style_index):
     """Run-encode the single-element mappings.
@@ -629,6 +636,62 @@ def verify_style_sizes(styles):
     assert len(styles) < 65536, "style index must fit in uint16_t"
     assert max(s for _, s, _ in styles) < 65536, "secondary must fit in uint16_t"
     assert max(t for _, _, t in styles) < 256, "tertiary must fit in uint8_t"
+
+
+def implicit_anchors(implicit):
+    """\\return a map from primary weight base to the code point its offsets
+    are measured from.
+
+    UTS #10 section 10.1.3 measures the second implicit weight of a code
+    point in an `@implicitweights` range from the start of the *first* range
+    that uses the range's base, not from the start of the range the code
+    point itself falls in. Two bases are shared by two ranges each, so the
+    distinction changes the weights of four of the six ranges."""
+    anchors = {}
+    for first, _, base in sorted(implicit):
+        anchors.setdefault(base, first)
+    return anchors
+
+
+def verify_implicit_weights(implicit):
+    """Assert the `@implicitweights` ranges satisfy the formula in UTS #10
+    section 10.1.3 rather than assuming they do.
+
+    A code point in such a range gets the two collation elements
+    AAAA = base and BBBB = (cp - anchor) | 0x8000. That yields distinct and
+    correctly ordered keys only if the ranges are disjoint, every offset
+    from the anchor fits in the 15 bits below the 0x8000 flag, and the
+    ranges that share a base stay disjoint after being shifted onto their
+    common anchor. Nothing in allkeys.txt guarantees any of that, so a
+    future data file that broke it must fail here rather than silently
+    emitting colliding weights."""
+    ranges = sorted(implicit)
+    for (first, last, _), (next_first, _, _) in zip(ranges, ranges[1:]):
+        assert first <= last, f"@implicitweights range U+{first:04X} is empty"
+        assert last < next_first, (
+            f"@implicitweights ranges U+{first:04X}..U+{last:04X} and "
+            f"U+{next_first:04X}.. overlap"
+        )
+    anchors = implicit_anchors(ranges)
+    spans = {}
+    for first, last, base in ranges:
+        assert base not in (HAN_CORE_BASE, HAN_OTHER_BASE, UNASSIGNED_BASE), (
+            f"@implicitweights base 0x{base:04X} collides with a base "
+            "reserved for Han and unassigned code points"
+        )
+        lo, hi = first - anchors[base], last - anchors[base]
+        assert 0 <= lo <= hi <= 0x7FFF, (
+            f"@implicitweights range U+{first:04X}..U+{last:04X} is "
+            f"0x{lo:X}..0x{hi:X} from the anchor of base 0x{base:04X}, which "
+            "does not fit the 15 bits UTS #10 section 10.1.3 allows"
+        )
+        for prev_lo, prev_hi in spans.setdefault(base, []):
+            assert hi < prev_lo or lo > prev_hi, (
+                f"@implicitweights range U+{first:04X}..U+{last:04X} shares "
+                f"base 0x{base:04X} with an earlier range and overlaps it "
+                "once both are measured from their common anchor"
+            )
+        spans[base].append((lo, hi))
 
 
 def verify_no_implicit_overlap(single, multi, implicit):
@@ -705,6 +768,7 @@ def print_collation_tables(
     runs = build_collation_runs(single, style_index)
     verify_collation_runs(runs, single, styles)
 
+    verify_implicit_weights(implicit)
     verify_no_implicit_overlap(single, multi, implicit)
 
     print_template(
@@ -808,10 +872,14 @@ struct CollRange {
   uint32_t last;
 };
 
-/// An @implicitweights range and the primary weight base it uses.
+/// An @implicitweights range, the primary weight base it uses, and the code
+/// point its secondary implicit weight is measured from. Per UTS #10 section
+/// 10.1.3 the anchor is the start of the first range that uses this base,
+/// which is not this range's own start when two ranges share a base.
 struct CollImplicitRange {
   uint32_t first;
   uint32_t last;
+  uint32_t anchor;
   uint16_t base;
 };
 """
@@ -848,8 +916,11 @@ struct CollImplicitRange {
     print("/// Ranges given explicit primary weight bases by")
     print("/// @implicitweights in allkeys.txt.")
     print("static constexpr CollImplicitRange COLL_IMPLICIT_RANGES[] = {")
+    anchors = implicit_anchors(implicit)
     for first, last, base in sorted(implicit):
-        print(f"    {{0x{first:04X}, 0x{last:04X}, 0x{base:04X}}},")
+        print(
+            f"    {{0x{first:04X}, 0x{last:04X}, 0x{anchors[base]:04X}, 0x{base:04X}}},"
+        )
     print("};")
     print("")
 
@@ -867,9 +938,9 @@ struct CollImplicitRange {
 /// Compatibility Ideographs blocks uses the core base, any other
 /// Unified_Ideograph uses the other base, and everything else, including
 /// unassigned code points, uses the unassigned base.
-static constexpr uint16_t COLL_HAN_CORE_BASE = 0xFB40;
-static constexpr uint16_t COLL_HAN_OTHER_BASE = 0xFB80;
-static constexpr uint16_t COLL_UNASSIGNED_BASE = 0xFBC0;
+static constexpr uint16_t COLL_HAN_CORE_BASE = 0x${han_core_base};
+static constexpr uint16_t COLL_HAN_OTHER_BASE = 0x${han_other_base};
+static constexpr uint16_t COLL_UNASSIGNED_BASE = 0x${unassigned_base};
 
 /// The CJK Unified Ideographs and CJK Compatibility Ideographs blocks, which
 /// select COLL_HAN_CORE_BASE. Block boundaries are stable, so they are
@@ -878,7 +949,10 @@ static constexpr CollRange COLL_HAN_CORE_BLOCKS[] = {
     {0x4E00, 0x9FFF},
     {0xF900, 0xFAFF},
 };
-"""
+""",
+        han_core_base=f"{HAN_CORE_BASE:04X}",
+        han_other_base=f"{HAN_OTHER_BASE:04X}",
+        unassigned_base=f"{UNASSIGNED_BASE:04X}",
     )
 
 
