@@ -663,6 +663,40 @@ TEST_F(GCBasicsTestGCOptions, CollectWithGCOptionsMinorSync) {
   EXPECT_EQ(cellSize<DummyObject>(), info.allocatedBytes);
 }
 
+TEST(GCOptionsPromotionTest, MinorRespectsPromotionPolicy) {
+  for (const auto executionPolicy :
+       {GCBase::GCExecutionPolicy::Sync, GCBase::GCExecutionPolicy::Async}) {
+    SCOPED_TRACE(static_cast<int>(executionPolicy));
+    for (const bool revertToYGAtTTI : {false, true}) {
+      SCOPED_TRACE(revertToYGAtTTI);
+      auto runtime = DummyRuntime::create(TestGCConfigFixedSize(
+          8 * FixedSizeHeapSegment::storageSize(),
+          GCConfig::Builder(kTestGCConfigBuilder)
+              .withAllocInYoung(false)
+              .withRevertToYGAtTTI(revertToYGAtTTI)));
+      auto &rt = *runtime;
+      auto &gc = rt.getHeap();
+      const GCBase::GCOptions options{GCBase::GCType::Minor, executionPolicy};
+      GCBase::HeapInfo info;
+
+      DummyObject::create(gc, rt);
+      gc.collectWithOptions("test", options);
+      gc.getHeapInfo(info);
+      // Whole-segment promotion retains even unreachable objects.
+      EXPECT_EQ(cellSize<DummyObject>(), info.allocatedBytes);
+
+      gc.ttiReached();
+      DummyObject::create(gc, rt);
+      gc.collectWithOptions("test", options);
+      gc.getHeapInfo(info);
+      // Only the new YG object can be reclaimed; the first is already in OG.
+      EXPECT_EQ(
+          cellSize<DummyObject>() * (revertToYGAtTTI ? 1 : 2),
+          info.allocatedBytes);
+    }
+  }
+}
+
 TEST_F(GCBasicsTestGCOptions, CollectWithGCOptionsMajorSync) {
   auto &gc = rt.getHeap();
   GCBase::HeapInfo info;

@@ -1492,8 +1492,10 @@ void HadesGC::collectWithOptions(
   }
 
   std::lock_guard<Mutex> lk = ensureBackgroundTaskPaused();
-  // A forced collection should reclaim YG garbage even in promotion mode.
-  promoteYGToOG_ = false;
+  // Major collections should reclaim YG garbage even in promotion mode.
+  if (options.type == GCType::Major) {
+    promoteYGToOG_ = false;
+  }
   // For minor GC, we do YG collection and let it determine if we should start
   // a new OG collection cycle. For async Major GC, we force a new OG
   // collection.
