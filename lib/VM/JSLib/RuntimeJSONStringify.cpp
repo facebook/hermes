@@ -722,6 +722,11 @@ ExecutionStatus JSONStringifyer::operationJA() {
     return runtime_.raiseStackOverflow(
         Runtime::StackOverflowKind::JSONStringify);
   }
+  // The depth limit does not bound the native stack, which may be nearly
+  // exhausted when stringify is called, so check it at every level.
+  if (LLVM_UNLIKELY(runtime_.isStackOverflowing())) {
+    return runtime_.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
+  }
   depthCount_++;
   output_.push_back(u'[');
   lv.arrayObject.castAndSetHermesValue<JSObject>(
@@ -839,6 +844,11 @@ ExecutionStatus JSONStringifyer::operationJO() {
   if (depthCount_ + 1 >= kMaxRecursionDepth_) {
     return runtime_.raiseStackOverflow(
         Runtime::StackOverflowKind::JSONStringify);
+  }
+  // The depth limit does not bound the native stack, which may be nearly
+  // exhausted when stringify is called, so check it at every level.
+  if (LLVM_UNLIKELY(runtime_.isStackOverflowing())) {
+    return runtime_.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   }
   depthCount_++;
   output_.push_back(u'{');

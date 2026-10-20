@@ -584,6 +584,11 @@ CallResult<HermesValue> RuntimeJSONParser<Kind>::operationWalk(
   if (remainingDepth_ <= 0) {
     return runtime_.raiseStackOverflow(Runtime::StackOverflowKind::JSONParser);
   }
+  // The reviver is only called after the children have been walked, so check
+  // the native stack here, at every level of the walk.
+  if (LLVM_UNLIKELY(runtime_.isStackOverflowing())) {
+    return runtime_.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
+  }
 
   struct : public Locals {
     PinnedValue<> tmpHandle;
