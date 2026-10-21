@@ -213,54 +213,37 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:        StoreStackInst %8: any, %10: any
 // CHECK-NEXT:  %12 = IteratorBeginInst (:any) %10: any
 // CHECK-NEXT:        StoreStackInst %12: any, %9: any
-// CHECK-NEXT:  %14 = AllocStackInst (:any) $?anon_5_iterDone: any
-// CHECK-NEXT:        StoreStackInst undefined: undefined, %14: any
-// CHECK-NEXT:  %16 = AllocStackInst (:any) $?anon_6_iterValue: any
-// CHECK-NEXT:        StoreStackInst undefined: undefined, %16: any
-// CHECK-NEXT:        BranchInst %BB4
+// CHECK-NEXT:  %14 = AllocStackInst (:any) $?anon_5_iterValue: any
+// CHECK-NEXT:  %15 = LoadStackInst (:any) %10: any
+// CHECK-NEXT:  %16 = IteratorNextInst (:any) %9: any, %15: any
+// CHECK-NEXT:        StoreStackInst %16: any, %14: any
+// CHECK-NEXT:  %18 = LoadStackInst (:any) %14: any
+// CHECK-NEXT:        StoreFrameInst %6: environment, %18: any, [%VS7.x]: any
+// CHECK-NEXT:  %20 = LoadStackInst (:any) %9: any
+// CHECK-NEXT:  %21 = IteratorCloseInst (:any) %20: any, false: boolean
+// CHECK-NEXT:        SaveAndYieldInst undefined: undefined, false: boolean, %BB3
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:        ReturnInst %1: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %20 = ResumeGeneratorInst (:any) %4: boolean
-// CHECK-NEXT:  %21 = LoadStackInst (:boolean) %4: boolean
-// CHECK-NEXT:        CondBranchInst %21: boolean, %BB10, %BB9
+// CHECK-NEXT:  %24 = ResumeGeneratorInst (:any) %4: boolean
+// CHECK-NEXT:  %25 = LoadStackInst (:boolean) %4: boolean
+// CHECK-NEXT:        CondBranchInst %25: boolean, %BB5, %BB4
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %23 = LoadStackInst (:any) %10: any
-// CHECK-NEXT:  %24 = IteratorNextInst (:any) %9: any, %23: any
-// CHECK-NEXT:  %25 = LoadStackInst (:any) %9: any
-// CHECK-NEXT:  %26 = BinaryStrictlyEqualInst (:any) %25: any, undefined: undefined
-// CHECK-NEXT:        StoreStackInst %26: any, %14: any
-// CHECK-NEXT:        CondBranchInst %26: any, %BB6, %BB5
+// CHECK-NEXT:  %27 = LoadFrameInst (:any) %6: environment, [%VS7.x]: any
+// CHECK-NEXT:  %28 = AllocStackInst (:boolean) $?anon_7_isReturn: any
+// CHECK-NEXT:        SaveAndYieldInst %27: any, false: boolean, %BB6
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:        StoreStackInst %24: any, %16: any
-// CHECK-NEXT:        BranchInst %BB6
+// CHECK-NEXT:        ReturnInst %24: any
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %31 = LoadStackInst (:any) %16: any
-// CHECK-NEXT:        StoreFrameInst %6: environment, %31: any, [%VS7.x]: any
-// CHECK-NEXT:  %33 = LoadStackInst (:any) %14: any
-// CHECK-NEXT:        CondBranchInst %33: any, %BB8, %BB7
+// CHECK-NEXT:  %31 = ResumeGeneratorInst (:any) %28: boolean
+// CHECK-NEXT:  %32 = LoadStackInst (:boolean) %28: boolean
+// CHECK-NEXT:        CondBranchInst %32: boolean, %BB8, %BB7
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %35 = LoadStackInst (:any) %9: any
-// CHECK-NEXT:  %36 = IteratorCloseInst (:any) %35: any, false: boolean
-// CHECK-NEXT:        BranchInst %BB8
+// CHECK-NEXT:        StoreFrameInst %6: environment, %31: any, [%VS7.x]: any
+// CHECK-NEXT:  %35 = LoadFrameInst (:any) %6: environment, [%VS7.x]: any
+// CHECK-NEXT:        ReturnInst %35: any
 // CHECK-NEXT:%BB8:
-// CHECK-NEXT:        SaveAndYieldInst undefined: undefined, false: boolean, %BB3
-// CHECK-NEXT:%BB9:
-// CHECK-NEXT:  %39 = LoadFrameInst (:any) %6: environment, [%VS7.x]: any
-// CHECK-NEXT:  %40 = AllocStackInst (:boolean) $?anon_8_isReturn: any
-// CHECK-NEXT:        SaveAndYieldInst %39: any, false: boolean, %BB11
-// CHECK-NEXT:%BB10:
-// CHECK-NEXT:        ReturnInst %20: any
-// CHECK-NEXT:%BB11:
-// CHECK-NEXT:  %43 = ResumeGeneratorInst (:any) %40: boolean
-// CHECK-NEXT:  %44 = LoadStackInst (:boolean) %40: boolean
-// CHECK-NEXT:        CondBranchInst %44: boolean, %BB13, %BB12
-// CHECK-NEXT:%BB12:
-// CHECK-NEXT:        StoreFrameInst %6: environment, %43: any, [%VS7.x]: any
-// CHECK-NEXT:  %47 = LoadFrameInst (:any) %6: environment, [%VS7.x]: any
-// CHECK-NEXT:        ReturnInst %47: any
-// CHECK-NEXT:%BB13:
-// CHECK-NEXT:        ReturnInst %43: any
+// CHECK-NEXT:        ReturnInst %31: any
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS8 [x: any]

@@ -1677,7 +1677,8 @@ class ESTreeIRGen {
   IteratorRecord emitGetIterator(Value *obj);
 
   /// Emit the IteratorNextInst for \p iteratorRecord, which may alter the
-  /// iteratorRecord to indicate completion.
+  /// iteratorRecord to indicate completion. Returns undefined without advancing
+  /// the iterator if it is already complete.
   Value *emitIteratorNext(IteratorRecord iteratorRecord) {
     auto *LSI = Builder.createLoadStackInst(iteratorRecord.sourceOrNext);
     return Builder.createIteratorNextInst(iteratorRecord.iterStorage, LSI);
@@ -1751,7 +1752,6 @@ class ESTreeIRGen {
       bool declInit,
       ESTree::RestElementNode *rest,
       IteratorRecord iteratorRecord,
-      AllocStackInst *iteratorDone,
       SharedExceptionHandler *handler);
 
   /// Emit an operation guarded by try with a shared exception handler.
