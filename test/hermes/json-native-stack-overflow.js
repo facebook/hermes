@@ -50,10 +50,12 @@ function nestedArrays(depth) {
   return a;
 }
 
-// Nest as deeply as the nesting limit allows. It is lower in some sanitizer
-// builds.
+// Nest as deeply as the nesting limit and the native stack allow. The nesting
+// limit is lower in some sanitizer builds, and in unoptimized builds 400
+// nested objects do not fit in the 1 MB stack.
 var depth = 400;
 try {
+  JSON.stringify(nestedObjects(depth));
   JSON.stringify(nestedArrays(depth));
 } catch (e) {
   depth = 99;
