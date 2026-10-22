@@ -1427,7 +1427,8 @@ _sh_ljs_iterator_begin_rjs(SHRuntime *shr, SHLegacyValue *src);
 
 /// Move \p iteratorOrIdx forward, and return the value at the new iterator. \p
 /// srcOrNext is the source if we are iterating over an array, or the .next()
-/// method otherwise.
+/// method otherwise. An exhausted iterator is represented by undefined;
+/// advancing it returns undefined without accessing \p srcOrNext.
 SHERMES_EXPORT SHLegacyValue _sh_ljs_iterator_next_rjs(
     SHRuntime *shr,
     SHLegacyValue *iteratorOrIdx,

@@ -816,11 +816,6 @@ void ESTreeIRGen::emitDestructuringArray(
 
   const IteratorRecord iteratorRecord = emitGetIterator(source);
 
-  /// iteratorDone = undefined.
-  auto *iteratorDone = Builder.createAllocStackInst(
-      genAnonymousLabelName("iterDone"), Type::createAnyType());
-  Builder.createStoreStackInst(Builder.getLiteralUndefined(), iteratorDone);
-
   auto *value = Builder.createAllocStackInst(
       genAnonymousLabelName("iterValue"), Type::createAnyType());
 
@@ -832,7 +827,6 @@ void ESTreeIRGen::emitDestructuringArray(
   bool fastDestructure =
       Mod->getContext().getCodeGenerationSettings().enableFastDestructure;
 
-  bool first = true;
   bool emittedRest = false;
   // The LReference created in the previous iteration of the destructuring
   // loop. We need it because we want to put the previous store and the creation
@@ -878,7 +872,7 @@ void ESTreeIRGen::emitDestructuringArray(
 
     if (auto *rest = llvh::dyn_cast<ESTree::RestElementNode>(target)) {
       storePreviousValue();
-      emitRestElement(declInit, rest, iteratorRecord, iteratorDone, &handler);
+      emitRestElement(declInit, rest, iteratorRecord, &handler);
       emittedRest = true;
       break;
     }
@@ -934,64 +928,11 @@ void ESTreeIRGen::emitDestructuringArray(
       }
     }
 
-    // Pseudocode of the algorithm for a step:
-    //
-    //   value = undefined;
-    //   if (iteratorDone) goto nextBlock
-    // notDoneBlock:
-    //   stepResult = IteratorNext(iteratorRecord)
-    //   stepDone = IteratorComplete(stepResult)
-    //   iteratorDone = stepDone
-    //   if (stepDone) goto nextBlock
-    // newValueBlock:
-    //   value = IteratorValue(stepResult)
-    // nextBlock:
-    //   if (value !== undefined) goto storeBlock    [if initializer present]
-    //   value = initializer                         [if initializer present]
-    // storeBlock:
-    //   lref.emitStore(value)
+    Builder.createStoreStackInst(emitIteratorNext(iteratorRecord), value);
 
-    auto *notDoneBlock = Builder.createBasicBlock(Builder.getFunction());
-    auto *newValueBlock = Builder.createBasicBlock(Builder.getFunction());
-    auto *nextBlock = Builder.createBasicBlock(Builder.getFunction());
-    auto *getDefaultBlock =
-        init ? Builder.createBasicBlock(Builder.getFunction()) : nullptr;
-    auto *storeBlock =
-        init ? Builder.createBasicBlock(Builder.getFunction()) : nullptr;
-
-    Builder.createStoreStackInst(Builder.getLiteralUndefined(), value);
-
-    // In the first iteration we know that "done" is false.
-    if (first) {
-      first = false;
-      Builder.createBranchInst(notDoneBlock);
-    } else {
-      Builder.createCondBranchInst(
-          Builder.createLoadStackInst(iteratorDone), nextBlock, notDoneBlock);
-    }
-
-    // notDoneBlock:
-    Builder.setInsertionBlock(notDoneBlock);
-    auto *stepValue = emitIteratorNext(iteratorRecord);
-    auto *stepDone = emitIteratorComplete(iteratorRecord);
-    Builder.createStoreStackInst(stepDone, iteratorDone);
-    Builder.createCondBranchInst(
-        stepDone, init ? getDefaultBlock : nextBlock, newValueBlock);
-
-    // newValueBlock:
-    Builder.setInsertionBlock(newValueBlock);
-    Builder.createStoreStackInst(stepValue, value);
-    Builder.createBranchInst(nextBlock);
-
-    // nextBlock:
-    Builder.setInsertionBlock(nextBlock);
-
-    // NOTE: we can't use emitOptionalInitializationHere() because we want to
-    // be able to jump directly to getDefaultBlock.
     if (init) {
-      //    if (value !== undefined) goto storeBlock    [if initializer present]
-      //    value = initializer                         [if initializer present]
-      //  storeBlock:
+      auto *getDefaultBlock = Builder.createBasicBlock(Builder.getFunction());
+      auto *storeBlock = Builder.createBasicBlock(Builder.getFunction());
       Builder.createCondBranchInst(
           Builder.createBinaryOperatorInst(
               Builder.createLoadStackInst(value),
@@ -1039,20 +980,10 @@ void ESTreeIRGen::emitDestructuringArray(
 
   storePreviousValue();
 
-  // If in the end the iterator is not done, close it. We only need to do
-  // that if we didn't end with a rest element because it would have exhausted
-  // the iterator.
+  // A rest element exhausts the iterator. Otherwise, IteratorClose
+  // closes it only if it is still active.
   if (!emittedRest) {
-    auto *notDoneBlock = Builder.createBasicBlock(Builder.getFunction());
-    auto *doneBlock = Builder.createBasicBlock(Builder.getFunction());
-    Builder.createCondBranchInst(
-        Builder.createLoadStackInst(iteratorDone), doneBlock, notDoneBlock);
-
-    Builder.setInsertionBlock(notDoneBlock);
     emitIteratorClose(iteratorRecord, false);
-    Builder.createBranchInst(doneBlock);
-
-    Builder.setInsertionBlock(doneBlock);
   }
 
   // If we emitted at least one try block, generate the exception handler.
@@ -1060,17 +991,7 @@ void ESTreeIRGen::emitDestructuringArray(
     IRBuilder::SaveRestore saveRestore{Builder};
     Builder.setInsertionBlock(handler.exceptionBlock);
 
-    auto *notDoneBlock = Builder.createBasicBlock(Builder.getFunction());
-    auto *doneBlock = Builder.createBasicBlock(Builder.getFunction());
-
-    Builder.createCondBranchInst(
-        Builder.createLoadStackInst(iteratorDone), doneBlock, notDoneBlock);
-
-    Builder.setInsertionBlock(notDoneBlock);
     emitIteratorClose(iteratorRecord, true);
-    Builder.createBranchInst(doneBlock);
-
-    Builder.setInsertionBlock(doneBlock);
     Builder.createThrowInst(Builder.createLoadStackInst(handler.exc));
   } else {
     // If we didn't use the exception block, we need to delete it, otherwise
@@ -1155,7 +1076,6 @@ void ESTreeIRGen::emitRestElement(
     bool declInit,
     ESTree::RestElementNode *rest,
     hermes::irgen::ESTreeIRGen::IteratorRecord iteratorRecord,
-    hermes::AllocStackInst *iteratorDone,
     SharedExceptionHandler *handler) {
   // 13.3.3.8 BindingRestElement:...BindingIdentifier
 
@@ -1194,14 +1114,12 @@ void ESTreeIRGen::emitRestElement(
   // n = 0.
   Builder.createStoreStackInst(Builder.getLiteralPositiveZero(), n);
 
-  Builder.createCondBranchInst(
-      Builder.createLoadStackInst(iteratorDone), doneBlock, notDoneBlock);
+  Builder.createBranchInst(notDoneBlock);
 
   // notDoneBlock:
   Builder.setInsertionBlock(notDoneBlock);
   auto *stepValue = emitIteratorNext(iteratorRecord);
   auto *stepDone = emitIteratorComplete(iteratorRecord);
-  Builder.createStoreStackInst(stepDone, iteratorDone);
   Builder.createCondBranchInst(stepDone, doneBlock, newValueBlock);
 
   // newValueBlock:

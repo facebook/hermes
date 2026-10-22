@@ -405,13 +405,6 @@ ExecutionStatus Interpreter::caseIteratorNext(
     return ExecutionStatus::RETURNED;
   }
   if (LLVM_UNLIKELY(O2REG(IteratorNext).isUndefined())) {
-    // In all current use cases of IteratorNext, we check and branch away
-    // from IteratorNext in the case that iterStorage was set to undefined
-    // (which indicates completion of iteration).
-    // If we introduce a use case which allows calling IteratorNext,
-    // then this assert can be removed. For now, this branch just returned
-    // undefined in NDEBUG mode.
-    assert(false && "IteratorNext called on completed iterator");
     O1REG(IteratorNext) = HermesValue::encodeUndefinedValue();
     return ExecutionStatus::RETURNED;
   }

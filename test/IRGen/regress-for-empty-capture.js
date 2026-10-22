@@ -26,22 +26,15 @@ for (const [] = []; ; class C {}) {
 // CHECK-NEXT:       StoreStackInst %3: object, %5: any
 // CHECK-NEXT:  %7 = IteratorBeginInst (:any) %5: any
 // CHECK-NEXT:       StoreStackInst %7: any, %4: any
-// CHECK-NEXT:  %9 = AllocStackInst (:any) $?anon_3_iterDone: any
-// CHECK-NEXT:        StoreStackInst undefined: undefined, %9: any
-// CHECK-NEXT:  %11 = AllocStackInst (:any) $?anon_4_iterValue: any
-// CHECK-NEXT:  %12 = LoadStackInst (:any) %9: any
-// CHECK-NEXT:        CondBranchInst %12: any, %BB4, %BB3
+// CHECK-NEXT:  %9 = AllocStackInst (:any) $?anon_3_iterValue: any
+// CHECK-NEXT:  %10 = LoadStackInst (:any) %4: any
+// CHECK-NEXT:  %11 = IteratorCloseInst (:any) %10: any, false: boolean
+// CHECK-NEXT:        BranchInst %BB1
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:        BranchInst %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %15 = LoadStackInst (:any) %1: any
-// CHECK-NEXT:        ReturnInst %15: any
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %17 = LoadStackInst (:any) %4: any
-// CHECK-NEXT:  %18 = IteratorCloseInst (:any) %17: any, false: boolean
-// CHECK-NEXT:        BranchInst %BB4
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:        BranchInst %BB1
+// CHECK-NEXT:  %14 = LoadStackInst (:any) %1: any
+// CHECK-NEXT:        ReturnInst %14: any
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS1 [this: object]
