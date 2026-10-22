@@ -38,3 +38,12 @@ if("${CMAKE_C_COMPILER_ID}" MATCHES "Clang" OR
     "${CMAKE_C_COMPILER_ID}" MATCHES "GNU")
   set_property(SOURCE ${IMPL_SRCS} APPEND_STRING PROPERTY COMPILE_FLAGS "-w")
 endif()
+
+# The generated code calls functions through pointers that take the instance
+# as void *, while it defines them with a typed instance pointer. UBSan's
+# function type check, which Clang applies to C since version 17, flags each
+# of those calls.
+if("${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
+  set_property(SOURCE ${IMPL_SRCS} APPEND_STRING PROPERTY COMPILE_FLAGS
+    " -fno-sanitize=function")
+endif()

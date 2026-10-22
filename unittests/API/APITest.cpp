@@ -465,6 +465,11 @@ TEST_P(HermesRuntimeTest, StrictHostFunctionBindTest) {
 }
 
 TEST_P(HermesRuntimeTest, CreateValueFromJsonUtf8IgnoresGlobalJSON) {
+  // HermesSandboxRuntime uses the default createValueFromJsonUtf8, which calls
+  // the global JSON.parse.
+  if (dynamic_cast<HermesSandboxRuntime *>(rt.get()))
+    return;
+
   // Hermes parses JSON natively, so replacing the global JSON.parse must not
   // change the result, also when the runtime is decorated (e.g. thread-safe).
   eval("JSON.parse = function() { return 'hijacked'; }");
@@ -924,6 +929,10 @@ TEST(HermesWatchTimeLimitTest, WatchTimeLimit) {
 
 #if HERMESVM_GCKIND == _HERMESVM_GCVALUE_HADES
 TEST_P(HermesRuntimeTest, GetHeapInfo) {
+  // HermesSandboxRuntime does not implement instrumentation().
+  if (dynamic_cast<HermesSandboxRuntime *>(rt.get()))
+    return;
+
   auto &instrumentation = rt->instrumentation();
   // Make sure we do run some collections.
   instrumentation.collectGarbage("test");
@@ -1416,6 +1425,10 @@ TEST_P(HermesRuntimeTest, ExternalMemoryTest) {
 }
 
 TEST_P(HermesRuntimeTest, ExternalMemoryNoOpTest) {
+  // HermesSandboxRuntime does not implement instrumentation().
+  if (dynamic_cast<HermesSandboxRuntime *>(rt.get()))
+    return;
+
   auto heapInfo = [&](const char *key) {
     return rt->instrumentation().getHeapInfo(false)[key];
   };
@@ -1955,6 +1968,11 @@ TEST_P(HermesRuntimeTest, UTF16ConversionTest) {
       *rt, "foobar\xf0\x9f\x91\x8d\xe4\xbd\xa0\xe5\xa5\xbd");
   EXPECT_EQ(combined.utf16(*rt), u"foobar\xd83d\xdc4d\x4f60\x597d");
 
+  // HermesSandboxRuntime converts strings to UTF-16 through UTF-8, which
+  // replaces lone surrogates with U+FFFD.
+  if (dynamic_cast<HermesSandboxRuntime *>(rt.get()))
+    return;
+
   // Thumbs up emoji is encoded as 0xd83d 0xdc4d. These test UTF16 with lone
   // high and low surrogates.
   String loneHighSurrogate = eval("'\\ud83d'").getString(*rt);
@@ -1987,6 +2005,11 @@ TEST_P(HermesRuntimeTest, CreateFromUtf16Test) {
   EXPECT_EQ(jsString.utf16(*rt), utf16);
   prop = PropNameID::forUtf16(*rt, utf16);
   EXPECT_EQ(prop.utf16(*rt), utf16);
+
+  // HermesSandboxRuntime converts strings to UTF-16 through UTF-8, which
+  // replaces lone surrogates with U+FFFD.
+  if (dynamic_cast<HermesSandboxRuntime *>(rt.get()))
+    return;
 
   // Thumbs up emoji is encoded as 0xd83d 0xdc4d. The following tests String
   // creation with a lone surrogate.
@@ -2409,6 +2432,10 @@ TEST_P(HermesRuntimeTest, TryGetMutableBuffer) {
       eval("new ArrayBuffer(8);").getObject(*rt).getArrayBuffer(*rt);
   EXPECT_EQ(arrayBuffer.tryGetMutableBuffer(*rt), nullptr);
 
+  // HermesSandboxRuntime cannot create an ArrayBuffer from a MutableBuffer.
+  if (dynamic_cast<HermesSandboxRuntime *>(rt.get()))
+    return;
+
   struct TestBuffer : MutableBuffer {
     size_t size() const override {
       return sizeof(arr);
@@ -2442,6 +2469,10 @@ TEST_P(HermesRuntimeTest, TryGetMutableBuffer) {
 }
 
 TEST_P(HermesRuntimeTest, TryGetMutableBufferAfterHiddenClassTransition) {
+  // HermesSandboxRuntime cannot create an ArrayBuffer from a MutableBuffer.
+  if (dynamic_cast<HermesSandboxRuntime *>(rt.get()))
+    return;
+
   struct TestBuffer : MutableBuffer {
     size_t size() const override {
       return sizeof(arr);
@@ -4311,5 +4342,5 @@ TEST_P(HermesRuntimeTest, CreateErrorTest) {
 INSTANTIATE_TEST_CASE_P(
     Runtimes,
     HermesRuntimeTest,
-    ::testing::ValuesIn(runtimeGenerators()));
+    ::testing::ValuesIn(runtimeGeneratorsWithSandBox()));
 } // namespace

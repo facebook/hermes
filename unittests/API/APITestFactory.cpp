@@ -6,6 +6,7 @@
  */
 
 #include <hermes/hermes.h>
+#include <hermes_sandbox/HermesSandboxRuntime.h>
 #include <jsi/test/testlib.h>
 #include <jsi/threadsafe.h>
 
@@ -28,6 +29,13 @@ std::vector<RuntimeFactory> runtimeGenerators() {
                 .withEnableHermesInternalTestMethods(true)
                 .build());
       }};
+}
+
+/// The factories in runtimeGenerators(), plus HermesSandboxRuntime.
+std::vector<RuntimeFactory> runtimeGeneratorsWithSandBox() {
+  auto factories = runtimeGenerators();
+  factories.push_back([] { return makeHermesSandboxRuntime(); });
+  return factories;
 }
 
 } // namespace jsi
