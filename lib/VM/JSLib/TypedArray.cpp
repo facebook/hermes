@@ -89,9 +89,6 @@ CallResult<HermesValue> iterableToArrayLikeFastPath(
       lv.nextValue = std::move(*valueRes);
     }
 
-    if (LLVM_UNLIKELY(k == UINT32_MAX)) {
-      return runtime.raiseRangeError("iterable too long for TypedArray");
-    }
     if (LLVM_UNLIKELY(
             JSArray::setElementAt(lv.A, runtime, k, lv.nextValue) ==
             ExecutionStatus::EXCEPTION)) {

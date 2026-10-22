@@ -222,6 +222,31 @@ cons.forEach(function(TypedArray) {
   assert.equal(view[2], 3);
 });
 
+(function testArrayCopyWithDeletedElement() {
+  var source = [1, 2, 3];
+  delete source[1];
+
+  var view = new Float64Array(source);
+  assert.arrayEqual([view[0], view[1], view[2]], [1, NaN, 3]);
+
+  view = Uint8Array.from(source);
+  assert.arrayEqual([view[0], view[1], view[2]], [1, 0, 3]);
+
+  var visited = [];
+  view = Float64Array.from(source, function(value, index) {
+    visited.push(index);
+    if (index === 1) {
+      assert.equal(value, undefined);
+      return 7;
+    }
+    return value;
+  });
+  assert.arrayEqual([view[0], view[1], view[2]], [1, 7, 3]);
+  assert.arrayEqual(visited, [0, 1, 2]);
+  assert.equal(source.length, 3);
+  assert.equal(1 in source, false);
+})();
+
 (function testArrayIteratorFastPathSemantics() {
   var dense = [1, 2, 3];
   var view = new Float64Array(dense);
