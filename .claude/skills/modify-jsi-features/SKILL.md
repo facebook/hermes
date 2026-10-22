@@ -4,7 +4,8 @@ description: >
   Guide for adding new JSI functionality to the JavaScript Interface (JSI) layer.
   Use when the user asks to add, create, or implement new methods or features
   in the JSI Runtime interface. Covers all required files across JSI core,
-  Hermes implementation, and SynthTrace replay support.
+  Hermes implementation, SynthTrace replay support, and the runtimes on the
+  Hermes C ABI, such as the sandbox.
 ---
 
 # Adding New JSI Functionality
@@ -48,6 +49,14 @@ interact with JavaScript runtimes. The architecture consists of:
 14. `xplat/static_h/unittests/API/SynthTraceTest.cpp` — Add replay tests
 15. `xplat/static_h/unittests/API/SynthTraceSerializationTest.cpp` — Add serialization tests
 16. `xplat/static_h/unittests/API/SynthTraceParserTest.cpp` — Add parser tests
+
+### Runtimes on the Hermes C ABI
+
+17. `xplat/static_h/API/hermes_sandbox/HermesSandboxRuntime.cpp` — The sandbox
+    runtime inherits the default from `jsi.cpp` unless it overrides the method.
+    Check the default (see step 15)
+18. `xplat/static_h/API/hermes_abi/HermesABIRuntimeWrapper.cpp` — The native
+    runtime on the C ABI; the same check applies
 
 ## Implementation Strategy
 
@@ -111,7 +120,6 @@ class JSI_EXPORT Runtime : public IRuntime {
 while the `Runtime` class provides the default implementation with `override` keyword.
 This separation allows other runtimes to implement the interface differently while
 `Runtime` provides a JavaScript-based fallback.
-```
 
 If adding convenience methods to JSI types (like `Object`), add them too:
 
@@ -487,6 +495,27 @@ TEST_F(SynthTraceParserTest, ParseMyNewMethodRecord) {
 }
 ```
 
+### 15. Check the Runtimes on the Hermes C ABI
+
+`HermesSandboxRuntime` runs JS that it does not trust, inside a sandbox, and
+reaches the VM only through the C ABI in `API/hermes_abi`. It inherits the
+default implementation from `jsi.cpp` unless it overrides the method, and so
+does `HermesABIRuntimeWrapper`. A default that looks up JS globals, or uses
+the unchecked `Value` accessors (`getString`, `getObject`, ...) on what JS
+returns, is not safe in the sandbox, so override it there:
+
+- with existing ABI entries, if they can do the job;
+- otherwise with a built-in that the runtime saves at startup, in
+  `captureIntrinsics()`, before any JS can replace it;
+- or with a new ABI entry, which means changing `hermes_abi.h`,
+  `hermes_vtable.cpp` and the host mirror together, and regenerating the
+  sandbox.
+
+The `regenerate-sandbox` skill describes these steps
+(`references/jsi.md` and `references/abi.md`). The API tests in
+`APITest.cpp` that use `TEST_P(HermesRuntimeTest, ...)` also run on the
+sandbox.
+
 ## Key Conventions
 
 1. **Default Implementations**: Always provide a default implementation in
@@ -518,7 +547,7 @@ TEST_F(SynthTraceParserTest, ParseMyNewMethodRecord) {
 To run all JSI tests defined in `testlib.cpp`:
 
 ```bash
-buck test xplat/jsi:jsi
+buck2 test xplat/jsi:jsi
 ```
 
 This runs the JSI test suite against multiple runtime implementations (Hermes, StaticHermes, etc.).
@@ -528,13 +557,13 @@ This runs the JSI test suite against multiple runtime implementations (Hermes, S
 To run the Hermes-specific API tests:
 
 ```bash
-buck test xplat/static_h:HermesUnitTests
+buck2 test xplat/static_h:HermesUnitTests
 ```
 
 To run a specific test:
 
 ```bash
-buck test xplat/static_h:HermesUnitTests -- MyTestName
+buck2 test xplat/static_h:HermesUnitTests -- MyTestName
 ```
 
 ## Reference Diffs
@@ -545,5 +574,5 @@ For a complete example of adding JSI functionality, refer to these diffs:
 - **D66729169**: Hermes implementation
 - **D66792338**: SynthTrace support
 
-Note: These diffs predate the `IRuntime` interface, but the patterns remain the
-same.
+Note: These diffs predate the `IRuntime` interface, which **D89093651** added,
+but the patterns remain the same.

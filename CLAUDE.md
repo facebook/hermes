@@ -69,7 +69,7 @@ Pass these with `-D` when configuring, e.g., `cmake -B build -DCMAKE_BUILD_TYPE=
 
 **External Dependencies:**
 - `HERMES_ALLOW_BOOST_CONTEXT` - Use Boost.Context fibers: 0 (off), 1 (auto), 2 (force on) (default: 1)
-- `JSI_UNSTABLE` - Enable JSI unstable APIs (default: ON)
+- `JSI_UNSTABLE` - Enable JSI unstable APIs (default: OFF)
 - `IMPORT_HOST_COMPILERS` - Import shermes/hermesc from another build for cross-compilation
 
 ### Building

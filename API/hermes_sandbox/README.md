@@ -20,6 +20,8 @@ These JSI features are not supported:
 
 ## Re-generating the sandbox
 
+The `regenerate-sandbox` skill in `.claude/skills` has a checklist for this, the checks to run on the output, and solutions to problems seen in the past.
+
 Install `emsdk` by following the instructions [here](https://github.com/emscripten-core/emsdk). Then [download wasm2c from wabt](https://github.com/WebAssembly/wabt/releases). The versions to use are listed at the end of this file.
 
 Build `hermesc` for the host platform, in order to generate bytecode that is used by the Hermes build. The commands below use `build_host` to refer to this host build. Use a fresh directory, since the build appends to `ImportHostCompilers.cmake`.
