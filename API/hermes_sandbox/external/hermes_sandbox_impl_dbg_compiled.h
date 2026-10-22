@@ -88,9 +88,6 @@ u32 w2c_hermes_get_global_base(w2c_hermes*);
 /* export: 'get_hermes_abi_vtable' */
 u32 w2c_hermes_get_hermes_abi_vtable(w2c_hermes*);
 
-/* export: '_ZNK4llvh3cfg6UpdateIPN6hermes10BasicBlockEE4dumpEv' */
-void w2c_hermes_0x5FZNK4llvh3cfg6UpdateIPN6hermes10BasicBlockEE4dumpEv(w2c_hermes*, u32);
-
 /* export: '_ZNK4llvh7APFloat4dumpEv' */
 void w2c_hermes_0x5FZNK4llvh7APFloat4dumpEv(w2c_hermes*, u32);
 
@@ -102,6 +99,18 @@ void w2c_hermes_0x5FZNK4llvh5Twine4dumpEv(w2c_hermes*, u32);
 
 /* export: '_ZNK4llvh5Twine8dumpReprEv' */
 void w2c_hermes_0x5FZNK4llvh5Twine8dumpReprEv(w2c_hermes*, u32);
+
+/* export: '_ZNK4llvh3cfg6UpdateIPN6hermes10BasicBlockEE4dumpEv' */
+void w2c_hermes_0x5FZNK4llvh3cfg6UpdateIPN6hermes10BasicBlockEE4dumpEv(w2c_hermes*, u32);
+
+/* export: '_ZNK6hermes2vm11HermesValue4dumpEv' */
+void w2c_hermes_0x5FZNK6hermes2vm11HermesValue4dumpEv(w2c_hermes*, u32);
+
+/* export: '_ZN6hermes2vm15dumpHermesValueE15HermesValueBase' */
+void w2c_hermes_0x5FZN6hermes2vm15dumpHermesValueE15HermesValueBase(w2c_hermes*, u32);
+
+/* export: '_sh_ljs_dump_to_stderr' */
+void w2c_hermes_0x5Fsh_ljs_dump_to_stderr(w2c_hermes*, u32);
 
 /* export: '_initialize' */
 void w2c_hermes_0x5Finitialize(w2c_hermes*);
