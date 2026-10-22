@@ -13,10 +13,24 @@
 
 #include <atomic>
 #include <chrono>
+#include <cmath>
+#include <cstring>
 #include <deque>
+#include <limits>
+#include <optional>
 #include <random>
+#include <string>
+#include <unordered_map>
 
 #ifdef _WIN32
+// Leave out the parts of windows.h that clash with JSI and the standard
+// library, such as the global UUID type and the min and max macros.
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
 #else
 #include <sys/mman.h>
@@ -408,51 +422,52 @@ SandboxPropNameIDListPtrOrError createPropNameIDListPtrOrError(
   return {static_cast<u32>((err << 2) | 1)};
 }
 
-SandboxValue createUndefinedValue() {
+/// Create a SandboxValue of the given \p kind with all other bytes zeroed.
+/// SandboxValues are copied into sandbox memory, so this keeps the padding and
+/// the bytes of the union that the active member does not use from carrying
+/// host stack contents into the sandbox.
+SandboxValue createValue(SandboxValueKind kind) {
   SandboxValue val;
-  val.kind = SandboxValueKindUndefined;
+  memset(&val, 0, sizeof(val));
+  val.kind = kind;
   return val;
+}
+
+SandboxValue createUndefinedValue() {
+  return createValue(SandboxValueKindUndefined);
 }
 SandboxValue createNullValue() {
-  SandboxValue val;
-  val.kind = SandboxValueKindNull;
-  return val;
+  return createValue(SandboxValueKindNull);
 }
 SandboxValue createBoolValue(bool b) {
-  SandboxValue val;
-  val.kind = SandboxValueKindBoolean;
+  SandboxValue val = createValue(SandboxValueKindBoolean);
   val.data.boolean = b;
   return val;
 }
 SandboxValue createNumberValue(double d) {
-  SandboxValue val;
-  val.kind = SandboxValueKindNumber;
+  SandboxValue val = createValue(SandboxValueKindNumber);
   val.data.number = d;
   return val;
 }
 
 /// Helpers to create a SandboxValue from a pointer to a ManagedPointer.
 SandboxValue createObjectValue(u32 ptr) {
-  SandboxValue val;
-  val.kind = SandboxValueKindObject;
+  SandboxValue val = createValue(SandboxValueKindObject);
   val.data.pointer = ptr;
   return val;
 }
 SandboxValue createStringValue(u32 ptr) {
-  SandboxValue val;
-  val.kind = SandboxValueKindString;
+  SandboxValue val = createValue(SandboxValueKindString);
   val.data.pointer = ptr;
   return val;
 }
 SandboxValue createBigIntValue(u32 ptr) {
-  SandboxValue val;
-  val.kind = SandboxValueKindBigInt;
+  SandboxValue val = createValue(SandboxValueKindBigInt);
   val.data.pointer = ptr;
   return val;
 }
 SandboxValue createSymbolValue(u32 ptr) {
-  SandboxValue val;
-  val.kind = SandboxValueKindSymbol;
+  SandboxValue val = createValue(SandboxValueKindSymbol);
   val.data.pointer = ptr;
   return val;
 }
@@ -511,20 +526,22 @@ SandboxSymbol getSymbolValue(const SandboxValue &val) {
   return createSymbol(val.data.pointer);
 }
 u32 getPointerValue(const SandboxValue &val) {
-  assert(getValueKind(val) | SANDBOX_POINTER_MASK);
+  assert(getValueKind(val) & SANDBOX_POINTER_MASK);
   return val.data.pointer;
 }
 
 SandboxValueOrError createValueOrError(SandboxValue val) {
+  // Zero the result first, like createValue, so that copying \p val member by
+  // member cannot leave stale bytes in the padding.
   SandboxValueOrError res;
+  memset(&res, 0, sizeof(res));
   res.value = val;
   return res;
 }
 SandboxValueOrError createValueOrError(SandboxErrorCode err) {
-  SandboxValueOrError res;
-  res.value.kind = SandboxValueKindError;
-  res.value.data.error = err;
-  return res;
+  SandboxValue val = createValue(SandboxValueKindError);
+  val.data.error = err;
+  return createValueOrError(val);
 }
 bool isError(const SandboxValueOrError &val) {
   return getValueKind(val.value) == SandboxValueKindError;
@@ -896,6 +913,67 @@ class NativeTable {
 
 #define THROW_UNIMPLEMENTED() throwUnimplementedImpl(__func__)
 
+/// Convert the UTF-16 string \p utf16 of \p length code units to UTF-8 in \p
+/// out. Return false if it contains an unpaired surrogate, which UTF-8 cannot
+/// represent.
+bool convertUTF16ToUTF8(
+    const char16_t *utf16,
+    size_t length,
+    std::string &out) {
+  out.clear();
+  out.reserve(length);
+  for (size_t i = 0; i < length; ++i) {
+    uint32_t c = utf16[i];
+    if (c >= 0xD800 && c <= 0xDFFF) {
+      // A high surrogate must be followed by a low surrogate.
+      if (c > 0xDBFF || i + 1 == length || utf16[i + 1] < 0xDC00 ||
+          utf16[i + 1] > 0xDFFF)
+        return false;
+      c = 0x10000 + ((c - 0xD800) << 10) + (utf16[++i] - 0xDC00);
+    }
+    auto push = [&out](uint32_t byte) {
+      out.push_back(static_cast<char>(byte));
+    };
+    if (c < 0x80) {
+      push(c);
+    } else if (c < 0x800) {
+      push(0xC0 | (c >> 6));
+      push(0x80 | (c & 0x3F));
+    } else if (c < 0x10000) {
+      push(0xE0 | (c >> 12));
+      push(0x80 | ((c >> 6) & 0x3F));
+      push(0x80 | (c & 0x3F));
+    } else {
+      push(0xF0 | (c >> 18));
+      push(0x80 | ((c >> 12) & 0x3F));
+      push(0x80 | ((c >> 6) & 0x3F));
+      push(0x80 | (c & 0x3F));
+    }
+  }
+  return true;
+}
+
+/// Return the source of a JS string literal whose value is exactly the UTF-16
+/// string \p utf16, with every code unit outside printable ASCII escaped.
+std::string toJSStringLiteral(const char16_t *utf16, size_t length) {
+  static constexpr char kHexDigits[] = "0123456789abcdef";
+  std::string literal;
+  literal.reserve(length + 2);
+  literal.push_back('"');
+  for (size_t i = 0; i < length; ++i) {
+    char16_t c = utf16[i];
+    if (c >= 0x20 && c < 0x7F && c != '"' && c != '\\') {
+      literal.push_back(static_cast<char>(c));
+      continue;
+    }
+    literal.append("\\u");
+    for (int shift = 12; shift >= 0; shift -= 4)
+      literal.push_back(kHexDigits[(c >> shift) & 0xF]);
+  }
+  literal.push_back('"');
+  return literal;
+}
+
 class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
                                  public W2CHermesRAII {
   class ManagedPointerHolder;
@@ -934,6 +1012,65 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
   /// Whether the integrator has requested we terminate execution with a timeout
   /// exception.
   std::atomic<bool> asyncTimeout_{false};
+
+  /// The error constructors used by createError and its variants, in the order
+  /// of kErrorNames.
+  enum ErrorKind {
+    kError,
+    kEvalError,
+    kRangeError,
+    kReferenceError,
+    kSyntaxError,
+    kTypeError,
+    kURIError,
+    kNumErrorKinds,
+  };
+  static constexpr const char *kErrorNames[kNumErrorKinds] = {
+      "Error",
+      "EvalError",
+      "RangeError",
+      "ReferenceError",
+      "SyntaxError",
+      "TypeError",
+      "URIError",
+  };
+
+  /// Built-ins captured by captureIntrinsics() when the runtime is created,
+  /// before any JS has run. JS can replace the globals they come from, or the
+  /// properties they are stored in, so the JSI methods below use these instead
+  /// of looking them up again, and still check the type of everything they
+  /// return. A member is empty if the built-in could not be found.
+  struct Intrinsics {
+    std::optional<Function> eval;
+    std::optional<Function> jsonParse;
+    std::optional<Function> queueMicrotask;
+    std::optional<Function> objectCreate;
+    std::optional<Function> objectGetPrototypeOf;
+    std::optional<Function> objectSetPrototypeOf;
+    std::optional<Function> reflectDeleteProperty;
+    std::optional<Function> reflectOwnKeys;
+    std::optional<Function> uint8Array;
+    std::optional<Function> errors[kNumErrorKinds];
+    /// Getters from %TypedArray%.prototype and ArrayBuffer.prototype. They
+    /// check the internal type of the object they are called on, so JS cannot
+    /// make another object pass for a TypedArray or an ArrayBuffer.
+    std::optional<Function> typedArrayToStringTag;
+    std::optional<Function> typedArrayBuffer;
+    std::optional<Function> typedArrayByteOffset;
+    std::optional<Function> typedArrayByteLength;
+    std::optional<Function> typedArrayLength;
+    std::optional<Function> arrayBufferDetached;
+    /// The string "Uint8Array", to compare with typedArrayToStringTag results.
+    std::optional<String> uint8ArrayName;
+  };
+  Intrinsics intrinsics_;
+
+  /// The data stored with setRuntimeDataImpl, and the deleter for each entry.
+  std::unordered_map<
+      facebook::jsi::UUID,
+      std::pair<const void *, void (*)(const void *)>,
+      facebook::jsi::UUID::Hash>
+      runtimeData_;
 
 #ifndef NDEBUG
   /// Counter to track heap allocations that cannot be managed by a LIFOAlloc.
@@ -1666,6 +1803,208 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
     BUILTIN_UNREACHABLE;
   }
 
+  /// Fill intrinsics_. This runs at the end of the constructor, while the
+  /// global object is still the one the VM created.
+  void captureIntrinsics() {
+    // Return the object stored in property \p name of \p obj, if any.
+    auto getObject =
+        [this](const Object &obj, const char *name) -> std::optional<Object> {
+      Value val = obj.getProperty(*this, name);
+      if (!val.isObject())
+        return std::nullopt;
+      return std::move(val).getObject(*this);
+    };
+    // Return the function stored in property \p name of \p obj, if any.
+    auto getFunction = [&](const Object &obj,
+                           const char *name) -> std::optional<Function> {
+      std::optional<Object> fn = getObject(obj, name);
+      if (!fn || !fn->isFunction(*this))
+        return std::nullopt;
+      return std::move(*fn).getFunction(*this);
+    };
+
+    try {
+      Object global = this->global();
+      intrinsics_.eval = getFunction(global, "eval");
+      intrinsics_.queueMicrotask = getFunction(global, "queueMicrotask");
+      intrinsics_.uint8Array = getFunction(global, "Uint8Array");
+      for (size_t i = 0; i < kNumErrorKinds; ++i)
+        intrinsics_.errors[i] = getFunction(global, kErrorNames[i]);
+      intrinsics_.uint8ArrayName = createStringFromAscii("Uint8Array", 10);
+      if (auto json = getObject(global, "JSON"))
+        intrinsics_.jsonParse = getFunction(*json, "parse");
+      if (auto reflect = getObject(global, "Reflect")) {
+        intrinsics_.reflectDeleteProperty =
+            getFunction(*reflect, "deleteProperty");
+        intrinsics_.reflectOwnKeys = getFunction(*reflect, "ownKeys");
+      }
+
+      auto object = getObject(global, "Object");
+      if (!object)
+        return;
+      intrinsics_.objectCreate = getFunction(*object, "create");
+      intrinsics_.objectGetPrototypeOf = getFunction(*object, "getPrototypeOf");
+      intrinsics_.objectSetPrototypeOf = getFunction(*object, "setPrototypeOf");
+      auto getOwnPropertyDescriptor =
+          getFunction(*object, "getOwnPropertyDescriptor");
+      if (!getOwnPropertyDescriptor)
+        return;
+
+      // Return the getter of the accessor property \p key of \p obj, if any.
+      auto getGetter = [&](const Object &obj,
+                           const Value &key) -> std::optional<Function> {
+        Value desc = getOwnPropertyDescriptor->call(*this, obj, key);
+        if (!desc.isObject())
+          return std::nullopt;
+        return getFunction(desc.getObject(*this), "get");
+      };
+
+      if (auto arrayBuffer = getObject(global, "ArrayBuffer")) {
+        if (auto proto = getObject(*arrayBuffer, "prototype"))
+          intrinsics_.arrayBufferDetached =
+              getGetter(*proto, String::createFromAscii(*this, "detached"));
+      }
+
+      // %TypedArray%.prototype is the prototype of Uint8Array.prototype.
+      if (!intrinsics_.uint8Array || !intrinsics_.objectGetPrototypeOf)
+        return;
+      auto uint8ArrayProto = getObject(*intrinsics_.uint8Array, "prototype");
+      if (!uint8ArrayProto)
+        return;
+      Value protoVal =
+          intrinsics_.objectGetPrototypeOf->call(*this, *uint8ArrayProto);
+      if (!protoVal.isObject())
+        return;
+      Object proto = std::move(protoVal).getObject(*this);
+      intrinsics_.typedArrayBuffer =
+          getGetter(proto, String::createFromAscii(*this, "buffer"));
+      intrinsics_.typedArrayByteOffset =
+          getGetter(proto, String::createFromAscii(*this, "byteOffset"));
+      intrinsics_.typedArrayByteLength =
+          getGetter(proto, String::createFromAscii(*this, "byteLength"));
+      intrinsics_.typedArrayLength =
+          getGetter(proto, String::createFromAscii(*this, "length"));
+      if (auto symbol = getObject(global, "Symbol")) {
+        Value toStringTag = symbol->getProperty(*this, "toStringTag");
+        if (toStringTag.isSymbol())
+          intrinsics_.typedArrayToStringTag = getGetter(proto, toStringTag);
+      }
+    } catch (const JSIException &) {
+      // No JS has run yet, so this should not happen. Leave the remaining
+      // built-ins empty, so the methods that need them throw.
+      assert(false && "Failed to capture the built-ins");
+    }
+  }
+
+  /// Return the captured built-in \p fn, which is called \p name in JS, or
+  /// throw if it was not found.
+  static const Function &getIntrinsic(
+      const std::optional<Function> &fn,
+      const char *name) {
+    if (!fn)
+      throw JSINativeException(
+          std::string(name) + " is not available in this runtime");
+    return *fn;
+  }
+
+  /// Run the deleters of all the runtime data. Remove each entry before running
+  /// its deleter, so that a deleter can still look up the entries that have not
+  /// been released yet, but never one that has. A deleter may also store more
+  /// data, which the loop then releases too.
+  void releaseRuntimeData() {
+    while (!runtimeData_.empty()) {
+      auto it = runtimeData_.begin();
+      auto entry = it->second;
+      runtimeData_.erase(it);
+      entry.second(entry.first);
+    }
+  }
+
+  /// Throw unless \p prototype is a valid prototype, i.e. an object or null.
+  void checkPrototype(const Value &prototype) {
+    if (!prototype.isObject() && !prototype.isNull())
+      throw JSError(
+          *this, "Object prototype argument must be an Object or null");
+  }
+
+  /// Return the property key that \p name stands for, as a String or a Symbol.
+  /// The ABI cannot turn a PropNameID back into a value, so add it to a new
+  /// object without a prototype, where no setter can intercept it, and read
+  /// the object's only key.
+  Value propNameIDToValue(const PropNameID &name) {
+    Object holder = getIntrinsic(intrinsics_.objectCreate, "Object.create")
+                        .call(*this, Value::null())
+                        .asObject(*this);
+    holder.setProperty(*this, name, true);
+    Value keys = getIntrinsic(intrinsics_.reflectOwnKeys, "Reflect.ownKeys")
+                     .call(*this, holder);
+    if (keys.isObject()) {
+      Object keysObj = std::move(keys).getObject(*this);
+      if (keysObj.isArray(*this)) {
+        Array keysArr = std::move(keysObj).getArray(*this);
+        if (keysArr.size(*this) == 1) {
+          Value key = keysArr.getValueAtIndex(*this, 0);
+          if (key.isString() || key.isSymbol())
+            return key;
+        }
+      }
+    }
+    throw JSINativeException("Unexpected result from Reflect.ownKeys");
+  }
+
+  /// Call the captured \p getter, which is called \p name in JS, on \p obj.
+  Value callGetter(
+      const std::optional<Function> &getter,
+      const char *name,
+      const Object &obj) {
+    return getIntrinsic(getter, name).callWithThis(*this, obj);
+  }
+
+  /// Convert \p val, the result of the TypedArray getter \p name, to a size_t.
+  size_t toSize(const Value &val, const char *name) {
+    // The getters return integers that are valid indices, so anything else
+    // means the VM misbehaved.
+    if (val.isNumber()) {
+      double d = val.getNumber();
+      if (d >= 0 && d < 9007199254740992.0 && d == std::floor(d) &&
+          d <= static_cast<double>((std::numeric_limits<size_t>::max)()))
+        return static_cast<size_t>(d);
+    }
+    throw JSINativeException(std::string(name) + " is not a valid size");
+  }
+
+  /// Return the name of the TypedArray type of \p obj, such as "Uint8Array",
+  /// or undefined if \p obj is not a TypedArray.
+  Value getTypedArrayName(const Object &obj) {
+    Value name = callGetter(
+        intrinsics_.typedArrayToStringTag,
+        "%TypedArray%.prototype[Symbol.toStringTag]",
+        obj);
+    if (!name.isUndefined() && !name.isString())
+      throw JSINativeException("Unexpected TypedArray name");
+    return name;
+  }
+
+  /// Return \p val as a Uint8Array, or throw if it is not one.
+  Uint8Array toUint8Array(Value val) {
+    if (val.isObject()) {
+      Object obj = std::move(val).getObject(*this);
+      if (isUint8Array(obj))
+        return make<Uint8Array>(clone(getPointerValue(obj)));
+    }
+    throw JSINativeException("Uint8Array constructor did not return one");
+  }
+
+  /// Construct an error object with the captured constructor \p kind.
+  Value createErrorOfKind(ErrorKind kind, const String &msg) {
+    Value res = getIntrinsic(intrinsics_.errors[kind], kErrorNames[kind])
+                    .callAsConstructor(*this, msg);
+    if (!res.isObject())
+      throw JSINativeException(
+          std::string(kErrorNames[kind]) + " did not return an object");
+    return res;
+  }
+
  public:
   HermesSandboxRuntimeImpl()
       : bufferVTable_(this),
@@ -1730,8 +2069,16 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
   vt_.name = sb::getFunctionPtr<ret args>(this, srtVt->name);
     SANDBOX_CONTEXT_VTABLE_FUNCTIONS(RETRIEVE_VTABLE_FUNCTIONS)
 #undef RETRIEVE_VTABLE_FUNCTIONS
+
+    captureIntrinsics();
   }
   ~HermesSandboxRuntimeImpl() override {
+    // Release the runtime data and the captured built-ins while the context is
+    // still alive, since they may hold JSI values. Release the data first,
+    // since its deleters may still use the runtime.
+    releaseRuntimeData();
+    intrinsics_ = Intrinsics();
+
     // Destroy the context first, so any finalizers that may reference vtables
     // or ManagedPointers will run.
     vt_.release(this, srt_);
@@ -1814,8 +2161,12 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
     return evaluateJavaScript(sjp, sjp->sourceURL());
   }
 
-  void queueMicrotask(const Function & /*callback*/) override {
-    THROW_UNIMPLEMENTED();
+  void queueMicrotask(const Function &callback) override {
+    // The global queueMicrotask only exists when the microtask queue is on.
+    if (!intrinsics_.queueMicrotask)
+      throw JSINativeException(
+          "Could not enqueue microtask because they are disabled in this runtime");
+    intrinsics_.queueMicrotask->call(*this, callback);
   }
 
   bool drainMicrotasks(int maxMicrotasksHint = -1) override {
@@ -1833,18 +2184,32 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
   }
 
   bool isInspectable() override {
-    THROW_UNIMPLEMENTED();
+    // The sandbox is built without the debugger.
+    return false;
   }
 
-  Instrumentation &instrumentation() override {
-    THROW_UNIMPLEMENTED();
+  void setRuntimeDataImpl(
+      const facebook::jsi::UUID &uuid,
+      const void *data,
+      void (*deleter)(const void *data)) override {
+    // Keep the data in the runtime rather than in the default global map. The
+    // default relies on a JS object to release the data, so JS could release
+    // it early.
+    auto [it, inserted] = runtimeData_.try_emplace(uuid, data, deleter);
+    if (inserted)
+      return;
+    // Store the new data before releasing the old data, in case the deleter
+    // looks it up.
+    auto old = it->second;
+    it->second = {data, deleter};
+    old.second(old.first);
+  }
+  const void *getRuntimeDataImpl(const facebook::jsi::UUID &uuid) override {
+    auto it = runtimeData_.find(uuid);
+    return it == runtimeData_.end() ? nullptr : it->second.first;
   }
 
  protected:
-  using IRuntime::getProperty;
-  using IRuntime::hasProperty;
-  using IRuntime::setPropertyValue;
-
   PointerValue *cloneSymbol(const Runtime::PointerValue *pv) override {
     return clone(pv);
   }
@@ -1868,6 +2233,10 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
   PropNameID createPropNameIDFromUtf8(const uint8_t *utf8, size_t length)
       override {
     return createPropNameIDFromString(createStringFromUtf8(utf8, length));
+  }
+  PropNameID createPropNameIDFromUtf16(const char16_t *utf16, size_t length)
+      override {
+    return createPropNameIDFromString(createStringFromUtf16(utf16, length));
   }
   PropNameID createPropNameIDFromString(const String &str) override {
     return intoJSIPropNameID(
@@ -1937,6 +2306,28 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
         vt_.create_string_from_utf8(this, srt_, s, length)};
     return intoJSIString(res);
   }
+  String createStringFromUtf16(const char16_t *utf16, size_t length) override {
+    std::string utf8;
+    if (convertUTF16ToUTF8(utf16, length, utf8))
+      return createStringFromUtf8(
+          reinterpret_cast<const uint8_t *>(utf8.data()), utf8.size());
+
+    // The VM stops decoding UTF-8 at an encoded surrogate, so a string with
+    // unpaired surrogates can only be created by evaluating a string literal
+    // that escapes them. The captured eval cannot be replaced by JS, but its
+    // result still comes from the sandbox, so check it.
+    std::string literal = toJSStringLiteral(utf16, length);
+    Value res =
+        getIntrinsic(intrinsics_.eval, "eval")
+            .call(*this, createStringFromAscii(literal.data(), literal.size()));
+    if (!res.isString())
+      throw JSINativeException("eval did not return a string");
+    return std::move(res).getString(*this);
+  }
+  Value createValueFromJsonUtf8(const uint8_t *json, size_t length) override {
+    return getIntrinsic(intrinsics_.jsonParse, "JSON.parse")
+        .call(*this, createStringFromUtf8(json, length));
+  }
   std::string utf8(const String &str) override {
     auto outBuf = GrowableBufferImpl::create(*this);
     vt_.get_utf8_from_string(this, srt_, toSandboxString(str).pointer, outBuf);
@@ -1961,6 +2352,27 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
   HostFunctionType &getHostFunction(const Function &fn) override {
     u32 hfw = vt_.get_host_function(this, srt_, toSandboxFunction(fn).pointer);
     return sb::Ptr<HostFunctionWrapper>(this, hfw)->getHostFunction(*this);
+  }
+
+  Object createObjectWithPrototype(const Value &prototype) override {
+    checkPrototype(prototype);
+    return getIntrinsic(intrinsics_.objectCreate, "Object.create")
+        .call(*this, prototype)
+        .asObject(*this);
+  }
+  void setPrototypeOf(const Object &object, const Value &prototype) override {
+    checkPrototype(prototype);
+    getIntrinsic(intrinsics_.objectSetPrototypeOf, "Object.setPrototypeOf")
+        .call(*this, object, prototype);
+  }
+  Value getPrototypeOf(const Object &object) override {
+    Value res =
+        getIntrinsic(intrinsics_.objectGetPrototypeOf, "Object.getPrototypeOf")
+            .call(*this, object);
+    if (!res.isObject() && !res.isNull())
+      throw JSINativeException(
+          "Object.getPrototypeOf did not return an object or null");
+    return res;
   }
 
   bool hasNativeState(const Object &obj) override {
@@ -1992,6 +2404,14 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
   Value getProperty(const Object &obj, const String &name) override {
     return getProperty(obj, createPropNameIDFromString(name));
   }
+  Value getProperty(const Object &obj, const Value &name) override {
+    StackAlloc<SandboxValueOrError> resValueOrError(this);
+    StackAlloc<SandboxValue> sbKey(this);
+    *sbKey = toSandboxValue(name);
+    vt_.get_object_property_from_value(
+        this, resValueOrError, srt_, toSandboxObject(obj).pointer, sbKey);
+    return intoJSIValue(*resValueOrError);
+  }
   bool hasProperty(const Object &obj, const PropNameID &name) override {
     SandboxBoolOrError resBoolOrError{vt_.has_object_property_from_propnameid(
         this,
@@ -2002,6 +2422,13 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
   }
   bool hasProperty(const Object &obj, const String &name) override {
     return hasProperty(obj, createPropNameIDFromString(name));
+  }
+  bool hasProperty(const Object &obj, const Value &name) override {
+    StackAlloc<SandboxValue> sbKey(this);
+    *sbKey = toSandboxValue(name);
+    SandboxBoolOrError resBoolOrError{vt_.has_object_property_from_value(
+        this, srt_, toSandboxObject(obj).pointer, sbKey)};
+    return unwrap(resBoolOrError);
   }
   void setPropertyValue(
       const Object &obj,
@@ -2024,6 +2451,35 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
       const Value &value) override {
     setPropertyValue(obj, createPropNameIDFromString(name), value);
   }
+  void setPropertyValue(
+      const Object &obj,
+      const Value &name,
+      const Value &value) override {
+    StackAlloc<SandboxValue> sbVal(this);
+    StackAlloc<SandboxValue> sbKey(this);
+    *sbKey = toSandboxValue(name);
+    *sbVal = toSandboxValue(value);
+    SandboxVoidOrError resVoidOrError{vt_.set_object_property_from_value(
+        this, srt_, toSandboxObject(obj).pointer, sbKey, sbVal)};
+    unwrap(resVoidOrError);
+  }
+
+  void deleteProperty(const Object &obj, const PropNameID &name) override {
+    deleteProperty(obj, propNameIDToValue(name));
+  }
+  void deleteProperty(const Object &obj, const String &name) override {
+    deleteProperty(obj, Value(*this, name));
+  }
+  void deleteProperty(const Object &obj, const Value &name) override {
+    Value res = getIntrinsic(
+                    intrinsics_.reflectDeleteProperty, "Reflect.deleteProperty")
+                    .call(*this, obj, name);
+    if (!res.isBool())
+      throw JSINativeException(
+          "Reflect.deleteProperty did not return a boolean");
+    if (!res.getBool())
+      throw JSError(*this, "Failed to delete property");
+  }
 
   bool isArray(const Object &obj) const override {
     SandboxBoolOrError resBoolOrError{
@@ -2033,6 +2489,16 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
   bool isArrayBuffer(const Object &obj) const override {
     return vt_.object_is_arraybuffer(
         getMutMod(), srt_, toSandboxObject(obj).pointer);
+  }
+  bool isTypedArray(const Object &obj) const override {
+    auto &self = const_cast<HermesSandboxRuntimeImpl &>(*this);
+    return self.getTypedArrayName(obj).isString();
+  }
+  bool isUint8Array(const Object &obj) const override {
+    auto &self = const_cast<HermesSandboxRuntimeImpl &>(*this);
+    Value name = self.getTypedArrayName(obj);
+    return name.isString() && intrinsics_.uint8ArrayName &&
+        strictEquals(name.getString(self), *intrinsics_.uint8ArrayName);
   }
   bool isFunction(const Object &obj) const override {
     return vt_.object_is_function(
@@ -2084,6 +2550,66 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
   }
   uint8_t *data(const ArrayBuffer &) override {
     THROW_UNIMPLEMENTED();
+  }
+  bool detached(const ArrayBuffer &ab) override {
+    Value res = callGetter(
+        intrinsics_.arrayBufferDetached, "ArrayBuffer.prototype.detached", ab);
+    if (!res.isBool())
+      throw JSINativeException("ArrayBuffer.prototype.detached is not a bool");
+    return res.getBool();
+  }
+
+  Uint8Array createUint8Array(size_t length) override {
+    return toUint8Array(
+        getIntrinsic(intrinsics_.uint8Array, "Uint8Array")
+            .callAsConstructor(*this, static_cast<double>(length)));
+  }
+  Uint8Array createUint8Array(
+      const ArrayBuffer &buffer,
+      size_t offset,
+      size_t length) override {
+    return toUint8Array(getIntrinsic(intrinsics_.uint8Array, "Uint8Array")
+                            .callAsConstructor(
+                                *this,
+                                buffer,
+                                static_cast<double>(offset),
+                                static_cast<double>(length)));
+  }
+  ArrayBuffer buffer(const TypedArray &typedArray) override {
+    Value res = callGetter(
+        intrinsics_.typedArrayBuffer,
+        "%TypedArray%.prototype.buffer",
+        typedArray);
+    if (res.isObject()) {
+      Object obj = std::move(res).getObject(*this);
+      if (obj.isArrayBuffer(*this))
+        return std::move(obj).getArrayBuffer(*this);
+    }
+    throw JSINativeException("TypedArray buffer is not an ArrayBuffer");
+  }
+  size_t byteOffset(const TypedArray &typedArray) override {
+    return toSize(
+        callGetter(
+            intrinsics_.typedArrayByteOffset,
+            "%TypedArray%.prototype.byteOffset",
+            typedArray),
+        "byteOffset");
+  }
+  size_t byteLength(const TypedArray &typedArray) override {
+    return toSize(
+        callGetter(
+            intrinsics_.typedArrayByteLength,
+            "%TypedArray%.prototype.byteLength",
+            typedArray),
+        "byteLength");
+  }
+  size_t length(const TypedArray &typedArray) override {
+    return toSize(
+        callGetter(
+            intrinsics_.typedArrayLength,
+            "%TypedArray%.prototype.length",
+            typedArray),
+        "length");
   }
   Value getValueAtIndex(const Array &arr, size_t i) override {
     if (i >= arr.length(*this))
@@ -2192,6 +2718,28 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
         srt_,
         toSandboxObject(a).pointer,
         toSandboxObject(b).pointer);
+  }
+
+  Value createError(const String &msg) override {
+    return createErrorOfKind(kError, msg);
+  }
+  Value createEvalError(const String &msg) override {
+    return createErrorOfKind(kEvalError, msg);
+  }
+  Value createRangeError(const String &msg) override {
+    return createErrorOfKind(kRangeError, msg);
+  }
+  Value createReferenceError(const String &msg) override {
+    return createErrorOfKind(kReferenceError, msg);
+  }
+  Value createSyntaxError(const String &msg) override {
+    return createErrorOfKind(kSyntaxError, msg);
+  }
+  Value createTypeError(const String &msg) override {
+    return createErrorOfKind(kTypeError, msg);
+  }
+  Value createURIError(const String &msg) override {
+    return createErrorOfKind(kURIError, msg);
   }
 
   bool instanceOf(const Object &o, const Function &f) override {

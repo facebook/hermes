@@ -4,6 +4,20 @@ This directory contains a sandboxed version of Hermes that is produced by compil
 
 The generated C is pre-generated and checked in to simplify the build. It will need to be periodically updated to incorporate bug fixes, and especially when there are changes to JSI or the bytecode version.
 
+## JSI support
+
+`HermesSandboxRuntime.cpp` implements `jsi::Runtime` on top of the ABI. The JS running in the sandbox is untrusted, so the runtime's implementations of `jsi::Runtime` methods do not look up JS globals, and they check the type of every value they get from the sandbox. Many default implementations in `jsi.cpp` do neither, so the runtime overrides them. When the ABI has no entry for an operation, the runtime calls a built-in that it saved when it was created, before any JS ran: `eval` (only to create strings with unpaired surrogates), `JSON.parse`, `queueMicrotask`, `Object.create`, `Object.getPrototypeOf`, `Object.setPrototypeOf`, `Reflect.deleteProperty`, `Reflect.ownKeys`, the `Uint8Array` and error constructors, and the getters of `%TypedArray%.prototype` and `ArrayBuffer.prototype.detached`. Runtime data is stored in the runtime, and released before the VM.
+
+JSI helpers that are not `jsi::Runtime` methods run on the host, and this runtime cannot override them. `jsi::Value::toString`, and building the message of a `jsi::JSError`, call the global `String`. Both check that it returns a string, but the JS in the sandbox can replace `String`, so do not trust the text they produce for values from the sandbox.
+
+When JSI gains a method, check whether its default implementation looks up globals, or uses the unchecked `Value` accessors such as `getString` on what JS returns. If it does, override it here. Code that is not a `jsi::Runtime` method cannot be overridden, so fix it in JSI, for example by using the checked accessors such as `asString`.
+
+These JSI features are not supported:
+- `createArrayBuffer` and `ArrayBuffer::data` throw, since the sandbox cannot share memory with the host.
+- `utf16`, `getStringData` and `getPropNameIdData` convert through UTF-8, so unpaired surrogates come back as U+FFFD.
+- `instrumentation` is the JSI default, so heap information is empty and requests for garbage collection do nothing.
+- `isInspectable` returns false, and `castInterface` returns null, so the Hermes interfaces such as `IHermes` and `ISerialization` are not available.
+
 ## Re-generating the sandbox
 
 Install `emsdk` by following the instructions [here](https://github.com/emscripten-core/emsdk). Then [download wasm2c from wabt](https://github.com/WebAssembly/wabt/releases). The versions to use are listed at the end of this file.

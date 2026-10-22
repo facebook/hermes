@@ -465,13 +465,9 @@ TEST_P(HermesRuntimeTest, StrictHostFunctionBindTest) {
 }
 
 TEST_P(HermesRuntimeTest, CreateValueFromJsonUtf8IgnoresGlobalJSON) {
-  // HermesSandboxRuntime uses the default createValueFromJsonUtf8, which calls
-  // the global JSON.parse.
-  if (dynamic_cast<HermesSandboxRuntime *>(rt.get()))
-    return;
-
-  // Hermes parses JSON natively, so replacing the global JSON.parse must not
-  // change the result, also when the runtime is decorated (e.g. thread-safe).
+  // Hermes parses JSON natively, and the sandbox uses the JSON.parse it saved
+  // at startup, so replacing the global JSON.parse must not change the result,
+  // also when the runtime is decorated (e.g. thread-safe).
   eval("JSON.parse = function() { return 'hijacked'; }");
   uint8_t json[] = "{\"a\": 1}";
   Value v = Value::createFromJsonUtf8(*rt, json, sizeof(json) - 1);
@@ -929,7 +925,8 @@ TEST(HermesWatchTimeLimitTest, WatchTimeLimit) {
 
 #if HERMESVM_GCKIND == _HERMESVM_GCVALUE_HADES
 TEST_P(HermesRuntimeTest, GetHeapInfo) {
-  // HermesSandboxRuntime does not implement instrumentation().
+  // HermesSandboxRuntime uses the default JSI instrumentation, which reports no
+  // heap information and does not collect garbage.
   if (dynamic_cast<HermesSandboxRuntime *>(rt.get()))
     return;
 
@@ -1425,7 +1422,8 @@ TEST_P(HermesRuntimeTest, ExternalMemoryTest) {
 }
 
 TEST_P(HermesRuntimeTest, ExternalMemoryNoOpTest) {
-  // HermesSandboxRuntime does not implement instrumentation().
+  // HermesSandboxRuntime uses the default JSI instrumentation, which reports no
+  // heap information, so the external memory cannot be measured.
   if (dynamic_cast<HermesSandboxRuntime *>(rt.get()))
     return;
 
@@ -2160,7 +2158,7 @@ TEST_P(HermesRuntimeTest, SetRuntimeData) {
   // Verify that the old data was not held on after it was deleted
   EXPECT_EQ(weakOldStr.use_count(), 0);
 
-  auto rt2 = makeHermesRuntime();
+  auto rt2 = GetParam()();
   UUID uuid3{0x16f55892, 0x1034, 0x11f0, 0x8f65, 0x325096b39f47};
   auto obj2 = std::make_shared<Object>(*rt2);
   rt2->setRuntimeData(uuid3, obj2);
@@ -2169,7 +2167,7 @@ TEST_P(HermesRuntimeTest, SetRuntimeData) {
       std::static_pointer_cast<Object>(rt2->getRuntimeData(uuid3));
   EXPECT_EQ(storedObj2, obj2);
 
-  // UUID 1 is for data in the first hermes runtime, so we expect nullptr here
+  // UUID 1 is for data in the first runtime, so we expect nullptr here
   EXPECT_FALSE(rt2->getRuntimeData(uuid1));
 
   // Verify that when the runtime gets destroyed, the custom data is also
@@ -2217,6 +2215,192 @@ TEST_P(HermesRuntimeTest, DeleteProperty) {
   EXPECT_THROW(obj.deleteProperty(*rt, prop), JSError);
   hasRes = obj.hasProperty(*rt, "prop");
   EXPECT_TRUE(hasRes);
+}
+
+TEST_P(HermesRuntimeTest, SymbolKeys) {
+  // A Symbol key and a String key with the symbol's description must stay
+  // apart in every operation, including deleting through a PropNameID.
+  auto sym = eval("Symbol('key')").getSymbol(*rt);
+  auto symVal = Value(*rt, sym);
+  auto symProp = PropNameID::forSymbol(*rt, sym);
+  Object obj(*rt);
+  obj.setProperty(*rt, symVal, 1);
+  obj.setProperty(*rt, "key", 2);
+  EXPECT_TRUE(obj.hasProperty(*rt, symVal));
+  EXPECT_EQ(obj.getProperty(*rt, symVal).getNumber(), 1);
+  EXPECT_EQ(obj.getProperty(*rt, symProp).getNumber(), 1);
+
+  obj.deleteProperty(*rt, symProp);
+  EXPECT_FALSE(obj.hasProperty(*rt, symVal));
+  EXPECT_EQ(obj.getProperty(*rt, "key").getNumber(), 2);
+
+  obj.setProperty(*rt, symProp, 3);
+  obj.deleteProperty(*rt, symVal);
+  EXPECT_FALSE(obj.hasProperty(*rt, symProp));
+  EXPECT_TRUE(obj.hasProperty(*rt, "key"));
+}
+
+TEST_P(HermesRuntimeTest, JSIIgnoresReplacedBuiltins) {
+  // JSI methods must not depend on globals or prototype properties that JS can
+  // replace. Replace every built-in that the sandbox saves at startup, or that
+  // the default JSI implementations use, with a function that returns a
+  // number, and check that JSI still works. Use evaluateJavaScript, since
+  // eval() goes through the global eval.
+  auto run = [&](const char *code) {
+    return rt->evaluateJavaScript(std::make_shared<StringBuffer>(code), "");
+  };
+  run(R"(
+    var originals = {Error, TypeError, Uint8Array};
+    var replacement = function() { return 42; };
+    var getter = {get: replacement, configurable: true};
+    var typedArrayProto = Object.getPrototypeOf(Uint8Array.prototype);
+    for (var name of ['buffer', 'byteOffset', 'byteLength', 'length'])
+      Object.defineProperty(typedArrayProto, name, getter);
+    Object.defineProperty(typedArrayProto, Symbol.toStringTag, getter);
+    Object.defineProperty(ArrayBuffer.prototype, 'detached', getter);
+    // The default runtime data needs to install this global.
+    Object.defineProperty(globalThis, '_jsiRuntimeDataCleanUp', {value: 0});
+    for (var name of [
+        'create', 'defineProperty', 'getPrototypeOf', 'setPrototypeOf',
+        'getOwnPropertyDescriptor'])
+      Object[name] = replacement;
+    for (var name of ['deleteProperty', 'get', 'has', 'ownKeys', 'set'])
+      Reflect[name] = replacement;
+    JSON.parse = replacement;
+    for (var name of [
+        'eval', 'queueMicrotask', 'Uint8Array', 'Error', 'EvalError',
+        'RangeError', 'ReferenceError', 'SyntaxError', 'TypeError',
+        'URIError'])
+      globalThis[name] = replacement;
+  )");
+
+  // A string with an unpaired surrogate, which the sandbox creates with eval.
+  std::u16string utf16 = u"a\xd83d";
+  rt->global().setProperty(*rt, "str", String::createFromUtf16(*rt, utf16));
+  EXPECT_TRUE(
+      run("str.length === 2 && str.charCodeAt(1) === 0xd83d").getBool());
+  Object obj(*rt);
+  obj.setProperty(*rt, PropNameID::forUtf16(*rt, utf16), 1);
+  rt->global().setProperty(*rt, "obj", obj);
+  EXPECT_TRUE(run("obj[str] === 1").getBool());
+
+  // Properties with a Value key.
+  Object props(*rt);
+  Value key(*rt, String::createFromAscii(*rt, "key"));
+  props.setProperty(*rt, key, 7);
+  EXPECT_TRUE(props.hasProperty(*rt, key));
+  Value prop = props.getProperty(*rt, key);
+  ASSERT_TRUE(prop.isNumber());
+  EXPECT_EQ(prop.getNumber(), 7);
+
+  // Runtime data.
+  UUID uuid{0x3c1f2a8e, 0x5b7d, 0x4e21, 0x9a6c, 0x1f2e3d4c5b6a};
+  auto data = std::make_shared<int>(1);
+  rt->setRuntimeData(uuid, data);
+  EXPECT_EQ(rt->getRuntimeData(uuid), data);
+
+  // Deleting a property, by each kind of key.
+  obj.setProperty(*rt, "a", 1);
+  obj.setProperty(*rt, "b", 2);
+  obj.deleteProperty(*rt, PropNameID::forUtf16(*rt, utf16));
+  obj.deleteProperty(*rt, String::createFromAscii(*rt, "a"));
+  obj.deleteProperty(*rt, Value(*rt, String::createFromAscii(*rt, "b")));
+  EXPECT_TRUE(run("Object.keys(obj).length === 0").getBool());
+
+  // Prototypes.
+  Object proto(*rt);
+  Object child = Object::create(*rt, Value(*rt, proto));
+  EXPECT_TRUE(
+      Object::strictEquals(*rt, child.getPrototype(*rt).getObject(*rt), proto));
+  child.setPrototype(*rt, Value::null());
+  EXPECT_TRUE(child.getPrototype(*rt).isNull());
+
+  // JSON.
+  uint8_t json[] = "[1, 2]";
+  auto parsed = Value::createFromJsonUtf8(*rt, json, sizeof(json) - 1);
+  ASSERT_TRUE(parsed.isObject());
+  EXPECT_EQ(parsed.getObject(*rt).getArray(*rt).size(*rt), 2);
+
+  // TypedArrays and ArrayBuffers.
+  Uint8Array u8(*rt, 8);
+  EXPECT_TRUE(u8.isTypedArray(*rt));
+  EXPECT_TRUE(u8.isUint8Array(*rt));
+  EXPECT_EQ(u8.length(*rt), 8);
+  EXPECT_EQ(u8.byteLength(*rt), 8);
+  EXPECT_EQ(u8.byteOffset(*rt), 0);
+  auto buffer = u8.buffer(*rt);
+  EXPECT_EQ(buffer.size(*rt), 8);
+  EXPECT_FALSE(buffer.detached(*rt));
+  Uint8Array view(*rt, buffer, 2, 4);
+  EXPECT_EQ(view.byteOffset(*rt), 2);
+  EXPECT_EQ(view.length(*rt), 4);
+  // Inheriting from Uint8Array.prototype does not make an object a TypedArray.
+  auto fake = run("({__proto__: originals.Uint8Array.prototype})");
+  EXPECT_FALSE(fake.getObject(*rt).isTypedArray(*rt));
+  EXPECT_FALSE(run("new Int8Array(1)").getObject(*rt).isUint8Array(*rt));
+
+  // Errors.
+  rt->global().setProperty(
+      *rt, "error", JSError::createTypeError(*rt, "boom").value());
+  EXPECT_TRUE(run("error instanceof originals.TypeError && "
+                  "error.message === 'boom'")
+                  .getBool());
+  rt->global().setProperty(*rt, "error", JSError(*rt, "bang").value());
+  EXPECT_TRUE(run("error instanceof originals.Error && "
+                  "error.message === 'bang'")
+                  .getBool());
+
+  // Microtasks.
+  run("var ran = false;");
+  rt->queueMicrotask(
+      run("(function() { ran = true; })").getObject(*rt).getFunction(*rt));
+  rt->drainMicrotasks();
+  EXPECT_TRUE(run("ran").getBool());
+
+  // Value::toString calls the global String, and must check its result.
+  run("String = replacement;");
+  EXPECT_THROW(Value(1).toString(*rt), JSError);
+}
+
+TEST_P(HermesRuntimeTest, CreateFromUtf16UnpairedSurrogates) {
+  // Check the results in JS, since utf16() goes through UTF-8 on the sandbox.
+  // Each string has one kind of unpaired surrogate, so that a mistake with one
+  // kind cannot be hidden by another.
+  auto check = [&](const std::u16string &str) {
+    Array codes(*rt, str.size());
+    for (size_t i = 0; i < str.size(); ++i)
+      codes.setValueAtIndex(*rt, i, static_cast<double>(str[i]));
+    Object obj(*rt);
+    obj.setProperty(*rt, PropNameID::forUtf16(*rt, str), 1);
+    auto global = rt->global();
+    global.setProperty(*rt, "str", String::createFromUtf16(*rt, str));
+    global.setProperty(*rt, "codes", codes);
+    global.setProperty(*rt, "obj", obj);
+    return eval(
+               "str === String.fromCharCode.apply(null, codes) && "
+               "Object.keys(obj).length === 1 && obj[str] === 1")
+        .getBool();
+  };
+
+  // Every code unit up to 0xFF, and the line terminators, followed by an
+  // unpaired surrogate so that the sandbox creates it from a string literal.
+  std::u16string escapes;
+  for (char16_t c = 0; c < 0x100; ++c)
+    escapes.push_back(c);
+  escapes += u"\x2028\x2029\xd800";
+  EXPECT_TRUE(check(escapes));
+  // A low surrogate on its own.
+  EXPECT_TRUE(check(u"\xdc00"));
+  // A high surrogate in the middle of a string.
+  EXPECT_TRUE(check(
+      u"a\xdbff"
+      u"b"));
+  // Surrogates in the wrong order.
+  EXPECT_TRUE(check(u"\xdc00\xd800"));
+  // A pair followed by an unpaired high surrogate.
+  EXPECT_TRUE(check(u"\xd83d\xdc4d\xd83d"));
+  // A valid pair, which does not need a string literal.
+  EXPECT_TRUE(check(u"\xd83d\xdc4d"));
 }
 
 TEST_P(HermesRuntimeTest, ObjectTest) {
