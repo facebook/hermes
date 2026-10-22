@@ -407,7 +407,7 @@ struct HermesABIRuntimeVTable {
       *create_array)(struct HermesABIRuntime *rt, size_t length);
 
   /// Get the length of the given array by reading its .length property.
-  size_t (*get_array_length)(
+  struct HermesABISizeTOrError (*get_array_length)(
       struct HermesABIRuntime *rt,
       struct HermesABIArray arr);
 
@@ -505,8 +505,10 @@ struct HermesABIRuntimeVTable {
       struct HermesABIObject obj,
       struct HermesABINativeState *ns);
 
-  /// Return true if an object is an Array, false otherwise.
-  bool (*object_is_array)(
+  /// Return true if an object is an Array, false otherwise. Like
+  /// Array.isArray, this looks through Proxy objects, and it returns an error
+  /// for a revoked Proxy.
+  struct HermesABIBoolOrError (*object_is_array)(
       struct HermesABIRuntime *rt,
       struct HermesABIObject obj);
 

@@ -5,7 +5,9 @@
 
 # Define libraries that provides Hermes wrapped in the C-API.
 add_library(hermesabi hermes_vtable.cpp c_compat.c)
-target_link_libraries(hermesabi PRIVATE hermesVMRuntime)
+# Link the complete VM. hermesVMRuntime only contains the VM itself, without
+# the compiler and the support libraries that it depends on.
+target_link_libraries(hermesabi PRIVATE hermesvm_a)
 target_include_directories(hermesabi PUBLIC ..)
 target_link_options(hermesabi PRIVATE ${HERMES_EXTRA_LINKER_FLAGS})
 
