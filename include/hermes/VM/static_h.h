@@ -398,7 +398,18 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_create_this(
     SHLegacyValue *newTarget,
     SHReadPropertyCacheEntry *propCacheEntry);
 
-#ifndef _WINDOWS
+#if defined(HERMES_SANDBOX_WASM)
+// The sandbox (API/hermes_sandbox) builds the VM as a standalone wasm module
+// that is translated to C and runs without a JS host. By default (which uses
+// -sSUPPORT_LONGJMP=emscripten), Emscripten implements setjmp/longjmp with JS
+// imports, which the sandbox cannot provide. Only code compiled by shermes and
+// the JIT use _sh_try and _sh_throw, and neither can run in the sandbox, so
+// setjmp always returns 0 and longjmp traps.
+// Note: -sSUPPORT_LONGJMP=wasm turns on WASM exception handling. We may use
+// this if we want to support native backend or JIT in sandbox in the future.
+#define _sh_setjmp(buf) ((void)(buf), 0)
+#define _sh_longjmp(buf, val) ((void)(buf), (void)(val), __builtin_trap())
+#elif !defined(_WINDOWS)
 // Use _setjmp and _longjmp outside Windows, to avoid saving and restoring the
 // signal mask, which is costly and may interfere with signal mask manipulation
 // by non-Hermes code.

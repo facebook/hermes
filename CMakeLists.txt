@@ -318,6 +318,12 @@ set(QEMU_RUN_PREFIX "" CACHE STRING
 
 set(JSI_UNSTABLE OFF CACHE BOOL "Enable the JSI unstable APIs.")
 
+# Build the VM for the wasm2c-based sandbox in API/hermes_sandbox. This compiles
+# out the setjmp/longjmp that shermes-compiled code and the JIT use for
+# exceptions, since neither can run in the sandbox.
+set(HERMES_SANDBOX_WASM OFF CACHE BOOL
+  "Build the VM for the sandbox in API/hermes_sandbox.")
+
 if (NOT QEMU_RUN_PREFIX STREQUAL "")
   add_definitions(-DQEMU_MODE)
 endif()
@@ -349,6 +355,15 @@ endif()
 
 if (HERMESVM_INTERNAL_JAVASCRIPT_NATIVE)
   add_definitions(-DHERMESVM_INTERNAL_JAVASCRIPT_NATIVE)
+endif()
+
+if (HERMES_SANDBOX_WASM)
+  if (NOT EMSCRIPTEN OR HERMESVM_INTERNAL_JAVASCRIPT_NATIVE OR
+      NOT HERMESVM_ALLOW_JIT EQUAL 0)
+    message(FATAL_ERROR "HERMES_SANDBOX_WASM requires Emscripten, "
+      "HERMESVM_INTERNAL_JAVASCRIPT_NATIVE=OFF and HERMESVM_ALLOW_JIT=0")
+  endif()
+  add_definitions(-DHERMES_SANDBOX_WASM)
 endif()
 
 if (HERMES_STATIC_LINK)

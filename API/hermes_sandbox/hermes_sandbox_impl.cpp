@@ -5,6 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+// The VM linked into the sandbox must not use setjmp/longjmp, see
+// _sh_setjmp in include/hermes/VM/static_h.h.
+#ifndef HERMES_SANDBOX_WASM
+#error "Configure the sandbox wasm build with -DHERMES_SANDBOX_WASM=ON"
+#endif
+
 #include <emscripten/emscripten.h>
 
 /// Emscripten defines getentropy as a weak symbol that aborts in the

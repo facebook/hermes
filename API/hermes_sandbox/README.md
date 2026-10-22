@@ -10,12 +10,15 @@ Install `emsdk` by following the instructions [here](https://github.com/emscript
 
 Build `hermesc` for the host platform, in order to generate bytecode that is used by the Hermes build. The commands below use `build_host` to refer to this host build.
 
+The wasm builds must be configured with `-DHERMES_SANDBOX_WASM=ON`. Static Hermes uses setjmp/longjmp for exceptions in shermes-compiled code and the JIT, and Emscripten would implement them with JS imports that the sandbox runtime cannot provide. Since neither can run in the sandbox, this option compiles them out.
+
 
 Generate the debug build with the following command. Note that it is built with O2 and without slow asserts to avoid slowing down execution too dramatically, since the generated C code for the debug build is then typically built without optimisations.
 ```
 cmake -S <path to hermes> -B build_wasm_dbg \
   -DCMAKE_TOOLCHAIN_FILE=<path to emsdk>/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake \
-  -DIMPORT_HERMESC=build_host/ImportHermesc.cmake \
+  -DIMPORT_HOST_COMPILERS=<absolute path to build_host>/ImportHostCompilers.cmake \
+  -DHERMES_SANDBOX_WASM=ON \
   -DCMAKE_BUILD_TYPE=Debug -DHERMES_UNICODE_LITE=ON \
   -DCMAKE_CXX_FLAGS=-O2  -DCMAKE_C_FLAGS=-O2 \
   -DCMAKE_EXE_LINKER_FLAGS="-sALLOW_MEMORY_GROWTH=1 -sSTACK_SIZE=256KB -sGLOBAL_BASE=16384" \
@@ -34,7 +37,8 @@ Likewise for the release build. Note that the release build is still built with 
 ```
 cmake -S <path to hermes> -B build_wasm_opt \
   -DCMAKE_TOOLCHAIN_FILE=<path to emsdk>/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake \
-  -DIMPORT_HERMESC=build_host/ImportHermesc.cmake \
+  -DIMPORT_HOST_COMPILERS=<absolute path to build_host>/ImportHostCompilers.cmake \
+  -DHERMES_SANDBOX_WASM=ON \
   -DCMAKE_BUILD_TYPE=Release -DHERMES_UNICODE_LITE=ON \
   -DCMAKE_EXE_LINKER_FLAGS="-sALLOW_MEMORY_GROWTH=1 -sSTACK_SIZE=256KB -sGLOBAL_BASE=16384 -g2" \
   -DHERMES_ENABLE_DEBUGGER=OFF -DHERMES_IS_MOBILE_BUILD=ON -G Ninja
