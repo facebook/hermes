@@ -15,6 +15,7 @@
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSObject-inline.h"
 #include "hermes/VM/JSProxy.h"
+#include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/NativeState.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/PropertyAccessor.h"
@@ -917,6 +918,53 @@ inline CallResult<bool> getOwnComputedPrimitiveDescriptorImpl(
 
 } // namespace
 
+/// \return whether the property key \p key is a canonical numeric string
+/// (ES2024 7.1.21 CanonicalNumericIndexString).
+static bool isCanonicalNumericKey(Runtime &runtime, Handle<> key) {
+  // ToString of a Number is canonical by definition.
+  if (key->isNumber())
+    return true;
+  if (!key->isString())
+    return false;
+  CallResult<HermesValue> numRes = toNumber_RJS(runtime, key);
+  assert(
+      numRes != ExecutionStatus::EXCEPTION &&
+      "ToNumber of a string cannot throw");
+  char buf[NUMBER_TO_STRING_BUF_SIZE];
+  llvh::StringRef canonical =
+      numberToString(numRes->getNumber(), buf, sizeof(buf));
+  StringView view = StringPrimitive::createStringView(
+      runtime, Handle<StringPrimitive>::vmcast(key));
+  // "-0" is canonical numeric, even though ToString(-0) is "0".
+  if (view.length() == 2 && view[0] == u'-' && view[1] == u'0')
+    return true;
+  return view.length() == canonical.size() &&
+      std::equal(canonical.begin(), canonical.end(), view.begin());
+}
+
+/// \return whether the property key \p key is a canonical numeric string
+/// that is not an array index.
+static bool isNonIndexCanonicalNumericKey(Runtime &runtime, Handle<> key) {
+  if (key->isNumber())
+    return !toArrayIndexFastPath(*key);
+  return isCanonicalNumericKey(runtime, key) &&
+      !toArrayIndex(vmcast<StringPrimitive>(*key));
+}
+
+/// \return whether the property name \p name is a canonical numeric string
+/// that is not an array index. See the overload taking a key value.
+static bool isNonIndexCanonicalNumericKey(Runtime &runtime, SymbolID name) {
+  if (!name.isUniqued())
+    return false;
+  struct : public Locals {
+    PinnedValue<> key;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.key =
+      HermesValue::encodeStringValue(runtime.getStringPrimFromSymbolID(name));
+  return isNonIndexCanonicalNumericKey(runtime, lv.key);
+}
+
 CallResult<bool> JSObject::getOwnComputedPrimitiveDescriptor(
     Handle<JSObject> selfHandle,
     Runtime &runtime,
@@ -1014,6 +1062,11 @@ JSObject *JSObject::getNamedDescriptorUnsafe(
     return *selfHandle;
   }
 
+  if (LLVM_UNLIKELY(vmisa<JSTypedArrayBase>(*selfHandle)) &&
+      isNonIndexCanonicalNumericKey(runtime, name)) {
+    return nullptr;
+  }
+
   if (selfHandle->parent_) {
     MutableHandle<JSObject> mutableSelfHandle{
         runtime, selfHandle->parent_.getNonNull(runtime)};
@@ -1030,6 +1083,10 @@ JSObject *JSObject::getNamedDescriptorUnsafe(
               !selfHandle->flags_.proxyObject &&
               "Proxy object parents should never have own properties");
           return *mutableSelfHandle;
+        }
+        if (LLVM_UNLIKELY(vmisa<JSTypedArrayBase>(*mutableSelfHandle)) &&
+            isNonIndexCanonicalNumericKey(runtime, name)) {
+          return nullptr;
         }
       } else if (LLVM_UNLIKELY(mutableSelfHandle->flags_.lazyObject)) {
         JSObject::initializeLazyObject(runtime, mutableSelfHandle);
@@ -1094,6 +1151,11 @@ ExecutionStatus JSObject::getComputedPrimitiveDescriptor(
       desc.flags.proxyObject = true;
       desc.slot = id.unsafeGetRaw();
       desc._tmpSymbolStorage.set(id);
+      return ExecutionStatus::RETURNED;
+    }
+    if (LLVM_UNLIKELY(vmisa<JSTypedArrayBase>(propObj.get())) &&
+        isCanonicalNumericKey(runtime, nameValHandle)) {
+      propObj.set(nullptr);
       return ExecutionStatus::RETURNED;
     }
     // This isn't a proxy, so use the faster getParent() instead of
@@ -1387,6 +1449,19 @@ CallResult<bool> JSObject::hasComputed(
   return true;
 }
 
+/// ES2024 10.4.5.5 [[Set]] on the TypedArray \p selfHandle with a key that is
+/// not a valid integer index
+static CallResult<bool> setInvalidTypedArrayIndex(
+    Handle<JSObject> selfHandle,
+    Runtime &runtime,
+    Handle<> valueHandle,
+    Handle<> receiver) {
+  if (selfHandle.getHermesValue().getRaw() != receiver->getRaw())
+    return true;
+  // 0xFFFFFFFF is never in range, so this only converts the value.
+  return JSObject::setOwnIndexed(selfHandle, runtime, 0xFFFFFFFFu, valueHandle);
+}
+
 static ExecutionStatus raiseErrorForOverridingStaticBuiltin(
     Handle<JSObject> selfHandle,
     Runtime &runtime,
@@ -1439,6 +1514,12 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
     RuntimeModule *runtimeModule,
     SHUnit *unit,
     WritePropertyCacheEntry *cacheEntry) {
+  if (LLVM_UNLIKELY(vmisa<JSTypedArrayBase>(*selfHandle)) &&
+      isNonIndexCanonicalNumericKey(runtime, name)) {
+    return setInvalidTypedArrayIndex(
+        selfHandle, runtime, valueHandle, receiver);
+  }
+
   NamedPropertyDescriptor desc;
 
   // Look for the property in this object or along the prototype chain.
@@ -1678,6 +1759,12 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
     return ExecutionStatus::EXCEPTION;
   }
   auto nameValPrimitiveHandle = *converted;
+
+  if (LLVM_UNLIKELY(vmisa<JSTypedArrayBase>(*selfHandle)) &&
+      isNonIndexCanonicalNumericKey(runtime, nameValPrimitiveHandle)) {
+    return setInvalidTypedArrayIndex(
+        selfHandle, runtime, valueHandle, receiver);
+  }
 
   ComputedPropertyDescWithSymStorage desc{MutableHandle<SymbolID>{runtime}};
 
@@ -2159,6 +2246,13 @@ CallResult<bool> JSObject::defineOwnPropertyInternal(
         selfHandle, runtime, name, dpFlags, valueOrAccessor, opFlags);
   }
 
+  if (LLVM_UNLIKELY(vmisa<JSTypedArrayBase>(*selfHandle)) &&
+      isNonIndexCanonicalNumericKey(runtime, name)) {
+    if (opFlags.getThrowOnError())
+      return runtime.raiseTypeError("Invalid typed array index");
+    return false;
+  }
+
   return addOwnProperty(
       selfHandle, runtime, name, dpFlags, valueOrAccessor, opFlags);
 }
@@ -2354,6 +2448,14 @@ CallResult<bool> JSObject::defineOwnComputedPrimitive(
                 /* cacheEntry */ nullptr) == ExecutionStatus::EXCEPTION))
       return ExecutionStatus::EXCEPTION;
     return true;
+  }
+
+  // ES2024 10.4.5.3 [[DefineOwnProperty]]: an index that is not present in a
+  // TypedArray is not a valid integer index.
+  if (LLVM_UNLIKELY(vmisa<JSTypedArrayBase>(*selfHandle))) {
+    if (opFlags.getThrowOnError())
+      return runtime.raiseTypeError("Invalid typed array index");
+    return false;
   }
 
   /// Can we add new properties?
