@@ -399,6 +399,22 @@ static constexpr void setArrayFastPathObjectFlags(SHObjectFlags &res) {
   res.objectID = 0;
 }
 
+/// Populate \p res with the flags to be used to check for fast path for array
+/// methods.
+/// Ensures that the HiddenClass has no behaviors that would make the array
+/// fast path observe different indexed-property behavior.
+static constexpr void setArrayFastPathClassFlags(ClassFlags &res) {
+  // This code should set every field in ClassFlags to make sure we don't
+  // miss one, which is checked by the assert in arrayFastPathCheck.
+  res.dictionaryMode = 0;
+  res.dictionaryNoCacheMode = 0;
+  res.typed = 0;
+  res.hasIndexLikeProperties = 0;
+  res.mayHaveAccessor = 0;
+  res.parentChangeCounter = 0;
+  res.unusedPadding = 0;
+}
+
 /// Check that the prototype chain of arrays starting at Array.prototype does
 /// not contain any index-like properties. If it does not, update the epoch in
 /// the runtime so that calling this function can be skipped when the epoch
@@ -487,8 +503,46 @@ bool arrayFastPathCheck(
           0))
     return false;
 
+  HiddenClass *clazz = arr->getClass(runtime);
+
   // Optionally check that 'length' hasn't been reconfigured.
-  if (arrayClass && arr->getClass(runtime) != arrayClass)
+  if (arrayClass && clazz != arrayClass)
+    return false;
+
+  // Make our own ClassFlags here to compare against quickly, to avoid having
+  // to use lots of accessors on HiddenClass.
+  ClassFlags arrayFastPathClassFlags{};
+  setArrayFastPathClassFlags(arrayFastPathClassFlags);
+
+#ifndef NDEBUG
+  // Test that all the flags are handled in setArrayFastPathClassFlags
+  // by starting with all the bits reversed and calling the function,
+  // and making sure the result is the same.
+  ClassFlags classFlagsForAssert{};
+  std::memset(&classFlagsForAssert, 0xff, sizeof(ClassFlags));
+  setArrayFastPathClassFlags(classFlagsForAssert);
+  assert(
+      std::memcmp(
+          &classFlagsForAssert, &arrayFastPathClassFlags, sizeof(ClassFlags)) ==
+          0 &&
+      "setArrayFastPathClassFlags is missing a flag");
+#endif
+
+  ClassFlags arrClassFlags = clazz->getFlags();
+  // Clear the flags that only affect named properties, which the fast path
+  // doesn't observe.
+  arrClassFlags.dictionaryMode = 0;
+  arrClassFlags.dictionaryNoCacheMode = 0;
+  arrClassFlags.mayHaveAccessor = 0;
+  arrClassFlags.typed = 0;
+  arrClassFlags.parentChangeCounter = 0;
+  arrClassFlags.unusedPadding = 0;
+
+  static_assert(
+      sizeof(ClassFlags) == sizeof(uint16_t), "ClassFlags must be uint16_t");
+  if (LLVM_UNLIKELY(
+          std::memcmp(
+              &arrayFastPathClassFlags, &arrClassFlags, sizeof(uint16_t)) != 0))
     return false;
 
   // Fast path assumes that the array storage goes from 0 to len.
