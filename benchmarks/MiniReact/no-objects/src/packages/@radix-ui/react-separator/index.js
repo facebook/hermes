@@ -12,6 +12,7 @@ import type {Props, React$MixedElement} from 'react';
 
 import * as React from 'react';
 import {Primitive} from '@radix-ui/react-primitive';
+import CHECKED_CAST from 'sh/CHECKED_CAST';
 
 /* -------------------------------------------------------------------------------------------------
  *  Separator
@@ -47,7 +48,9 @@ const Separator = React.forwardRef(
       orientation: orientationProp = DEFAULT_ORIENTATION,
       ...domProps
     } = props;
-    const orientation = isValidOrientation(orientationProp)
+    const orientation = isValidOrientation(
+      CHECKED_CAST<string>(orientationProp),
+    )
       ? orientationProp
       : DEFAULT_ORIENTATION;
     // `aria-orientation` defaults to `horizontal` so we only need it if `orientation` is vertical
