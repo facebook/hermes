@@ -374,7 +374,7 @@ void _jit_put_by_id(
         LLVM_LIKELY(addCacheEntry.resultClazz) &&
         LLVM_LIKELY(
             addCacheEntry.getParentEpoch() == runtime.getParentCacheEpoch()) &&
-        LLVM_LIKELY(addCacheEntry.parent == obj->getParentGCPtr())) {
+        LLVM_LIKELY(addCacheEntry.parent == obj->getParentGCPtr(runtime))) {
       HiddenClass *resultClazz =
           addCacheEntry.resultClazz.getNonNull(runtime, runtime.getHeap());
       JSObject::addNewOwnPropertyInSlot(

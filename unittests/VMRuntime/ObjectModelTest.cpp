@@ -902,7 +902,7 @@ TEST_F(ObjectModelTest, ParentCacheEpochTest) {
   lv.obj = JSObject::create(runtime, lv.parent);
   uint32_t idx = *runtimeModule->allocateAddCacheEntry();
   AddPropertyCacheEntry &entry = runtimeModule->getAddCacheEntry(idx);
-  entry.parent = lv.obj->getParentGCPtr();
+  entry.parent = lv.obj->getParentGCPtr(runtime);
   entry.startClazz = lv.obj->getClassGCPtr();
   entry.setParentEpochAndSlot(runtime.getParentCacheEpoch(), 5);
 
