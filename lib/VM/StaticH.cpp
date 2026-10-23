@@ -970,7 +970,7 @@ static inline void putByValWithReceiver_RJS(
         targetHandle.getHermesValue().getRaw() ==
             receiverHandle.getHermesValue().getRaw()) {
       auto objHandle = Handle<JSObject>::vmcast(targetHandle);
-      if (objHandle->hasFastIndexProperties()) {
+      if (objHandle->hasFastIndexProperties(runtime)) {
         if (LLVM_LIKELY(JSObject::haveOwnIndexed(objHandle, runtime, index))) {
           GCScopeMarkerRAII marker{runtime};
           auto result =
@@ -1055,7 +1055,7 @@ static inline void putByIndex_RJS(
     // (not getOwnIndexed) so the existence check does not depend on read-side
     // value semantics like `undefined` vs `empty`.
     auto objHandle = Handle<JSObject>::vmcast(targetHandle);
-    if (objHandle->hasFastIndexProperties() && index != 0xFFFFFFFFu) {
+    if (objHandle->hasFastIndexProperties(runtime) && index != 0xFFFFFFFFu) {
       if (LLVM_LIKELY(JSObject::haveOwnIndexed(objHandle, runtime, index))) {
         GCScopeMarkerRAII marker{runtime};
         auto result =

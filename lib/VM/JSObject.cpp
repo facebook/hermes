@@ -189,9 +189,6 @@ PseudoHandle<JSObject> JSObject::create(
     result = JSObjectInit::initToPseudoHandle(runtime, obj);
   }
 
-  if (LLVM_UNLIKELY(result->getClass(runtime)->getHasIndexLikeProperties()))
-    result->flags_.fastIndexProperties = false;
-
   return result;
 }
 
@@ -882,7 +879,7 @@ inline CallResult<bool> getOwnComputedPrimitiveDescriptorImpl(
   // Try the fast paths first if we have "fast" index properties and the
   // property name is an obvious index.
   if (auto arrayIndex = toArrayIndexFastPath(*nameValHandle)) {
-    if (JSObject::Helper::flags(*selfHandle).fastIndexProperties) {
+    if (selfHandle->hasFastIndexProperties(runtime)) {
       auto res = JSObject::Helper::getOwnIndexedPropertyFlags(
           selfHandle.get(), runtime, *arrayIndex);
       if (res) {
@@ -921,7 +918,7 @@ inline CallResult<bool> getOwnComputedPrimitiveDescriptorImpl(
   }
 
   if (LLVM_LIKELY(
-          !JSObject::Helper::flags(*selfHandle).indexedStorage &&
+          !selfHandle->hasIndexedStorage(runtime) &&
           !selfHandle->isLazy(runtime) &&
           !selfHandle->isProxyObject(runtime))) {
     return false;
@@ -929,7 +926,7 @@ inline CallResult<bool> getOwnComputedPrimitiveDescriptorImpl(
 
   // If we have indexed storage, perform potentially expensive conversions
   // to array index and check it.
-  if (JSObject::Helper::flags(*selfHandle).indexedStorage) {
+  if (selfHandle->hasIndexedStorage(runtime)) {
     // If the name is a valid integer array index, store it here.
     OptValue<uint32_t> arrayIndex;
 
@@ -1260,7 +1257,7 @@ CallResult<PseudoHandle<>> JSObject::getNamedOrIndexed(
     Runtime &runtime,
     SymbolID name,
     PropOpFlags opFlags) {
-  if (LLVM_UNLIKELY(selfHandle->flags_.indexedStorage)) {
+  if (LLVM_UNLIKELY(selfHandle->hasIndexedStorage(runtime))) {
     // Note that getStringView can be satisfied without materializing the
     // Identifier.
     const auto strView =
@@ -1285,7 +1282,7 @@ CallResult<PseudoHandle<>> JSObject::getComputedWithReceiver_RJS(
     Handle<> receiver) {
   // Try the fast-path first: no "index-like" properties and the "name" already
   // is a valid integer index.
-  if (selfHandle->flags_.fastIndexProperties) {
+  if (selfHandle->hasFastIndexProperties(runtime)) {
     if (auto arrayIndex = toArrayIndexFastPath(*nameValHandle)) {
       // Do we have this value present in our array storage? If so, return it.
       PseudoHandle<> ourValue =
@@ -1370,14 +1367,14 @@ CallResult<bool> JSObject::hasNamedOrIndexed(
     Handle<JSObject> selfHandle,
     Runtime &runtime,
     SymbolID name) {
-  if (LLVM_UNLIKELY(selfHandle->flags_.indexedStorage)) {
+  if (LLVM_UNLIKELY(selfHandle->hasIndexedStorage(runtime))) {
     const auto strView =
         runtime.getIdentifierTable().getStringView(runtime, name);
     if (auto nameAsIndex = toArrayIndex(strView)) {
       if (haveOwnIndexed(selfHandle.get(), runtime, *nameAsIndex)) {
         return true;
       }
-      if (selfHandle->flags_.fastIndexProperties) {
+      if (selfHandle->hasFastIndexProperties(runtime)) {
         return false;
       }
     }
@@ -1394,7 +1391,7 @@ CallResult<bool> JSObject::hasComputed(
     Handle<> nameValHandle) {
   // Try the fast-path first: no "index-like" properties and the "name" already
   // is a valid integer index.
-  if (selfHandle->flags_.fastIndexProperties) {
+  if (selfHandle->hasFastIndexProperties(runtime)) {
     if (auto arrayIndex = toArrayIndexFastPath(*nameValHandle)) {
       // Do we have this value present in our array storage? If so, return true.
       if (haveOwnIndexed(selfHandle.get(), runtime, *arrayIndex)) {
@@ -1670,7 +1667,7 @@ CallResult<bool> JSObject::putNamedOrIndexed(
     SymbolID name,
     Handle<> valueHandle,
     PropOpFlags opFlags) {
-  if (LLVM_UNLIKELY(selfHandle->flags_.indexedStorage)) {
+  if (LLVM_UNLIKELY(selfHandle->hasIndexedStorage(runtime))) {
     // Note that getStringView can be satisfied without materializing the
     // Identifier.
     const auto strView =
@@ -1704,7 +1701,7 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
   // Try the fast-path first: has "index-like" properties, the "name"
   // already is a valid integer index, selfHandle and receiver are the
   // same, and it is present in storage.
-  if (selfHandle->flags_.fastIndexProperties) {
+  if (selfHandle->hasFastIndexProperties(runtime)) {
     if (auto arrayIndex = toArrayIndexFastPath(*nameValHandle)) {
       if (selfHandle.getHermesValue().getRaw() == receiver->getRaw()) {
         if (haveOwnIndexed(selfHandle.get(), runtime, *arrayIndex)) {
@@ -1937,7 +1934,7 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
 
   // If we have indexed storage we must check whether the property is an index,
   // and if it is, store it in indexed storage.
-  if (receiverHandle->flags_.indexedStorage) {
+  if (receiverHandle->hasIndexedStorage(runtime)) {
     OptValue<uint32_t> arrayIndex;
     StringPrimitive *strPrim = nullptr;
     TO_ARRAY_INDEX(runtime, nameValPrimitiveHandle, strPrim, arrayIndex);
@@ -2067,14 +2064,14 @@ CallResult<bool> JSObject::deleteComputed(
 
   // If we have indexed storage, we must attempt to convert the name to array
   // index, even if the conversion is expensive.
-  if (selfHandle->flags_.indexedStorage) {
+  if (selfHandle->hasIndexedStorage(runtime)) {
     StringPrimitive *strPrim = nullptr;
     TO_ARRAY_INDEX(runtime, nameValPrimitiveHandle, strPrim, arrayIndex);
   }
 
   // Try the fast-path first: the "name" is a valid array index and we don't
   // have "index-like" named properties.
-  if (arrayIndex && selfHandle->flags_.fastIndexProperties) {
+  if (arrayIndex && selfHandle->hasFastIndexProperties(runtime)) {
     // Delete the indexed property.
     if (deleteOwnIndexed(selfHandle, runtime, *arrayIndex))
       return true;
@@ -2294,7 +2291,7 @@ CallResult<bool> JSObject::defineOwnComputedPrimitive(
 
   // If we have indexed storage, we must attempt to convert the name to array
   // index, even if the conversion is expensive.
-  if (selfHandle->flags_.indexedStorage) {
+  if (selfHandle->hasIndexedStorage(runtime)) {
     StringPrimitive *strPrim = nullptr;
     TO_ARRAY_INDEX(runtime, nameValHandle, strPrim, arrayIndex);
   }
@@ -3123,10 +3120,6 @@ ExecutionStatus JSObject::addOwnPropertyImpl(
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-
-  // If this is an index-like property, we need to clear the fast path flags.
-  if (LLVM_UNLIKELY(lv.resultClazz->getHasIndexLikeProperties()))
-    selfHandle->flags_.fastIndexProperties = false;
 
   if (cacheEntry && !lv.resultClazz->isDictionary()) {
     tryCacheAddProperty(
