@@ -425,8 +425,8 @@ class JSObject : public GCCell {
   }
 
   /// ES9 9.1 O.[[Extensible]] internal slot
-  bool isExtensible() const {
-    return !flags_.noExtend;
+  bool isExtensible(PointerBase &pb) const {
+    return getClass(pb)->isExtensible();
   }
 
   /// true if this a lazy object that must be initialized prior to use.
@@ -1220,7 +1220,9 @@ class JSObject : public GCCell {
   /// ES5.1 15.2.3.10.
   /// Set [[Extensible]] slot on an ordinary object to false, preventing adding
   /// more properties.
-  static void preventExtensionsNonProxy(Handle<JSObject> self, PointerBase &pb);
+  static void preventExtensionsNonProxy(
+      Handle<JSObject> self,
+      Runtime &runtime);
   /// ES9 [[PreventExtensons]] internal method.  This works on Proxy
   /// objects and ordinary objects. If opFlags.getThrowOnError() is
   /// true, then this will throw an appropriate TypeError if the
@@ -1229,14 +1231,6 @@ class JSObject : public GCCell {
       Handle<JSObject> selfHandle,
       Runtime &runtime,
       PropOpFlags opFlags = PropOpFlags());
-
-  /// Mark this object as having been created from typed code.
-  /// \pre object was allocated with a typed HiddenClass.
-  void markAsTyped() {
-    flags_.frozen = 1;
-    flags_.sealed = 1;
-    flags_.noExtend = 1;
-  }
 
   /// ES9 9.1.3 [[IsExtensible]] internal method
   /// No properties are can be added.  This also handles the Proxy case.

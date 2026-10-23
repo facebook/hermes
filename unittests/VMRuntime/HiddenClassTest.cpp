@@ -50,6 +50,9 @@ TEST_F(HiddenClassTest, SmokeTest) {
 
   MutableHandle<HiddenClass> x{runtime};
   MutableHandle<HiddenClass> y{runtime};
+  MutableHandle<HiddenClass> y1{runtime};
+  MutableHandle<HiddenClass> y2{runtime};
+  MutableHandle<HiddenClass> y3{runtime};
   MutableHandle<HiddenClass> z{runtime};
 
   auto rootHnd = runtime.makeHandle<HiddenClass>(HiddenClass::createRoot(
@@ -207,10 +210,10 @@ TEST_F(HiddenClassTest, SmokeTest) {
     ASSERT_EQ(*x, *z);
   }
 
-  auto y1 = HiddenClass::makeAllReadOnly(y, runtime);
-  auto y2 = HiddenClass::makeAllReadOnly(y, runtime);
+  y1 = HiddenClass::freeze(y, runtime);
+  y2 = HiddenClass::freeze(y, runtime);
   ASSERT_EQ(*y1, *y2);
-  auto y3 = HiddenClass::makeAllReadOnly(y1, runtime);
+  y3 = HiddenClass::freeze(y1, runtime);
   ASSERT_EQ(*y1, *y3);
 
   // Turn x into a dictionary by erasing x.a

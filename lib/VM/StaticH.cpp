@@ -1995,11 +1995,6 @@ static SHLegacyValue createObjectFromBuffer(
   SerializedLiteralParser::parseValueBuffer(
       literalValBuffer.slice(valBufferOffset), numProps, v);
 
-  if (isTypedAllocKind(AllocKind)) {
-    // Freeze the object from the perspective of untyped code.
-    lv.obj->markAsTyped();
-  }
-
   return lv.obj.getHermesValue();
 }
 

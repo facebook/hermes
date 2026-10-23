@@ -69,6 +69,29 @@ struct ClassFlags {
       /// the property map must never be null.
       uint16_t typed : 1;
 
+      /// New properties cannot be added.
+      uint16_t noExtend : 1;
+
+      /// \c Object.seal() has been invoked on this object, marking all
+      /// properties as non-configurable. When \c Sealed is set, \c NoExtend is
+      /// always set too.
+      ///
+      /// NOTE: It is possible for this flag to be 'false' but for the
+      /// JSObject::isSealed() function to return true, because this flag is set
+      /// lazily in cases like preventExtensions. If JSObject::isSealed() is
+      /// called and returns true, this flag will be set by that call.
+      uint16_t sealed : 1;
+
+      /// \c Object.freeze() has been invoked on this object, marking all
+      /// properties as non-configurable and non-writable. When \c Frozen is
+      /// set, \c Sealed and must \c NoExtend are always set too.
+      ///
+      /// NOTE: It is possible for this flag to be 'false' but for the
+      /// JSObject::isFrozen() function to return true, because this flag is set
+      /// lazily in cases like preventExtensions. If JSObject::isFrozen() is
+      /// called and returns true, this flag will be set by that call.
+      uint16_t frozen : 1;
+
       /// This flag indicates this is a special object whose properties are
       /// managed by C++ code, and not via the standard property storage
       /// mechanisms.
@@ -88,7 +111,7 @@ struct ClassFlags {
       uint16_t parentChangeCounter : kParentChangeCounterSize;
 
       /// Unused bits, tracked explicitly for convenience.
-      uint16_t unusedPadding : 6;
+      uint16_t unusedPadding : 3;
     };
 
     uint16_t _flags;
@@ -403,7 +426,8 @@ class HiddenClass final : public GCCell {
   createRoot(Runtime &runtime, Handle<JSObject> objectParent, ClassFlags flags);
 
   /// Create a "root" hidden class for a typed object - one that doesn't define
-  /// any properties yet but reserves space for a property map.
+  /// any properties yet but reserves space for a property map. The class is
+  /// created frozen, sealed and noExtend.
   /// \param capacity the number of properties in the typed object,
   ///  used to reserve space in the property map.
   /// \pre capacity < maxNumProperties().
@@ -450,6 +474,21 @@ class HiddenClass final : public GCCell {
   /// don't (normally) result in creation of new classes.
   bool isDictionary() const {
     return flags_.dictionaryMode;
+  }
+
+  /// \return true if new properties can be added to the class.
+  bool isExtensible() const {
+    return !flags_.noExtend;
+  }
+
+  /// \return true if the class is sealed.
+  bool isSealed() const {
+    return flags_.sealed;
+  }
+
+  /// \return true if the class is frozen.
+  bool isFrozen() const {
+    return flags_.frozen;
   }
 
   /// \return true if the class is for a lazy object.
@@ -639,17 +678,54 @@ class HiddenClass final : public GCCell {
       Runtime &runtime,
       PseudoHandle<JSObject> newParent);
 
+  /// Update the ClassFlags and return the new HiddenClass.
+  /// Updates the transition table to cache the new HiddenClass.
+  static HiddenClass *updateClassFlags(
+      Handle<HiddenClass> selfHandle,
+      Runtime &runtime,
+      ClassFlags newFlags);
+
   /// Mark all properties as non-configurable.
   /// \return the resulting class
-  static Handle<HiddenClass> makeAllNonConfigurable(
+  static HiddenClass *seal(Handle<HiddenClass> selfHandle, Runtime &runtime);
+
+  /// Mark the HiddenClass as being sealed.
+  /// \return the resulting class
+  static HiddenClass *markAsSealed(
       Handle<HiddenClass> selfHandle,
-      Runtime &runtime);
+      Runtime &runtime) {
+    ClassFlags sealedFlags = selfHandle->flags_;
+    sealedFlags.noExtend = 1;
+    sealedFlags.sealed = 1;
+    return HiddenClass::updateClassFlags(selfHandle, runtime, sealedFlags);
+  }
 
   /// Mark all properties as non-writable and non-configurable.
   /// \return the resulting class
-  static Handle<HiddenClass> makeAllReadOnly(
+  static HiddenClass *freeze(Handle<HiddenClass> selfHandle, Runtime &runtime);
+
+  /// Mark the HiddenClass as being frozen (which implies sealed and
+  /// non-extensible).
+  /// \return the resulting class
+  static HiddenClass *markAsFrozen(
       Handle<HiddenClass> selfHandle,
-      Runtime &runtime);
+      Runtime &runtime) {
+    ClassFlags frozenFlags = selfHandle->flags_;
+    frozenFlags.noExtend = 1;
+    frozenFlags.frozen = 1;
+    frozenFlags.sealed = 1;
+    return HiddenClass::updateClassFlags(selfHandle, runtime, frozenFlags);
+  }
+
+  /// Mark the HiddenClass as being non-extensible.
+  /// \return the resulting class
+  static HiddenClass *markNoExtend(
+      Handle<HiddenClass> selfHandle,
+      Runtime &runtime) {
+    ClassFlags noExtendFlags = selfHandle->flags_;
+    noExtendFlags.noExtend = 1;
+    return HiddenClass::updateClassFlags(selfHandle, runtime, noExtendFlags);
+  }
 
   /// Update the flags for the properties in the list \p props with \p
   /// flagsToClear and \p flagsToSet. If in dictionary mode, the properties are

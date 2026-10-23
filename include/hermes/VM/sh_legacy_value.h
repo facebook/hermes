@@ -440,19 +440,6 @@ static inline bool _sh_ljs_are_both_non_nan_numbers(
 /// Flags associated with an object.
 typedef union {
   struct {
-    /// New properties cannot be added.
-    uint32_t noExtend : 1;
-
-    /// \c Object.seal() has been invoked on this object, marking all properties
-    /// as non-configurable. When \c Sealed is set, \c NoExtend is always set
-    /// too.
-    uint32_t sealed : 1;
-
-    /// \c Object.freeze() has been invoked on this object, marking all
-    /// properties as non-configurable and non-writable. When \c Frozen is set,
-    /// \c Sealed and must \c NoExtend are always set too.
-    uint32_t frozen : 1;
-
     /// This object has indexed storage. This flag will not change at runtime,
     /// it is set at construction and its value never changes. It is not a
     /// state.
@@ -476,7 +463,7 @@ typedef union {
     /// A non-zero object id value, assigned lazily. It is 0 before it is
     /// assigned. If an object started out as lazy, the objectID is the lazy
     /// object index used to identify when it gets initialized.
-    uint32_t objectID : 26;
+    uint32_t objectID : 29;
   };
   uint32_t bits;
 } SHObjectFlags;

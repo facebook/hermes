@@ -317,6 +317,9 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   hostObjectFlags.hostObject = 1;
   ClassFlags proxyFlags{};
   proxyFlags.proxyObject = 1;
+  ClassFlags fastArrayFlags{};
+  fastArrayFlags.noExtend = 1;
+  fastArrayFlags.sealed = 1;
 
   // Define a function on the global object with name \p name.
   // Allocates a NativeObject and puts it in the global object.
@@ -638,7 +641,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
 
   // Declare the fast array class.
   runtime.classFastArray = createRootHiddenClassWithParent(
-      CellKind::FastArrayKind, runtime.fastArrayPrototype, ClassFlags{});
+      CellKind::FastArrayKind, runtime.fastArrayPrototype, fastArrayFlags);
   runtime.classFastArray = FastArray::createClass(
       runtime, runtime.fastArrayPrototype, runtime.classFastArray);
 
