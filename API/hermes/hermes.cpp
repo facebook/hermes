@@ -2698,7 +2698,7 @@ bool HermesRuntimeImpl::hasNativeState(const jsi::Object &obj) {
   ExecutionScopeRAII scopeRAII(mutatorScope);
   vm::GCScope gcScope(runtime_);
   auto h = handle(obj);
-  if (h->isProxyObject() || h->isHostObject()) {
+  if (h->isProxyObject(runtime_) || h->isHostObject(runtime_)) {
     return false;
   }
   vm::NamedPropertyDescriptor desc;
@@ -2720,9 +2720,9 @@ void HermesRuntimeImpl::setNativeState(
 
   vm::GCScope gcScope(runtime_);
   auto h = handle(obj);
-  if (h->isProxyObject()) {
+  if (h->isProxyObject(runtime_)) {
     throw jsi::JSINativeException("native state unsupported on Proxy");
-  } else if (h->isHostObject()) {
+  } else if (h->isHostObject(runtime_)) {
     throw jsi::JSINativeException("native state unsupported on HostObject");
   }
   // Allocate a NativeStateBox on the C++ heap and use it as context of
@@ -2780,7 +2780,7 @@ void HermesRuntimeImpl::setExternalMemoryPressure(
 
   vm::GCScope gcScope(runtime_);
   auto h = handle(obj);
-  if (h->isProxyObject())
+  if (h->isProxyObject(runtime_))
     throw jsi::JSINativeException("Cannot set external memory on Proxy");
 
   // Check if the internal property is already set. If so, we can update the

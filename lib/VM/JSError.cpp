@@ -78,7 +78,7 @@ static llvh::Optional<Handle<JSError>> getErrorFromStackTarget(
       return Handle<JSError>::vmcast(targetHandle);
     }
 
-    if (LLVM_UNLIKELY(targetHandle->isProxyObject())) {
+    if (LLVM_UNLIKELY(targetHandle->isProxyObject(runtime))) {
       return llvh::None;
     }
 

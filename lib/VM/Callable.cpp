@@ -560,7 +560,7 @@ CallResult<double> Callable::extractOwnLengthProperty_RJS(
           desc)) {
     propRes = JSObject::getNamedPropertyValue_RJS(
         selfHandle, runtime, selfHandle, desc);
-  } else if (selfHandle->isProxyObject()) {
+  } else if (selfHandle->isProxyObject(runtime)) {
     ComputedPropertyDescriptor desc;
     CallResult<bool> hasLength = JSProxy::getOwnProperty(
         selfHandle,
@@ -700,7 +700,7 @@ ExecutionStatus BoundFunction::initializeLengthAndName_RJS(
     Runtime &runtime,
     Handle<Callable> target,
     unsigned argCount) {
-  if (LLVM_UNLIKELY(target->isLazy())) {
+  if (LLVM_UNLIKELY(target->isLazy(runtime))) {
     Callable::initializeLazyObject(runtime, target);
   }
 
@@ -995,7 +995,7 @@ Handle<NativeJSFunction> NativeJSFunction::create(
       funcInfo,
       unit);
   auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
-  selfHandle->flags_.lazyObject = 1;
+  assert(selfHandle->isLazy(runtime) && "NativeJSFunction must be lazy");
   return selfHandle;
 }
 
@@ -1102,7 +1102,7 @@ Handle<NativeJSClass> NativeJSClass::create(
       funcInfo,
       unit);
   auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
-  selfHandle->flags_.lazyObject = 1;
+  assert(selfHandle->isLazy(runtime) && "NativeJSClass must be lazy");
   return selfHandle;
 }
 
@@ -1392,7 +1392,7 @@ PseudoHandle<JSFunction> JSFunction::create(
       envHandle,
       codeBlock);
   auto self = JSObjectInit::initToPseudoHandle(runtime, cell);
-  self->flags_.lazyObject = 1;
+  assert(cell->isLazy(runtime) && "JSFunction must be lazy");
   return self;
 }
 
@@ -1546,7 +1546,7 @@ PseudoHandle<JSClass> JSClass::create(
       envHandle,
       codeBlock);
   auto self = JSObjectInit::initToPseudoHandle(runtime, cell);
-  self->flags_.lazyObject = 1;
+  assert(cell->isLazy(runtime) && "JSClass must be lazy");
   return self;
 }
 

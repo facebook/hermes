@@ -392,9 +392,6 @@ static constexpr void setArrayFastPathObjectFlags(SHObjectFlags &res) {
   res.frozen = 0;
   res.indexedStorage = 1;
   res.fastIndexProperties = 1;
-  res.hostObject = 0;
-  res.lazyObject = 0;
-  res.proxyObject = 0;
   res.isCachedUsingEpoch = 0;
   res.objectID = 0;
 }
@@ -411,6 +408,9 @@ static constexpr void setArrayFastPathClassFlags(ClassFlags &res) {
   res.typed = 0;
   res.hasIndexLikeProperties = 0;
   res.mayHaveAccessor = 0;
+  res.hostObject = 0;
+  res.lazyObject = 0;
+  res.proxyObject = 0;
   res.parentChangeCounter = 0;
   res.unusedPadding = 0;
 }
@@ -438,8 +438,8 @@ static bool checkAndCacheProtoForFastPath(Runtime &runtime) {
     // If the object may have index-like properties that are not reflected on
     // the hidden class or indexed storage, bail.
     if (LLVM_UNLIKELY(
-            curParent->isHostObject() || curParent->isProxyObject() ||
-            curParent->isLazy()))
+            curParent->isHostObject(runtime) ||
+            curParent->isProxyObject(runtime) || curParent->isLazy(runtime)))
       return false;
 
     // Any index-like properties in the parent means we can't use the fast path
@@ -1895,7 +1895,7 @@ CallResult<HermesValue> sortSparse(
   GCScope gcScope{runtime};
 
   assert(
-      !O->isHostObject() && !O->isProxyObject() &&
+      !O->isHostObject(runtime) && !O->isProxyObject(runtime) &&
       "only non-exotic objects can be sparsely sorted");
 
   struct : Locals {
@@ -2048,7 +2048,7 @@ CallResult<HermesValue> arrayPrototypeSort(void *, Runtime &runtime) {
   // If we are not sorting a regular dense array, use a special routine which
   // first copies all existing properties into an array and sorts that.
   // Proxies and host objects however are excluded because they are weird.
-  if (!lv.O->isProxyObject() && !lv.O->isHostObject() &&
+  if (!lv.O->isProxyObject(runtime) && !lv.O->isHostObject(runtime) &&
       !lv.O->hasFastIndexProperties())
     return sortSparse(runtime, lv.O, compareFn, len);
 
@@ -2571,7 +2571,7 @@ static CallResult<HermesValue> arrayPrototypeSpliceFastPath(
     uint32_t itemCount,
     NativeArgs args) {
   assert(O->hasFastIndexProperties() && "O must have fast index properties");
-  assert(!O->isProxyObject() && "O must not be proxy");
+  assert(!O->isProxyObject(runtime) && "O must not be proxy");
   assert(O->getBeginIndex() == 0 && "incorrect begin index");
   assert(O->getEndIndex() == len && "incorrect end index");
 

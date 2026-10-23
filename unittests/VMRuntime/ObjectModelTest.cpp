@@ -194,7 +194,7 @@ TEST_F(ObjectModelTest, DefineOwnPropertyTest) {
     EXPECT_PROPERTY_FLAG(FALSE, obj, *prop1ID, enumerable);
     EXPECT_PROPERTY_FLAG(FALSE, obj, *prop1ID, configurable);
     EXPECT_PROPERTY_FLAG(FALSE, obj, *prop1ID, accessor);
-    JSObject::preventExtensions(obj.get());
+    JSObject::preventExtensionsNonProxy(obj, runtime);
     ASSERT_TRUE(*JSObject::defineOwnProperty(
         obj,
         runtime,

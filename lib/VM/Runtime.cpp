@@ -426,7 +426,8 @@ Runtime::Runtime(
       PinnedValue<HiddenClass> tmpRoot;
     } lv;
     LocalsRAII lraii{*this, &lv};
-    lv.tmpRoot = HiddenClass::createRoot(*this, makeNullHandle<JSObject>());
+    lv.tmpRoot = HiddenClass::createRoot(
+        *this, makeNullHandle<JSObject>(), ClassFlags{});
     objectPrototype =
         JSObject::create(*this, makeNullHandle<JSObject>(), lv.tmpRoot);
   }
@@ -439,7 +440,7 @@ Runtime::Runtime(
   static_assert(
       JSObject::numOverlapSlots<JSObject>() == 0,
       "must have no overlap slots for classJSObject");
-  classJSObject = HiddenClass::createRoot(*this, objectPrototype);
+  classJSObject = HiddenClass::createRoot(*this, objectPrototype, ClassFlags{});
   {
     // getHiddenClassForPrototype may allocate and move objectPrototype, so
     // dereference objectPrototype only after it returns.
@@ -1724,7 +1725,10 @@ void Runtime::initRootHiddenClasses() {
 
   // For lazy objects, they should just use this empty HiddenClass until they
   // are actually populated.
-  lv.clazz = HiddenClass::createRoot(*this, makeNullHandle<JSObject>());
+  ClassFlags lazyFlags{};
+  lazyFlags.lazyObject = 1;
+  lv.clazz =
+      HiddenClass::createRoot(*this, makeNullHandle<JSObject>(), lazyFlags);
   lazyObjectClass_ = lv.clazz;
 }
 

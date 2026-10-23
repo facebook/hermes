@@ -98,7 +98,9 @@ PseudoHandle<JSProxy> JSProxy::create(Runtime &runtime) {
       Runtime::makeNullHandle<JSObject>(),
       runtime.getHiddenClassForPrototype(nullptr, runtime.classJSProxy));
 
-  proxy->flags_.proxyObject = true;
+  assert(
+      proxy->isProxyObject(runtime) &&
+      "new Proxy made with the wrong HiddenClass");
 
   return JSObjectInit::initToPseudoHandle(runtime, proxy);
 }
