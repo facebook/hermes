@@ -109,13 +109,13 @@ id<number | string>('a');
 // CHECK-NEXT:                Id 'id' [D:E:%d.5 'id'] : %function.3
 // CHECK-NEXT:                TypeParameterInstantiation
 // CHECK-NEXT:                    StringTypeAnnotation
-// CHECK-NEXT:                StringLiteral : string
+// CHECK-NEXT:                StringLiteral : "a"
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            CallExpression : string
 // CHECK-NEXT:                Id 'id' [D:E:%d.5 'id'] : %function.3
 // CHECK-NEXT:                TypeParameterInstantiation
 // CHECK-NEXT:                    StringTypeAnnotation
-// CHECK-NEXT:                StringLiteral : string
+// CHECK-NEXT:                StringLiteral : "a"
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            CallExpression : %union.4
 // CHECK-NEXT:                Id 'id' [D:E:%d.6 'id'] : %function.5
@@ -131,4 +131,4 @@ id<number | string>('a');
 // CHECK-NEXT:                    UnionTypeAnnotation
 // CHECK-NEXT:                        NumberTypeAnnotation
 // CHECK-NEXT:                        StringTypeAnnotation
-// CHECK-NEXT:                StringLiteral : string
+// CHECK-NEXT:                StringLiteral : "a"

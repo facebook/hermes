@@ -26,8 +26,8 @@ var seq: string = ("ignored", 42, "kept");
 // CHECK-NEXT:    BlockStatement
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                SequenceExpression : string
-// CHECK-NEXT:                    StringLiteral : string
+// CHECK-NEXT:                SequenceExpression : "kept"
+// CHECK-NEXT:                    StringLiteral : "ignored"
 // CHECK-NEXT:                    NumericLiteral : number
-// CHECK-NEXT:                    StringLiteral : string
+// CHECK-NEXT:                    StringLiteral : "kept"
 // CHECK-NEXT:                Id 'seq' [D:E:%d.2 'seq']

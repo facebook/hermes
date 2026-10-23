@@ -37,17 +37,26 @@ namespace flow {
   _HERMES_SEMA_FLOW_DEFKIND(Empty)                \
   _HERMES_SEMA_FLOW_DEFKIND(Mixed)
 
-#define _HERMES_SEMA_FLOW_COMPLEX_TYPES       \
-  _HERMES_SEMA_FLOW_DEFKIND(Union)            \
-  _HERMES_SEMA_FLOW_DEFKIND(Array)            \
-  _HERMES_SEMA_FLOW_DEFKIND(Tuple)            \
-  _HERMES_SEMA_FLOW_DEFKIND(ExactObject)      \
-  _HERMES_SEMA_FLOW_DEFKIND(UntypedFunction)  \
-  _HERMES_SEMA_FLOW_DEFKIND(TypedFunction)    \
-  _HERMES_SEMA_FLOW_DEFKIND(NativeFunction)   \
-  _HERMES_SEMA_FLOW_DEFKIND(Class)            \
-  _HERMES_SEMA_FLOW_DEFKIND(ClassConstructor) \
-  _HERMES_SEMA_FLOW_DEFKIND(InferencePlaceholderArray)
+/// The literal kinds must be listed last here, see
+/// _HERMES_SEMA_FLOW_LITERAL_BASES.
+#define _HERMES_SEMA_FLOW_COMPLEX_TYPES                \
+  _HERMES_SEMA_FLOW_DEFKIND(Union)                     \
+  _HERMES_SEMA_FLOW_DEFKIND(Array)                     \
+  _HERMES_SEMA_FLOW_DEFKIND(Tuple)                     \
+  _HERMES_SEMA_FLOW_DEFKIND(ExactObject)               \
+  _HERMES_SEMA_FLOW_DEFKIND(UntypedFunction)           \
+  _HERMES_SEMA_FLOW_DEFKIND(TypedFunction)             \
+  _HERMES_SEMA_FLOW_DEFKIND(NativeFunction)            \
+  _HERMES_SEMA_FLOW_DEFKIND(Class)                     \
+  _HERMES_SEMA_FLOW_DEFKIND(ClassConstructor)          \
+  _HERMES_SEMA_FLOW_DEFKIND(InferencePlaceholderArray) \
+  _HERMES_SEMA_FLOW_DEFKIND(StringLiteral)
+
+/// Each literal TypeKind and the primary TypeKind it widens into. Every kind
+/// in [_FirstLiteral, _LastLiteral] must appear here, and they must be the
+/// last kinds in \c TypeKind.
+#define _HERMES_SEMA_FLOW_LITERAL_BASES \
+  _HERMES_SEMA_FLOW_DEFLITERAL(StringLiteral, String)
 
 enum class TypeKind : uint8_t {
 #define _HERMES_SEMA_FLOW_DEFKIND(name) name,
@@ -62,7 +71,33 @@ enum class TypeKind : uint8_t {
   _LastId = ClassConstructor,
   _FirstFunction = UntypedFunction,
   _LastFunction = NativeFunction,
+  _FirstLiteral = StringLiteral,
+  _LastLiteral = StringLiteral,
 };
+
+/// The number of distinct TypeKind values.
+constexpr unsigned kNumTypeKinds = 0
+#define _HERMES_SEMA_FLOW_DEFKIND(name) +1
+    _HERMES_SEMA_FLOW_SINGLETONS _HERMES_SEMA_FLOW_COMPLEX_TYPES
+#undef _HERMES_SEMA_FLOW_DEFKIND
+    ;
+
+static_assert(
+    (unsigned)TypeKind::_LastLiteral + 1 == kNumTypeKinds,
+    "literal kinds must sort last; union literal absorption relies on it");
+
+static_assert(
+    0
+#define _HERMES_SEMA_FLOW_DEFLITERAL(name, base) +1
+        _HERMES_SEMA_FLOW_LITERAL_BASES
+#undef _HERMES_SEMA_FLOW_DEFLITERAL
+        == (int)TypeKind::_LastLiteral - (int)TypeKind::_FirstLiteral + 1,
+    "every literal TypeKind needs an entry in "
+    "_HERMES_SEMA_FLOW_LITERAL_BASES");
+
+/// \return \p kind widened to the primary kind it represents, if it is a
+/// literal kind. Otherwise \p kind unchanged.
+TypeKind widenLiteralKind(TypeKind kind);
 
 /// The backing storage for Types.
 /// Indicates the TypeKind and can be compared for equality, etc.
@@ -83,6 +118,11 @@ class TypeInfo {
 
   bool isSingleton() const {
     return kind_ <= TypeKind::_LastSingleton;
+  }
+
+  /// \return true if this is a literal type (e.g. a string literal type).
+  bool isLiteral() const {
+    return kind_ >= TypeKind::_FirstLiteral && kind_ <= TypeKind::_LastLiteral;
   }
 
   TypeKind getKind() const {
@@ -375,7 +415,10 @@ class UnionType : public SingleType<TypeKind::Union, TypeInfo> {
       llvh::SmallVectorImpl<Type *> &nonLoopingTypes,
       llvh::SmallVectorImpl<Type *> &loopingTypes);
 
-  /// Unique types and sort them according to \c TypeInfo::compare.
+  /// Unique types and sort them according to \c TypeInfo::compare. Also
+  /// remove the literal types absorbed by another arm: a literal is absorbed
+  /// by its base type (`string | "abc"` is `string`), by `any` and by
+  /// `mixed`.
   /// \param types the types that are known to be non-recursive.
   static void sortAndUniqueNonLoopingTypes(
       llvh::SmallVectorImpl<Type *> &types);
@@ -465,6 +508,33 @@ class TupleType : public TypeInfo {
 
   static bool classof(const TypeInfo *t) {
     return t->getKind() == TypeKind::Tuple;
+  }
+};
+
+/// The type of a single string literal, e.g. the type "foo". Carries the
+/// interned literal value. A StringLiteralType flows into String, and into
+/// another StringLiteralType only when the value is identical.
+class StringLiteralType : public TypeInfo {
+  /// The interned literal value.
+  UniqueString *value_;
+
+ public:
+  explicit StringLiteralType(UniqueString *value)
+      : TypeInfo(TypeKind::StringLiteral), value_(value) {
+    assert(value && "value must be non-null");
+  }
+
+  /// \return the interned literal value.
+  UniqueString *getValue() const {
+    return value_;
+  }
+
+  int _compareImpl(const StringLiteralType *other, CompareState &state) const;
+  bool _equalsImpl(const StringLiteralType *other, CompareState &state) const;
+  unsigned _hashImpl() const;
+
+  static bool classof(const TypeInfo *t) {
+    return t->getKind() == TypeKind::StringLiteral;
   }
 };
 
@@ -1236,6 +1306,10 @@ class FlowContext {
   }
   TupleType *createTuple(llvh::ArrayRef<Type *> types) {
     return &allocTuple_.emplace_back(types);
+  }
+  StringLiteralType *createStringLiteral(UniqueString *value) {
+    assert(value);
+    return &allocStringLiteral_.emplace_back(value);
   }
   ExactObjectType *createExactObject(
       llvh::ArrayRef<ExactObjectType::Field> fields,

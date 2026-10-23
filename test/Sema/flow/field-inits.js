@@ -78,7 +78,7 @@ class C1 extends C0 {
 // CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:    BlockStatement
 // CHECK-NEXT:        ExpressionStatement
-// CHECK-NEXT:            StringLiteral : string
+// CHECK-NEXT:            StringLiteral : "use strict"
 // CHECK-NEXT:        ClassDeclaration Scope %s.2
 // CHECK-NEXT:            Id 'C0' [D:E:%d.2 'C0']
 // CHECK-NEXT:            ClassBody

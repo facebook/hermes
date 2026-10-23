@@ -67,12 +67,13 @@ function f7(k: string): {[string | number]: number} {
 // CHECK-NEXT:  [number]: number
 // CHECK-NEXT:})
 // CHECK-NEXT:%object.13 = object({
-// CHECK-NEXT:  [%union.15]: %union.15
+// CHECK-NEXT:  [%union.16]: %union.16
 // CHECK-NEXT:})
 // CHECK-NEXT:%object.14 = object({
-// CHECK-NEXT:  [%union.15]: number
+// CHECK-NEXT:  [%union.16]: number
 // CHECK-NEXT:})
-// CHECK-NEXT:%union.15 = union(string | number)
+// CHECK-NEXT:%union.15 = union(number | "s")
+// CHECK-NEXT:%union.16 = union(string | number)
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict mayReachImplicitReturn
@@ -149,7 +150,7 @@ function f7(k: string): {[string | number]: number} {
 // CHECK-NEXT:                            NumericLiteral : number
 // CHECK-NEXT:                        Property
 // CHECK-NEXT:                            Id 'k2' [D:E:%d.13 'k2'] : string
-// CHECK-NEXT:                            StringLiteral : string
+// CHECK-NEXT:                            StringLiteral : "s"
 // CHECK-NEXT:        FunctionDeclaration : %function.4
 // CHECK-NEXT:            Id 'f3' [D:E:%d.4 'f3']
 // CHECK-NEXT:            Id 'k' [D:E:%d.15 'k']

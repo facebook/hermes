@@ -67,7 +67,7 @@ let typedYNum: string = typedY;
 // CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:    BlockStatement
 // CHECK-NEXT:        ExpressionStatement
-// CHECK-NEXT:            StringLiteral : string
+// CHECK-NEXT:            StringLiteral : "use strict"
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                ObjectExpression : %object.2
@@ -76,7 +76,7 @@ let typedYNum: string = typedY;
 // CHECK-NEXT:                        NumericLiteral : number
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'y'
-// CHECK-NEXT:                        StringLiteral : string
+// CHECK-NEXT:                        StringLiteral : "hello"
 // CHECK-NEXT:                Id 'obj' [D:E:%d.2 'obj']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator

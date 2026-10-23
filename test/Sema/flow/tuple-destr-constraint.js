@@ -38,12 +38,12 @@ let [p, {q}]: [number, {q: string}] = [1, {q: "a"}];
 // CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:    BlockStatement
 // CHECK-NEXT:        ExpressionStatement
-// CHECK-NEXT:            StringLiteral : string
+// CHECK-NEXT:            StringLiteral : "use strict"
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                ArrayExpression : %tuple.2
 // CHECK-NEXT:                    NumericLiteral : number
-// CHECK-NEXT:                    StringLiteral : string
+// CHECK-NEXT:                    StringLiteral : "hello"
 // CHECK-NEXT:                ArrayPattern : %tuple.2
 // CHECK-NEXT:                    Id 'a' [D:E:%d.2 'a'] : number
 // CHECK-NEXT:                    Id 'b' [D:E:%d.3 'b'] : string
@@ -54,7 +54,7 @@ let [p, {q}]: [number, {q: string}] = [1, {q: "a"}];
 // CHECK-NEXT:                    ObjectExpression : %object.3
 // CHECK-NEXT:                        Property
 // CHECK-NEXT:                            Id 'q'
-// CHECK-NEXT:                            StringLiteral : string
+// CHECK-NEXT:                            StringLiteral : "a"
 // CHECK-NEXT:                ArrayPattern : %tuple.4
 // CHECK-NEXT:                    Id 'p' [D:E:%d.4 'p'] : number
 // CHECK-NEXT:                    ObjectPattern : %object.3

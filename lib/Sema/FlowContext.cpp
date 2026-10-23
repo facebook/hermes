@@ -174,6 +174,11 @@ static void messageStringImpl(const Type *type, llvh::raw_ostream &os) {
     return;
   }
 
+  if (auto *strLitType = llvh::dyn_cast<StringLiteralType>(type->info)) {
+    os << '"' << strLitType->getValue()->str() << '"';
+    return;
+  }
+
   os << type->info->getKindName();
 }
 
@@ -186,6 +191,18 @@ std::string Type::messageString() const {
   return os.str();
 }
 
+TypeKind widenLiteralKind(TypeKind kind) {
+  switch (kind) {
+#define _HERMES_SEMA_FLOW_DEFLITERAL(name, base) \
+  case TypeKind::name:                           \
+    return TypeKind::base;
+    _HERMES_SEMA_FLOW_LITERAL_BASES
+#undef _HERMES_SEMA_FLOW_DEFLITERAL
+    default:
+      return kind;
+  }
+}
+
 llvh::StringRef TypeInfo::getKindName() const {
   switch (kind_) {
     case TypeKind::Void:
@@ -196,6 +213,8 @@ llvh::StringRef TypeInfo::getKindName() const {
       return "boolean";
     case TypeKind::String:
       return "string";
+    case TypeKind::StringLiteral:
+      return "string literal";
     case TypeKind::CPtr:
       return "c_ptr";
     case TypeKind::Number:
@@ -445,18 +464,37 @@ void UnionType::canonicalizeTypes(
 
 void UnionType::sortAndUniqueNonLoopingTypes(
     llvh::SmallVectorImpl<Type *> &types) {
-  // Sort for predictable order.
+  // Sort for predictable order. Literal kinds are the last TypeKinds, so a
+  // literal arm is always visited after everything that can absorb it.
   std::sort(types.begin(), types.end(), [](Type *a, Type *b) {
     return a->info->compare(b->info) < 0;
   });
 
-  // Remove identical union arms.
-  types.erase(
-      std::unique(
-          types.begin(),
-          types.end(),
-          [](Type *a, Type *b) { return a->info->equals(b->info); }),
-      types.end());
+  // Mark for removal the identical arms (which are adjacent after sorting)
+  // and the literal arms absorbed by an earlier arm.
+  bool seenKind[kNumTypeKinds] = {};
+  Type *prev = nullptr;
+  for (size_t i = 0, e = types.size(); i < e; ++i) {
+    Type *t = types[i];
+    TypeKind kind = t->info->getKind();
+    if (prev && prev->info->equals(t->info)) {
+      types[i] = nullptr;
+      continue;
+    }
+    // A literal is absorbed by its base type, by "any" and by "mixed".
+    if (t->info->isLiteral() &&
+        (seenKind[(size_t)widenLiteralKind(kind)] ||
+         seenKind[(size_t)TypeKind::Any] ||
+         seenKind[(size_t)TypeKind::Mixed])) {
+      types[i] = nullptr;
+      continue;
+    }
+    seenKind[(size_t)kind] = true;
+    prev = t;
+  }
+
+  // Remove the marked arms.
+  llvh::erase_if(types, [](Type *type) { return type == nullptr; });
 }
 
 void UnionType::uniqueLoopingTypesSlow(llvh::SmallVectorImpl<Type *> &types) {
@@ -579,6 +617,23 @@ bool TupleType::_equalsImpl(const TupleType *other, CompareState &state) const {
 
 unsigned TupleType::_hashImpl() const {
   return (unsigned)llvh::hash_combine((unsigned)TypeKind::Tuple, types_.size());
+}
+
+int StringLiteralType::_compareImpl(
+    const StringLiteralType *other,
+    CompareState &state) const {
+  return value_->str().compare(other->value_->str());
+}
+
+bool StringLiteralType::_equalsImpl(
+    const StringLiteralType *other,
+    CompareState &state) const {
+  return value_ == other->value_;
+}
+
+unsigned StringLiteralType::_hashImpl() const {
+  return (unsigned)llvh::hash_combine(
+      (unsigned)TypeKind::StringLiteral, (uintptr_t)value_);
 }
 
 hermes::OptValue<size_t> ExactObjectType::findField(Identifier id) const {

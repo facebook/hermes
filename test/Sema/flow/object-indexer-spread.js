@@ -84,14 +84,14 @@ let merged: {[string]: number | boolean} = {...d, ...plain};
 // CHECK-NEXT:                        Id 'd' [D:E:%d.2 'd'] : %object.2
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'x'
-// CHECK-NEXT:                        StringLiteral : string
+// CHECK-NEXT:                        StringLiteral : "s"
 // CHECK-NEXT:                Id 'withName' [D:E:%d.4 'withName']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                ObjectExpression : %object.3
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'x'
-// CHECK-NEXT:                        StringLiteral : string
+// CHECK-NEXT:                        StringLiteral : "s"
 // CHECK-NEXT:                    SpreadElement
 // CHECK-NEXT:                        Id 'd' [D:E:%d.2 'd'] : %object.2
 // CHECK-NEXT:                Id 'nameFirst' [D:E:%d.5 'nameFirst']

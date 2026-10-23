@@ -148,9 +148,9 @@ let v5 = first(c);
 // CHECK-NEXT:                CallExpression : string
 // CHECK-NEXT:                    Id 'head' [D:E:%d.13 'head'] : %function.7
 // CHECK-NEXT:                    ArrayExpression : %class.6
-// CHECK-NEXT:                        StringLiteral : string
-// CHECK-NEXT:                        StringLiteral : string
-// CHECK-NEXT:                        StringLiteral : string
+// CHECK-NEXT:                        StringLiteral : "a"
+// CHECK-NEXT:                        StringLiteral : "b"
+// CHECK-NEXT:                        StringLiteral : "c"
 // CHECK-NEXT:                Id 'v2' [D:E:%d.4 'v2']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator

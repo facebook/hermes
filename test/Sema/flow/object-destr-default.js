@@ -78,7 +78,7 @@ function g({k = 'd'}: {+[key: string]: mixed}): mixed {
 // CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:    BlockStatement
 // CHECK-NEXT:        ExpressionStatement
-// CHECK-NEXT:            StringLiteral : string
+// CHECK-NEXT:            StringLiteral : "use strict"
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                ObjectExpression : %object.2
@@ -87,7 +87,7 @@ function g({k = 'd'}: {+[key: string]: mixed}): mixed {
 // CHECK-NEXT:                        NumericLiteral : number
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'y'
-// CHECK-NEXT:                        StringLiteral : string
+// CHECK-NEXT:                        StringLiteral : "hello"
 // CHECK-NEXT:                Id 'obj' [D:E:%d.2 'obj']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
@@ -102,7 +102,7 @@ function g({k = 'd'}: {+[key: string]: mixed}): mixed {
 // CHECK-NEXT:                        Id 'y'
 // CHECK-NEXT:                        AssignmentPattern
 // CHECK-NEXT:                            Id 'y' [D:E:%d.4 'y'] : string
-// CHECK-NEXT:                            StringLiteral : string
+// CHECK-NEXT:                            StringLiteral : "z"
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                Id 'x' [D:E:%d.3 'x'] : number
@@ -138,7 +138,7 @@ function g({k = 'd'}: {+[key: string]: mixed}): mixed {
 // CHECK-NEXT:                    Id 'k'
 // CHECK-NEXT:                    AssignmentPattern
 // CHECK-NEXT:                        Id 'k' [D:E:%d.15 'k'] : mixed
-// CHECK-NEXT:                        StringLiteral : string
+// CHECK-NEXT:                        StringLiteral : "d"
 // CHECK-NEXT:            BlockStatement
 // CHECK-NEXT:                ReturnStatement
 // CHECK-NEXT:                    Id 'k' [D:E:%d.15 'k'] : mixed

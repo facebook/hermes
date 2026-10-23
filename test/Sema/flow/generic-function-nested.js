@@ -185,4 +185,4 @@ outer<string>('a');
 // CHECK-NEXT:                Id 'outer' [D:E:%d.5 'outer'] : %function.3
 // CHECK-NEXT:                TypeParameterInstantiation
 // CHECK-NEXT:                    StringTypeAnnotation
-// CHECK-NEXT:                StringLiteral : string
+// CHECK-NEXT:                StringLiteral : "a"

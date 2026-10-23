@@ -158,5 +158,5 @@ var xyz: [number, string, number] = a.foo<string>(123, 'str');
 // CHECK-NEXT:                    TypeParameterInstantiation
 // CHECK-NEXT:                        StringTypeAnnotation
 // CHECK-NEXT:                    NumericLiteral : number
-// CHECK-NEXT:                    StringLiteral : string
+// CHECK-NEXT:                    StringLiteral : "str"
 // CHECK-NEXT:                Id 'xyz' [D:E:%d.4 'xyz']

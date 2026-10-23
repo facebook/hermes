@@ -118,7 +118,7 @@
 // CHECK-NEXT:                                            MemberExpression : any
 // CHECK-NEXT:                                                SHBuiltin
 // CHECK-NEXT:                                                Id 'export'
-// CHECK-NEXT:                                            StringLiteral : string
+// CHECK-NEXT:                                            StringLiteral : "n"
 // CHECK-NEXT:                                            Id 'n' [D:E:%d.10 'n'] : number
 // CHECK-NEXT:                                    ReturnStatement
 // CHECK-NEXT:                                        NumericLiteral : number
@@ -138,13 +138,13 @@
 // CHECK-NEXT:                                                BinaryExpression : any
 // CHECK-NEXT:                                                    MemberExpression : any
 // CHECK-NEXT:                                                        AsExpression : any
-// CHECK-NEXT:                                                            CallExpression : string
+// CHECK-NEXT:                                                            CallExpression : "abc"
 // CHECK-NEXT:                                                                MemberExpression : any
 // CHECK-NEXT:                                                                    SHBuiltin
 // CHECK-NEXT:                                                                    Id 'import'
 // CHECK-NEXT:                                                                NumericLiteral : number
-// CHECK-NEXT:                                                                StringLiteral : string
-// CHECK-NEXT:                                                                StringLiteral : string
+// CHECK-NEXT:                                                                StringLiteral : "n"
+// CHECK-NEXT:                                                                StringLiteral : "abc"
 // CHECK-NEXT:                                                            AnyTypeAnnotation
 // CHECK-NEXT:                                                        Id 'length'
 // CHECK-NEXT:                                                    BinOp +

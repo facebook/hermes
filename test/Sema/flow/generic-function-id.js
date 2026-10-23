@@ -105,4 +105,4 @@ id<string>('a');
 // CHECK-NEXT:                Id 'id' [D:E:%d.5 'id'] : %function.3
 // CHECK-NEXT:                TypeParameterInstantiation
 // CHECK-NEXT:                    StringTypeAnnotation
-// CHECK-NEXT:                StringLiteral : string
+// CHECK-NEXT:                StringLiteral : "a"

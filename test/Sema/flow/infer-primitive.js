@@ -38,7 +38,7 @@ let v7 = /1/;
 // CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:    BlockStatement
 // CHECK-NEXT:        ExpressionStatement
-// CHECK-NEXT:            StringLiteral : string
+// CHECK-NEXT:            StringLiteral : "use strict"
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                NumericLiteral : number
@@ -49,7 +49,7 @@ let v7 = /1/;
 // CHECK-NEXT:                Id 'v2' [D:E:%d.3 'v2']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                StringLiteral : string
+// CHECK-NEXT:                StringLiteral : "1"
 // CHECK-NEXT:                Id 'v3' [D:E:%d.4 'v3']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
