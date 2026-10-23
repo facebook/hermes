@@ -133,6 +133,7 @@ typedef struct SHBoxedDouble {
 typedef struct SHHiddenClassTransition {
   uint32_t symbolID;
   uint16_t propertyFlags;
+  uint16_t classFlags;
 } SHTransition;
 
 /// Struct mirroring the layout of detail::TransitionMap.
@@ -154,7 +155,7 @@ typedef struct SHHiddenClass {
 #if HERMESVM_JIT
   uint16_t lazyJITId;
 #endif
-  uint8_t flags;
+  uint16_t flags;
   SHTransitionMap transitionMap;
   void *parentTransitionMap;
 } SHHiddenClass;
