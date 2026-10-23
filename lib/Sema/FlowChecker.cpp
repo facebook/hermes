@@ -2261,30 +2261,39 @@ class FlowChecker::AnnotateScopeDecls {
   void annotateAllScopeDecls(
       const sema::ScopeDecls &decls,
       ESTree::Node *scopeNode) {
+    // Annotate function declaration signatures first, mirroring JS function
+    // hoisting, so their types are available to variable initializers that
+    // reference them regardless of textual order.
+    for (ESTree::Node *declNode : decls) {
+      auto *funcDecl =
+          llvh::dyn_cast<ESTree::FunctionDeclarationNode>(declNode);
+      if (!funcDecl)
+        continue;
+      ESTree::Node *parent = nullptr;
+      if (auto *program = llvh::dyn_cast<ESTree::ProgramNode>(scopeNode)) {
+        parent = program;
+      } else if (
+          auto *func = llvh::dyn_cast<ESTree::FunctionLikeNode>(scopeNode)) {
+        parent = ESTree::getBlockStatement(func);
+      } else {
+        parent = scopeNode;
+        assert(
+            llvh::isa<ESTree::BlockStatementNode>(parent) ||
+            llvh::isa<ESTree::SwitchStatementNode>(parent));
+      }
+      annotateFunctionDeclaration(funcDecl, parent);
+    }
+
     for (ESTree::Node *declNode : decls) {
       if (auto *declaration =
               llvh::dyn_cast<ESTree::VariableDeclarationNode>(declNode)) {
         // VariableDeclaration.
         //
         annotateVariableDeclaration(declaration);
-      } else if (
-          auto *funcDecl =
-              llvh::dyn_cast<ESTree::FunctionDeclarationNode>(declNode)) {
-        // FunctionDeclaration.
+      } else if (llvh::isa<ESTree::FunctionDeclarationNode>(declNode)) {
+        // FunctionDeclaration: already annotated in the hoisting pass above.
         //
-        ESTree::Node *parent = nullptr;
-        if (auto *program = llvh::dyn_cast<ESTree::ProgramNode>(scopeNode)) {
-          parent = program;
-        } else if (
-            auto *func = llvh::dyn_cast<ESTree::FunctionLikeNode>(scopeNode)) {
-          parent = ESTree::getBlockStatement(func);
-        } else {
-          parent = scopeNode;
-          assert(
-              llvh::isa<ESTree::BlockStatementNode>(parent) ||
-              llvh::isa<ESTree::SwitchStatementNode>(parent));
-        }
-        annotateFunctionDeclaration(funcDecl, parent);
+        continue;
       } else if (
           auto *id = llvh::dyn_cast<ESTree::ImportDeclarationNode>(declNode)) {
         // ImportDeclaration.
@@ -2324,8 +2333,11 @@ class FlowChecker::AnnotateScopeDecls {
       auto *declarator = llvh::cast<ESTree::VariableDeclaratorNode>(&n);
       if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(declarator->_id)) {
         sema::Decl *decl = outer.getDecl(id);
-        if (outer.flowContext_.findDeclType(decl)) {
-          // This decl was already handled in setTypesForAnnotatedVariables.
+        // Already handled in setTypesForAnnotatedVariables, unless it was a
+        // hoisted function, which recordDecl below reports as redeclared.
+        if (outer.flowContext_.findDeclType(decl) &&
+            !llvh::dyn_cast_or_null<ESTree::FunctionDeclarationNode>(
+                outer.declNodes_.lookup(decl))) {
           continue;
         }
         Type *type = outer.parseOptionalTypeAnnotation(id->_typeAnnotation);
@@ -2421,6 +2433,10 @@ class FlowChecker::AnnotateScopeDecls {
     sema::Decl *decl = outer.getDecl(id);
     assert(decl && "unresolved identifier");
     if (funcDecl->_typeParameters) {
+      // Generics have no Decl type, but still record the node to catch
+      // re-declarations.
+      if (!outer.recordDeclNode(decl, id, funcDecl))
+        return;
       decl->generic = true;
       outer.registerGeneric(
           decl, funcDecl, parent, outer.bindingTable_.getCurrentScope());
@@ -2526,19 +2542,26 @@ bool FlowChecker::recordDecl(
     Type *type,
     ESTree::IdentifierNode *id,
     ESTree::Node *astDeclNode) {
+  if (!recordDeclNode(decl, id, astDeclNode))
+    return false;
+  declTypes_.try_emplace(decl, type);
+  return true;
+}
+
+bool FlowChecker::recordDeclNode(
+    sema::Decl *decl,
+    ESTree::IdentifierNode *id,
+    ESTree::Node *astDeclNode) {
   assert(decl && "unresolved identifier");
   auto [it, inserted] = declNodes_.try_emplace(decl, astDeclNode);
-  if (inserted) {
-    declTypes_.try_emplace(decl, type);
+  if (inserted)
     return true;
-  } else {
-    sm_.error(id->getStartLoc(), "ft: redeclaration of " + id->_name->str());
-    sm_.note(
-        it->second->getSourceRange(),
-        "ft: first declaration of " + id->_name->str());
-    return false;
-  }
-};
+  sm_.error(id->getStartLoc(), "ft: redeclaration of " + id->_name->str());
+  sm_.note(
+      it->second->getSourceRange(),
+      "ft: first declaration of " + id->_name->str());
+  return false;
+}
 
 Type *FlowChecker::parseFunctionType(
     ESTree::NodeList &params,

@@ -516,6 +516,14 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
       ESTree::IdentifierNode *id,
       ESTree::Node *astDeclNode);
 
+  /// Record only the declaring AST node of \p decl, reporting a
+  /// re-declaration if it already has one.
+  /// \return true if there was no error.
+  bool recordDeclNode(
+      sema::Decl *decl,
+      ESTree::IdentifierNode *id,
+      ESTree::Node *astDeclNode);
+
   /// Walk a destructuring pattern for a function parameter, assigning types
   /// to each leaf identifier and recording them in declTypes_.
   void assignDestructuringParamTypes(ESTree::Node *pattern, Type *paramType);
