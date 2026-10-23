@@ -690,13 +690,6 @@
     return props => comp(props, null);
   }
   /* file: app/music/data/albums.js */
-  // TODO: Need Object support
-  // export type Album = {
-  //   name: string
-  //   artist: string
-  //   cover: string
-  // };
-
   const M$albums$listenNowAlbums = [{
     name: 'React Rendezvous',
     artist: 'Ethan Byte',
