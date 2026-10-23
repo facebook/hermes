@@ -28,7 +28,7 @@ function bar() {
 // CHECK-NEXT:  StringSwitchImm count: 0
 // CHECK-NEXT:  Key buffer size (bytes): 0
 // CHECK-NEXT:  Value buffer size (bytes): 0
-// CHECK-NEXT:  Shape table count: 0
+// CHECK-NEXT:  Shape table count: 2
 // CHECK-NEXT:  Segment ID: 0
 // CHECK-NEXT:  CommonJS module count: 0
 // CHECK-NEXT:  CommonJS module count (static): 0
@@ -42,6 +42,10 @@ function bar() {
 // CHECK-NEXT:i1[ASCII, 6..8] #9B85A7ED: bar
 // CHECK-NEXT:i2[ASCII, 9..11] #9290584E: foo
 // CHECK-NEXT:i3[ASCII, 12..12] #0001E7F9: x
+
+// CHECK:Object Shape Table:
+// CHECK-NEXT:0[0, 0]
+// CHECK-NEXT:1[0, 0]
 
 // CHECK:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000
@@ -67,12 +71,12 @@ function bar() {
 // CHECK-NEXT:Offset in debug table: source 0x0019
 // CHECK-NEXT:[@ 0] GetGlobalObject 1<Reg8>
 // CHECK-NEXT:[@ 2] GetByIdShort 1<Reg8>, 1<Reg8>, 0<UInt8>, 2<UInt8>
-// CHECK-NEXT:[@ 7] CreateThisForNew 2<Reg8>, 1<Reg8>, 1<UInt8>
-// CHECK-NEXT:[@ 11] LoadConstUInt8 3<Reg8>, 1<UInt8>
-// CHECK-NEXT:[@ 14] Mov 4<Reg8>, 2<Reg8>
-// CHECK-NEXT:[@ 17] Construct 1<Reg8>, 1<Reg8>, 2<UInt8>
-// CHECK-NEXT:[@ 21] SelectObject 1<Reg8>, 2<Reg8>, 1<Reg8>
-// CHECK-NEXT:[@ 25] Ret 1<Reg8>
+// CHECK-NEXT:[@ 7] CreateThisForNew 2<Reg8>, 1<Reg8>, 1<UInt8>, 1<UInt16>
+// CHECK-NEXT:[@ 13] LoadConstUInt8 3<Reg8>, 1<UInt8>
+// CHECK-NEXT:[@ 16] Mov 4<Reg8>, 2<Reg8>
+// CHECK-NEXT:[@ 19] Construct 1<Reg8>, 1<Reg8>, 2<UInt8>
+// CHECK-NEXT:[@ 23] SelectObject 1<Reg8>, 2<Reg8>, 1<Reg8>
+// CHECK-NEXT:[@ 27] Ret 1<Reg8>
 
 // CHECK:Debug filename table:
 // CHECK-NEXT:  0: {{.*}}construct.js
@@ -91,5 +95,5 @@ function bar() {
 // CHECK-NEXT:  0x0019  function idx 2, starts at line 14 col 1
 // CHECK-NEXT:    bc 2: line 15 col 14
 // CHECK-NEXT:    bc 7: line 15 col 17
-// CHECK-NEXT:    bc 17: line 15 col 17
+// CHECK-NEXT:    bc 19: line 15 col 17
 // CHECK-NEXT:  0x0027  end of debug source table

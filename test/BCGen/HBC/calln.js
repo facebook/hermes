@@ -118,7 +118,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // BCGEN-NEXT:  StringSwitchImm count: 0
 // BCGEN-NEXT:  Key buffer size (bytes): 0
 // BCGEN-NEXT:  Value buffer size (bytes): 0
-// BCGEN-NEXT:  Shape table count: 0
+// BCGEN-NEXT:  Shape table count: 1
 // BCGEN-NEXT:  Segment ID: 0
 // BCGEN-NEXT:  CommonJS module count: 0
 // BCGEN-NEXT:  CommonJS module count (static): 0
@@ -134,6 +134,9 @@ function foo5(f) { f(1, 2, 3, 4); }
 // BCGEN-NEXT:i3[ASCII, 14..17] #D0BD95F3: foo3
 // BCGEN-NEXT:i4[ASCII, 18..21] #D0BDA900: foo4
 // BCGEN-NEXT:i5[ASCII, 22..25] #D0BDAD11: foo5
+
+// BCGEN:Object Shape Table:
+// BCGEN-NEXT:0[0, 0]
 
 // BCGEN:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // BCGEN-NEXT:Offset in debug table: source 0x0000

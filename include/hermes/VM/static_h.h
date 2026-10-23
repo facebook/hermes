@@ -392,11 +392,14 @@ SHERMES_EXPORT void _sh_ljs_reify_arguments_strict(
     SHLegacyValue *lazyReg);
 
 /// Allocate an empty, uninitialized object (immediately before a constructor).
+/// \param classCacheEntry caches the HiddenClass of the new object, may be
+///   null.
 SHERMES_EXPORT SHLegacyValue _sh_ljs_create_this(
     SHRuntime *shr,
     SHLegacyValue *callee,
     SHLegacyValue *newTarget,
-    SHReadPropertyCacheEntry *propCacheEntry);
+    SHReadPropertyCacheEntry *propCacheEntry,
+    SHCompressedPointer *classCacheEntry);
 
 #if defined(HERMES_SANDBOX_WASM)
 // The sandbox (API/hermes_sandbox) builds the VM as a standalone wasm module

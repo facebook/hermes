@@ -34,7 +34,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:  StringSwitchImm count: 0
 // CHECK-NEXT:  Key buffer size (bytes): 5
 // CHECK-NEXT:  Value buffer size (bytes): 16
-// CHECK-NEXT:  Shape table count: 1
+// CHECK-NEXT:  Shape table count: 2
 // CHECK-NEXT:  Segment ID: 0
 // CHECK-NEXT:  CommonJS module count: 0
 // CHECK-NEXT:  CommonJS module count (static): 0
@@ -71,7 +71,8 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:[String 6]
 
 // CHECK:Object Shape Table:
-// CHECK-NEXT:0[0, 2]
+// CHECK-NEXT:0[0, 0]
+// CHECK-NEXT:1[0, 2]
 
 // CHECK:Function Source Table:
 // CHECK-NEXT:  Function ID 7 -> s0
@@ -223,13 +224,13 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    LoadConstUInt8    r1, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 2, r1
 // CHECK-NEXT:L9:
-// CHECK-NEXT:    NewObjectWithBuffer r1, 0, 4
+// CHECK-NEXT:    NewObjectWithBuffer r1, 1, 4
 // CHECK-NEXT:    Ret               r1
 // CHECK-NEXT:L4:
 // CHECK-NEXT:    LoadConstUInt8    r1, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 2, r1
 // CHECK-NEXT:L10:
-// CHECK-NEXT:    NewObjectWithBuffer r1, 0, 0
+// CHECK-NEXT:    NewObjectWithBuffer r1, 1, 0
 // CHECK-NEXT:    PutOwnBySlotIdx   r1, r5, 0
 // CHECK-NEXT:    Ret               r1
 // CHECK-NEXT:L3:
@@ -251,10 +252,10 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    LoadConstUInt8    r1, 2
 // CHECK-NEXT:    StrictEq          r1, r4, r1
 // CHECK-NEXT:    JmpTrue           L7, r1
-// CHECK-NEXT:    NewObjectWithBuffer r1, 0, 2
+// CHECK-NEXT:    NewObjectWithBuffer r1, 1, 2
 // CHECK-NEXT:    Ret               r1
 // CHECK-NEXT:L7:
-// CHECK-NEXT:    NewObjectWithBuffer r1, 0, 0
+// CHECK-NEXT:    NewObjectWithBuffer r1, 1, 0
 // CHECK-NEXT:    PutOwnBySlotIdx   r1, r3, 0
 // CHECK-NEXT:    Ret               r1
 // CHECK-NEXT:L6:
@@ -312,14 +313,14 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    LoadConstUInt8    r1, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 8, r1
 // CHECK-NEXT:L12:
-// CHECK-NEXT:    NewObjectWithBuffer r1, 0, 0
+// CHECK-NEXT:    NewObjectWithBuffer r1, 1, 0
 // CHECK-NEXT:    PutOwnBySlotIdx   r1, r9, 0
 // CHECK-NEXT:    Ret               r1
 // CHECK-NEXT:L5:
 // CHECK-NEXT:    LoadConstUInt8    r1, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 8, r1
 // CHECK-NEXT:L13:
-// CHECK-NEXT:    NewObjectWithBuffer r1, 0, 0
+// CHECK-NEXT:    NewObjectWithBuffer r1, 1, 0
 // CHECK-NEXT:    PutOwnBySlotIdx   r1, r8, 0
 // CHECK-NEXT:    Ret               r1
 // CHECK-NEXT:L4:
@@ -351,13 +352,13 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    LoadConstUInt8    r1, 1
 // CHECK-NEXT:    StoreNPToEnvironment r2, 8, r1
 // CHECK-NEXT:L14:
-// CHECK-NEXT:    NewObjectWithBuffer r1, 0, 10
+// CHECK-NEXT:    NewObjectWithBuffer r1, 1, 10
 // CHECK-NEXT:    Ret               r1
 // CHECK-NEXT:L7:
 // CHECK-NEXT:    LoadConstUInt8    r1, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 8, r1
 // CHECK-NEXT:L15:
-// CHECK-NEXT:    NewObjectWithBuffer r1, 0, 0
+// CHECK-NEXT:    NewObjectWithBuffer r1, 1, 0
 // CHECK-NEXT:    PutOwnBySlotIdx   r1, r5, 0
 // CHECK-NEXT:    Ret               r1
 // CHECK-NEXT:L6:
@@ -379,10 +380,10 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    LoadConstUInt8    r1, 2
 // CHECK-NEXT:    StrictEq          r1, r4, r1
 // CHECK-NEXT:    JmpTrue           L10, r1
-// CHECK-NEXT:    NewObjectWithBuffer r1, 0, 2
+// CHECK-NEXT:    NewObjectWithBuffer r1, 1, 2
 // CHECK-NEXT:    Ret               r1
 // CHECK-NEXT:L10:
-// CHECK-NEXT:    NewObjectWithBuffer r1, 0, 0
+// CHECK-NEXT:    NewObjectWithBuffer r1, 1, 0
 // CHECK-NEXT:    PutOwnBySlotIdx   r1, r3, 0
 // CHECK-NEXT:    Ret               r1
 // CHECK-NEXT:L9:
@@ -442,14 +443,14 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    LoadConstUInt8    r1, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 8, r1
 // CHECK-NEXT:L12:
-// CHECK-NEXT:    NewObjectWithBuffer r1, 0, 0
+// CHECK-NEXT:    NewObjectWithBuffer r1, 1, 0
 // CHECK-NEXT:    PutOwnBySlotIdx   r1, r9, 0
 // CHECK-NEXT:    Ret               r1
 // CHECK-NEXT:L5:
 // CHECK-NEXT:    LoadConstUInt8    r1, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 8, r1
 // CHECK-NEXT:L13:
-// CHECK-NEXT:    NewObjectWithBuffer r1, 0, 0
+// CHECK-NEXT:    NewObjectWithBuffer r1, 1, 0
 // CHECK-NEXT:    PutOwnBySlotIdx   r1, r8, 0
 // CHECK-NEXT:    Ret               r1
 // CHECK-NEXT:L4:
@@ -481,13 +482,13 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    LoadConstUInt8    r1, 1
 // CHECK-NEXT:    StoreNPToEnvironment r2, 8, r1
 // CHECK-NEXT:L14:
-// CHECK-NEXT:    NewObjectWithBuffer r1, 0, 10
+// CHECK-NEXT:    NewObjectWithBuffer r1, 1, 10
 // CHECK-NEXT:    Ret               r1
 // CHECK-NEXT:L7:
 // CHECK-NEXT:    LoadConstUInt8    r1, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 8, r1
 // CHECK-NEXT:L15:
-// CHECK-NEXT:    NewObjectWithBuffer r1, 0, 0
+// CHECK-NEXT:    NewObjectWithBuffer r1, 1, 0
 // CHECK-NEXT:    PutOwnBySlotIdx   r1, r5, 0
 // CHECK-NEXT:    Ret               r1
 // CHECK-NEXT:L6:
@@ -509,10 +510,10 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    LoadConstUInt8    r1, 2
 // CHECK-NEXT:    StrictEq          r1, r4, r1
 // CHECK-NEXT:    JmpTrue           L10, r1
-// CHECK-NEXT:    NewObjectWithBuffer r1, 0, 2
+// CHECK-NEXT:    NewObjectWithBuffer r1, 1, 2
 // CHECK-NEXT:    Ret               r1
 // CHECK-NEXT:L10:
-// CHECK-NEXT:    NewObjectWithBuffer r1, 0, 0
+// CHECK-NEXT:    NewObjectWithBuffer r1, 1, 0
 // CHECK-NEXT:    PutOwnBySlotIdx   r1, r3, 0
 // CHECK-NEXT:    Ret               r1
 // CHECK-NEXT:L9:

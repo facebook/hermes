@@ -20,13 +20,15 @@ void Emitter::createThis(
     FR frRes,
     FR frCallee,
     FR frNewTarget,
-    uint8_t cacheIdx) {
+    uint8_t cacheIdx,
+    uint32_t shapeTableIndex) {
   comment(
-      "// CreateThis r%u, r%u, r%u, cache %u",
+      "// CreateThis r%u, r%u, r%u, cache %u, shape %u",
       frRes.index(),
       frCallee.index(),
       frNewTarget.index(),
-      cacheIdx);
+      cacheIdx,
+      shapeTableIndex);
 
   syncAllFRTempExcept(frRes != frCallee && frRes != frNewTarget ? frRes : FR());
   syncToFrame(frCallee);
@@ -43,13 +45,33 @@ void Emitter::createThis(
     if (cacheIdx != 0)
       emit_add_imm_u24(a, a64::x3, sizeof(SHReadPropertyCacheEntry) * cacheIdx);
   }
+  if (shapeTableIndex == hbc::SHAPE_TABLE_CACHING_DISABLED) {
+    a.mov(a64::x4, 0);
+  } else {
+    // Pass the address of the RuntimeModule's class cache slot.
+    static_assert(
+        std::is_same_v<
+            TransparentConservativeVector<WeakRoot<HiddenClass>>,
+            RuntimeOffsets::RuntimeModuleObjectLiteralHiddenClassesType>,
+        "objectLiteralHiddenClasses_ must be transparent");
+    loadBits64InGp(
+        a64::x4, (uint64_t)codeBlock_->getRuntimeModule(), "RuntimeModule");
+    a.ldr(
+        a64::x4,
+        a64::Mem(
+            a64::x4, RuntimeOffsets::runtimeModuleObjectLiteralHiddenClasses));
+    if (shapeTableIndex != 0)
+      emit_add_imm_u24(
+          a, a64::x4, sizeof(WeakRoot<HiddenClass>) * shapeTableIndex);
+  }
   EMIT_RUNTIME_CALL(
       *this,
       SHLegacyValue (*)(
           SHRuntime *,
           SHLegacyValue *,
           SHLegacyValue *,
-          SHReadPropertyCacheEntry *),
+          SHReadPropertyCacheEntry *,
+          SHCompressedPointer *),
       _sh_ljs_create_this);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));

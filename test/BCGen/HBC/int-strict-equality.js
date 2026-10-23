@@ -146,7 +146,7 @@ function test_could_be_int(func) {
 // CHKBC-NEXT:  StringSwitchImm count: 0
 // CHKBC-NEXT:  Key buffer size (bytes): 0
 // CHKBC-NEXT:  Value buffer size (bytes): 0
-// CHKBC-NEXT:  Shape table count: 0
+// CHKBC-NEXT:  Shape table count: 1
 // CHKBC-NEXT:  Segment ID: 0
 // CHKBC-NEXT:  CommonJS module count: 0
 // CHKBC-NEXT:  CommonJS module count (static): 0
@@ -161,6 +161,9 @@ function test_could_be_int(func) {
 // CHKBC-NEXT:i2[ASCII, 19..31] #738B3606: test_int_uint
 // CHKBC-NEXT:i3[ASCII, 31..42] #B424DF91: test_int_int
 // CHKBC-NEXT:i4[ASCII, 42..58] #7CF5E44C: test_could_be_int
+
+// CHKBC:Object Shape Table:
+// CHKBC-NEXT:0[0, 0]
 
 // CHKBC:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHKBC-NEXT:Offset in debug table: source 0x0000

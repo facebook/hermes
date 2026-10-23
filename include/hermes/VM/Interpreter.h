@@ -337,6 +337,7 @@ class Interpreter {
       PinnedHermesValue *callee,
       PinnedHermesValue *newTarget,
       uint8_t cacheIdx,
+      uint32_t shapeTableIdx,
       CodeBlock *curCodeBlock);
 
   /// Create a class, as per ES2023 15.7.14.

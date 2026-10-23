@@ -67,7 +67,7 @@ function stringSwitch(x) {
 // HBC-NEXT:  StringSwitchImm count: 1
 // HBC-NEXT:  Key buffer size (bytes): 0
 // HBC-NEXT:  Value buffer size (bytes): 0
-// HBC-NEXT:  Shape table count: 0
+// HBC-NEXT:  Shape table count: 1
 // HBC-NEXT:  Segment ID: 0
 // HBC-NEXT:  CommonJS module count: 0
 // HBC-NEXT:  CommonJS module count (static): 0
@@ -98,6 +98,9 @@ function stringSwitch(x) {
 // HBC-NEXT:s18[ASCII, 33..34]: hi
 // HBC-NEXT:i19[ASCII, 22..33] #646CA4B1: stringSwitch
 // HBC-NEXT:i20[ASCII, 35..39] #A689F65B: print
+
+// HBC:Object Shape Table:
+// HBC-NEXT:0[0, 0]
 
 // HBC:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // HBC-NEXT:Offset in debug table: source 0x0000
@@ -213,7 +216,7 @@ function stringSwitch(x) {
 // HBCRAW-NEXT:  StringSwitchImm count: 1
 // HBCRAW-NEXT:  Key buffer size (bytes): 0
 // HBCRAW-NEXT:  Value buffer size (bytes): 0
-// HBCRAW-NEXT:  Shape table count: 0
+// HBCRAW-NEXT:  Shape table count: 1
 // HBCRAW-NEXT:  Segment ID: 0
 // HBCRAW-NEXT:  CommonJS module count: 0
 // HBCRAW-NEXT:  CommonJS module count (static): 0
@@ -244,6 +247,9 @@ function stringSwitch(x) {
 // HBCRAW-NEXT:s18[ASCII, 33..34]: hi
 // HBCRAW-NEXT:i19[ASCII, 22..33] #646CA4B1: stringSwitch
 // HBCRAW-NEXT:i20[ASCII, 35..39] #A689F65B: print
+
+// HBCRAW:Object Shape Table:
+// HBCRAW-NEXT:0[0, 0]
 
 // HBCRAW:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // HBCRAW-NEXT:Offset in debug table: source 0x0000

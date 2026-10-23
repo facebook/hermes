@@ -2175,7 +2175,10 @@ class InstrGen {
     auto *protoStr =
         M->getLiteralString(M->getContext().getIdentifier("prototype"));
     genReadIC(protoStr);
-    os_ << ");\n";
+    os_ << ", &shUnit->object_literal_class_cache["
+        << moduleGen_.literalBuffers.serializedLiteralOffsetFor(&inst)
+               .shapeTableIdx
+        << "]);\n";
   }
   void generateLIRGetArgumentsPropByValLooseInst(
       LIRGetArgumentsPropByValLooseInst &inst) {

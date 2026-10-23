@@ -24,7 +24,7 @@ var b = {x: 1, __proto__: Math};
 // CHECK-NEXT:  StringSwitchImm count: 0
 // CHECK-NEXT:  Key buffer size (bytes): 3
 // CHECK-NEXT:  Value buffer size (bytes): 5
-// CHECK-NEXT:  Shape table count: 2
+// CHECK-NEXT:  Shape table count: 3
 // CHECK-NEXT:  Segment ID: 0
 // CHECK-NEXT:  CommonJS module count: 0
 // CHECK-NEXT:  CommonJS module count (static): 0
@@ -47,8 +47,9 @@ var b = {x: 1, __proto__: Math};
 // CHECK-NEXT:[String 4]
 
 // CHECK:Object Shape Table:
-// CHECK-NEXT:0[0, 1]
+// CHECK-NEXT:0[0, 0]
 // CHECK-NEXT:1[0, 1]
+// CHECK-NEXT:2[0, 1]
 
 // CHECK:Function<global>(1 params, 14 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000
@@ -56,9 +57,9 @@ var b = {x: 1, __proto__: Math};
 // CHECK-NEXT:    DeclareGlobalVar  "b"
 // CHECK-NEXT:    GetGlobalObject   r2
 // CHECK-NEXT:    LoadConstNull     r0
-// CHECK-NEXT:    NewObjectWithBufferAndParent r1, r0, 0, 0
+// CHECK-NEXT:    NewObjectWithBufferAndParent r1, r0, 1, 0
 // CHECK-NEXT:    PutByIdLoose      r2, r1, 0, "a"
-// CHECK-NEXT:    NewObjectWithBuffer r1, 1, 0
+// CHECK-NEXT:    NewObjectWithBuffer r1, 2, 0
 // CHECK-NEXT:    TryGetById        r4, r2, 0, "Math"
 // CHECK-NEXT:    Mov               r5, r1
 // CHECK-NEXT:    CallBuiltin       r3, "HermesBuiltin.silentSetPrototypeOf", 3

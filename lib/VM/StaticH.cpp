@@ -1289,7 +1289,8 @@ extern "C" SHLegacyValue _sh_ljs_create_this(
     SHRuntime *shr,
     SHLegacyValue *callee,
     SHLegacyValue *newTarget,
-    SHReadPropertyCacheEntry *propCacheEntry) {
+    SHReadPropertyCacheEntry *propCacheEntry,
+    SHCompressedPointer *classCacheEntry) {
   Runtime &runtime = getRuntime(shr);
   auto *calleePHV = toPHV(callee);
   auto *newTargetPHV = toPHV(newTarget);
@@ -1366,6 +1367,7 @@ extern "C" SHLegacyValue _sh_ljs_create_this(
       PinnedValue<Callable> newTarget;
       // This is the .prototype of new.target
       PinnedValue<> newTargetPrototype;
+      PinnedValue<HiddenClass> clazz;
     } lv;
     LocalsRAII lraii(runtime, &lv);
     lv.newTarget = correctNewTarget;
@@ -1374,13 +1376,26 @@ extern "C" SHLegacyValue _sh_ljs_create_this(
         lv.newTarget,
         Predefined::getSymbolID(Predefined::prototype),
         reinterpret_cast<ReadPropertyCacheEntry *>(propCacheEntry));
+    Handle<JSObject> parentHandle = lv.newTargetPrototype->isObject()
+        ? Handle<JSObject>::vmcast(&lv.newTargetPrototype)
+        : runtime.objectPrototype;
 
-    return JSObject::create(
-               runtime,
-               lv.newTargetPrototype->isObject()
-                   ? Handle<JSObject>::vmcast(&lv.newTargetPrototype)
-                   : runtime.objectPrototype)
-        .getHermesValue();
+    // Cache the class per call site to avoid the class lookup.
+    auto *cacheEntry =
+        reinterpret_cast<WeakRoot<HiddenClass> *>(classCacheEntry);
+    HiddenClass *cached =
+        cacheEntry ? cacheEntry->get(runtime, runtime.getHeap()) : nullptr;
+    if (cached) {
+      lv.clazz = cached;
+    } else {
+      lv.clazz = *runtime.getHiddenClassForPrototype(
+          *parentHandle, runtime.classJSObject);
+      assert(!lv.clazz->isDictionary() && "Prototype must be a normal object");
+      if (cacheEntry)
+        cacheEntry->set(runtime, *lv.clazz);
+    }
+
+    return JSObject::create(runtime, parentHandle, lv.clazz).getHermesValue();
   }
 throwCurrent:
   _sh_throw_current(shr);

@@ -37,6 +37,9 @@ const static uint64_t DELTA_MAGIC = ~MAGIC;
 static constexpr uint8_t PROPERTY_CACHING_DISABLED =
     std::numeric_limits<uint8_t>::max();
 
+/// Shape table index which indicates no caching.
+static constexpr uint8_t SHAPE_TABLE_CACHING_DISABLED = 0;
+
 /// Alignment of data structures of in file.
 static constexpr size_t BYTECODE_ALIGNMENT = alignof(uint32_t);
 

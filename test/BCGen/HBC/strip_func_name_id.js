@@ -22,7 +22,7 @@ Math['function-name-stripped'] = 123;
 // CHECK-NEXT:  StringSwitchImm count: 0
 // CHECK-NEXT:  Key buffer size (bytes): 0
 // CHECK-NEXT:  Value buffer size (bytes): 0
-// CHECK-NEXT:  Shape table count: 0
+// CHECK-NEXT:  Shape table count: 1
 // CHECK-NEXT:  Segment ID: 0
 // CHECK-NEXT:  CommonJS module count: 0
 // CHECK-NEXT:  CommonJS module count (static): 0
@@ -34,6 +34,9 @@ Math['function-name-stripped'] = 123;
 // CHECK:Global String Table:
 // CHECK-NEXT:i0[ASCII, 0..3] #1C182460: Math
 // CHECK-NEXT:i1[ASCII, 4..25] #D7615A1F: function-name-stripped
+
+// CHECK:Object Shape Table:
+// CHECK-NEXT:0[0, 0]
 
 // CHECK:Function<function-name-stripped>(1 params, 2 registers, 1 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000

@@ -1302,14 +1302,14 @@ EMIT_REIFY_ARGUMENTS(ReifyArgumentsStrict, Strict)
 
 inline void JITContext::Compiler::emitCreateThisForNew(
     const inst::CreateThisForNewInst *inst) {
-  auto cacheIdx = inst->op3;
-  em_.createThis(FR(inst->op1), FR(inst->op2), FR(inst->op2), cacheIdx);
+  em_.createThis(
+      FR(inst->op1), FR(inst->op2), FR(inst->op2), inst->op3, inst->op4);
 }
 
 inline void JITContext::Compiler::emitCreateThisForSuper(
     const inst::CreateThisForSuperInst *inst) {
-  auto cacheIdx = inst->op4;
-  em_.createThis(FR(inst->op1), FR(inst->op2), FR(inst->op3), cacheIdx);
+  em_.createThis(
+      FR(inst->op1), FR(inst->op2), FR(inst->op3), inst->op4, inst->op5);
 }
 
 inline void JITContext::Compiler::emitSelectObject(
