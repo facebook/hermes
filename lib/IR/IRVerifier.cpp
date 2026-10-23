@@ -1490,10 +1490,6 @@ bool Verifier::visitHBCProfilePointInst(const HBCProfilePointInst &Inst) {
 
 bool Verifier::visitLIRAllocObjectFromBufferInst(
     const hermes::LIRAllocObjectFromBufferInst &Inst) {
-  AssertIWithMsg(
-      Inst,
-      Inst.getKeyValuePairCount() > 0,
-      "Cannot allocate an empty LIRAllocObjectFromBufferInst");
   return true;
 }
 
@@ -1501,11 +1497,7 @@ bool Verifier::visitLIRAllocTypedObjectFromBufferInst(
     const hermes::LIRAllocTypedObjectFromBufferInst &Inst) {
   AssertIWithMsg(
       Inst,
-      Inst.getKeyValuePairCount() > 0,
-      "Cannot allocate an empty LIRAllocTypedObjectFromBufferInst");
-  AssertIWithMsg(
-      Inst,
-      !llvh::isa<EmptySentinel>(Inst.getParent()),
+      !llvh::isa<EmptySentinel>(Inst.getParentObject()),
       "LIRAllocTypedObjectFromBufferInst requires a parent object");
   return true;
 }
@@ -1514,11 +1506,7 @@ bool Verifier::visitLIRAllocTypedNonEnumObjectFromBufferInst(
     const hermes::LIRAllocTypedNonEnumObjectFromBufferInst &Inst) {
   AssertIWithMsg(
       Inst,
-      Inst.getKeyValuePairCount() > 0,
-      "Cannot allocate an empty LIRAllocTypedNonEnumObjectFromBufferInst");
-  AssertIWithMsg(
-      Inst,
-      !llvh::isa<EmptySentinel>(Inst.getParent()),
+      !llvh::isa<EmptySentinel>(Inst.getParentObject()),
       "LIRAllocTypedNonEnumObjectFromBufferInst requires a parent object");
   return true;
 }

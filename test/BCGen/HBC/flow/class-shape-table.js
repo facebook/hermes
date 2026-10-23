@@ -29,7 +29,7 @@ globalThis.b = ({x:1} as any);
 // CHECK-NEXT:  StringSwitchImm count: 0
 // CHECK-NEXT:  Key buffer size (bytes): 3
 // CHECK-NEXT:  Value buffer size (bytes): 10
-// CHECK-NEXT:  Shape table count: 2
+// CHECK-NEXT:  Shape table count: 3
 // CHECK-NEXT:  Segment ID: 0
 // CHECK-NEXT:  CommonJS module count: 0
 // CHECK-NEXT:  CommonJS module count (static): 0
@@ -55,22 +55,23 @@ globalThis.b = ({x:1} as any);
 // CHECK-NEXT:[String 6]
 
 // CHECK:Object Shape Table:
-// CHECK-NEXT:0[0, 1]
+// CHECK-NEXT:0[0, 0]
 // CHECK-NEXT:1[0, 1]
+// CHECK-NEXT:2[0, 1]
 
 // CHECK:Function<global>(1 params, 4 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000
 // CHECK-NEXT:    LoadConstNull     r0
-// CHECK-NEXT:    NewObjectWithParent r2, r0
+// CHECK-NEXT:    NewObjectWithParent r2, r0, 0
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    CreateClosure     r1, r0, Function<A>
 // CHECK-NEXT:    PutByIdStrict     r1, r2, 0, "prototype"
 // CHECK-NEXT:    GetGlobalObject   r1
 // CHECK-NEXT:    TryGetById        r3, r1, 0, "globalThis"
-// CHECK-NEXT:    NewTypedObjectWithBuffer r2, r2, 0, 0, 0
+// CHECK-NEXT:    NewTypedObjectWithBuffer r2, r2, 1, 0, 0
 // CHECK-NEXT:    PutByIdStrict     r3, r2, 1, "a"
 // CHECK-NEXT:    TryGetById        r2, r1, 0, "globalThis"
-// CHECK-NEXT:    NewObjectWithBuffer r1, 1, 5
+// CHECK-NEXT:    NewObjectWithBuffer r1, 2, 5
 // CHECK-NEXT:    PutByIdStrict     r2, r1, 2, "b"
 // CHECK-NEXT:    Ret               r0
 
@@ -86,9 +87,9 @@ globalThis.b = ({x:1} as any);
 
 // CHECK:Debug source table:
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 10 col 1
-// CHECK-NEXT:    bc 12: line 10 col 1
-// CHECK-NEXT:    bc 20: line 16 col 1
-// CHECK-NEXT:    bc 38: line 16 col 14
-// CHECK-NEXT:    bc 44: line 17 col 1
-// CHECK-NEXT:    bc 56: line 17 col 14
+// CHECK-NEXT:    bc 16: line 10 col 1
+// CHECK-NEXT:    bc 24: line 16 col 1
+// CHECK-NEXT:    bc 42: line 16 col 14
+// CHECK-NEXT:    bc 48: line 17 col 1
+// CHECK-NEXT:    bc 60: line 17 col 14
 // CHECK-NEXT:  0x0014  end of debug source table

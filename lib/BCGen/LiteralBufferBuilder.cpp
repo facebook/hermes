@@ -486,11 +486,19 @@ void Builder::serializeLiteralFor(AllocArrayInst *AAI) {
 
 void Builder::serializeLiteralFor(LIRAllocObjectFromBufferInst *AOFB) {
   unsigned e = AOFB->getKeyValuePairCount();
-  if (!e)
-    return;
 
   llvh::SmallVector<Literal *, 8> objKeys;
   llvh::SmallVector<Literal *, 8> objVals;
+
+  if (e == 0) {
+    // Empty object literal, we're just going to use the shape table for the
+    // parent.
+    objInst_.push_back({AOFB, {objKeys_.size(), values_.size()}});
+    objKeys_.push_back({});
+    values_.push_back({});
+    return;
+  }
+
   for (unsigned ind = 0; ind != e; ++ind) {
     auto keyValuePair = AOFB->getKeyValuePair(ind);
     objKeys.push_back(cast<Literal>(keyValuePair.first));
@@ -504,8 +512,14 @@ void Builder::serializeLiteralFor(LIRAllocObjectFromBufferInst *AOFB) {
 
 void Builder::serializeLiteralFor(LIRAllocTypedObjectFromBufferInst *AOFB) {
   unsigned e = AOFB->getKeyValuePairCount();
-  if (!e)
+
+  if (e == 0) {
+    // Empty typed object literal, just use the shape table for the parent.
+    objInst_.push_back({AOFB, {objKeys_.size(), values_.size()}});
+    objKeys_.push_back({});
+    values_.push_back({});
     return;
+  }
 
   llvh::SmallVector<Literal *, 8> objKeys;
   llvh::SmallVector<Literal *, 8> objVals;
@@ -523,8 +537,15 @@ void Builder::serializeLiteralFor(LIRAllocTypedObjectFromBufferInst *AOFB) {
 void Builder::serializeLiteralFor(
     LIRAllocTypedNonEnumObjectFromBufferInst *AOFB) {
   unsigned e = AOFB->getKeyValuePairCount();
-  if (!e)
+
+  if (e == 0) {
+    // Empty typed non-enum object literal, just use the shape table for the
+    // parent.
+    objInst_.push_back({AOFB, {objKeys_.size(), values_.size()}});
+    objKeys_.push_back({});
+    values_.push_back({});
     return;
+  }
 
   llvh::SmallVector<Literal *, 8> objKeys;
   llvh::SmallVector<Literal *, 8> objVals;

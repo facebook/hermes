@@ -77,25 +77,63 @@ void Emitter::newObject(FR frRes) {
        }});
 }
 
-void Emitter::newObjectWithParent(FR frRes, FR frParent) {
+void Emitter::newObjectWithParent(
+    FR frRes,
+    FR frParent,
+    uint32_t shapeTableIndex) {
   comment("// NewObjectWithParent r%u, r%u", frRes.index(), frParent.index());
   syncAllFRTempExcept(frRes != frParent ? frRes : FR());
   syncToFrame(frParent);
   auto hwParent = getOrAllocFRInGpX(frParent, true);
   auto hwNewObjPtr = allocTempGpX();
+  auto hwClazz = allocTempGpX();
   auto hwTemp1 = allocTempGpX();
   auto hwTemp2 = allocTempGpX();
   auto xParent = hwParent.a64GpX();
   auto xNewObjPtr = hwNewObjPtr.a64GpX();
+  auto xClazz = hwClazz.a64GpX();
   auto xTemp1 = hwTemp1.a64GpX();
   auto xTemp2 = hwTemp2.a64GpX();
   freeAllFRTempExcept({});
   freeReg(hwNewObjPtr);
+  freeReg(hwClazz);
   freeReg(hwTemp1);
   freeReg(hwTemp2);
 
   asmjit::Label slowPathLab = newSlowPathLabel();
   asmjit::Label contLab = newContLabel();
+
+#if HERMESVM_GCKIND == _HERMESVM_GCVALUE_HADES
+  // Reading a WeakRoot while the OG is marking needs the read barrier, so bail
+  // to the slow path instead.
+  emit_load_from_base_offset<1, true>(
+      a,
+      xTemp1,
+      xRuntime,
+      xTemp2,
+      RuntimeOffsets::runtimeHadesOGMarkingBarriers);
+  a.cbnz(xTemp1.w(), slowPathLab);
+#endif
+  // Load the HC from the cache.
+  static_assert(
+      std::is_same_v<
+          TransparentConservativeVector<WeakRoot<HiddenClass>>,
+          RuntimeOffsets::RuntimeModuleObjectLiteralHiddenClassesType>,
+      "objectLiteralHiddenClasses_ must be transparent");
+  loadBits64InGp(
+      xTemp1, (uint64_t)codeBlock_->getRuntimeModule(), "RuntimeModule");
+  a.ldr(
+      xTemp1,
+      a64::Mem(
+          xTemp1, RuntimeOffsets::runtimeModuleObjectLiteralHiddenClasses));
+  emit_load_from_base_offset<sizeof(WeakRoot<HiddenClass>)>(
+      a,
+      xClazz,
+      xTemp1,
+      xTemp2,
+      shapeTableIndex * sizeof(WeakRoot<HiddenClass>));
+  // If the HC isn't cached, slow path.
+  a.cbz(xClazz, slowPathLab);
 
   allocInYoung(
       CellKind::JSObjectKind,
@@ -140,7 +178,8 @@ void Emitter::newObjectWithParent(FR frRes, FR frParent) {
       xNewObjPtr,
       /* xParent */ xTemp2,
       /* xTempOrPropStorageOpt */ xTemp1,
-      false);
+      false,
+      xClazz);
 
   auto hwRes = getOrAllocFRInGpX(frRes, false, HWReg::gpX(0));
   frUpdatedWithHW(frRes, hwRes, FRType::Pointer);
@@ -156,6 +195,7 @@ void Emitter::newObjectWithParent(FR frRes, FR frParent) {
        .frRes = frRes,
        .frInput1 = frParent,
        .hwRes = hwRes,
+       .sizeOrIdx = shapeTableIndex,
        .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment(
@@ -164,12 +204,15 @@ void Emitter::newObjectWithParent(FR frRes, FR frParent) {
              sl.frInput1.index());
          em.a.bind(sl.slowPathLab);
          em.a.mov(a64::x0, xRuntime);
-         em.loadFrameAddr(a64::x1, sl.frInput1);
+         em.loadBits64InGp(a64::x1, (uint64_t)em.codeBlock_, "CodeBlock");
+         em.loadFrameAddr(a64::x2, sl.frInput1);
+         em.a.mov(a64::w3, sl.sizeOrIdx);
 
          EMIT_RUNTIME_CALL(
              em,
-             SHLegacyValue (*)(SHRuntime *, const SHLegacyValue *),
-             _sh_ljs_new_object_with_parent);
+             SHLegacyValue (*)(
+                 Runtime &, CodeBlock *, PinnedHermesValue *, uint32_t),
+             _interpreter_create_object_with_parent);
          em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
        }});
@@ -267,10 +310,8 @@ void Emitter::newObjectWithBuffer(
       xClazz,
       a64::Mem(
           xClazz, RuntimeOffsets::runtimeModuleObjectLiteralHiddenClasses));
-  emit_load_cp(
-      a,
-      xClazz,
-      a64::Mem(xClazz, shapeTableIndex * sizeof(WeakRoot<HiddenClass>)));
+  emit_load_from_base_offset<sizeof(WeakRoot<HiddenClass>)>(
+      a, xClazz, xClazz, xTmp, shapeTableIndex * sizeof(WeakRoot<HiddenClass>));
   // If the HC isn't cached, slow path.
   a.cbz(xClazz, slowPathLab);
 

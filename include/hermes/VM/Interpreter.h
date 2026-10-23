@@ -165,6 +165,15 @@ class Interpreter {
   /// Constructs an object via literal buffers in the bytecode file.
   /// \param parent the parent of the newly created object.
   /// \param shapeTableIndex the index of the shape element.
+  static PseudoHandle<> createObjectWithParent(
+      Runtime &runtime,
+      CodeBlock *curCodeBlock,
+      Handle<JSObject> parent,
+      unsigned shapeTableIndex);
+
+  /// Constructs an object via literal buffers in the bytecode file.
+  /// \param parent the parent of the newly created object.
+  /// \param shapeTableIndex the index of the shape element.
   /// \param valBufferOffset the first element of the val buffer to read.
   /// \param parentObject the object to be used as the parent of the new object.
   /// \param allocKind the kind of allocation being performed.

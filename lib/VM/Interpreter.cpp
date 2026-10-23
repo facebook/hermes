@@ -2655,16 +2655,17 @@ tailCall:
         DISPATCH;
       }
       CASE(NewObjectWithParent) {
-        CAPTURE_IP(
-            O1REG(NewObjectWithParent) =
-                JSObject::create(
-                    runtime,
-                    O2REG(NewObjectWithParent).isObject()
-                        ? Handle<JSObject>::vmcast(&O2REG(NewObjectWithParent))
-                        : O2REG(NewObjectWithParent).isNull()
-                        ? Runtime::makeNullHandle<JSObject>()
-                        : Handle<JSObject>::vmcast(&runtime.objectPrototype))
-                    .getHermesValue());
+        CAPTURE_IP_ASSIGN(
+            O1REG(NewObjectWithParent),
+            createObjectWithParent(
+                runtime,
+                curCodeBlock,
+                O2REG(NewObjectWithParent).isObject()
+                    ? Handle<JSObject>::vmcast(&O2REG(NewObjectWithParent))
+                    : O2REG(NewObjectWithParent).isNull()
+                    ? Runtime::makeNullHandle<JSObject>()
+                    : Handle<JSObject>::vmcast(&runtime.objectPrototype),
+                ip->iNewObjectWithParent.op3));
         assert(
             gcScope.getHandleCountDbg() == KEEP_HANDLES &&
             "Should not create handles.");

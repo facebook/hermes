@@ -123,7 +123,7 @@ DEFINE_OPCODE_1(NewObject, Reg8)
 /// Object.prototype is used. Otherwise the parent itself is used.
 /// Arg1 = the created object
 /// Arg2 = the parent.
-DEFINE_OPCODE_2(NewObjectWithParent, Reg8, Reg8)
+DEFINE_OPCODE_3(NewObjectWithParent, Reg8, Reg8, UInt32)
 
 /// Create an array from a static list of values, as for var=[1,2,3].
 /// Any non-constant elements can be set afterwards with DefineOwnByIndex.

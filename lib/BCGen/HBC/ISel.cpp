@@ -1361,12 +1361,8 @@ void HBCISel::generateAllocObjectLiteralInst(
   assert(
       Inst->getKeyValuePairCount() == 0 &&
       "AllocObjectLiteralInst with properties should be lowered to LIRAllocObjectFromBufferInst");
-  if (llvh::isa<EmptySentinel>(Inst->getParentObject())) {
-    BCFGen_->emitNewObject(result);
-  } else {
-    auto parentReg = encodeValue(Inst->getParentObject());
-    BCFGen_->emitNewObjectWithParent(result, parentReg);
-  }
+  assert(llvh::isa<EmptySentinel>(Inst->getParentObject()));
+  BCFGen_->emitNewObject(result);
 }
 void HBCISel::generateAllocTypedObjectInst(
     AllocTypedObjectInst *Inst,
@@ -1375,8 +1371,8 @@ void HBCISel::generateAllocTypedObjectInst(
   assert(
       Inst->getKeyValuePairCount() == 0 &&
       "AllocTypedObjectInst with properties should be lowered to LIRAllocObjectFromBufferInst");
-  auto parentReg = encodeValue(Inst->getParentObject());
-  BCFGen_->emitNewObjectWithParent(result, parentReg);
+  assert(llvh::isa<EmptySentinel>(Inst->getParentObject()));
+  BCFGen_->emitNewObject(result);
 }
 void HBCISel::generateAllocTypedNonEnumObjectInst(
     AllocTypedNonEnumObjectInst *Inst,
@@ -1385,8 +1381,8 @@ void HBCISel::generateAllocTypedNonEnumObjectInst(
   assert(
       Inst->getKeyValuePairCount() == 0 &&
       "AllocTypedNonEnumObjectInst with properties should be lowered to LIRAllocTypedNonEnumObjectFromBufferInst");
-  auto parentReg = encodeValue(Inst->getParentObject());
-  BCFGen_->emitNewObjectWithParent(result, parentReg);
+  assert(llvh::isa<EmptySentinel>(Inst->getParentObject()));
+  BCFGen_->emitNewObject(result);
 }
 void HBCISel::generateAllocArrayInst(AllocArrayInst *Inst, BasicBlock *next) {
   auto dstReg = encodeValue(Inst);
@@ -1439,7 +1435,13 @@ void HBCISel::generateLIRAllocObjectFromBufferInst(
   auto result = encodeValue(Inst);
   auto buffIdxs =
       BCFGen_->getBytecodeModuleGenerator().serializedLiteralOffsetFor(Inst);
-  if (!llvh::isa<EmptySentinel>(Inst->getParentObject())) {
+  if (Inst->getKeyValuePairCount() == 0) {
+    assert(
+        !llvh::isa<EmptySentinel>(Inst->getParentObject()) &&
+        "must have a parent, otherwise we should use AllocObjectLiteral");
+    BCFGen_->emitNewObjectWithParent(
+        result, encodeValue(Inst->getParentObject()), buffIdxs.shapeTableIdx);
+  } else if (!llvh::isa<EmptySentinel>(Inst->getParentObject())) {
     BCFGen_->emitNewObjectWithBufferAndParent(
         result,
         encodeValue(Inst->getParentObject()),
@@ -1463,12 +1465,16 @@ void HBCISel::generateLIRAllocTypedObjectFromBufferInst(
   auto parent = encodeValue(Inst->getParentObject());
   auto buffIdxs =
       BCFGen_->getBytecodeModuleGenerator().serializedLiteralOffsetFor(Inst);
-  BCFGen_->emitNewTypedObjectWithBuffer(
-      result,
-      parent,
-      buffIdxs.shapeTableIdx,
-      buffIdxs.valueBufferOffset,
-      /* nonEnumerable */ 0);
+  if (Inst->getKeyValuePairCount() == 0) {
+    BCFGen_->emitNewObjectWithParent(result, parent, buffIdxs.shapeTableIdx);
+  } else {
+    BCFGen_->emitNewTypedObjectWithBuffer(
+        result,
+        parent,
+        buffIdxs.shapeTableIdx,
+        buffIdxs.valueBufferOffset,
+        /* nonEnumerable */ 0);
+  }
 }
 
 void HBCISel::generateLIRAllocTypedNonEnumObjectFromBufferInst(
@@ -1478,12 +1484,16 @@ void HBCISel::generateLIRAllocTypedNonEnumObjectFromBufferInst(
   auto parent = encodeValue(Inst->getParentObject());
   auto buffIdxs =
       BCFGen_->getBytecodeModuleGenerator().serializedLiteralOffsetFor(Inst);
-  BCFGen_->emitNewTypedObjectWithBuffer(
-      result,
-      parent,
-      buffIdxs.shapeTableIdx,
-      buffIdxs.valueBufferOffset,
-      /* nonEnumerable */ 1);
+  if (Inst->getKeyValuePairCount() == 0) {
+    BCFGen_->emitNewObjectWithParent(result, parent, buffIdxs.shapeTableIdx);
+  } else {
+    BCFGen_->emitNewTypedObjectWithBuffer(
+        result,
+        parent,
+        buffIdxs.shapeTableIdx,
+        buffIdxs.valueBufferOffset,
+        /* nonEnumerable */ 1);
+  }
 }
 
 void HBCISel::generateCatchInst(CatchInst *Inst, BasicBlock *next) {
