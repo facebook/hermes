@@ -11,6 +11,7 @@
 #include "hermes/Support/Statistic.h"
 #include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/GCPointer-inline.h"
+#include "hermes/VM/HiddenClass-inline.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/Operations.h"
@@ -26,6 +27,10 @@ HERMES_SLOW_STATISTIC(
 HERMES_SLOW_STATISTIC(
     NumHCMapSteal,
     "NumHCMapSteal: Number of map steals from parent HiddenClass.");
+HERMES_SLOW_STATISTIC(
+    NumHCObjectParentChanges,
+    "NumHCObjectParentChanges: Number of HiddenClass ObjectParent change slow "
+    "path calls.");
 
 namespace hermes {
 namespace vm {
@@ -121,6 +126,7 @@ const VTable HiddenClass::vt{
 void HiddenClassBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const HiddenClass *>(cell);
   mb.setVTable(&HiddenClass::vt);
+  mb.addField("objectParent", &self->objectParent_);
   mb.addField("symbol", &self->symbolID_);
   mb.addField("parent", &self->parent_);
   mb.addField("propertyMap", &self->propertyMap_);
@@ -137,7 +143,11 @@ void HiddenClass::_finalizeImpl(GCCell *cell, GC &gc) {
 
 size_t HiddenClass::_mallocSizeImpl(GCCell *cell) {
   auto *self = vmcast<HiddenClass>(cell);
-  return self->transitionMap_.getMemorySize();
+  size_t size = self->transitionMap_.getMemorySize();
+  if (self->parentTransitionMap_)
+    size += sizeof(WeakValueObjectMap<HiddenClass>) +
+        self->parentTransitionMap_->getMemorySize();
+  return size;
 }
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION
@@ -156,6 +166,8 @@ void HiddenClass::_snapshotAddEdgesImpl(
     HeapSnapshot &snap) {
   auto *const self = vmcast<HiddenClass>(cell);
   self->transitionMap_.snapshotAddEdges(gc, snap);
+  if (self->parentTransitionMap_)
+    self->parentTransitionMap_->snapshotAddEdges(gc, snap, "parentTransition");
 }
 
 void HiddenClass::_snapshotAddNodesImpl(
@@ -167,11 +179,14 @@ void HiddenClass::_snapshotAddNodesImpl(
 }
 #endif
 
-HiddenClass *HiddenClass::createRoot(Runtime &runtime) {
+HiddenClass *HiddenClass::createRoot(
+    Runtime &runtime,
+    Handle<JSObject> objectParent) {
   return create(
       runtime,
       ClassFlags{},
       Runtime::makeNullHandle<HiddenClass>(),
+      objectParent,
       SymbolID{},
       PropertyFlags{},
       0);
@@ -179,6 +194,7 @@ HiddenClass *HiddenClass::createRoot(Runtime &runtime) {
 
 HiddenClass *HiddenClass::createForTypedObject(
     Runtime &runtime,
+    Handle<JSObject> objectParent,
     uint32_t capacity) {
   assert(capacity <= maxNumProperties() && "too many properties");
 
@@ -197,6 +213,7 @@ HiddenClass *HiddenClass::createForTypedObject(
       runtime,
       flags,
       Runtime::makeNullHandle<HiddenClass>(),
+      objectParent,
       SymbolID{},
       PropertyFlags{},
       0);
@@ -212,6 +229,7 @@ HiddenClass *HiddenClass::create(
     Runtime &runtime,
     ClassFlags flags,
     Handle<HiddenClass> parent,
+    Handle<JSObject> objectParent,
     SymbolID symbolID,
     PropertyFlags propertyFlags,
     unsigned numProperties) {
@@ -220,7 +238,13 @@ HiddenClass *HiddenClass::create(
       "non-empty non-dictionary orphan");
   auto *obj =
       runtime.makeAFixed<HiddenClass, HasFinalizer::Yes, LongLived::Yes>(
-          runtime, flags, parent, symbolID, propertyFlags, numProperties);
+          runtime,
+          flags,
+          parent,
+          objectParent,
+          symbolID,
+          propertyFlags,
+          numProperties);
   return obj;
 }
 
@@ -231,6 +255,11 @@ Handle<HiddenClass> HiddenClass::copyToNewDictionary(
   assert(
       !selfHandle->isDictionaryNoCache() && "class already in no-cache mode");
 
+  struct : public Locals {
+    PinnedValue<JSObject> objectParent;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
   auto newFlags = selfHandle->flags_;
   newFlags.dictionaryMode = true;
   // If the requested, transition to no-cache mode.
@@ -239,10 +268,12 @@ Handle<HiddenClass> HiddenClass::copyToNewDictionary(
   }
 
   /// Allocate a new class without a parent.
+  lv.objectParent = selfHandle->objectParent_.get(runtime);
   auto newClassHandle = runtime.makeHandle<HiddenClass>(HiddenClass::create(
       runtime,
       newFlags,
       Runtime::makeNullHandle<HiddenClass>(),
+      lv.objectParent,
       SymbolID{},
       PropertyFlags{},
       selfHandle->numProperties_));
@@ -472,11 +503,18 @@ CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::addProperty(
           .hasValue();
   auto newFlags = computeFlags(selfHandle->flags_, propertyFlags, isIndexLike);
 
+  struct : public Locals {
+    PinnedValue<JSObject> objectParent;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
   // Allocate the child.
+  lv.objectParent = selfHandle->objectParent_.get(runtime);
   auto childHandle = runtime.makeHandle<HiddenClass>(HiddenClass::create(
       runtime,
       newFlags,
       selfHandle,
+      lv.objectParent,
       name,
       propertyFlags,
       selfHandle->numProperties_ + 1));
@@ -595,15 +633,22 @@ Handle<HiddenClass> HiddenClass::updateProperty(
     return runtime.makeHandle(existingChild);
   }
 
+  struct : public Locals {
+    PinnedValue<JSObject> objectParent;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
   // We are updating the existing property and adding a transition to a new
   // hidden class.
   descPair->second.flags = newFlags;
 
   // Allocate the child.
+  lv.objectParent = selfHandle->objectParent_.get(runtime);
   auto childHandle = runtime.makeHandle<HiddenClass>(HiddenClass::create(
       runtime,
       computeFlags(selfHandle->flags_, newFlags, false),
       selfHandle,
+      lv.objectParent,
       name,
       transitionFlags,
       selfHandle->numProperties_));
@@ -661,6 +706,84 @@ SlotIndex HiddenClass::addNewTypedPublicProperty(
       selfHandle, runtime, name, NamedPropertyDescriptor(propFlags, newSlot));
 
   return newSlot;
+}
+
+JSObject *WeakValueObjectMapKey<HiddenClass>::get(
+    HiddenClass *clazz,
+    Runtime &runtime) {
+  assert(!clazz->isDictionary() && "dictionaries are never transition targets");
+  return clazz->getObjectParent(runtime);
+}
+
+HiddenClass *HiddenClass::updateObjectParentSlowPath(
+    Handle<HiddenClass> selfHandle,
+    Runtime &runtime,
+    PseudoHandle<JSObject> newParentPH) {
+  ++NumHCObjectParentChanges;
+  assert(
+      newParentPH.get() != selfHandle->objectParent_.get(runtime) &&
+      "don't call slow path if the parent isn't changing");
+  // A typed class is a shared orphan whose property map cannot be rebuilt from
+  // a transition chain, so a child of it would steal the map and leave every
+  // sibling object broken. Typed objects are non-extensible, so setParent
+  // rejects them before we get here.
+  assert(!selfHandle->isTyped() && "typed classes cannot change parent");
+
+  // In dictionary mode, update the objectParent directly without making a new
+  // HiddenClass.
+  if (LLVM_UNLIKELY(selfHandle->isDictionary())) {
+    selfHandle->objectParent_.set(
+        runtime, newParentPH.get(), runtime.getHeap());
+    return *selfHandle;
+  }
+
+  struct : public Locals {
+    PinnedValue<HiddenClass> child;
+    PinnedValue<JSObject> newParent;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  lv.newParent = std::move(newParentPH);
+
+  // Check if incrementing parentChangeCounter would exceed the maximum.
+  constexpr uint8_t maxCounter =
+      (1 << ClassFlags::kParentChangeCounterSize) - 1;
+  if (LLVM_UNLIKELY(selfHandle->flags_.parentChangeCounter >= maxCounter)) {
+    // Convert to dictionary mode and update the objectParent directly.
+    Handle<HiddenClass> dictionaryHandle =
+        copyToNewDictionary(selfHandle, runtime);
+    dictionaryHandle->objectParent_.set(
+        runtime, *lv.newParent, runtime.getHeap());
+    return *dictionaryHandle;
+  }
+
+  // Check for existing transition in parentTransitionMap_.
+  if (!selfHandle->parentTransitionMap_) {
+    selfHandle->parentTransitionMap_ =
+        std::make_unique<WeakValueObjectMap<HiddenClass>>();
+  } else if (
+      HiddenClass *existingChild =
+          selfHandle->parentTransitionMap_->lookup(runtime, *lv.newParent)) {
+    return existingChild;
+  }
+
+  // Create new flags with incremented parentChangeCounter
+  ClassFlags newClassFlags = selfHandle->flags_;
+  ++newClassFlags.parentChangeCounter;
+
+  // Create a new HiddenClass with the new objectParent.
+  lv.child = HiddenClass::create(
+      runtime,
+      newClassFlags,
+      selfHandle,
+      lv.newParent,
+      SymbolID::empty(),
+      PropertyFlags{},
+      selfHandle->numProperties_);
+
+  selfHandle->parentTransitionMap_->insert(runtime, *lv.newParent, *lv.child);
+
+  return *lv.child;
 }
 
 Handle<HiddenClass> HiddenClass::makeAllNonConfigurable(
@@ -897,6 +1020,9 @@ void HiddenClass::initializeMissingPropertyMap(
     NoAllocScope _(runtime);
     for (auto *cur = *selfHandle; cur->numProperties_ > 0;
          cur = cur->parent_.getNonNull(runtime)) {
+      // Only visit the HiddenClasses which involve properties.
+      if (LLVM_UNLIKELY(cur->symbolID_.isInvalid()))
+        continue;
       auto tmpFlags = cur->propertyFlags_;
       tmpFlags.flagsTransition = 0;
       entries.emplace_back(cur->symbolID_, tmpFlags);
@@ -959,6 +1085,12 @@ void HiddenClass::stealPropertyMapFromParent(
       self->parent_.getNonNull(runtime)->propertyMap_,
       runtime.getHeap());
   self->parent_.getNonNull(runtime)->propertyMap_.setNull(runtime.getHeap());
+
+  if (LLVM_UNLIKELY(self->symbolID_.isInvalid())) {
+    // No changes to make to the property map, because only the object's parent
+    // was updated.
+    return;
+  }
 
   // Does our class add a new property?
   if (LLVM_LIKELY(!self->propertyFlags_.flagsTransition)) {

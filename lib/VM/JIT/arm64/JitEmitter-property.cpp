@@ -574,7 +574,10 @@ class HERMES_ATTRIBUTE_INTERNAL_LINKAGE Emitter::GetByIdImpl {
     a.b_ne(failSpecLab);
 
     // Get the parent.
-    emit_load_cp(a, xTemp1, a64::Mem(xTemp1, offsetof(SHJSObject, parent)));
+    emit_load_cp(a, xTemp1, a64::Mem(xTemp1, offsetof(SHJSObject, clazz)));
+    emit_sh_cp_decode_non_null(a, xTemp1);
+    emit_load_cp(
+        a, xTemp1, a64::Mem(xTemp1, RuntimeOffsets::hiddenClassObjectParent));
     // If no parent, fail.
     a.cbz(xTemp1, failSpecLab);
     emit_sh_cp_decode_non_null(a, xTemp1);

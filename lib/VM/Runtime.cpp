@@ -417,11 +417,39 @@ Runtime::Runtime(
 
   initRootHiddenClasses();
 
-  objectPrototype =
-      JSObject::create(*this, Runtime::makeNullHandle<JSObject>());
+  // Object.prototype needs a class before classJSObject can exist, since
+  // classJSObject's parent is Object.prototype. Start it on a temporary root,
+  // then move it to classJSObject's null-parent transition below, so it shares
+  // a class with every other null-parent JSObject.
+  {
+    struct : public Locals {
+      PinnedValue<HiddenClass> tmpRoot;
+    } lv;
+    LocalsRAII lraii{*this, &lv};
+    lv.tmpRoot = HiddenClass::createRoot(*this, makeNullHandle<JSObject>());
+    objectPrototype =
+        JSObject::create(*this, makeNullHandle<JSObject>(), lv.tmpRoot);
+  }
   objectPrototypeRawPtr = *objectPrototype;
 
-  global_ = JSObject::create(*this, objectPrototype).getHermesValue();
+  // We want the prototype of 'global' to be an ordinary object,
+  // with Object.prototype as the parent.
+  // We don't need to use the full createRootHiddenClass in GlobalObject.cpp
+  // because we know that JSObject has no overlap slots, simplifying things.
+  static_assert(
+      JSObject::numOverlapSlots<JSObject>() == 0,
+      "must have no overlap slots for classJSObject");
+  classJSObject = HiddenClass::createRoot(*this, objectPrototype);
+  {
+    // getHiddenClassForPrototype may allocate and move objectPrototype, so
+    // dereference objectPrototype only after it returns.
+    Handle<HiddenClass> nullParentClass =
+        getHiddenClassForPrototype(nullptr, classJSObject);
+    JSObject::setEmptyClassUnsafe(*objectPrototype, *this, *nullParentClass);
+  }
+
+  global_ =
+      JSObject::create(*this, objectPrototype, classJSObject).getHermesValue();
 
   JSLibFlags jsLibFlags{};
   jsLibFlags.enableHermesInternal = runtimeConfig.getEnableHermesInternal();
@@ -1694,31 +1722,9 @@ void Runtime::initRootHiddenClasses() {
   } lv;
   LocalsRAII lraii{*this, &lv};
 
-  auto createRoot = [this, &lv](
-                        CellKind kind, PinnedValue<HiddenClass> *result) {
-    size_t baseNumSlots = JSObject::numOverlapSlotsForCellKind(kind);
-    // Create a root HiddenClass
-    lv.clazz = HiddenClass::createRoot(*this);
-    // Get to the base number of slots.
-    for (size_t i = 0; i < baseNumSlots; ++i) {
-      GCScopeMarkerRAII marker{*this};
-      auto addResult = HiddenClass::reserveSlot(lv.clazz, *this);
-      assert(
-          addResult != ExecutionStatus::EXCEPTION &&
-          "Could not possibly grow larger than the limit");
-      lv.clazz = *addResult->first;
-    }
-
-    *result = lv.clazz;
-  };
-
-#define CELL_JSOBJECT_NAME(name, vmClassName) \
-  createRoot(CellKind::name##Kind, &class##name);
-#include "hermes/VM/CellKinds.def"
-
   // For lazy objects, they should just use this empty HiddenClass until they
   // are actually populated.
-  lv.clazz = HiddenClass::createRoot(*this);
+  lv.clazz = HiddenClass::createRoot(*this, makeNullHandle<JSObject>());
   lazyObjectClass_ = lv.clazz;
 }
 

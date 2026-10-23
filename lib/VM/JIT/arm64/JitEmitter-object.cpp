@@ -89,16 +89,19 @@ void Emitter::newObjectWithParent(
   auto hwClazz = allocTempGpX();
   auto hwTemp1 = allocTempGpX();
   auto hwTemp2 = allocTempGpX();
+  auto hwTemp3 = allocTempGpX();
   auto xParent = hwParent.a64GpX();
   auto xNewObjPtr = hwNewObjPtr.a64GpX();
   auto xClazz = hwClazz.a64GpX();
   auto xTemp1 = hwTemp1.a64GpX();
   auto xTemp2 = hwTemp2.a64GpX();
+  auto xTemp3 = hwTemp3.a64GpX();
   freeAllFRTempExcept({});
   freeReg(hwNewObjPtr);
   freeReg(hwClazz);
   freeReg(hwTemp1);
   freeReg(hwTemp2);
+  freeReg(hwTemp3);
 
   asmjit::Label slowPathLab = newSlowPathLabel();
   asmjit::Label contLab = newContLabel();
@@ -135,17 +138,10 @@ void Emitter::newObjectWithParent(
   // If the HC isn't cached, slow path.
   a.cbz(xClazz, slowPathLab);
 
-  allocInYoung(
-      CellKind::JSObjectKind,
-      cellSize<JSObject>(),
-      xNewObjPtr,
-      xTemp1,
-      xTemp2,
-      slowPathLab);
-
   // Compute what the parent should be into xTemp2. We must not overwrite
   // xParent, because it may be a register that the allocator still believes
-  // holds the live frParent value.
+  // holds the live frParent value. Normalize to a CP-encoded raw pointer
+  // (or 0 for null), so we can compare against the HC's objectParent.
   auto decodeObjParentLab = a.newLabel();
   auto parentDoneLab = a.newLabel();
 
@@ -171,6 +167,24 @@ void Emitter::newObjectWithParent(
   emit_sh_cp_encode_non_null(a, xTemp2);
 
   a.bind(parentDoneLab);
+
+  // If the parent isn't correct, slow path.
+  auto &xClazzDecoded =
+      emit_sh_cp_decode_non_null_preserve_input(a, xTemp1, xClazz);
+  emit_load_cp(
+      a,
+      xTemp1,
+      a64::Mem(xClazzDecoded, RuntimeOffsets::hiddenClassObjectParent));
+  a.cmp(xTemp1, xTemp2);
+  a.b_ne(slowPathLab);
+
+  allocInYoung(
+      CellKind::JSObjectKind,
+      cellSize<JSObject>(),
+      xNewObjPtr,
+      xTemp1,
+      xTemp3,
+      slowPathLab);
 
   // Initialize the object.
   emit_jsobject_init(
@@ -345,8 +359,7 @@ void Emitter::newObjectWithBuffer(
   }
 
   // Get the parent.
-  a.ldr(xTmp, a64::Mem(xRuntime, offsetof(Runtime, objectPrototype)));
-  emit_sh_ljs_get_pointer(a, xTmp, xTmp);
+  a.ldr(xTmp, a64::Mem(xRuntime, offsetof(Runtime, objectPrototypeRawPtr)));
   emit_sh_cp_encode_non_null(a, xTmp);
 
   // Initialize the JSObject to have the correct parent/HC.
@@ -652,7 +665,10 @@ void Emitter::loadParentNoTraps(FR frRes, FR frObj) {
   a64::GpX xRes = hwRes.a64GpX();
   emit_sh_ljs_get_pointer(a, xTmp, hwObj.a64GpX());
   // xTmp contains the unencoded pointer value.
-  emit_load_cp(a, xTmp, a64::Mem(xTmp, offsetof(SHJSObject, parent)));
+  emit_load_cp(a, xTmp, a64::Mem(xTmp, offsetof(SHJSObject, clazz)));
+  emit_sh_cp_decode_non_null(a, xTmp);
+  emit_load_cp(
+      a, xTmp, a64::Mem(xTmp, RuntimeOffsets::hiddenClassObjectParent));
   emit_sh_cp_decode(a, xTmp);
   // Check whether it is nullptr and set flags.
   // TODO: Combine this null check with the one in emit_load_and_sh_cp_decode.
@@ -674,7 +690,10 @@ void Emitter::typedLoadParent(FR frRes, FR frObj) {
   HWReg hwRes = getOrAllocFRInGpX(frRes, false);
   a64::GpX xRes = hwRes.a64GpX();
   emit_sh_ljs_get_pointer(a, xRes, hwObj.a64GpX());
-  emit_load_cp(a, xRes, a64::Mem(xRes, offsetof(SHJSObject, parent)));
+  emit_load_cp(a, xRes, a64::Mem(xRes, offsetof(SHJSObject, clazz)));
+  emit_sh_cp_decode_non_null(a, xRes);
+  emit_load_cp(
+      a, xRes, a64::Mem(xRes, RuntimeOffsets::hiddenClassObjectParent));
   emit_sh_cp_decode_non_null(a, xRes);
   emit_sh_ljs_object(a, xRes);
 

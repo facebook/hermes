@@ -221,7 +221,7 @@ ExecutionStatus JSRegExp::initializeGroupNameMappingObj(
   auto objRes = JSObject::create(
       runtime,
       Runtime::makeNullHandle<JSObject>(),
-      runtime.classJSObject,
+      runtime.getHiddenClassForPrototype(nullptr, runtime.classJSObject),
       parsedMappings.size());
   lv.obj = objRes.get();
 

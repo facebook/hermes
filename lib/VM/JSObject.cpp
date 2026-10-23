@@ -109,6 +109,20 @@ size_t JSObject::numOverlapSlotsForCellKind(CellKind k) {
   }
 }
 
+void JSObject::setEmptyClassUnsafe(
+    JSObject *self,
+    Runtime &runtime,
+    HiddenClass *clazz) {
+  assert(
+      self->getClass(runtime)->getNumProperties() == 0 &&
+      "object must have no properties");
+  assert(clazz->getNumProperties() == 0 && "class must be empty");
+  assert(
+      clazz->getObjectParent(runtime) == self->getParent(runtime) &&
+      "parent must not change");
+  self->updateClass(runtime, clazz);
+}
+
 PseudoHandle<JSObject> JSObject::create(
     Runtime &runtime,
     Handle<JSObject> parentHandle) {
@@ -251,7 +265,7 @@ CallResult<bool> JSObject::setParent(
   }
   // ES9 9.1.2
   // 4.
-  if (self->parent_.get(runtime) == parent)
+  if (self->getParent(runtime) == parent)
     return true;
   // ES2022 10.4.7 Immutable Prototype Exotic Objects
   // The [[SetPrototypeOf]] for %Object.prototype% is supposed to be
@@ -278,7 +292,7 @@ CallResult<bool> JSObject::setParent(
     }
   }
   // 6-8. Check for a prototype cycle.
-  for (JSObject *cur = parent; cur; cur = cur->parent_.get(runtime)) {
+  for (JSObject *cur = parent; cur; cur = cur->getParent(runtime)) {
     if (cur == self) {
       if (opFlags.getThrowOnError()) {
         return runtime.raiseTypeError("Prototype cycle detected");
@@ -300,8 +314,23 @@ CallResult<bool> JSObject::setParent(
     runtime.incParentCacheEpoch();
   }
 
+  struct : public Locals {
+    PinnedValue<HiddenClass> clazz;
+    PinnedValue<JSObject> self;
+    PinnedValue<JSObject> parent;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  lv.self = self;
+  lv.clazz = lv.self->getClass(runtime);
+  lv.parent = parent;
+
   // 9.
-  self->parent_.set(runtime, parent, runtime.getHeap());
+  lv.clazz = HiddenClass::updateObjectParent(
+      lv.clazz, runtime, createPseudoHandle(*lv.parent));
+  lv.self->parent_.set(runtime, *lv.parent, runtime.getHeap());
+  lv.self->updateClass(runtime, *lv.clazz);
+
   // 10.
   return true;
 }
@@ -1034,11 +1063,12 @@ JSObject *JSObject::getNamedDescriptorUnsafe(
     return *selfHandle;
   }
 
-  if (selfHandle->parent_) {
+  if (selfHandle->getParentGCPtr(runtime)) {
     MutableHandle<JSObject> mutableSelfHandle{
-        runtime, selfHandle->parent_.getNonNull(runtime)};
+        runtime, selfHandle->getParentNonNull(runtime)};
 
     do {
+      GCScopeMarkerRAII marker{runtime};
       // Check the most common case first, at the cost of some code duplication.
       if (LLVM_LIKELY(
               !mutableSelfHandle->flags_.lazyObject &&
@@ -1067,7 +1097,7 @@ JSObject *JSObject::getNamedDescriptorUnsafe(
         desc.slot = name.unsafeGetRaw();
         return *mutableSelfHandle;
       }
-    } while ((mutableSelfHandle = mutableSelfHandle->parent_.get(runtime)));
+    } while ((mutableSelfHandle = mutableSelfHandle->getParent(runtime)));
   }
 
   return nullptr;
@@ -2623,12 +2653,12 @@ void JSObject::_snapshotAddEdgesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap) {
 
   // Add the prototype as a property edge, so it's easy for JS developers to
   // walk the prototype chain on their own.
-  if (self->parent_) {
+  if (self->getParentGCPtr(gc.getPointerBase())) {
     snap.addNamedEdge(
         HeapSnapshot::EdgeType::Property,
         // __proto__ chosen for similarity to V8.
         "__proto__",
-        gc.getObjectID(self->parent_));
+        gc.getObjectID(self->getParent(gc.getPointerBase())));
   }
 
   HiddenClass::forEachPropertyNoAlloc(

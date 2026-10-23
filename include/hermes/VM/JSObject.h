@@ -274,6 +274,8 @@ struct ObjectVTable : public VTable {
 /// available.
 class JSObject : public GCCell {
   friend void JSObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb);
+  /// Runtime needs setEmptyClassUnsafe to bootstrap Object.prototype.
+  friend class Runtime;
 
  protected:
   /// Flags affecting the entire object.
@@ -308,6 +310,9 @@ class JSObject : public GCCell {
             runtime.getHeap(),
             needsBarriers),
         propStorage_(nullptr) {
+    assert(
+        parent == clazz->getObjectParentGCPtr().get(runtime) &&
+        "creation failed");
     // Direct property slots are initialized by initDirectPropStorage.
   }
 
@@ -324,6 +329,9 @@ class JSObject : public GCCell {
             runtime.getHeap(),
             needsBarriers),
         propStorage_(nullptr) {
+    assert(
+        *parent == clazz->getObjectParentGCPtr().get(runtime) &&
+        "creation failed");
     // Direct property slots are initialized by initDirectPropStorage.
   }
 
@@ -332,6 +340,9 @@ class JSObject : public GCCell {
   /// (defaulting to NoBarriers).
   JSObject(Runtime &runtime, JSObject *parent, HiddenClass *clazz)
       : JSObject(runtime, parent, clazz, GCPointerBase::NoBarriers()) {
+    assert(
+        parent == clazz->getObjectParentGCPtr().get(runtime) &&
+        "creation failed");
     // Direct property slots are initialized by initDirectPropStorage.
   }
 
@@ -463,11 +474,22 @@ class JSObject : public GCCell {
     return getParentGCPtr(runtime).get(runtime);
   }
 
+  /// Faster than getParent() because it skips the null check.
+  /// \pre the parent is non-null.
+  /// \return the `__proto__` internal property, which must be non-null.
+  JSObject *getParentNonNull(PointerBase &runtime) const {
+    return getParentGCPtr(runtime).getNonNull(runtime);
+  }
+
   /// \return the `__proto__` internal property, which may be nullptr.
   const GCPointer<JSObject> &getParentGCPtr(PointerBase &runtime) const {
     assert(
         !flags_.proxyObject && "getParent cannot be used with proxy objects");
-    return parent_;
+    assert(
+        parent_.get(runtime) ==
+            getClass(runtime)->getObjectParentGCPtr().get(runtime) &&
+        "get failed");
+    return getClass(runtime)->getObjectParentGCPtr();
   }
 
   /// \return the hidden class of this object.
@@ -1438,6 +1460,14 @@ class JSObject : public GCCell {
       runtime.incParentCacheEpoch();
   }
 
+  /// Replace the class of \p self with \p clazz without going through a
+  /// transition.
+  /// SAFETY: \p self must have no properties, and \p clazz must have no
+  /// properties and the same parent as \p self. Otherwise the object's slots
+  /// no longer match its class, or its parent silently changes.
+  static void
+  setEmptyClassUnsafe(JSObject *self, Runtime &runtime, HiddenClass *clazz);
+
   /// Allocate storage for a new slot after the slot index itself has been
   /// allocated by the hidden class.
   /// Note that slot storage is never truly released once allocated. Released
@@ -2068,7 +2098,7 @@ inline OptValue<bool> JSObject::tryGetOwnNamedDescriptorFast(
 
 inline OptValue<SmallHermesValue>
 JSObject::tryGetNamedNoAlloc(JSObject *self, PointerBase &base, SymbolID name) {
-  for (JSObject *curr = self; curr; curr = curr->parent_.get(base)) {
+  for (JSObject *curr = self; curr; curr = curr->getParent(base)) {
     if (LLVM_UNLIKELY(curr->isProxyObject()) ||
         LLVM_UNLIKELY(curr->isHostObject())) {
       // Fail if there is a proxy or host object in the chain,

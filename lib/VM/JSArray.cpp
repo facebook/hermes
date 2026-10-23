@@ -522,11 +522,18 @@ void JSArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.setVTable(&JSArray::vt);
 }
 
-Handle<HiddenClass> JSArray::createClass(
+HiddenClass *JSArray::createClass(
     Runtime &runtime,
     Handle<JSObject> prototypeHandle,
     Handle<HiddenClass> rootClazz) {
   assert(rootClazz && "must have a starting point");
+
+  struct : public Locals {
+    PinnedValue<HiddenClass> clazz;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+  lv.clazz = runtime.getHiddenClassForPrototype(*prototypeHandle, rootClazz);
+
   PropertyFlags pf{};
   pf.enumerable = 0;
   pf.writable = 1;
@@ -534,19 +541,19 @@ Handle<HiddenClass> JSArray::createClass(
   pf.internalSetter = 1;
 
   auto added = HiddenClass::addProperty(
-      rootClazz, runtime, Predefined::getSymbolID(Predefined::length), pf);
+      lv.clazz, runtime, Predefined::getSymbolID(Predefined::length), pf);
   assert(
       added != ExecutionStatus::EXCEPTION &&
       "Adding the first properties shouldn't cause overflow");
   assert(
       added->second == lengthPropIndex() && "JSArray.length has invalid index");
-  rootClazz = added->first;
+  lv.clazz = added->first;
 
   assert(
-      rootClazz->getNumProperties() == jsArrayPropertyCount() &&
+      lv.clazz->getNumProperties() == jsArrayPropertyCount() &&
       "JSArray class defined with incorrect number of properties");
 
-  return rootClazz;
+  return *lv.clazz;
 }
 
 CallResult<PseudoHandle<JSArray>> JSArray::createNoAllocPropStorage(
@@ -558,6 +565,7 @@ CallResult<PseudoHandle<JSArray>> JSArray::createNoAllocPropStorage(
   assert(length <= capacity && "length must be <= capacity");
 
   assert(
+      classHandle &&
       classHandle->getNumProperties() >= jsArrayPropertyCount() &&
       "invalid number of properties in JSArray hidden class");
 
