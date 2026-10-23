@@ -1295,13 +1295,9 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
         Type irType = flowTypeToIRType(optFieldLookup->getField()->type);
         TypeContext &tc = getTypeContext();
         Instruction *inst;
-        if (tc.canBePrimitive(irType)) {
-          // If the type can be a primitive, it will have a default value that
-          // doesn't need IDZ.
-          inst =
-              Builder.createPrLoadInst(baseValue, fieldIndex, propName, irType);
-        } else {
-          // IDZ needed for object types.
+        if (tc.isIDZType(irType)) {
+          // No representable literal default (object types, symbol): the field
+          // is stored uninitialized, so IDZ-check it on load.
           inst = Builder.createThrowIfInst(
               Builder.createPrLoadInst(
                   baseValue,
@@ -1309,6 +1305,10 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
                   propName,
                   tc.unionTy(irType, Type::createUninit())),
               Type::createUninit());
+        } else {
+          // Has a literal default that doesn't need IDZ.
+          inst =
+              Builder.createPrLoadInst(baseValue, fieldIndex, propName, irType);
         }
         return MemberExpressionResult{inst, nullptr, baseValue};
       }

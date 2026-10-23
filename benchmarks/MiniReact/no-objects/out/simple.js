@@ -55,7 +55,7 @@
    * - React component. See `ComponentType` for more information about its
    *   different variants.
    */
-  type M$react_index$INTERNAL$React$ElementType = string | M$react_index$INTERNAL$Component /* TODO: React$AbstractComponent<empty, mixed> */ | number /* TODO: symbol */;
+  type M$react_index$INTERNAL$React$ElementType = string | M$react_index$INTERNAL$Component /* TODO: React$AbstractComponent<empty, mixed> */ | symbol;
   /**
    * Type of a React element. React elements are commonly created using JSX
    * literals, which desugar to React.createElement calls (see below).
@@ -86,7 +86,7 @@
    * have moved.
    */
   type M$react_index$INTERNAL$React$Key = string | number;
-  const M$react_index$INTERNAL$REACT_FRAGMENT_TYPE: number = 1 /* Symbol.for('react.fragment') */;
+  const M$react_index$INTERNAL$REACT_FRAGMENT_TYPE: symbol = Symbol.for('react.fragment');
   /* eslint-disable lint/strictly-null, lint/react-state-props-mutation, lint/flow-react-element */
 
   /**
