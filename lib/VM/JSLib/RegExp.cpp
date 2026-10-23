@@ -1194,10 +1194,8 @@ regExpExec(Runtime &runtime, Handle<JSObject> R, Handle<StringPrimitive> S) {
 
 /// Implementation of RegExp.prototype.exec
 /// Returns an Array if a match is found, null if no match is found
-/// Helper function for regExpPrototypeExec that takes NativeArgs directly
-static CallResult<HermesValue> regExpPrototypeExecImpl(
-    Runtime &runtime,
-    NativeArgs args) {
+CallResult<HermesValue> regExpPrototypeExec(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   struct : public Locals {
     PinnedValue<StringPrimitive> S;
     PinnedValue<JSArray> result;
@@ -1227,22 +1225,27 @@ static CallResult<HermesValue> regExpPrototypeExecImpl(
   return lv.result.getHermesValue();
 }
 
-CallResult<HermesValue> regExpPrototypeExec(void *, Runtime &runtime) {
+/// Implementation of RegExp.prototype.test.
+CallResult<HermesValue> regExpPrototypeTest(void *, Runtime &runtime) {
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
-  return regExpPrototypeExecImpl(runtime, args);
-}
+  struct : public Locals {
+    PinnedValue<StringPrimitive> S;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
 
-/// Implementation of RegExp.prototype.test
-/// Returns true if a match is found, false otherwise
-/// TODO optimization: avoid constructing the submatch array. Instead simply
-/// check for a match.
-CallResult<HermesValue> regExpPrototypeTest(void *context, Runtime &runtime) {
-  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
-  CallResult<HermesValue> res = regExpPrototypeExecImpl(runtime, args);
-  if (res == ExecutionStatus::EXCEPTION)
+  auto receiver = args.dyncastThis<JSObject>();
+  if (!receiver)
+    return runtime.raiseTypeError("RegExp.prototype.test requires an object");
+  auto strRes = toString_RJS(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
-
-  return HermesValue::encodeBoolValue(!res.getValue().isNull());
+  lv.S = std::move(*strRes);
+  // RegExpExec observes exec after string coercion, including on generic
+  // objects. Calling the builtin matcher directly would bypass that dispatch.
+  auto result = regExpExec(runtime, receiver, lv.S);
+  if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+  return HermesValue::encodeBoolValue(!result->isNull());
 }
 
 /// Return the ith capture group in the most recent successful RegExp search.
