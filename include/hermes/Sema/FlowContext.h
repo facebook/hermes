@@ -1307,18 +1307,20 @@ class FlowContext {
   /// Register an Array<T> ClassType specialization with its element type.
   /// This is idempotent — re-registering the same classType is a no-op.
   void registerArrayClassType(Type *classType, Type *elementType) {
-    arrayClassTypes_.try_emplace(classType, elementType);
+    arrayClassTypes_.try_emplace(
+        llvh::cast<ClassType>(classType->info), elementType);
   }
 
   /// Check if a Type has ClassType info that is an Array<T> specialization.
   bool isArrayClassType(const Type *t) const {
-    return t && arrayClassTypes_.count(const_cast<Type *>(t)) > 0;
+    auto *classType = t ? llvh::dyn_cast_or_null<ClassType>(t->info) : nullptr;
+    return classType && arrayClassTypes_.count(classType);
   }
 
   /// Return the element type for an Array<T> ClassType specialization.
   /// \pre isArrayClassType(t) must be true.
   Type *getArrayElementType(const Type *t) const {
-    auto it = arrayClassTypes_.find(const_cast<Type *>(t));
+    auto it = arrayClassTypes_.find(llvh::cast<ClassType>(t->info));
     assert(it != arrayClassTypes_.end() && "not an Array ClassType");
     return it->second;
   }
@@ -1360,7 +1362,7 @@ class FlowContext {
 
   /// Maps Array<T> ClassType specializations to their element Type.
   /// Populated by FlowChecker during specialization, used by IRGen.
-  llvh::DenseMap<Type *, Type *> arrayClassTypes_{};
+  llvh::DenseMap<const ClassType *, Type *> arrayClassTypes_{};
 
   std::deque<Type> allocTypes_{};
 

@@ -3477,6 +3477,17 @@ FlowChecker::specializeGenericWithParsedTypes(
     assert(flowContext_.findDeclType(newDecl) && "expected valid type");
   }
 
+  // Register Array<T> specializations here so every path that creates or
+  // reaches one is covered, including the Array body referencing its own
+  // in-flight specialization.
+  if (oldDecl == arrayClassDecl_) {
+    if (Type *classConsType = flowContext_.findDeclType(newDecl)) {
+      flowContext_.registerArrayClassType(
+          llvh::cast<ClassConstructorType>(classConsType->info)->getClassType(),
+          typeArgTypes[0]);
+    }
+  }
+
   return {newDecl, specialization};
 }
 
@@ -3657,12 +3668,7 @@ Type *FlowChecker::getSpecializedArrayClassType(
   if (!newDecl)
     return nullptr;
   Type *classConsType = getDeclType(newDecl);
-  Type *classType =
-      llvh::cast<ClassConstructorType>(classConsType->info)->getClassType();
-  // The scopetypes path may have already registered this specialization.
-  // registerArrayClassType asserts the element type is consistent.
-  flowContext_.registerArrayClassType(classType, elementType);
-  return classType;
+  return llvh::cast<ClassConstructorType>(classConsType->info)->getClassType();
 }
 
 std::pair<Type *, const ClassType::Field *> FlowChecker::lookupPropertyOnClass(
