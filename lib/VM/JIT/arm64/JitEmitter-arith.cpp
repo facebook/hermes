@@ -6,10 +6,10 @@
  */
 
 #include "hermes/VM/JIT/Config.h"
-#if HERMESVM_JIT
+#if HERMESVM_JIT_ARM64
 #include "JitEmitter-internal.h"
 #include "JitEmitter.h"
-#include "JitHandlers.h"
+#include "../JitHandlers.h"
 
 #include "../RuntimeOffsets.h"
 
@@ -17,8 +17,10 @@ namespace hermes::vm::arm64 {
 
 void Emitter::toNumber(FR frRes, FR frInput) {
   comment("// %s r%u, r%u", "toNumber", frRes.index(), frInput.index());
-  if (isFRKnownNumber(frInput))
+  if (isFRKnownNumber(frInput)) {
+    emitTypeAssertFR(frInput, TypePred::IsNumber);
     return mov(frRes, frInput, false);
+  }
 
   HWReg hwRes, hwInput;
   asmjit::Label slowPathLab = newSlowPathLabel();
@@ -44,34 +46,31 @@ void Emitter::toNumber(FR frRes, FR frInput) {
 
   a.bind(contLab);
 
-  slowPaths_.push_back(
-      {.slowPathLab = slowPathLab,
-       .contLab = contLab,
-       .frRes = frRes,
-       .frInput1 = frInput,
-       .hwRes = hwRes,
-       .emittingIP = emittingIP,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment(
-             "// Slow path: toNumber r%u, r%u",
-             sl.frRes.index(),
-             sl.frInput1.index());
-         em.a.bind(sl.slowPathLab);
-         em.a.mov(a64::x0, xRuntime);
-         em.loadFrameAddr(a64::x1, sl.frInput1);
-         EMIT_RUNTIME_CALL(
-             em,
-             double (*)(SHRuntime *, const SHLegacyValue *),
-             _sh_ljs_to_double_rjs);
-         em.movHWFromHW<false>(sl.hwRes, HWReg::vecD(0));
-         em.a.b(sl.contLab);
-       }});
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      emittingIP,
+      [frRes, frInput, hwRes](Emitter &em, SlowPath &sp) {
+        em.comment(
+            "// Slow path: toNumber r%u, r%u", frRes.index(), frInput.index());
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(a64::x0, xRuntime);
+        em.loadFrameAddr(a64::x1, frInput);
+        EMIT_RUNTIME_CALL(
+            em,
+            double (*)(SHRuntime *, const SHLegacyValue *),
+            _sh_ljs_to_double_rjs);
+        em.movHWFromHW<false>(hwRes, HWReg::vecD(0));
+        em.a.b(sp.contLab);
+      });
 }
 
 void Emitter::toNumeric(FR frRes, FR frInput) {
   comment("// %s r%u, r%u", "toNumeric", frRes.index(), frInput.index());
-  if (isFRKnownNumber(frInput))
+  if (isFRKnownNumber(frInput)) {
+    emitTypeAssertFR(frInput, TypePred::IsNumber);
     return mov(frRes, frInput, false);
+  }
 
   HWReg hwRes, hwInput;
   asmjit::Label slowPathLab = newSlowPathLabel();
@@ -97,28 +96,23 @@ void Emitter::toNumeric(FR frRes, FR frInput) {
 
   a.bind(contLab);
 
-  slowPaths_.push_back(
-      {.slowPathLab = slowPathLab,
-       .contLab = contLab,
-       .frRes = frRes,
-       .frInput1 = frInput,
-       .hwRes = hwRes,
-       .emittingIP = emittingIP,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment(
-             "// Slow path: toNumeric r%u, r%u",
-             sl.frRes.index(),
-             sl.frInput1.index());
-         em.a.bind(sl.slowPathLab);
-         em.a.mov(a64::x0, xRuntime);
-         em.loadFrameAddr(a64::x1, sl.frInput1);
-         EMIT_RUNTIME_CALL(
-             em,
-             SHLegacyValue (*)(SHRuntime *, const SHLegacyValue *),
-             _sh_ljs_to_numeric_rjs);
-         em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
-         em.a.b(sl.contLab);
-       }});
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      emittingIP,
+      [frRes, frInput, hwRes](Emitter &em, SlowPath &sp) {
+        em.comment(
+            "// Slow path: toNumeric r%u, r%u", frRes.index(), frInput.index());
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(a64::x0, xRuntime);
+        em.loadFrameAddr(a64::x1, frInput);
+        EMIT_RUNTIME_CALL(
+            em,
+            SHLegacyValue (*)(SHRuntime *, const SHLegacyValue *),
+            _sh_ljs_to_numeric_rjs);
+        em.movHWFromHW<false>(hwRes, HWReg::gpX(0));
+        em.a.b(sp.contLab);
+      });
 }
 
 void Emitter::toInt32(FR frRes, FR frInput, bool isSigned) {
@@ -161,32 +155,26 @@ void Emitter::toInt32(FR frRes, FR frInput, bool isSigned) {
 
   a.bind(contLab);
 
-  slowPaths_.push_back(
-      {.slowPathLab = slowPathLab,
-       .contLab = contLab,
-       .name = isSigned ? "ToInt32" : "ToUint32",
-       .frRes = frRes,
-       .frInput1 = frInput,
-       .hwRes = hwRes,
-       .slowCall = isSigned ? (void *)_sh_ljs_to_int32_rjs
-                            : (void *)_sh_ljs_to_uint32_rjs,
-       .slowCallName =
-           isSigned ? "_sh_ljs_to_int32_rjs" : "_sh_ljs_to_uint32_rjs",
-       .emittingIP = emittingIP,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment(
-             "// Slow path: %s, r%u, r%u, r%u",
-             sl.name,
-             sl.frRes.index(),
-             sl.frInput1.index(),
-             sl.frInput2.index());
-         em.a.bind(sl.slowPathLab);
-         em.a.mov(a64::x0, xRuntime);
-         em.loadFrameAddr(a64::x1, sl.frInput1);
-         em.callThunkWithSavedIP((void *)sl.slowCall, sl.slowCallName);
-         em.movHWFromHW<false>(sl.hwRes, HWReg::vecD(0));
-         em.a.b(sl.contLab);
-       }});
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      emittingIP,
+      [isSigned, frRes, frInput, hwRes](Emitter &em, SlowPath &sp) {
+        em.comment(
+            "// Slow path: %s, r%u, r%u",
+            isSigned ? "ToInt32" : "ToUint32",
+            frRes.index(),
+            frInput.index());
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(a64::x0, xRuntime);
+        em.loadFrameAddr(a64::x1, frInput);
+        em.callRuntimeWithSavedIP(
+            isSigned ? (void *)_sh_ljs_to_int32_rjs
+                     : (void *)_sh_ljs_to_uint32_rjs,
+            isSigned ? "_sh_ljs_to_int32_rjs" : "_sh_ljs_to_uint32_rjs");
+        em.movHWFromHW<false>(hwRes, HWReg::vecD(0));
+        em.a.b(sp.contLab);
+      });
 }
 
 void Emitter::addEmptyString(FR frRes, FR frInput) {
@@ -217,28 +205,25 @@ void Emitter::addEmptyString(FR frRes, FR frInput) {
 
   a.bind(contLab);
 
-  slowPaths_.push_back(
-      {.slowPathLab = slowPathLab,
-       .contLab = contLab,
-       .frRes = frRes,
-       .frInput1 = frInput,
-       .hwRes = hwRes,
-       .emittingIP = emittingIP,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment(
-             "// Slow path: AddEmptyString r%u, r%u",
-             sl.frRes.index(),
-             sl.frInput1.index());
-         em.a.bind(sl.slowPathLab);
-         em.a.mov(a64::x0, xRuntime);
-         em.loadFrameAddr(a64::x1, sl.frInput1);
-         EMIT_RUNTIME_CALL(
-             em,
-             SHLegacyValue (*)(SHRuntime *, const SHLegacyValue *),
-             _sh_ljs_add_empty_string_rjs);
-         em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
-         em.a.b(sl.contLab);
-       }});
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      emittingIP,
+      [frRes, frInput, hwRes](Emitter &em, SlowPath &sp) {
+        em.comment(
+            "// Slow path: AddEmptyString r%u, r%u",
+            frRes.index(),
+            frInput.index());
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(a64::x0, xRuntime);
+        em.loadFrameAddr(a64::x1, frInput);
+        EMIT_RUNTIME_CALL(
+            em,
+            SHLegacyValue (*)(SHRuntime *, const SHLegacyValue *),
+            _sh_ljs_add_empty_string_rjs);
+        em.movHWFromHW<false>(hwRes, HWReg::gpX(0));
+        em.a.b(sp.contLab);
+      });
 }
 
 void Emitter::arithUnop(
@@ -268,6 +253,8 @@ void Emitter::arithUnop(
   }
 
   hwInput = getOrAllocFRInVecD(frInput, true);
+  if (inputIsNum)
+    emitTypeAssert(frInput, hwInput, TypePred::IsNumber);
   if (!inputIsNum) {
     slowPathLab = newSlowPathLabel();
     contLab = newContLabel();
@@ -297,29 +284,21 @@ void Emitter::arithUnop(
   freeAllFRTempExcept(frRes);
   a.bind(contLab);
 
-  slowPaths_.push_back(
-      {.slowPathLab = slowPathLab,
-       .contLab = contLab,
-       .name = name,
-       .frRes = frRes,
-       .frInput1 = frInput,
-       .hwRes = hwRes,
-       .slowCall = slowCall,
-       .slowCallName = slowCallName,
-       .emittingIP = emittingIP,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment(
-             "// Slow path: %s r%u, r%u",
-             sl.name,
-             sl.frRes.index(),
-             sl.frInput1.index());
-         em.a.bind(sl.slowPathLab);
-         em.a.mov(a64::x0, xRuntime);
-         em.loadFrameAddr(a64::x1, sl.frInput1);
-         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
-         em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
-         em.a.b(sl.contLab);
-       }});
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      emittingIP,
+      [name, frRes, frInput, hwRes, slowCall, slowCallName](
+          Emitter &em, SlowPath &sp) {
+        em.comment(
+            "// Slow path: %s r%u, r%u", name, frRes.index(), frInput.index());
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(a64::x0, xRuntime);
+        em.loadFrameAddr(a64::x1, frInput);
+        em.callRuntimeWithSavedIP(slowCall, slowCallName);
+        em.movHWFromHW<false>(hwRes, HWReg::gpX(0));
+        em.a.b(sp.contLab);
+      });
 }
 
 void Emitter::booleanNot(FR frRes, FR frInput) {
@@ -378,28 +357,23 @@ void Emitter::bitNot(FR frRes, FR frInput) {
 
   a.bind(contLab);
 
-  slowPaths_.push_back(
-      {.slowPathLab = slowPathLab,
-       .contLab = contLab,
-       .frRes = frRes,
-       .frInput1 = frInput,
-       .hwRes = hwRes,
-       .emittingIP = emittingIP,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment(
-             "// Slow path: bitNot r%u, r%u",
-             sl.frRes.index(),
-             sl.frInput1.index());
-         em.a.bind(sl.slowPathLab);
-         em.a.mov(a64::x0, xRuntime);
-         em.loadFrameAddr(a64::x1, sl.frInput1);
-         EMIT_RUNTIME_CALL(
-             em,
-             SHLegacyValue (*)(SHRuntime *, const SHLegacyValue *),
-             _sh_ljs_bit_not_rjs);
-         em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
-         em.a.b(sl.contLab);
-       }});
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      emittingIP,
+      [frRes, frInput, hwRes](Emitter &em, SlowPath &sp) {
+        em.comment(
+            "// Slow path: bitNot r%u, r%u", frRes.index(), frInput.index());
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(a64::x0, xRuntime);
+        em.loadFrameAddr(a64::x1, frInput);
+        EMIT_RUNTIME_CALL(
+            em,
+            SHLegacyValue (*)(SHRuntime *, const SHLegacyValue *),
+            _sh_ljs_bit_not_rjs);
+        em.movHWFromHW<false>(hwRes, HWReg::gpX(0));
+        em.a.b(sp.contLab);
+      });
 }
 
 void Emitter::typeOf(FR frRes, FR frInput) {
@@ -476,6 +450,11 @@ void Emitter::mod(bool forceNumber, FR frRes, FR frLeft, FR frRight) {
   hwLeft = getOrAllocFRInVecD(frLeft, true);
   hwRight = getOrAllocFRInVecD(frRight, true);
 
+  if (leftIsNum)
+    emitTypeAssert(frLeft, hwLeft, TypePred::IsNumber);
+  if (rightIsNum)
+    emitTypeAssert(frRight, hwRight, TypePred::IsNumber);
+
   if (slow) {
     // Since HermesValue is NaN-boxed we know that all non-number values will be
     // NaN. So we can conveniently test for non-number values by checking for
@@ -503,32 +482,28 @@ void Emitter::mod(bool forceNumber, FR frRes, FR frLeft, FR frRight) {
 
   a.bind(contLab);
 
-  slowPaths_.push_back(
-      {.slowPathLab = slowPathLab,
-       .contLab = contLab,
-       .frRes = frRes,
-       .frInput1 = frLeft,
-       .frInput2 = frRight,
-       .hwRes = hwRes,
-       .emittingIP = emittingIP,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment(
-             "// mod r%u, r%u, r%u",
-             sl.frRes.index(),
-             sl.frInput1.index(),
-             sl.frInput2.index());
-         em.a.bind(sl.slowPathLab);
-         em.a.mov(a64::x0, xRuntime);
-         em.loadFrameAddr(a64::x1, sl.frInput1);
-         em.loadFrameAddr(a64::x2, sl.frInput2);
-         EMIT_RUNTIME_CALL(
-             em,
-             SHLegacyValue (*)(
-                 SHRuntime *, const SHLegacyValue *, const SHLegacyValue *),
-             _sh_ljs_mod_rjs);
-         em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
-         em.a.b(sl.contLab);
-       }});
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      emittingIP,
+      [frRes, frLeft, frRight, hwRes](Emitter &em, SlowPath &sp) {
+        em.comment(
+            "// mod r%u, r%u, r%u",
+            frRes.index(),
+            frLeft.index(),
+            frRight.index());
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(a64::x0, xRuntime);
+        em.loadFrameAddr(a64::x1, frLeft);
+        em.loadFrameAddr(a64::x2, frRight);
+        EMIT_RUNTIME_CALL(
+            em,
+            SHLegacyValue (*)(
+                SHRuntime *, const SHLegacyValue *, const SHLegacyValue *),
+            _sh_ljs_mod_rjs);
+        em.movHWFromHW<false>(hwRes, HWReg::gpX(0));
+        em.a.b(sp.contLab);
+      });
 }
 
 void Emitter::arithBinOp(
@@ -569,6 +544,11 @@ void Emitter::arithBinOp(
   hwLeft = getOrAllocFRInVecD(frLeft, true);
   hwRight = getOrAllocFRInVecD(frRight, true);
 
+  if (leftIsNum)
+    emitTypeAssert(frLeft, hwLeft, TypePred::IsNumber);
+  if (rightIsNum)
+    emitTypeAssert(frRight, hwRight, TypePred::IsNumber);
+
   if (slow) {
     slowPathLab = newSlowPathLabel();
     contLab = newContLabel();
@@ -598,32 +578,26 @@ void Emitter::arithBinOp(
 
   a.bind(contLab);
 
-  slowPaths_.push_back(
-      {.slowPathLab = slowPathLab,
-       .contLab = contLab,
-       .name = name,
-       .frRes = frRes,
-       .frInput1 = frLeft,
-       .frInput2 = frRight,
-       .hwRes = hwRes,
-       .slowCall = slowCall,
-       .slowCallName = slowCallName,
-       .emittingIP = emittingIP,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment(
-             "// %s r%u, r%u, r%u",
-             sl.name,
-             sl.frRes.index(),
-             sl.frInput1.index(),
-             sl.frInput2.index());
-         em.a.bind(sl.slowPathLab);
-         em.a.mov(a64::x0, xRuntime);
-         em.loadFrameAddr(a64::x1, sl.frInput1);
-         em.loadFrameAddr(a64::x2, sl.frInput2);
-         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
-         em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
-         em.a.b(sl.contLab);
-       }});
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      emittingIP,
+      [name, frRes, frLeft, frRight, hwRes, slowCall, slowCallName](
+          Emitter &em, SlowPath &sp) {
+        em.comment(
+            "// %s r%u, r%u, r%u",
+            name,
+            frRes.index(),
+            frLeft.index(),
+            frRight.index());
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(a64::x0, xRuntime);
+        em.loadFrameAddr(a64::x1, frLeft);
+        em.loadFrameAddr(a64::x2, frRight);
+        em.callRuntimeWithSavedIP(slowCall, slowCallName);
+        em.movHWFromHW<false>(hwRes, HWReg::gpX(0));
+        em.a.b(sp.contLab);
+      });
 }
 
 void Emitter::bitBinOp(
@@ -699,32 +673,26 @@ void Emitter::bitBinOp(
 
   a.bind(contLab);
 
-  slowPaths_.push_back(
-      {.slowPathLab = slowPathLab,
-       .contLab = contLab,
-       .name = name,
-       .frRes = frRes,
-       .frInput1 = frLeft,
-       .frInput2 = frRight,
-       .hwRes = hwRes,
-       .slowCall = (void *)slowCall,
-       .slowCallName = slowCallName,
-       .emittingIP = emittingIP,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment(
-             "// %s r%u, r%u, r%u",
-             sl.name,
-             sl.frRes.index(),
-             sl.frInput1.index(),
-             sl.frInput2.index());
-         em.a.bind(sl.slowPathLab);
-         em.a.mov(a64::x0, xRuntime);
-         em.loadFrameAddr(a64::x1, sl.frInput1);
-         em.loadFrameAddr(a64::x2, sl.frInput2);
-         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
-         em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
-         em.a.b(sl.contLab);
-       }});
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      emittingIP,
+      [name, frRes, frLeft, frRight, hwRes, slowCall, slowCallName](
+          Emitter &em, SlowPath &sp) {
+        em.comment(
+            "// %s r%u, r%u, r%u",
+            name,
+            frRes.index(),
+            frLeft.index(),
+            frRight.index());
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(a64::x0, xRuntime);
+        em.loadFrameAddr(a64::x1, frLeft);
+        em.loadFrameAddr(a64::x2, frRight);
+        em.callRuntimeWithSavedIP((void *)slowCall, slowCallName);
+        em.movHWFromHW<false>(hwRes, HWReg::gpX(0));
+        em.a.b(sp.contLab);
+      });
 }
 
 void Emitter::strictEqualImpl(bool invert, FR frRes, FR frLeft, FR frRight) {
@@ -741,6 +709,17 @@ void Emitter::strictEqualImpl(bool invert, FR frRes, FR frLeft, FR frRight) {
       isFRKnownOtherNonPtr(frLeft) || isFRKnownOtherNonPtr(frRight)) {
     HWReg hwLeft = getOrAllocFRInGpX(frLeft, true);
     HWReg hwRight = getOrAllocFRInGpX(frRight, true);
+
+    // Evaluate and check the guards before frRes is declared updated below:
+    // frRes may alias frLeft/frRight, and frUpdatedWithHW would otherwise
+    // make isFRKnownBool/isFRKnownOtherNonPtr true only because of the
+    // result declaration, asserting a predicate against a register that
+    // still holds the (differently-typed) original operand.
+    if (isFRKnownBool(frLeft) || isFRKnownOtherNonPtr(frLeft))
+      emitTypeAssert(frLeft, hwLeft, TypePred::BitComparable);
+    if (isFRKnownBool(frRight) || isFRKnownOtherNonPtr(frRight))
+      emitTypeAssert(frRight, hwRight, TypePred::BitComparable);
+
     HWReg hwRes = getOrAllocFRInGpX(frRes, false);
     frUpdatedWithHW(frRes, hwRes, FRType::Bool);
 
@@ -759,6 +738,15 @@ void Emitter::strictEqualImpl(bool invert, FR frRes, FR frLeft, FR frRight) {
     // Do this always, since this could be the end of the BB.
     HWReg hwLeftD = getOrAllocFRInVecD(frLeft, true);
     HWReg hwRightD = getOrAllocFRInVecD(frRight, true);
+
+    // See the raw-bit tier above: evaluate and check the guards before
+    // frRes is declared updated, since frRes may alias frLeft/frRight and
+    // frUpdatedWithHW would otherwise perturb isFRKnownNumber's answer.
+    if (isFRKnownNumber(frLeft))
+      emitTypeAssert(frLeft, hwLeftD, TypePred::IsNumber);
+    if (isFRKnownNumber(frRight))
+      emitTypeAssert(frRight, hwRightD, TypePred::IsNumber);
+
     HWReg hwRes = getOrAllocFRInGpX(frRes, false);
     frUpdatedWithHW(frRes, hwRes, FRType::Bool);
 
@@ -873,47 +861,34 @@ void Emitter::strictEqualImpl(bool invert, FR frRes, FR frLeft, FR frRight) {
 
   a.bind(contLab);
 
-  slowPaths_.push_back(
-      {.slowPathLab = slowPathLab,
-       .contLab = contLab,
-       .name = !invert ? "StrictEq" : "StrictNEq",
-       .frRes = frRes,
-       .frInput1 = frLeft,
-       .frInput2 = frRight,
-       .hwRes = hwRes,
-       .invert = invert,
-       .passArgsByVal = true,
-       .slowCall = (void *)_sh_ljs_strict_equal,
-       .slowCallName = "_sh_ljs_strict_equal",
-       .emittingIP = emittingIP,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment(
-             "// Slow path: %s r%u, r%u, r%u",
-             sl.name,
-             sl.frRes.index(),
-             sl.frInput1.index(),
-             sl.frInput2.index());
-         em.a.bind(sl.slowPathLab);
-         if (sl.passArgsByVal) {
-           em._loadFrame(HWReg::gpX(0), sl.frInput1);
-           em._loadFrame(HWReg::gpX(1), sl.frInput2);
-         } else {
-           em.a.mov(a64::x0, xRuntime);
-           em.loadFrameAddr(a64::x1, sl.frInput1);
-           em.loadFrameAddr(a64::x2, sl.frInput2);
-         }
-         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      emittingIP,
+      [invert, frRes, frLeft, frRight, hwRes](Emitter &em, SlowPath &sp) {
+        em.comment(
+            "// Slow path: %s r%u, r%u, r%u",
+            !invert ? "StrictEq" : "StrictNEq",
+            frRes.index(),
+            frLeft.index(),
+            frRight.index());
+        em.a.bind(sp.slowPathLab);
+        // _sh_ljs_strict_equal takes its arguments by value.
+        em._loadFrame(HWReg::gpX(0), frLeft);
+        em._loadFrame(HWReg::gpX(1), frRight);
+        em.callRuntimeWithSavedIP(
+            (void *)_sh_ljs_strict_equal, "_sh_ljs_strict_equal");
 
-         // Invert the slow path result if needed.
-         if (sl.invert)
-           em.a.eor(sl.hwRes.a64GpX(), a64::x0, 1);
-         else
-           em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
+        // Invert the slow path result if needed.
+        if (invert)
+          em.a.eor(hwRes.a64GpX(), a64::x0, 1);
+        else
+          em.movHWFromHW<false>(hwRes, HWReg::gpX(0));
 
-         // Comparison functions return bool, so encode it.
-         emit_sh_ljs_bool(em.a, sl.hwRes.a64GpX());
-         em.a.b(sl.contLab);
-       }});
+        // Comparison functions return bool, so encode it.
+        emit_sh_ljs_bool(em.a, hwRes.a64GpX());
+        em.a.b(sp.contLab);
+      });
 }
 
 void Emitter::compareImpl(
@@ -943,6 +918,10 @@ void Emitter::compareImpl(
 
   hwLeft = getOrAllocFRInVecD(frLeft, true);
   hwRight = getOrAllocFRInVecD(frRight, true);
+  if (leftIsNum)
+    emitTypeAssert(frLeft, hwLeft, TypePred::IsNumber);
+  if (rightIsNum)
+    emitTypeAssert(frRight, hwRight, TypePred::IsNumber);
   if (slow) {
     slowPathLab = newSlowPathLabel();
     contLab = newContLabel();
@@ -979,48 +958,47 @@ void Emitter::compareImpl(
 
   a.bind(contLab);
 
-  slowPaths_.push_back(
-      {.slowPathLab = slowPathLab,
-       .contLab = contLab,
-       .name = name,
-       .frRes = frRes,
-       .frInput1 = frLeft,
-       .frInput2 = frRight,
-       .hwRes = hwRes,
-       .invert = invSlow,
-       .passArgsByVal = passArgsByVal,
-       .slowCall = slowCall,
-       .slowCallName = slowCallName,
-       .emittingIP = emittingIP,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment(
-             "// Slow path: j_%s r%u, r%u, r%u",
-             sl.name,
-             sl.frRes.index(),
-             sl.frInput1.index(),
-             sl.frInput2.index());
-         em.a.bind(sl.slowPathLab);
-         if (sl.passArgsByVal) {
-           em._loadFrame(HWReg::gpX(0), sl.frInput1);
-           em._loadFrame(HWReg::gpX(1), sl.frInput2);
-         } else {
-           em.a.mov(a64::x0, xRuntime);
-           em.loadFrameAddr(a64::x1, sl.frInput1);
-           em.loadFrameAddr(a64::x2, sl.frInput2);
-         }
-         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      emittingIP,
+      [name,
+       frRes,
+       frLeft,
+       frRight,
+       hwRes,
+       invSlow,
+       passArgsByVal,
+       slowCall,
+       slowCallName](Emitter &em, SlowPath &sp) {
+        em.comment(
+            "// Slow path: j_%s r%u, r%u, r%u",
+            name,
+            frRes.index(),
+            frLeft.index(),
+            frRight.index());
+        em.a.bind(sp.slowPathLab);
+        if (passArgsByVal) {
+          em._loadFrame(HWReg::gpX(0), frLeft);
+          em._loadFrame(HWReg::gpX(1), frRight);
+        } else {
+          em.a.mov(a64::x0, xRuntime);
+          em.loadFrameAddr(a64::x1, frLeft);
+          em.loadFrameAddr(a64::x2, frRight);
+        }
+        em.callRuntimeWithSavedIP(slowCall, slowCallName);
 
-         // Invert the slow path result if needed.
-         if (sl.invert)
-           em.a.eor(sl.hwRes.a64GpX(), a64::x0, 1);
-         else
-           em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
+        // Invert the slow path result if needed.
+        if (invSlow)
+          em.a.eor(hwRes.a64GpX(), a64::x0, 1);
+        else
+          em.movHWFromHW<false>(hwRes, HWReg::gpX(0));
 
-         // Comparison functions return bool, so encode it.
-         emit_sh_ljs_bool(em.a, sl.hwRes.a64GpX());
-         em.a.b(sl.contLab);
-       }});
+        // Comparison functions return bool, so encode it.
+        emit_sh_ljs_bool(em.a, hwRes.a64GpX());
+        em.a.b(sp.contLab);
+      });
 }
 
 } // namespace hermes::vm::arm64
-#endif // HERMESVM_JIT
+#endif // HERMESVM_JIT_ARM64

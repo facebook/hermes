@@ -22,9 +22,14 @@
 #include "hermes/VMLayouts/StackFrameLayout.h"
 
 #include "llvh/ADT/DenseMap.h"
+#include "llvh/ADT/SmallVector.h"
 
 #include <cstdarg>
 #include <deque>
+#include <new>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
 namespace hermes::vm::arm64 {
 
@@ -197,10 +202,11 @@ static constexpr auto xRuntime = a64::x19;
 // x20 is frame
 static constexpr auto xFrame = a64::x20;
 
-/// Scratch register. x16/x17 sit outside the register allocator and are used
-/// as scratch (thunk targets, IP materialization); nothing holds a value in
-/// them across an emitter call.
+/// Scratch registers. x16/x17 sit outside the register allocator and are
+/// used as scratch (call targets, IP materialization, type assert check
+/// sequences); nothing holds a value in them across an emitter call.
 static constexpr auto xScratch = a64::x16;
+static constexpr auto xScratch2 = a64::x17;
 
 /// GP arg registers (inclusive).
 // static constexpr std::pair<uint8_t, uint8_t> kGPArgs(0, 7);
@@ -294,6 +300,43 @@ class TempRegAlloc {
  private:
 };
 
+/// A property of an FR's value that a fast path relies on. These are the
+/// predicates the emitters actually exploit, which is narrower and more
+/// useful than the declared FRType.
+enum class TypePred : uint8_t {
+  /// Unsigned-below (HVTag_First << kHV_NumDataBits).
+  IsNumber,
+  /// ETag == HVETag_Bool.
+  IsBool,
+  /// Tag unsigned-below the pointer range. This is the GC-safety predicate.
+  NotPointer,
+  /// NotPointer && !IsNumber: the raw bits are the value's identity under
+  /// strict equality, so `===` is a bit compare. Doubles are excluded
+  /// because NaN is not equal to itself while its bits are, and -0 and +0
+  /// are equal while their bits are not; pointers because strings compare
+  /// by content rather than address.
+  BitComparable,
+  /// Tag == HVTag_Object.
+  IsObject,
+};
+
+/// \return a human-readable name for \p pred, for diagnostics.
+const char *typePredName(TypePred pred);
+
+/// One emitted type check, recorded so the failure handler can name it.
+struct TypeAssertSite {
+  CodeBlock *codeBlock;
+  uint32_t bytecodeOfs;
+  uint16_t frIndex;
+  TypePred pred;
+};
+
+/// Report a failed JIT type assertion and abort. Called only from JIT'ed
+/// code, and never returns, so it needs no register or frame preservation.
+[[noreturn]] void _jit_type_assert_failed(
+    uint32_t siteIdx,
+    const std::vector<TypeAssertSite> *sites);
+
 class Emitter {
   Runtime &runtime_;
   JITContext::Impl &jitImpl_;
@@ -302,6 +345,8 @@ class Emitter {
   unsigned const dumpJitCode_;
   /// Whether to emit asserts in the JIT'ed code.
   bool const emitAsserts_;
+  /// Whether to verify FR type assumptions in the JIT'ed code.
+  bool const emitTypeAsserts_;
   /// Whether to emit counters in the JIT'ed code.
   bool const emitCounters_;
 
@@ -320,44 +365,94 @@ class Emitter {
   /// VecD temp registers.
   TempRegAlloc vecTemp_{kVecTemp1, kVecTemp2};
 
-  /// Keep enough information to generate a slow path at the end of the
-  /// function.
-  struct SlowPath {
+  /// A deferred slow path, emitted at the end of the function.
+  ///
+  /// Everything the slow path needs beyond the common fields below is held in
+  /// the lambda passed to the constructor, stored inline in \c storage_. This
+  /// keeps each slow path's state private to the one place that produces and
+  /// consumes it, instead of a shared set of fields that any slow path could
+  /// read whether or not its producer set them.
+  class SlowPath {
+   public:
     /// Label of the slow path.
     asmjit::Label slowPathLab;
     /// Label to jump to after the slow path.
     asmjit::Label contLab;
-    /// Target if this is a branch.
-    asmjit::Label target;
-
-    /// Name of the slow path.
-    const char *name;
-    /// Frame register indexes;
-    FR frRes, frInput1, frInput2;
-    /// Optional hardware register for the result.
-    HWReg hwRes;
-    /// Whether to invert a condition.
-    bool invert;
-    /// Whether to pass arguments by value to the slow path.
-    bool passArgsByVal;
-    /// Some number or index that needs to be passed to the slow path.
-    unsigned sizeOrIdx;
-    /// Another number or index that needs to be passed to the slow path.
-    unsigned sizeOrIdx2;
-
-    /// Pointer to the slow path function that must be called.
-    void *slowCall;
-    /// The name of the slow path function.
-    const char *slowCallName;
-
     /// Bytecode IP of the instruction that this is a slow path for.
     const inst::Inst *emittingIP;
 
-    /// Callback to actually emit.
-    void (*emit)(Emitter &em, SlowPath &sl);
+    /// \param l is invoked as l(Emitter &, SlowPath &) to emit the slow path.
+    /// Its captures are copied into \c storage_ and never destroyed, so they
+    /// must be trivially destructible and must fit.
+    template <typename L>
+    SlowPath(
+        asmjit::Label slowPathLab,
+        asmjit::Label contLab,
+        const inst::Inst *emittingIP,
+        L &&l)
+        : slowPathLab(slowPathLab),
+          contLab(contLab),
+          emittingIP(emittingIP),
+          emit_([](Emitter &em, SlowPath &sp) {
+            (*reinterpret_cast<std::decay_t<L> *>(sp.storage_))(em, sp);
+          }) {
+      using Lambda = std::decay_t<L>;
+      static_assert(
+          sizeof(Lambda) <= sizeof(storage_),
+          "slow path captures too much; enlarge storage_ or capture less");
+      static_assert(
+          alignof(Lambda) <= alignof(void *),
+          "slow path captures are over-aligned");
+      static_assert(
+          std::is_trivially_destructible_v<Lambda>,
+          "slow path captures must be trivially destructible");
+      ::new (storage_) Lambda(std::forward<L>(l));
+    }
+
+    /// Overload for slow paths that do not branch back to a continuation.
+    template <typename L>
+    SlowPath(asmjit::Label slowPathLab, const inst::Inst *emittingIP, L &&l)
+        : SlowPath(
+              slowPathLab,
+              asmjit::Label(),
+              emittingIP,
+              std::forward<L>(l)) {}
+
+    /// Non-copyable and non-movable: \c storage_ holds a type-erased lambda
+    /// that cannot be relocated by the implicit memberwise copy. std::deque
+    /// never relocates existing elements, so emplace_back and pop_front are
+    /// all that is needed.
+    SlowPath(const SlowPath &) = delete;
+    SlowPath &operator=(const SlowPath &) = delete;
+
+    /// Emit this slow path.
+    void emit(Emitter &em) {
+      emit_(em, *this);
+    }
+
+   private:
+    void (*emit_)(Emitter &em, SlowPath &sp);
+    /// Inline storage for the lambda's captures. Sized to the largest current
+    /// slow path, jCond, whose captures include an asmjit::Label (16 bytes, an
+    /// Operand) plus three pointers, two FRs and two bools. Raising this is
+    /// fine; the static_assert above is what keeps a too-large capture from
+    /// becoming a silent heap allocation.
+    alignas(void *) char storage_[56];
   };
   /// Queue of slow paths.
   std::deque<SlowPath> slowPaths_{};
+
+  /// Records for every emitted type check, in site-index order. Owned by
+  /// JITContext::Impl, which outlives the emitted code that refers to it;
+  /// this is only a pointer to that entry, claimed on first use.
+  std::vector<TypeAssertSite> *typeAssertSites_ = nullptr;
+  /// The shared failure tail, bound only if there is at least one site.
+  asmjit::Label typeAssertFailLab_{};
+
+  /// FRs written by the bytecode instruction currently being emitted whose
+  /// global register class requires a check. Drained at each instruction
+  /// boundary by emitPendingTypeAsserts().
+  llvh::SmallVector<FR, 4> typeAssertPendingWrites_{};
 
   /// Descriptor for a single RO data entry.
   struct DataDesc {
@@ -372,10 +467,6 @@ class Emitter {
   std::vector<DataDesc> roDataDesc_{};
   std::vector<uint8_t> roData_{};
   asmjit::Label roDataLabel_{};
-
-  /// Each thunk contains the offset of the function pointer in roData.
-  std::vector<std::pair<asmjit::Label, int32_t>> thunks_{};
-  llvh::DenseMap<void *, size_t> thunkMap_{};
 
   /// Map from the bit pattern of a double value to offset in constant pool.
   llvh::DenseMap<hermes::DenseUInt64, int32_t> fp64ConstMap_{};
@@ -425,6 +516,7 @@ class Emitter {
       JITContext::Impl &jitImpl,
       unsigned dumpJitCode,
       bool emitAsserts,
+      bool emitTypeAsserts,
       bool emitCounters,
       PerfJitDump *perfJitDump,
       CodeBlock *codeBlock,
@@ -456,7 +548,7 @@ class Emitter {
   /// line so that vsnprintf is not duplicated into every caller.
   void commentV(const char *fmt, va_list args);
 
-  /// Emit the catch table, slow paths, thunks and RO data,
+  /// Emit the catch table, slow paths and RO data,
   /// then reset the stack, end any try, and return.
   /// \param exceptionHandlers the labels for the exception handler table.
   void leave(llvh::ArrayRef<const asmjit::Label *> exceptionHandlers);
@@ -927,6 +1019,41 @@ class Emitter {
   void loadParentNoTraps(FR frRes, FR frObj);
   void typedLoadParent(FR frRes, FR frObj);
 
+  /// Emit, only when emitTypeAsserts_ is set, a trap-on-violation check
+  /// that the value of \p fr, currently held in \p hwVal, satisfies
+  /// \p pred.
+  ///
+  /// Uses only xScratch/xScratch2 and never touches the register
+  /// allocator, so it is a pure insertion. It clobbers NZCV, so the caller
+  /// must have verified that flags are dead at the insertion point. That
+  /// is an obligation, not a property emitters have in general: see
+  /// selectObject, which holds flags across getOrAllocFRInGpX.
+  ///
+  /// Where an emitter knows a type fact per operand, guard each check on
+  /// that operand's own fact, never on the emitter's combined fast-path
+  /// condition: the point is to assert every fact the JIT holds, not only
+  /// the ones the chosen code shape happens to rely on.
+  void emitTypeAssert(FR fr, HWReg hwVal, TypePred pred);
+
+  /// Emit, at a bytecode instruction boundary, the global-register-class
+  /// checks for every FR recorded by recordFRWriteForAssert() since the
+  /// last call, then clear the recorded set. Called from compileBB as a
+  /// sibling of assertPostInstructionInvariants(), never from inside it:
+  /// that function's body is compiled out under NDEBUG, and emitting
+  /// checks from within it would silently disable Class C in
+  /// release-with-flag builds.
+  ///
+  /// This checks the value each FR holds at the boundary, not at the
+  /// instruction's write to it. An instruction that writes a
+  /// non-conforming value, calls the runtime (a GC safepoint), and then
+  /// overwrites it with a conforming one is not caught; only the value
+  /// that survives the instruction is.
+  void emitPendingTypeAsserts() {
+    if (LLVM_LIKELY(typeAssertPendingWrites_.empty()))
+      return;
+    emitPendingTypeAssertsSlow();
+  }
+
  private:
   /// \return the byte offset of \p fr's slot from xFrame.
   static constexpr inline uint32_t frByteOffset(FR fr) {
@@ -1197,25 +1324,15 @@ class Emitter {
   /// Register a 64-bit constant in RO DATA and return its offset.
   int32_t uint64Const(uint64_t bits, const char *comment);
 
-  /// Register \p fn as a thunk and return its label.
-  /// \param name is an optional name for the thunk.
-  asmjit::Label registerThunk(void *fn, const char *name = nullptr);
+  /// Emit a call to \p fn, saving the bytecode IP to Runtime::currentIP
+  /// before making the call. This should be used for all calls that may
+  /// observe the IP, such as calls that may throw exceptions, or perform
+  /// allocations.
+  void callRuntimeWithSavedIP(void *fn, const char *name);
 
-  /// Register a call as a thunk and emit a call to it. Note that most calls
-  /// into runtime functions should use \c callThunkWithSavedIP below.
-  void callThunk(void *fn, const char *name);
-
-  /// Register a call as a thunk and emit a call to it, saving the bytecode IP
-  /// to Runtime::currentIP before making the call. This should be used for all
-  /// calls that may observe the IP, such as calls that may throw exceptions, or
-  /// perform allocations.
-  void callThunkWithSavedIP(void *fn, const char *name);
-
-  /// Call a function without registering it as a thunk. This should be used for
-  /// functions that will only have a single call site in the emitted function,
-  /// and therefore do not benefit from a thunk. Note that like \c callThunk,
-  /// this does not save the IP.
-  void callWithoutThunk(void *fn, const char *name);
+  /// Emit a call to \p fn without saving the IP. This should be used only
+  /// where saving the IP is unnecessary or incorrect.
+  void callRuntime(void *fn, const char *name);
 
   /// Emit the code that runs when this function is longjmped to.
   /// Performs the catch table lookup and jumps to the appropriate catch block,
@@ -1223,8 +1340,42 @@ class Emitter {
   /// exception.
   void emitCatchTable(llvh::ArrayRef<const asmjit::Label *> exceptionHandlers);
   void emitSlowPaths();
-  void emitThunks();
   void emitROData();
+
+  /// Emit \c emitTypeAssert's check sequence for \p pred against \p xVal,
+  /// which holds the current value of \p fr, recording a TypeAssertSite.
+  /// The caller emits the dump comment, so that it precedes any load it
+  /// had to emit to produce \p xVal.
+  void emitTypeAssertGpX(FR fr, const a64::GpX &xVal, TypePred pred);
+
+  /// Like \c emitTypeAssert, but for an \p fr that the fast path never
+  /// materializes into a register: reads it with \c readFRForAssert first.
+  /// Like \c emitTypeAssert, it does nothing unless emitTypeAsserts_ is
+  /// set, so callers need not check it themselves.
+  void emitTypeAssertFR(FR fr, TypePred pred);
+
+  /// Read the current value of \p fr into xScratch, for use immediately
+  /// before an \c emitTypeAssertGpX call, without allocating or perturbing
+  /// any FRState. Honors the FRState up-to-date invariants rather than
+  /// merely the location priority: the local register if any (locals are
+  /// always current), else the global register only if
+  /// globalRegUpToDate, else the frame slot (asserting frameUpToDate).
+  /// \pre \p fr is not dirty (regIsDirty).
+  void readFRForAssert(FR fr);
+
+  /// The out-of-line body of \c emitPendingTypeAsserts.
+  /// \pre the pending set is not empty.
+  void emitPendingTypeAssertsSlow();
+
+  /// Emit the shared out-of-line tail that all type assert failure stubs
+  /// jump to, if any type assert was emitted for this function.
+  void emitTypeAssertFailTail();
+
+  /// Record that \p fr was written, so that the instruction boundary can
+  /// check the value against its global register class. Records nothing
+  /// unless the FR owns a global register. Callers must check
+  /// emitTypeAsserts_ themselves; this does not.
+  void recordFRWriteForAssert(FR fr);
 
  private:
   /// Set up the call frame and perform the call. The caller should have already
