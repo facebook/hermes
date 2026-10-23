@@ -399,6 +399,7 @@ static constexpr void setArrayFastPathClassFlags(ClassFlags &res) {
   res.hostObject = 0;
   res.lazyObject = 0;
   res.proxyObject = 0;
+  res.isCachedUsingEpoch = 0;
   res.parentChangeCounter = 0;
   res.unusedPadding = 0;
 }
@@ -411,38 +412,44 @@ static constexpr void setArrayFastPathClassFlags(ClassFlags &res) {
 /// \return true if the prototype chain does not contain any index-like
 /// properties, false otherwise.
 static bool checkAndCacheProtoForFastPath(Runtime &runtime) {
-  auto *arrParent = *runtime.arrayPrototype;
-  arrParent->setCachedUsingEpoch();
+  Handle<JSObject> arrParent = runtime.arrayPrototype;
+  JSObject::setCachedUsingEpoch(arrParent, runtime);
 
   // If the parent has any index-like properties, bail.
   if (LLVM_UNLIKELY(arrParent->getClass(runtime)->getHasIndexLikeProperties()))
     return false;
 
+  struct : public Locals {
+    PinnedValue<JSObject> curParent;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
   // Check if there are any index-like properties in any parent.
   // If so, we can't use the fast path.
-  for (JSObject *curParent = arrParent->getParent(runtime);
-       curParent != nullptr;
-       curParent = curParent->getParent(runtime)) {
+  for (lv.curParent = arrParent->getParent(runtime);
+       lv.curParent.get() != nullptr;
+       lv.curParent = lv.curParent->getParent(runtime)) {
     // If the object may have index-like properties that are not reflected on
     // the hidden class or indexed storage, bail.
     if (LLVM_UNLIKELY(
-            curParent->isHostObject(runtime) ||
-            curParent->isProxyObject(runtime) || curParent->isLazy(runtime)))
+            lv.curParent->isHostObject(runtime) ||
+            lv.curParent->isProxyObject(runtime) ||
+            lv.curParent->isLazy(runtime)))
       return false;
 
     // Any index-like properties in the parent means we can't use the fast path
     // because we might trigger an accessor or have to check property flags.
     if (LLVM_UNLIKELY(
-            curParent->getClass(runtime)->getHasIndexLikeProperties()))
+            lv.curParent->getClass(runtime)->getHasIndexLikeProperties()))
       return false;
 
     // Unlike the immediate parent, we do not expect any parent further up the
     // chain to have indexed storage. Disqualify anything with indexed storage,
     // since actually checking the "indexed range" is costly.
-    if (LLVM_UNLIKELY(curParent->hasIndexedStorage(runtime)))
+    if (LLVM_UNLIKELY(lv.curParent->hasIndexedStorage(runtime)))
       return false;
 
-    curParent->setCachedUsingEpoch();
+    JSObject::setCachedUsingEpoch(lv.curParent, runtime);
   }
   runtime.setArrayFastPathParentEpoch();
 
@@ -452,76 +459,83 @@ static bool checkAndCacheProtoForFastPath(Runtime &runtime) {
 /// Declared in JSLib.h so it can be used outside of JSLib
 bool arrayFastPathCheck(
     Runtime &runtime,
-    JSArray *arr,
-    HiddenClass *arrayClass,
+    Handle<JSArray> arr,
+    Handle<HiddenClass> arrayClass,
     uint32_t len) {
-  NoAllocScope noAlloc{runtime};
-  assert(arr && "arr must be non-null");
+  {
+    NoAllocScope noAlloc{runtime};
+    assert(arr && "arr must be non-null");
 
-  HiddenClass *clazz = arr->getClass(runtime);
+    HiddenClass *clazz = arr->getClass(runtime);
 
-  // Optionally check that 'length' hasn't been reconfigured.
-  if (arrayClass && clazz != arrayClass)
-    return false;
+    // Optionally check that 'length' hasn't been reconfigured.
+    if (arrayClass && clazz != arrayClass.get())
+      return false;
 
-  // Make our own ClassFlags here to compare against quickly, to avoid having
-  // to use lots of accessors on HiddenClass.
-  ClassFlags arrayFastPathClassFlags{};
-  setArrayFastPathClassFlags(arrayFastPathClassFlags);
+    // To use the fast path, the object has to be an array with fast index
+    // properties (no index-like properties that we can't read quickly).
+    // Make our own ClassFlags here to compare against quickly, to avoid having
+    // to use lots of accessors on HiddenClass.
+    ClassFlags arrayFastPathClassFlags{};
+    setArrayFastPathClassFlags(arrayFastPathClassFlags);
 
 #ifndef NDEBUG
-  // Test that all the flags are handled in setArrayFastPathClassFlags
-  // by starting with all the bits reversed and calling the function,
-  // and making sure the result is the same.
-  ClassFlags classFlagsForAssert{};
-  std::memset(&classFlagsForAssert, 0xff, sizeof(ClassFlags));
-  setArrayFastPathClassFlags(classFlagsForAssert);
-  assert(
-      std::memcmp(
-          &classFlagsForAssert, &arrayFastPathClassFlags, sizeof(ClassFlags)) ==
-          0 &&
-      "setArrayFastPathClassFlags is missing a flag");
+    // Test that all the flags are handled in setArrayFastPathClassFlags
+    // by starting with all the bits reversed and calling the function,
+    // and making sure the result is the same.
+    ClassFlags classFlagsForAssert{};
+    std::memset(&classFlagsForAssert, 0xff, sizeof(ClassFlags));
+    setArrayFastPathClassFlags(classFlagsForAssert);
+    assert(
+        std::memcmp(
+            &classFlagsForAssert,
+            &arrayFastPathClassFlags,
+            sizeof(ClassFlags)) == 0 &&
+        "setArrayFastPathClassFlags is missing a flag");
 #endif
 
-  ClassFlags arrClassFlags = clazz->getFlags();
-  // Clear the flags that only affect named properties, which the fast path
-  // doesn't observe.
-  arrClassFlags.dictionaryMode = 0;
-  arrClassFlags.dictionaryNoCacheMode = 0;
-  arrClassFlags.mayHaveAccessor = 0;
-  arrClassFlags.typed = 0;
-  arrClassFlags.parentChangeCounter = 0;
-  arrClassFlags.unusedPadding = 0;
+    ClassFlags arrClassFlags = clazz->getFlags();
+    // Clear the flags that only affect named properties or caching, which the
+    // fast path doesn't observe.
+    arrClassFlags.dictionaryMode = 0;
+    arrClassFlags.dictionaryNoCacheMode = 0;
+    arrClassFlags.mayHaveAccessor = 0;
+    arrClassFlags.typed = 0;
+    arrClassFlags.isCachedUsingEpoch = 0;
+    arrClassFlags.parentChangeCounter = 0;
+    arrClassFlags.unusedPadding = 0;
 
-  static_assert(
-      sizeof(ClassFlags) == sizeof(uint16_t), "ClassFlags must be uint16_t");
-  if (LLVM_UNLIKELY(
-          std::memcmp(
-              &arrayFastPathClassFlags, &arrClassFlags, sizeof(uint16_t)) != 0))
-    return false;
+    static_assert(
+        sizeof(ClassFlags) == sizeof(uint16_t), "ClassFlags must be uint16_t");
+    if (LLVM_UNLIKELY(
+            std::memcmp(
+                &arrayFastPathClassFlags, &arrClassFlags, sizeof(uint16_t)) !=
+            0))
+      return false;
 
-  // Fast path assumes that the array storage goes from 0 to len.
-  if (arr->getBeginIndex() != 0 || arr->getElemCount() != len)
-    return false;
+    // Fast path assumes that the array storage goes from 0 to len.
+    if (arr->getBeginIndex() != 0 || arr->getElemCount() != len)
+      return false;
 
-  JSArray *arrParent = *runtime.arrayPrototype;
+    JSArray *arrParent = *runtime.arrayPrototype;
 
-  // If the parent has been modified, bail.
-  if (LLVM_UNLIKELY(arr->getParent(runtime) != arrParent))
-    return false;
+    // If the parent has been modified, bail.
+    if (LLVM_UNLIKELY(arr->getParent(runtime) != arrParent))
+      return false;
 
-  // If there are any indexed properties in the parent we can't use the fast
-  // path. We check this specially because Array.prototype is itself
-  // an array that starts with no actual indexed properties.
-  //
-  // NOTE: It may be possible to use the fast path if the indexed properties
-  // don't overlap with the array's own indexed range, but that seems
-  // unnecessary to check for now given that this check is really to make sure
-  // that Array.prototype isn't filled with properties, and keeping track of
-  // the upper bound on the length here takes more effort and is potentially
-  // error-prone.
-  if (LLVM_UNLIKELY(arrParent->getElemCount()))
-    return false;
+    // If there are any indexed properties in the parent we can't use the fast
+    // path. We check this specially because Array.prototype is itself
+    // an array that starts with no actual indexed properties.
+    //
+    // NOTE: It may be possible to use the fast path if the indexed properties
+    // don't overlap with the array's own indexed range, but that seems
+    // unnecessary to check for now given that this check is really to make sure
+    // that Array.prototype isn't filled with properties, and keeping track of
+    // the upper bound on the length here takes more effort and is potentially
+    // error-prone.
+    if (LLVM_UNLIKELY(arrParent->getElemCount()))
+      return false;
+  }
 
   if (LLVM_UNLIKELY(!runtime.checkArrayFastPathParentEpoch()))
     return checkAndCacheProtoForFastPath(runtime);
@@ -1067,6 +1081,7 @@ CallResult<HermesValue> arrayPrototypeJoin(void *, Runtime &runtime) {
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   struct : Locals {
     PinnedValue<JSObject> O;
+    PinnedValue<JSArray> arr;
     PinnedValue<> lenProp;
     PinnedValue<StringPrimitive> sep;
     PinnedValue<JSArray::StorageType> strings;
@@ -1127,20 +1142,26 @@ CallResult<HermesValue> arrayPrototypeJoin(void *, Runtime &runtime) {
   uint32_t fastPathEnd = 0;
 
   // 1. Fast Path: Process as many elements as possible quickly.
-  if (JSArray *arr = dyn_vmcast<JSArray>(lv.O.get());
-      arr && arrayFastPathCheck(runtime, arr, nullptr, (uint32_t)len)) {
+  if (vmisa<JSArray>(lv.O.get()) &&
+      arrayFastPathCheck(
+          runtime,
+          Handle<JSArray>::vmcast(&lv.O),
+          Runtime::makeNullHandle<HiddenClass>(),
+          (uint32_t)len)) {
     // Accumulate the size of the strings in the array, stopping at the first
     // element that is not a string, null, or undefined.
+    lv.arr.castAndSetHermesValue<JSArray>(lv.O.getHermesValue());
 
     assert(
         len != 0 &&
         "we already checled len is not 0, so storage should be non-null");
-    auto *storage = arr->getIndexedStorageUnsafe(runtime);
+    auto *storage = lv.arr->getIndexedStorageUnsafe(runtime);
     // Save it for later.
     lv.inputStorage = storage;
 
     uint32_t i;
     for (i = 0; i < len; ++i) {
+      NoAllocScope noAlloc{runtime};
       SmallHermesValue elem = storage->at(i); // Direct access
       uint32_t elemLen;
       if (elem.isString())
@@ -1438,11 +1459,11 @@ CallResult<HermesValue> arrayPrototypePush(void *, Runtime &runtime) {
   OptValue<uint32_t> lenOpt = llvh::None;
   if (LLVM_LIKELY(vmisa<JSArray>(args.getThisArg()))) {
     // Fast path for getting the length.
-    JSArray *arr = vmcast<JSArray>(args.getThisArg());
-    uint32_t len = JSArray::getLength(arr, runtime);
+    auto arr = args.vmcastThis<JSArray>();
+    uint32_t len = JSArray::getLength(*arr, runtime);
 
     if (LLVM_LIKELY(len < UINT32_MAX - argCount) &&
-        arrayFastPathCheck(runtime, arr, *runtime.classJSArray, len)) {
+        arrayFastPathCheck(runtime, arr, runtime.classJSArray, len)) {
       return arrayPrototypePushFastPath(
           runtime, args.vmcastThis<JSArray>(), len, args);
     }
@@ -2733,8 +2754,8 @@ CallResult<HermesValue> arrayPrototypeSplice(void *, Runtime &runtime) {
 
   // If we can use the fast path, do so.
   if (LLVM_LIKELY(*lv.OArray) &&
-      LLVM_LIKELY(arrayFastPathCheck(
-          runtime, *lv.OArray, *runtime.classJSArray, len)) &&
+      LLVM_LIKELY(
+          arrayFastPathCheck(runtime, lv.OArray, runtime.classJSArray, len)) &&
       LLVM_LIKELY(len - actualDeleteCount < UINT32_MAX - itemCount)) {
     // These can be cast to uint32_t because we know that O is a JSArray.
     assert(actualStart <= len && "actualStart out of range");
@@ -3144,10 +3165,10 @@ CallResult<HermesValue> arrayPrototypePop(void *, Runtime &runtime) {
   uint64_t len;
   if (LLVM_LIKELY(vmisa<JSArray>(args.getThisArg()))) {
     // Fast path for getting the length.
-    JSArray *arr = vmcast<JSArray>(args.getThisArg());
-    len = JSArray::getLength(arr, runtime);
+    auto arr = args.vmcastThis<JSArray>();
+    len = JSArray::getLength(*arr, runtime);
 
-    if (arrayFastPathCheck(runtime, arr, *runtime.classJSArray, len)) {
+    if (arrayFastPathCheck(runtime, arr, runtime.classJSArray, len)) {
       return arrayPrototypePopFastPath(
           runtime, args.vmcastThis<JSArray>(), len);
     }
@@ -3451,7 +3472,10 @@ indexOfHelper(Runtime &runtime, NativeArgs args, const bool reverse) {
   if (LLVM_LIKELY(
           arrHandle &&
           arrayFastPathCheck(
-              runtime, arrHandle.get(), nullptr, (uint32_t)len))) {
+              runtime,
+              arrHandle,
+              Runtime::makeNullHandle<HiddenClass>(),
+              (uint32_t)len))) {
     // SmallHermesValue::getRaw() may return uintptr_t, which can be a
     // different type from uint32_t/uint64_t on some platforms (e.g.
     // unsigned long vs unsigned long long).
@@ -4327,14 +4351,20 @@ CallResult<HermesValue> arrayPrototypeReverse(void *, Runtime &runtime) {
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // Fast path for a JSArray with a contiguous storage and no numeric props
   // in the prototype.
-  if (auto *arr = llvh::dyn_vmcast<JSArray>(args.getThisArg())) {
-    NoAllocScope noAllocScope{runtime};
-    uint32_t len = JSArray::getLength(arr, runtime);
+  if (vmisa<JSArray>(args.getThisArg())) {
+    uint32_t len =
+        JSArray::getLength(vmcast<JSArray>(args.getThisArg()), runtime);
     if (len <= 1)
       return args.getThisArg();
 
-    if (arrayFastPathCheck(runtime, arr, nullptr, len)) {
-      auto *storage = arr->getIndexedStorageNullable(runtime);
+    if (arrayFastPathCheck(
+            runtime,
+            args.vmcastThis<JSArray>(),
+            Runtime::makeNullHandle<HiddenClass>(),
+            len)) {
+      NoAllocScope noAllocScope{runtime};
+      auto *storage = vmcast<JSArray>(args.getThisArg())
+                          ->getIndexedStorageNullable(runtime);
       for (uint32_t l = 0, u = len - 1; l < u; ++l, --u) {
         assert(storage && "storage should not be null");
         auto lowerValue = storage->at(l);
@@ -4552,7 +4582,10 @@ CallResult<HermesValue> arrayPrototypeIncludes(void *, Runtime &runtime) {
   if (LLVM_LIKELY(
           arrHandle &&
           arrayFastPathCheck(
-              runtime, arrHandle.get(), nullptr, (uint32_t)len))) {
+              runtime,
+              arrHandle,
+              Runtime::makeNullHandle<HiddenClass>(),
+              (uint32_t)len))) {
     using SearchType = std::conditional_t<
         sizeof(SmallHermesValue::RawType) == 4,
         uint32_t,
@@ -4727,7 +4760,9 @@ CallResult<HermesValue> arrayPrototypeToReversed(void *, Runtime &runtime) {
   }
 
   // Fast Path: Input is a JSArray and arrayFastPathCheck passes.
-  if (jsArr && arrayFastPathCheck(runtime, jsArr.get(), nullptr, len32)) {
+  if (jsArr &&
+      arrayFastPathCheck(
+          runtime, jsArr, Runtime::makeNullHandle<HiddenClass>(), len32)) {
     NoAllocScope noAllocScope{runtime};
     auto *srcStorage = jsArr->getIndexedStorageNullable(runtime);
     auto *destStorage = lv.A->getIndexedStorageNullable(runtime);
@@ -4842,7 +4877,9 @@ CallResult<HermesValue> arrayPrototypeToSorted(void *, Runtime &runtime) {
   // 6. Let sortedList be ? SortIndexedProperties(O, len, SortCompare,
   // READ-THROUGH-HOLES).
   // Copy all elements from O into A, treating holes as undefined.
-  if (jsArr && arrayFastPathCheck(runtime, jsArr.get(), nullptr, len32)) {
+  if (jsArr &&
+      arrayFastPathCheck(
+          runtime, jsArr, Runtime::makeNullHandle<HiddenClass>(), len32)) {
     // A is freshly created with the default class, so length is writable.
     // May allocate, so encode before NoAllocScope.
     auto newLen = SmallHermesValue::encodeNumberValue(len32, runtime);

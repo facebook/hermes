@@ -198,7 +198,8 @@ void JSObject::initializeLazyObject(
   assert(lazyObject->isLazy(runtime) && "object must be lazy");
   assert(
       lazyObject->getClass(runtime)->isExtensible() &&
-      "lazy objects must be initialized before changing integrity flags");
+      !lazyObject->getClass(runtime)->getIsCachedUsingEpoch() &&
+      "lazy objects must be initialized before changing per-object flags");
 
   // only functions can be lazy.
   assert(vmisa<Callable>(lazyObject.get()) && "unexpected lazy object");
@@ -309,7 +310,7 @@ CallResult<bool> JSObject::setParent(
   // parent chain that would prevent adding the property to the cached
   // HiddenClass.
   // We must break the cache, so increment the epoch.
-  if (LLVM_UNLIKELY(self->flags_.isCachedUsingEpoch)) {
+  if (LLVM_UNLIKELY(self->isCachedUsingEpoch(runtime))) {
     runtime.incParentCacheEpoch();
   }
 
@@ -2951,6 +2952,29 @@ bool JSObject::isFrozen(PseudoHandle<JSObject> self, Runtime &runtime) {
   return true;
 }
 
+void JSObject::setCachedUsingEpoch(Handle<JSObject> self, Runtime &runtime) {
+  // Typed objects never change class or parent, so they never need to bump the
+  // epoch, and their shared class cannot change flags.
+  if (self->getClass(runtime)->isTyped())
+    return;
+  // Lazy objects must be materialized before their class flags change,
+  // because materialization replaces the class.
+  if (LLVM_UNLIKELY(self->isLazy(runtime)))
+    initializeLazyObject(runtime, self);
+  struct : public Locals {
+    PinnedValue<HiddenClass> clazz;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  lv.clazz = self->getClass(runtime);
+  HiddenClass *newClazz =
+      HiddenClass::markAsCachedUsingEpoch(lv.clazz, runtime);
+  // Ensure that the epoch doesn't get incremented during this operation
+  // We're just flipping the flag on the HiddenClass, so it's safe to bypass the
+  // increment in this case.
+  self->updateClassIgnoringEpochUnsafe(runtime, newClazz);
+}
+
 CallResult<bool> JSObject::addOwnProperty(
     Handle<JSObject> selfHandle,
     Runtime &runtime,
@@ -3006,16 +3030,16 @@ CallResult<bool> JSObject::addOwnProperty(
 }
 
 void JSObject::tryCacheAddProperty(
-    JSObject *self,
+    Handle<JSObject> self,
     Runtime &runtime,
     RuntimeModule *runtimeModule,
     SHUnit *unit,
     WritePropertyCacheEntry *writeCacheEntry,
-    HiddenClass *startClazz,
+    Handle<HiddenClass> startClazz,
     SlotIndex slot,
-    HiddenClass *resultClazz) {
+    Handle<HiddenClass> resultClazz) {
   assert(writeCacheEntry && !resultClazz->isDictionary());
-  assert(startClazz != resultClazz && "must be a transition");
+  assert(*startClazz != *resultClazz && "must be a transition");
   assert(
       ((unit != nullptr) ^ (runtimeModule != nullptr)) &&
       "unable to determine where to allocate AddPropertyCacheEntry");
@@ -3025,59 +3049,67 @@ void JSObject::tryCacheAddProperty(
       HiddenClass::kDictionaryThreshold < WritePropertyCacheEntry::kMaxSlot);
   assert(slot <= WritePropertyCacheEntry::kMaxSlot);
 
-  NoAllocScope noAlloc{runtime};
+  {
+    NoAllocScope noAlloc{runtime};
 
-  // If any parents are dictionaries, they won't have their HiddenClass change
-  // when properties are modified. Parent cache epoch is incremented when the
-  // HiddenClass changes, so we can't cache this add.
-  // Proxies and HostObjects are excluded for the same reason: what they hold
-  // is not described by their HiddenClass, so the epoch cannot track them. A
-  // Proxy also cannot be traversed with getParent() at all, since its
-  // prototype is given by its target and traps.
-  // Perform these checks up here to avoid allocating an unused add cache entry
-  // if they fail.
-  for (JSObject *cur = self->getParent(runtime); cur != nullptr;
-       cur = cur->getParent(runtime)) {
-    if (LLVM_UNLIKELY(
-            cur->isProxyObject(runtime) || cur->isHostObject(runtime)))
-      return;
-    if (cur->getClass(runtime)->isDictionary())
-      return;
-  }
-
-  uint32_t parentCacheEpoch = runtime.getParentCacheEpoch();
-  uint32_t addCacheIndex = writeCacheEntry->getAddCacheIndex();
-  if (addCacheIndex == 0) {
-    // Need to allocate a new AddPropertyCacheEntry in the RuntimeModule.
-    if (auto optIdx = runtimeModule ? runtimeModule->allocateAddCacheEntry()
-                                    : sh_unit_allocate_add_cache_entry(unit)) {
-      addCacheIndex = *optIdx;
-      writeCacheEntry->setAddCacheIndex(addCacheIndex);
-    } else {
-      // Might fail if we're out of bits to use for the index.
-      return;
+    // If any parents are dictionaries, they won't have their HiddenClass change
+    // when properties are modified. Parent cache epoch is incremented when the
+    // HiddenClass changes, so we can't cache this add.
+    // Proxies and HostObjects are excluded for the same reason: what they hold
+    // is not described by their HiddenClass, so the epoch cannot track them. A
+    // Proxy also cannot be traversed with getParent() at all, since its
+    // prototype is given by its target and traps.
+    // Perform these checks up here to avoid allocating an unused add cache
+    // entry if they fail.
+    for (JSObject *cur = self->getParent(runtime); cur != nullptr;
+         cur = cur->getParent(runtime)) {
+      if (LLVM_UNLIKELY(
+              cur->isProxyObject(runtime) || cur->isHostObject(runtime)))
+        return;
+      if (cur->getClass(runtime)->isDictionary())
+        return;
     }
+
+    uint32_t parentCacheEpoch = runtime.getParentCacheEpoch();
+    uint32_t addCacheIndex = writeCacheEntry->getAddCacheIndex();
+    if (addCacheIndex == 0) {
+      // Need to allocate a new AddPropertyCacheEntry in the RuntimeModule.
+      if (auto optIdx = runtimeModule
+              ? runtimeModule->allocateAddCacheEntry()
+              : sh_unit_allocate_add_cache_entry(unit)) {
+        addCacheIndex = *optIdx;
+        writeCacheEntry->setAddCacheIndex(addCacheIndex);
+      } else {
+        // Might fail if we're out of bits to use for the index.
+        return;
+      }
+    }
+
+    assert(
+        writeCacheEntry->getAddCacheIndex() == addCacheIndex &&
+        addCacheIndex != 0);
+
+    // Populate AddPropertyCacheEntry.
+    AddPropertyCacheEntry &addCacheEntry = runtimeModule
+        ? runtimeModule->getAddCacheEntry(addCacheIndex)
+        : sh_unit_get_add_cache_entry(unit, addCacheIndex);
+    addCacheEntry.setParentEpochAndSlot(parentCacheEpoch, slot);
+    addCacheEntry.startClazz =
+        CompressedPointer::encodeNonNull(*startClazz, runtime);
+    addCacheEntry.resultClazz =
+        CompressedPointer::encodeNonNull(*resultClazz, runtime);
+    addCacheEntry.parent = self->getParentGCPtr(runtime);
   }
 
-  assert(
-      writeCacheEntry->getAddCacheIndex() == addCacheIndex &&
-      addCacheIndex != 0);
-
-  // Populate AddPropertyCacheEntry.
-  AddPropertyCacheEntry &addCacheEntry = runtimeModule
-      ? runtimeModule->getAddCacheEntry(addCacheIndex)
-      : sh_unit_get_add_cache_entry(unit, addCacheIndex);
-  addCacheEntry.setParentEpochAndSlot(parentCacheEpoch, slot);
-  addCacheEntry.startClazz =
-      CompressedPointer::encodeNonNull(startClazz, runtime);
-  addCacheEntry.resultClazz =
-      CompressedPointer::encodeNonNull(resultClazz, runtime);
-  addCacheEntry.parent = self->getParentGCPtr(runtime);
+  struct : public Locals {
+    PinnedValue<JSObject> cur;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
 
   // Mark everything along the prototype chain as a cached parent.
-  for (JSObject *cur = self->getParent(runtime); cur != nullptr;
-       cur = cur->getParent(runtime)) {
-    cur->flags_.isCachedUsingEpoch = 1;
+  for (lv.cur = self->getParent(runtime); lv.cur.get() != nullptr;
+       lv.cur = lv.cur->getParent(runtime)) {
+    JSObject::setCachedUsingEpoch(lv.cur, runtime);
   }
 }
 
@@ -3123,14 +3155,14 @@ ExecutionStatus JSObject::addOwnPropertyImpl(
 
   if (cacheEntry && !lv.resultClazz->isDictionary()) {
     tryCacheAddProperty(
-        *selfHandle,
+        selfHandle,
         runtime,
         runtimeModule,
         unit,
         cacheEntry,
-        *lv.startClazz,
+        lv.startClazz,
         slot,
-        *lv.resultClazz);
+        lv.resultClazz);
   }
 
   return ExecutionStatus::RETURNED;

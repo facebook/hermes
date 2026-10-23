@@ -25,6 +25,8 @@ namespace vm {
 
 // External forward declarations.
 class Runtime;
+class JSArray;
+class HiddenClass;
 struct JSLibStorage;
 
 /// Flags controlling the initialization of the global object.
@@ -104,8 +106,8 @@ enum class TypeErrorKind {
 /// \return whether we can use the fast path for Array methods on \p arr.
 bool arrayFastPathCheck(
     Runtime &runtime,
-    JSArray *arr,
-    HiddenClass *arrayClass,
+    Handle<JSArray> arr,
+    Handle<HiddenClass> arrayClass,
     uint32_t len);
 
 } // namespace vm

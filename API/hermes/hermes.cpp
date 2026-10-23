@@ -3258,7 +3258,7 @@ size_t HermesRuntimeImpl::push(
     auto arrHandle = vm::Handle<vm::JSArray>::vmcast(&phv(arr));
     if (LLVM_LIKELY(oldLen < UINT32_MAX - count) &&
         arrayFastPathCheck(
-            runtime_, *arrHandle, *runtime_.classJSArray, oldLen)) {
+            runtime_, arrHandle, runtime_.classJSArray, oldLen)) {
       auto increaseSizeRes =
           vm::JSArray::increaseStorageEndIndex(arrHandle, runtime_, newLen);
       checkStatus(increaseSizeRes);
