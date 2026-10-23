@@ -110,6 +110,8 @@ class TypeInfo {
     /// Pairs of (this, other) and the result of the comparison/equality.
     /// Note that for equals(), the value is a bool stored as int, so it can be
     /// cast directly to bool for returning.
+    /// equals() only caches false: a true result may depend on a pair still
+    /// in \c visited being assumed equal, and that assumption can later fail.
     /// Never gets elements popped during comparison, unlike the visited set.
     llvh::SmallDenseMap<std::pair<const TypeInfo *, const TypeInfo *>, int>
         cache{};

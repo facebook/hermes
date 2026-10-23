@@ -17,6 +17,8 @@
 #include "hermes/Sema/SemContext.h"
 #include "hermes/Support/StackExecutor.h"
 
+#include "llvh/ADT/SetVector.h"
+
 #if HERMES_PARSE_FLOW
 
 namespace hermes {
@@ -647,17 +649,6 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
     }
   };
 
-  /// Return true if type \p a can "flow" into type \p b.
-  /// TODO: generate message explaining why not.
-  CanFlowResult canAFlowIntoB(Type *a, Type *b) {
-    assert(a->info && b->info && "types haven't been populated yet");
-    return canAFlowIntoB(a->info, b->info);
-  }
-  CanFlowResult canAFlowIntoB(TypeInfo *a, TypeInfo *b);
-  CanFlowResult canAFlowIntoB(ClassType *a, ClassType *b);
-  CanFlowResult canAFlowIntoB(TupleType *a, TupleType *b);
-  CanFlowResult canAFlowIntoB(ExactObjectType *a, ExactObjectType *b);
-
   /// How to handle 'this' parameters when checking if function types can flow.
   enum class ThisFlowDirection {
     /// Supertype this parameters flow into subtype this parameters.
@@ -666,11 +657,73 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
     MethodOverride,
   };
 
+  /// Whether the caller can use a result that requires a checked cast. A cast
+  /// can only be emitted at the outermost relation; nested structural
+  /// positions have nowhere to put one, so they forbid it.
+  /// Only Forbidden relations participate in the cycle check, because the
+  /// assumption made when a relation is revisited ("flows, without a cast")
+  /// is only sound when the consumer rejects casts anyway.
+  enum class CheckedCastMode { Allowed, Forbidden };
+
+  /// State shared by all recursive checks in one flow query.
+  class CanFlowState {
+   public:
+    /// Forbidden-mode (a, b) flow relations currently being evaluated.
+    llvh::SmallSetVector<std::pair<TypeInfo *, TypeInfo *>, 4> active{};
+  };
+
+  /// Return true if type \p a can "flow" into type \p b.
+  /// TODO: generate message explaining why not.
+  CanFlowResult canAFlowIntoB(Type *a, Type *b) {
+    assert(a->info && b->info && "types haven't been populated yet");
+    return canAFlowIntoB(a->info, b->info);
+  }
+  /// Recursive helper used from nested structural positions, which cannot emit
+  /// a checked cast.
+  CanFlowResult canAFlowIntoB(Type *a, Type *b, CanFlowState &state) {
+    assert(a->info && b->info && "types haven't been populated yet");
+    return canAFlowIntoB(
+        a->info,
+        b->info,
+        state,
+        ThisFlowDirection::Default,
+        CheckedCastMode::Forbidden);
+  }
+  CanFlowResult canAFlowIntoB(TypeInfo *a, TypeInfo *b) {
+    CanFlowState state{};
+    // The outermost relation may use a checked cast; nested positions
+    // (below) may not.
+    return canAFlowIntoB(
+        a, b, state, ThisFlowDirection::Default, CheckedCastMode::Allowed);
+  }
+  /// The primary recursive entry point, which performs the cycle check and
+  /// dispatches to the per-kind overloads below.
+  /// \param state cycle detection state, shared by every recursive check
+  ///   within a single top-level query.
+  /// \param thisFlow how to handle 'this' parameters.
+  /// \param castMode whether the caller is able to emit a checked cast. Only
+  ///   the outermost relation can.
+  CanFlowResult canAFlowIntoB(
+      TypeInfo *a,
+      TypeInfo *b,
+      CanFlowState &state,
+      ThisFlowDirection thisFlow = ThisFlowDirection::Default,
+      CheckedCastMode castMode = CheckedCastMode::Forbidden);
+  // The per-kind overloads do not perform their own cycle check; recursive
+  // checks must go through the TypeInfo overload above.
+  // All of them take CanFlowState for uniformity, even when a particular
+  // overload does not need it.
+  CanFlowResult canAFlowIntoB(ClassType *a, ClassType *b, CanFlowState &state);
+  CanFlowResult canAFlowIntoB(TupleType *a, TupleType *b, CanFlowState &state);
+  CanFlowResult
+  canAFlowIntoB(ExactObjectType *a, ExactObjectType *b, CanFlowState &state);
+
   /// \param thisFlow how to handle 'this' parameter.
   CanFlowResult canAFlowIntoB(
       BaseFunctionType *a,
       BaseFunctionType *b,
-      ThisFlowDirection thisFlow = ThisFlowDirection::Default);
+      CanFlowState &state,
+      ThisFlowDirection thisFlow);
 
   /// Different from regular function type flowing, because 'this' parameters
   /// must be handled specially in the method override scenario.
@@ -679,7 +732,15 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// would fail to typecheck.
   /// \return whether \p a can be a method override for \p b.
   bool canAOverrideB(BaseFunctionType *a, BaseFunctionType *b) {
-    return canAFlowIntoB(a, b, ThisFlowDirection::MethodOverride).canFlow;
+    CanFlowState state;
+    // Call TypeInfo overload so the cycle check gets set up.
+    return canAFlowIntoB(
+               static_cast<TypeInfo *>(a),
+               static_cast<TypeInfo *>(b),
+               state,
+               ThisFlowDirection::MethodOverride,
+               CheckedCastMode::Allowed)
+        .canFlow;
   }
 
   /// Try to narrow a union with a single non-optional arm to the non-optional

@@ -49,8 +49,20 @@ inline int cmpHelperBool(bool a, bool b) {
 }
 
 /// A helper for comparing nullable Type pointers, returning -1, 0, +1.
-int cmpHelper(Type *a, Type *b) {
-  return a ? b ? a->info->compare(b->info) : 1 : b ? -1 : 0;
+/// \p state must be threaded through, otherwise recursive types (e.g. a
+/// function whose 'this' or return type refers back to itself) recurse forever.
+int cmpHelper(Type *a, Type *b, TypeInfo::CompareState &state) {
+  return a ? b ? a->info->compare(b->info, state) : 1 : b ? -1 : 0;
+}
+
+/// A helper for testing nullable Type pointers for equality.
+/// Uses equals() rather than compare(), because \c CompareState::cache is
+/// shared between the two and stores a bool for equals() but -1/0/1 for
+/// compare().
+bool eqHelper(Type *a, Type *b, TypeInfo::CompareState &state) {
+  if (!a || !b)
+    return a == b;
+  return a->info->equals(b->info, state);
 }
 
 /// Compare recursive lists of types on the left and right.
@@ -320,7 +332,8 @@ bool TypeInfo::equals(const TypeInfo *other, CompareState &state) const {
         llvh::cast<UnionType>(this)->getTypes(),
         llvh::cast<UnionType>(other)->getTypes(),
         state);
-    state.cache[{this, other}] = result;
+    if (!result)
+      state.cache[{this, other}] = false;
     return result;
   }
   // Handle the cases of one incomplete union and a non-union.
@@ -328,14 +341,16 @@ bool TypeInfo::equals(const TypeInfo *other, CompareState &state) const {
     bool result = llvh::all_of(
         llvh::cast<UnionType>(this)->getTypes(),
         [&state, other](Type *t) { return t->info->equals(other, state); });
-    state.cache[{this, other}] = result;
+    if (!result)
+      state.cache[{this, other}] = false;
     return result;
   }
   if (otherIncomplete) {
     bool result = llvh::all_of(
         llvh::cast<UnionType>(other)->getTypes(),
         [&state, this](Type *t) { return t->info->equals(this, state); });
-    state.cache[{this, other}] = result;
+    if (!result)
+      state.cache[{this, other}] = false;
     return result;
   }
 
@@ -352,7 +367,8 @@ bool TypeInfo::equals(const TypeInfo *other, CompareState &state) const {
     default:
       hermes_fatal("invalid TypeKind");
   }
-  state.cache[{this, other}] = result;
+  if (!result)
+    state.cache[{this, other}] = false;
   return result;
 }
 
@@ -650,7 +666,7 @@ int TypedFunctionType::_compareImpl(
     return tmp;
   if (auto tmp = cmpHelperBool(isGenerator(), other->isGenerator()))
     return tmp;
-  if (auto tmp = cmpHelper(thisParam_, other->thisParam_))
+  if (auto tmp = cmpHelper(thisParam_, other->thisParam_, state))
     return tmp;
   if (auto tmp = lexicographicalComparison(
           params_.begin(),
@@ -666,7 +682,7 @@ int TypedFunctionType::_compareImpl(
           })) {
     return tmp;
   }
-  return cmpHelper(return_, other->return_);
+  return cmpHelper(return_, other->return_, state);
 }
 
 /// Compare two instances of the same TypeKind.
@@ -677,7 +693,7 @@ bool TypedFunctionType::_equalsImpl(
     return false;
   if (cmpHelperBool(isGenerator(), other->isGenerator()))
     return false;
-  if (cmpHelper(thisParam_, other->thisParam_))
+  if (!eqHelper(thisParam_, other->thisParam_, state))
     return false;
   if (params_.size() != other->params_.size())
     return false;
@@ -689,7 +705,7 @@ bool TypedFunctionType::_equalsImpl(
     if (!params_[i].type->info->equals(other->params_[i].type->info, state))
       return false;
   }
-  if (!return_->info->equals(other->return_->info))
+  if (!return_->info->equals(other->return_->info, state))
     return false;
   return true;
 }
