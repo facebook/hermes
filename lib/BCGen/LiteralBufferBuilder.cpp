@@ -10,13 +10,14 @@
 #include "hermes/BCGen/SerializedLiteralParser.h"
 #include "hermes/BCGen/ShapeTableEntry.h"
 #include "hermes/IR/IR.h"
+#include "hermes/IR/IRBuilder.h"
 #include "hermes/IR/Instrs.h"
 #include "hermes/Inst/Inst.h"
 #include "hermes/Inst/InstDecode.h"
 #include "hermes/VM/ObjectAllocKind.h"
 
 namespace hermes::LiteralBufferBuilder::detail {
-/// The key with which to to deduplicate shape table entries in coordToIdx.
+/// The key with which to deduplicate shape table entries in coordToIdx.
 struct ShapeTableDedupKey {
   /// The offset of the first key in the key buffer.
   uint32_t keyBufferOffset;
@@ -26,6 +27,10 @@ struct ShapeTableDedupKey {
   /// We don't share shape table entries between different allocation kinds
   /// because they use different property flags, make new HiddenClasses, etc.
   ValueKind allocKind;
+  /// The parent object.
+  /// We store the parent to avoid sharing cache entries between instructions
+  /// that will likely never match.
+  Value *parent;
 };
 } // namespace hermes::LiteralBufferBuilder::detail
 
@@ -38,23 +43,29 @@ struct DenseMapInfo<ShapeTableDedupKey> {
     return {
         DenseMapInfo<uint32_t>::getEmptyKey(),
         DenseMapInfo<uint32_t>::getEmptyKey(),
-        hermes::ValueKind::AllocObjectLiteralInstKind};
+        hermes::ValueKind::AllocObjectLiteralInstKind,
+        DenseMapInfo<hermes::Value *>::getEmptyKey()};
   }
   static inline ShapeTableDedupKey getTombstoneKey() {
     return {
         DenseMapInfo<uint32_t>::getTombstoneKey(),
         DenseMapInfo<uint32_t>::getTombstoneKey(),
-        hermes::ValueKind::AllocObjectLiteralInstKind};
+        hermes::ValueKind::AllocObjectLiteralInstKind,
+        DenseMapInfo<hermes::Value *>::getTombstoneKey()};
   }
   static inline unsigned getHashValue(const ShapeTableDedupKey &key) {
     return hash_combine(
-        key.keyBufferOffset, key.numProps, static_cast<uint8_t>(key.allocKind));
+        key.keyBufferOffset,
+        key.numProps,
+        static_cast<uint8_t>(key.allocKind),
+        DenseMapInfo<hermes::Value *>::getHashValue(key.parent));
   }
   static inline bool isEqual(
       const ShapeTableDedupKey &lhs,
       const ShapeTableDedupKey &rhs) {
     return lhs.keyBufferOffset == rhs.keyBufferOffset &&
-        lhs.numProps == rhs.numProps && lhs.allocKind == rhs.allocKind;
+        lhs.numProps == rhs.numProps && lhs.allocKind == rhs.allocKind &&
+        lhs.parent == rhs.parent;
   }
 };
 
@@ -202,8 +213,8 @@ class Builder {
   // module.
   std::vector<ShapeTableEntry> objShapeTable_{};
 
-  /// This maps a <keyBufferOffset, numProps, allocKind> key to an element index
-  /// in \p objShapeTable_.
+  /// This maps a <keyBufferOffset, numProps, allocKind, parent> key to an
+  /// element index in \c objShapeTable_.
   llvh::DenseMap<detail::ShapeTableDedupKey, uint32_t> keyOffsetToShapeIdx_;
 
   /// Each element is the keys portion of a serialized object literal.
@@ -327,6 +338,7 @@ void Builder::reseedFromBaseBytecode() {
   objShapeTable_ = shapeTable.vec();
   llvh::ArrayRef<unsigned char> keyBuf = bcProvider_->getObjectKeyBuffer();
   std::vector<StringTableEntry> keyStrTable;
+  IRBuilder builder{M_};
   keyStrTable.reserve(objShapeTable_.size());
   for (size_t i = 0, e = objShapeTable_.size(); i < e; ++i) {
     auto numProps = objShapeTable_[i].numProps;
@@ -338,10 +350,16 @@ void Builder::reseedFromBaseBytecode() {
         llvh::StringRef{
             reinterpret_cast<const char *>(keyBuf.data() + keyBufferOffset),
             sizeInBytes});
+    // Add to keyOffsetToShapeIdx_ here because the common way to
+    // instantiate an object is without a custom parent.
+    // If a non-standard parent is used, a new shape table entry will be
+    // created. It's possible this will waste an entry, but it's the only way to
+    // do it without storing the parent somehow in the bytecode.
     keyOffsetToShapeIdx_.insert(
         {{keyBufferOffset,
           numProps,
-          ValueKind::LIRAllocObjectFromBufferInstKind},
+          ValueKind::LIRAllocObjectFromBufferInstKind,
+          builder.getEmptySentinel()},
          (uint32_t)i});
   }
   keyStorage_ =
@@ -400,15 +418,19 @@ LiteralBufferBuilder::Result Builder::generate() {
     const auto [keyIdx, valIdx] = indices;
     ValueKind allocKind = Inst->getKind();
     uint32_t len;
+    Value *parent;
     if (auto *typed = llvh::dyn_cast<LIRAllocTypedObjectFromBufferInst>(Inst)) {
       len = typed->getKeyValuePairCount();
+      parent = typed->getParentObject();
     } else if (
         auto *typedNonEnum =
             llvh::dyn_cast<LIRAllocTypedNonEnumObjectFromBufferInst>(Inst)) {
       len = typedNonEnum->getKeyValuePairCount();
+      parent = typedNonEnum->getParentObject();
     } else {
-      len = llvh::cast<LIRAllocObjectFromBufferInst>(Inst)
-                ->getKeyValuePairCount();
+      auto *obj = llvh::cast<LIRAllocObjectFromBufferInst>(Inst);
+      len = obj->getKeyValuePairCount();
+      parent = obj->getParentObject();
     }
     assert(
         literalOffsetMap.count(Inst) == 0 &&
@@ -417,7 +439,8 @@ LiteralBufferBuilder::Result Builder::generate() {
     uint32_t valIndexInSet = values_.indexInSet(valIdx);
     uint32_t keyBufferOffset = keyView[keyIndexInSet].getOffset();
     const auto [iter, success] = keyOffsetToShapeIdx_.insert(
-        {{keyBufferOffset, len, allocKind}, keyOffsetToShapeIdx_.size()});
+        {{keyBufferOffset, len, allocKind, parent},
+         (uint32_t)objShapeTable_.size()});
     auto shapeID = iter->second;
     if (success) {
       // This is a new entry, add it to the shape table.
