@@ -709,23 +709,28 @@ static inline unsigned _sh_tryfast_f64_to_u32_cvt(double x) {
 //
 // Wasm
 //
-// Fortunately Clang avoids UB when compiling the conversion to Wasm, so we
-// don't need to do anything special.
+// A C cast is undefined for out-of-range values even if the final Wasm
+// instruction saturates. LLVM can consequently remove the range check from
+// the conversion's round trip, accepting negative inputs as unsigned zero.
+// Use defined saturating intrinsics so that the round-trip check is preserved.
 
 static inline int32_t _sh_tryfast_f64_to_i32_cvt(double x) {
-  return (int32_t)x;
+  return __builtin_wasm_trunc_saturate_s_i32_f64(x);
 }
 static inline uint32_t _sh_tryfast_f64_to_u32_cvt(double x) {
-  return (uint32_t)x;
+  return __builtin_wasm_trunc_saturate_u_i32_f64(x);
 }
 
 #define HERMES_TRYFAST_F64_TO_64_IS_FAST 1
 
 static inline int64_t _sh_tryfast_f64_to_i64_cvt(double x) {
-  return (int64_t)x;
+  int64_t result = __builtin_wasm_trunc_saturate_s_i64_f64(x);
+  // Reject saturated values that round back to the overflowing input double.
+  // See the file doc-comment for the same mitigation on other architectures.
+  return (int64_t)((uint64_t)result << 1) >> 1;
 }
 static inline uint64_t _sh_tryfast_f64_to_u64_cvt(double x) {
-  return (uint64_t)x;
+  return __builtin_wasm_trunc_saturate_u_i64_f64(x) & ~(1ull << 63);
 }
 
 #else
