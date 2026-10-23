@@ -1051,7 +1051,8 @@ class ESTreeIRGen {
   MemberExpressionResult emitMemberLoad(
       ESTree::MemberExpressionNode *mem,
       Value *baseValue,
-      Value *propValue);
+      Value *propValue,
+      Value *thisValue);
   /// \param thisValue is the value of `this` when the member expression was
   /// first evaluated. This is only populated in `super` references.
   void emitMemberStore(
@@ -1102,7 +1103,11 @@ class ESTreeIRGen {
   MemberExpressionResult emitTypedSuperLoad(
       ESTree::SuperNode *superNode,
       ESTree::IdentifierNode *property);
-
+  /// Load a member property from a super.property expression inside a typed
+  /// static class method .
+  MemberExpressionResult emitStaticTypedSuperLoad(
+      ESTree::SuperNode *superNode,
+      ESTree::IdentifierNode *property);
   /// \return an instruction that is the currently visible scope described by
   /// \p targetVarScope, emitting a ResolveScopeInst if necessary.
   Instruction *emitResolveScopeInstIfNeeded(VariableScope *targetVarScope);
@@ -1939,17 +1944,15 @@ class ESTreeIRGen {
           decl->kind == sema::Decl::Kind::PrivateSetter ||
           decl->kind == sema::Decl::Kind::PrivateGetterSetter);
     }
-    if constexpr (std::is_same_v<
-                      T,
-                      PrivateNameFunctionTable::SingleFunctionEntry>) {
+    if constexpr (
+        std::is_same_v<T, PrivateNameFunctionTable::SingleFunctionEntry>) {
       assert(
           decl->kind == sema::Decl::Kind::PrivateMethod ||
           decl->kind == sema::Decl::Kind::PrivateGetter ||
           decl->kind == sema::Decl::Kind::PrivateSetter);
     }
-    if constexpr (std::is_same_v<
-                      T,
-                      PrivateNameFunctionTable::GetterSetterEntry>) {
+    if constexpr (
+        std::is_same_v<T, PrivateNameFunctionTable::GetterSetterEntry>) {
       assert(decl->kind == sema::Decl::Kind::PrivateGetterSetter);
     }
     return static_cast<T *>(decl->customData);
