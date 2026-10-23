@@ -135,10 +135,10 @@ export function useState<T>(
     // can't statically prove this
     state = CHECKED_CAST<State<T>>(nextState);
   } else {
-    let nextState = CHECKED_CAST<State<mixed>>(_workInProgressState).next;
+    let nextState = _workInProgressState.next;
     if (nextState === null) {
       nextState = new State<mixed>(initial);
-      CHECKED_CAST<State<mixed>>(_workInProgressState).next = nextState;
+      _workInProgressState.next = nextState;
     }
     // NOTE: in case of a re-render we assume that the hook types match but
     // can't statically prove this
@@ -542,11 +542,7 @@ class Root {
     prevChild: Fiber | null,
     element: React$MixedElement,
   ): Fiber {
-    if (
-      prevChild !== null &&
-      CHECKED_CAST<Fiber>(prevChild).type === (element.type: any)
-    ) {
-      let prevChild: Fiber = CHECKED_CAST<Fiber>(prevChild);
+    if (prevChild !== null && prevChild.type === (element.type: any)) {
       // Only host and fragment nodes have to be reconciled: otherwise this is a
       // function component and its children will be reconciled when they are later
       // emitted in a host position (ie as a direct result of render)
