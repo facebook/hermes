@@ -45,13 +45,10 @@ TEST_F(FinalizationRegistryTest, RegisterAndUnregisterTest) {
 
   lv.callable = *NativeFunction::create(
       runtime,
-      Handle<JSObject>::vmcast(&runtime.functionPrototype),
-      Runtime::makeNullHandle<Environment>(),
       nullptr,
       noopCallback,
       Predefined::getSymbolID(Predefined::emptyString),
-      0,
-      Runtime::makeNullHandle<JSObject>());
+      0);
 
   auto frRes = JSFinalizationRegistry::create(
       runtime, runtime.arrayPrototype, lv.callable);

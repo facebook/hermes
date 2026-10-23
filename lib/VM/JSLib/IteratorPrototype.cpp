@@ -27,13 +27,10 @@ void populateIteratorPrototype(Runtime &runtime) {
   lv.iteratorFunc.castAndSetHermesValue<NativeFunction>(
       NativeFunction::create(
           runtime,
-          Handle<JSObject>::vmcast(&runtime.functionPrototype),
-          Runtime::makeNullHandle<Environment>(),
           nullptr,
           iteratorPrototypeIterator,
           Predefined::getSymbolID(Predefined::squareSymbolIterator),
-          0,
-          Runtime::makeNullHandle<JSObject>())
+          0)
           .getHermesValue());
 
   defineProperty(

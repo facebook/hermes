@@ -226,9 +226,9 @@ napi_status NAPI_CDECL napi_create_function(
   auto funcHandle = NativeConstructor::create(
       runtime,
       Handle<JSObject>::vmcast(&runtime.functionPrototype),
-      Runtime::makeNullHandle<Environment>(),
       bundle,
-      napiConstructorTrampoline);
+      napiConstructorTrampoline,
+      0);
 
   // Root the function handle before creating the prototype, since
   // JSObject::create is a GC safepoint that can invalidate the

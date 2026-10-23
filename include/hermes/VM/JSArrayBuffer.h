@@ -34,6 +34,9 @@ class JSArrayBuffer final : public JSObject {
     return cell->getKind() == CellKind::JSArrayBufferKind;
   }
 
+  /// Create a JSArrayBuffer using the standard ArrayBuffer prototype.
+  static PseudoHandle<JSArrayBuffer> create(Runtime &runtime);
+
   static PseudoHandle<JSArrayBuffer> create(
       Runtime &runtime,
       Handle<JSObject> prototype);

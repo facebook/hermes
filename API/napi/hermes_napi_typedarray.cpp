@@ -98,11 +98,14 @@ static hermes::vm::ExecutionStatus createTypedArrayForType(
   // Create the TypedArray object with the correct prototype.
   // Each case creates a PseudoHandle, assigns it to taOut, then calls
   // setBuffer. We use a macro to avoid repeating the pattern 11 times.
-#define CREATE_TA_CASE(napiType, HermesType)                                  \
-  case napiType: {                                                            \
-    auto ph = HermesType::create(runtime, HermesType::getPrototype(runtime)); \
-    taOut = std::move(ph);                                                    \
-    break;                                                                    \
+#define CREATE_TA_CASE(napiType, HermesType)      \
+  case napiType: {                                \
+    auto ph = HermesType::create(                 \
+        runtime,                                  \
+        HermesType::getPrototype(runtime),        \
+        HermesType::getRootHiddenClass(runtime)); \
+    taOut = std::move(ph);                        \
+    break;                                        \
   }
 
   switch (type) {

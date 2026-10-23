@@ -35,8 +35,7 @@ static napi_status createBufferUint8Array(
   LocalsRAII lraii(runtime, &lv);
 
   // Create the ArrayBuffer.
-  auto proto = Handle<JSObject>::vmcast(&runtime.arrayBufferPrototype);
-  lv.ab = JSArrayBuffer::create(runtime, proto);
+  lv.ab = JSArrayBuffer::create(runtime);
 
   // Allocate the data block.
   auto status = JSArrayBuffer::createDataBlock(runtime, lv.ab, length);
@@ -45,7 +44,10 @@ static napi_status createBufferUint8Array(
   }
 
   // Create a Uint8Array view over the entire ArrayBuffer.
-  lv.ta = Uint8Array::create(runtime, Uint8Array::getPrototype(runtime));
+  lv.ta = Uint8Array::create(
+      runtime,
+      Uint8Array::getPrototype(runtime),
+      Uint8Array::getRootHiddenClass(runtime));
   JSTypedArrayBase::setBuffer(
       runtime,
       vmcast<JSTypedArrayBase>(lv.ta.getHermesValue()),
@@ -174,8 +176,7 @@ napi_status NAPI_CDECL napi_create_external_buffer(
   LocalsRAII lraii(runtime, &lv);
 
   // Create an ArrayBuffer.
-  auto proto = Handle<JSObject>::vmcast(&runtime.arrayBufferPrototype);
-  lv.ab = JSArrayBuffer::create(runtime, proto);
+  lv.ab = JSArrayBuffer::create(runtime);
 
   // Build a shared_ptr whose custom deleter invokes the NAPI
   // finalizer.
@@ -193,7 +194,10 @@ napi_status NAPI_CDECL napi_create_external_buffer(
       runtime, lv.ab, static_cast<uint8_t *>(data), length, ctx);
 
   // Create a Uint8Array view over the entire ArrayBuffer.
-  lv.ta = Uint8Array::create(runtime, Uint8Array::getPrototype(runtime));
+  lv.ta = Uint8Array::create(
+      runtime,
+      Uint8Array::getPrototype(runtime),
+      Uint8Array::getRootHiddenClass(runtime));
   JSTypedArrayBase::setBuffer(
       runtime,
       vmcast<JSTypedArrayBase>(lv.ta.getHermesValue()),
@@ -242,7 +246,10 @@ napi_status NAPI_CDECL node_api_create_buffer_from_arraybuffer(
   // Create a Uint8Array view at the specified offset and length.
   // Re-deref *abPhv after the allocation: it is a NAPI pinned handle, so it
   // survives GC and yields the post-relocation pointer.
-  lv.ta = Uint8Array::create(runtime, Uint8Array::getPrototype(runtime));
+  lv.ta = Uint8Array::create(
+      runtime,
+      Uint8Array::getPrototype(runtime),
+      Uint8Array::getRootHiddenClass(runtime));
   JSTypedArrayBase::setBuffer(
       runtime,
       vmcast<JSTypedArrayBase>(lv.ta.getHermesValue()),

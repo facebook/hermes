@@ -77,6 +77,7 @@ napi_status NAPI_CDECL napi_create_external(
   auto obj = DecoratedObject::create(
       runtime,
       Handle<JSObject>::vmcast(&runtime.objectPrototype),
+      Handle<HiddenClass>::vmcast(&runtime.classDecoratedObject),
       std::move(decoration));
 
   *result = env->addToCurrentScope(obj.getHermesValue());

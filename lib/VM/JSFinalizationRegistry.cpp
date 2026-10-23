@@ -123,7 +123,7 @@ PseudoHandle<JSFinalizationRegistry> JSFinalizationRegistry::create(
       runtime,
       parentHandle,
       runtime.getHiddenClassForPrototype(
-          *parentHandle, numOverlapSlots<JSFinalizationRegistry>()),
+          *parentHandle, runtime.classJSFinalizationRegistry),
       cleanupCallback);
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }

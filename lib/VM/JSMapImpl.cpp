@@ -56,14 +56,37 @@ void JSMapImpl<C>::_finalizeImpl(GCCell *cell, GC &gc) {
 }
 
 template <CellKind C>
+PseudoHandle<JSMapImpl<C>> JSMapImpl<C>::create(Runtime &runtime) {
+  Handle<JSObject> prototype = runtime.mapPrototype;
+  Handle<HiddenClass> clazz = runtime.classJSMap;
+  if constexpr (C == CellKind::JSMapKind) {
+    prototype = runtime.mapPrototype;
+    clazz = runtime.classJSMap;
+  } else {
+    static_assert(C == CellKind::JSSetKind, "Unexpected CellKind");
+    prototype = runtime.setPrototype;
+    clazz = runtime.classJSSet;
+  }
+  auto *cell = runtime.makeAFixed<JSMapImpl, HasFinalizer::Yes>(
+      runtime, prototype, clazz);
+  return JSObjectInit::initToPseudoHandle(runtime, cell);
+}
+
+template <CellKind C>
 PseudoHandle<JSMapImpl<C>> JSMapImpl<C>::create(
     Runtime &runtime,
     Handle<JSObject> parentHandle) {
+  Handle<HiddenClass> clazz = runtime.classJSMap;
+  if constexpr (C == CellKind::JSMapKind) {
+    clazz =
+        runtime.getHiddenClassForPrototype(*parentHandle, runtime.classJSMap);
+  } else {
+    static_assert(C == CellKind::JSSetKind, "Unexpected CellKind");
+    clazz =
+        runtime.getHiddenClassForPrototype(*parentHandle, runtime.classJSSet);
+  }
   auto *cell = runtime.makeAFixed<JSMapImpl, HasFinalizer::Yes>(
-      runtime,
-      parentHandle,
-      runtime.getHiddenClassForPrototype(
-          *parentHandle, numOverlapSlots<JSMapImpl>()));
+      runtime, parentHandle, clazz);
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
@@ -119,11 +142,17 @@ template <CellKind C>
 PseudoHandle<JSMapIteratorImpl<C>> JSMapIteratorImpl<C>::create(
     Runtime &runtime,
     Handle<JSObject> prototype) {
+  Handle<HiddenClass> clazz = runtime.classJSMapIterator;
+  if constexpr (C == CellKind::JSMapIteratorKind) {
+    clazz = runtime.getHiddenClassForPrototype(
+        *prototype, runtime.classJSMapIterator);
+  } else {
+    static_assert(C == CellKind::JSSetIteratorKind, "Unexpected CellKind");
+    clazz = runtime.getHiddenClassForPrototype(
+        *prototype, runtime.classJSSetIterator);
+  }
   auto *cell = runtime.makeAFixed<JSMapIteratorImpl<C>, HasFinalizer::Yes>(
-      runtime,
-      prototype,
-      runtime.getHiddenClassForPrototype(
-          *prototype, numOverlapSlots<JSMapIteratorImpl>()));
+      runtime, prototype, clazz);
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 

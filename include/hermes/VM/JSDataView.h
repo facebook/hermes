@@ -33,6 +33,9 @@ class JSDataView final : public JSObject {
     return cell->getKind() == CellKind::JSDataViewKind;
   }
 
+  /// Create a JSDataView using the standard DataView prototype.
+  static PseudoHandle<JSDataView> create(Runtime &runtime);
+
   static PseudoHandle<JSDataView> create(
       Runtime &runtime,
       Handle<JSObject> prototype);

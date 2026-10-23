@@ -33,15 +33,12 @@ class JSRegExp final : public JSObject {
   }
 
   /// Create a JSRegExp, with the empty string for pattern and flags.
+  static PseudoHandle<JSRegExp> create(Runtime &runtime);
+
+  /// Create a JSRegExp, with the empty string for pattern and flags.
   static PseudoHandle<JSRegExp> create(
       Runtime &runtime,
       Handle<JSObject> prototype);
-
-  /// Create a JSRegExp, with the standard RegExp prototype and the empty string
-  /// for pattern and flags.
-  static PseudoHandle<JSRegExp> create(Runtime &runtime) {
-    return create(runtime, Handle<JSObject>::vmcast(&runtime.regExpPrototype));
-  }
 
   /// Creates the hidden class for Regular Expression match objects.
   /// \p arrayClass should be hidden class for JSArray objects, and it will be

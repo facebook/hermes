@@ -36,6 +36,7 @@ TEST_F(DecoratedObjectTest, DecoratedObjectFinalizerRunsOnce) {
         DecoratedObject::create(
             runtime,
             Handle<JSObject>::vmcast(&runtime.objectPrototype),
+            runtime.classDecoratedObject,
             std::make_unique<TestDecoration>(counter)));
     runtime.collect("test");
     // should not have been finalized yet
@@ -58,6 +59,7 @@ TEST_F(DecoratedObjectTest, ChangeDecoration) {
         DecoratedObject::create(
             runtime,
             Handle<JSObject>::vmcast(&runtime.objectPrototype),
+            runtime.classDecoratedObject,
             std::make_unique<TestDecoration>(counter)));
     EXPECT_EQ(0, *counter);
     handle->setDecoration(std::make_unique<TestDecoration>(counter));
@@ -77,22 +79,11 @@ TEST_F(DecoratedObjectTest, NullDecoration) {
         DecoratedObject::create(
             runtime,
             Handle<JSObject>::vmcast(&runtime.objectPrototype),
+            runtime.classDecoratedObject,
             nullptr));
     EXPECT_EQ(nullptr, handle->getDecoration());
   }
   runtime.collect("test");
-}
-
-TEST_F(DecoratedObjectTest, AdditionalSlots) {
-  auto counter = std::make_shared<int>(0);
-  GCScope scope{runtime, "DecoratedObjectTest"};
-  auto handle = runtime.makeHandle(
-      DecoratedObject::create(
-          runtime,
-          Handle<JSObject>::vmcast(&runtime.objectPrototype),
-          std::make_unique<TestDecoration>(counter),
-          numAdditionalSlotsForTest<DecoratedObject>()));
-  testAdditionalSlots(runtime, handle);
 }
 
 } // namespace

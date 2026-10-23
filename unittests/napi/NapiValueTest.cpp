@@ -1265,13 +1265,10 @@ TEST_F(NapiTestFixture, Typeof_Function) {
     GCScope gcScope(*rt_);
     auto fn = NativeFunction::create(
         *rt_,
-        Handle<JSObject>::vmcast(&rt_->functionPrototype),
-        Runtime::makeNullHandle<Environment>(),
         nullptr, // context
         nullptr, // functionPtr (ok for typeof test)
         Predefined::getSymbolID(Predefined::emptyString),
-        0, // paramCount
-        Runtime::makeNullHandle<JSObject>());
+        0 /* paramCount */);
     val = env_->addToCurrentScope(fn.getHermesValue());
   }
 

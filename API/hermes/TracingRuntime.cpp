@@ -197,13 +197,10 @@ void installTraceableBuiltinWrappers(jsi::Runtime &jsRuntime) {
 
     lv.replacementMathFunction = *NativeFunction::create(
         *runtime,
-        Handle<JSObject>::vmcast(&runtime->functionPrototype),
-        Runtime::makeNullHandle<Environment>(),
         functionContext,
         nativeFunctionPtr,
         functionID,
-        traceableMathBuiltin.paramCount,
-        Runtime::makeNullHandle<JSObject>());
+        traceableMathBuiltin.paramCount);
 
     auto defineRes = JSObject::defineOwnProperty(
         lv.math,

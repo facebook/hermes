@@ -125,13 +125,10 @@ napi_status NAPI_CDECL napi_create_promise(
   // into the deferred when called by the Promise constructor.
   auto executorFunc = NativeFunction::create(
       runtime,
-      Handle<JSObject>::vmcast(&runtime.functionPrototype),
-      Runtime::makeNullHandle<Environment>(),
       def, // context: pointer to the deferred
       promiseExecutorTrampoline,
       Predefined::getSymbolID(Predefined::emptyString),
-      2, // paramCount: resolve, reject
-      Runtime::makeNullHandle<JSObject>());
+      2 /* paramCount: resolve, reject */);
   lv.executor.castAndSetHermesValue<Callable>(executorFunc.getHermesValue());
 
   // Call `new Promise(executor)` using the standard construct helper.

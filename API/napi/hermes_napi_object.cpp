@@ -695,9 +695,9 @@ napi_status createNapiNativeFunction(
   auto ctor = NativeConstructor::create(
       runtime,
       Handle<JSObject>::vmcast(&runtime.functionPrototype),
-      Runtime::makeNullHandle<Environment>(),
       bundle,
-      napiConstructorTrampoline);
+      napiConstructorTrampoline,
+      paramCount);
 
   // Root the constructor before creating the prototype, since
   // JSObject::create is a GC safepoint that can invalidate the

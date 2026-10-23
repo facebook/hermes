@@ -39,13 +39,48 @@ void JSStringBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 
 CallResult<Handle<JSString>> JSString::create(
     Runtime &runtime,
+    Handle<StringPrimitive> value) {
+  auto obj = runtime.makeAFixed<JSString>(
+      runtime, value, runtime.stringPrototype, runtime.classJSString);
+
+  auto selfHandle = JSObjectInit::initToHandle(runtime, obj);
+
+  PropertyFlags pf;
+  pf.writable = 0;
+  pf.enumerable = 0;
+  pf.configurable = 0;
+
+  PinnedHermesValue lengthValue =
+      HermesValue::encodeTrustedNumberValue(value->getStringLength());
+
+  if (LLVM_UNLIKELY(
+          JSObject::defineNewOwnProperty(
+              selfHandle,
+              runtime,
+              Predefined::getSymbolID(Predefined::length),
+              pf,
+              Handle<>{&lengthValue}) == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  return selfHandle;
+}
+
+CallResult<Handle<JSString>> JSString::create(
+    Runtime &runtime,
     Handle<StringPrimitive> value,
     Handle<JSObject> parentHandle) {
-  auto clazzHandle = runtime.getHiddenClassForPrototype(
-      *parentHandle, numOverlapSlots<JSString>());
-  auto obj =
-      runtime.makeAFixed<JSString>(runtime, value, parentHandle, clazzHandle);
+  auto clazzHandle =
+      runtime.getHiddenClassForPrototype(*parentHandle, runtime.classJSString);
+  return create(runtime, value, parentHandle, clazzHandle);
+}
 
+CallResult<Handle<JSString>> JSString::create(
+    Runtime &runtime,
+    Handle<StringPrimitive> value,
+    Handle<JSObject> prototype,
+    Handle<HiddenClass> clazz) {
+  auto obj = runtime.makeAFixed<JSString>(runtime, value, prototype, clazz);
   auto selfHandle = JSObjectInit::initToHandle(runtime, obj);
 
   PropertyFlags pf;
@@ -198,8 +233,8 @@ PseudoHandle<JSStringIterator> JSStringIterator::create(
     Runtime &runtime,
     Handle<StringPrimitive> string) {
   auto proto = Handle<JSObject>::vmcast(&runtime.stringIteratorPrototype);
-  auto clazzHandle = runtime.getHiddenClassForPrototype(
-      *proto, numOverlapSlots<JSStringIterator>());
+  auto clazzHandle =
+      runtime.getHiddenClassForPrototype(*proto, runtime.classJSStringIterator);
   auto obj =
       runtime.makeAFixed<JSStringIterator>(runtime, proto, clazzHandle, string);
   return JSObjectInit::initToPseudoHandle(runtime, obj);
@@ -299,8 +334,8 @@ Handle<JSBigInt> JSBigInt::create(
     Runtime &runtime,
     Handle<BigIntPrimitive> value,
     Handle<JSObject> parentHandle) {
-  auto clazzHandle = runtime.getHiddenClassForPrototype(
-      *parentHandle, numOverlapSlots<JSBigInt>());
+  auto clazzHandle =
+      runtime.getHiddenClassForPrototype(*parentHandle, runtime.classJSBigInt);
   auto obj =
       runtime.makeAFixed<JSBigInt>(runtime, value, parentHandle, clazzHandle);
 
@@ -327,12 +362,28 @@ void JSNumberBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.setVTable(&JSNumber::vt);
 }
 
+PseudoHandle<JSNumber> JSNumber::create(Runtime &runtime, double value) {
+  auto obj = runtime.makeAFixed<JSNumber>(
+      runtime, value, runtime.numberPrototype, runtime.classJSNumber);
+  return JSObjectInit::initToPseudoHandle(runtime, obj);
+}
+
 PseudoHandle<JSNumber> JSNumber::create(
     Runtime &runtime,
     double value,
     Handle<JSObject> parentHandle) {
-  auto clazzHandle = runtime.getHiddenClassForPrototype(
-      *parentHandle, numOverlapSlots<JSNumber>());
+  auto clazzHandle =
+      runtime.getHiddenClassForPrototype(*parentHandle, runtime.classJSNumber);
+  auto obj =
+      runtime.makeAFixed<JSNumber>(runtime, value, parentHandle, clazzHandle);
+  return JSObjectInit::initToPseudoHandle(runtime, obj);
+}
+
+PseudoHandle<JSNumber> JSNumber::create(
+    Runtime &runtime,
+    double value,
+    Handle<JSObject> parentHandle,
+    Handle<HiddenClass> clazzHandle) {
   auto obj =
       runtime.makeAFixed<JSNumber>(runtime, value, parentHandle, clazzHandle);
   return JSObjectInit::initToPseudoHandle(runtime, obj);
@@ -358,10 +409,26 @@ void JSBooleanBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.setVTable(&JSBoolean::vt);
 }
 
+PseudoHandle<JSBoolean> JSBoolean::create(Runtime &runtime, bool value) {
+  auto obj = runtime.makeAFixed<JSBoolean>(
+      runtime, value, runtime.booleanPrototype, runtime.classJSBoolean);
+  return JSObjectInit::initToPseudoHandle(runtime, obj);
+}
+
 PseudoHandle<JSBoolean>
 JSBoolean::create(Runtime &runtime, bool value, Handle<JSObject> parentHandle) {
-  auto clazzHandle = runtime.getHiddenClassForPrototype(
-      *parentHandle, numOverlapSlots<JSBoolean>());
+  auto clazzHandle =
+      runtime.getHiddenClassForPrototype(*parentHandle, runtime.classJSBoolean);
+  auto obj =
+      runtime.makeAFixed<JSBoolean>(runtime, value, parentHandle, clazzHandle);
+  return JSObjectInit::initToPseudoHandle(runtime, obj);
+}
+
+PseudoHandle<JSBoolean> JSBoolean::create(
+    Runtime &runtime,
+    bool value,
+    Handle<JSObject> parentHandle,
+    Handle<HiddenClass> clazzHandle) {
   auto obj =
       runtime.makeAFixed<JSBoolean>(runtime, value, parentHandle, clazzHandle);
   return JSObjectInit::initToPseudoHandle(runtime, obj);
@@ -393,8 +460,18 @@ PseudoHandle<JSSymbol> JSSymbol::create(
     Runtime &runtime,
     SymbolID value,
     Handle<JSObject> parentHandle) {
-  auto clazzHandle = runtime.getHiddenClassForPrototype(
-      *parentHandle, numOverlapSlots<JSSymbol>());
+  auto clazzHandle =
+      runtime.getHiddenClassForPrototype(*parentHandle, runtime.classJSSymbol);
+  auto *obj =
+      runtime.makeAFixed<JSSymbol>(runtime, value, parentHandle, clazzHandle);
+  return JSObjectInit::initToPseudoHandle(runtime, obj);
+}
+
+PseudoHandle<JSSymbol> JSSymbol::create(
+    Runtime &runtime,
+    SymbolID value,
+    Handle<JSObject> parentHandle,
+    Handle<HiddenClass> clazzHandle) {
   auto *obj =
       runtime.makeAFixed<JSSymbol>(runtime, value, parentHandle, clazzHandle);
   return JSObjectInit::initToPseudoHandle(runtime, obj);

@@ -76,14 +76,7 @@ NativeFunction *defineMethod(
   GCScope gcScope{runtime};
 
   auto method = NativeFunction::create(
-      runtime,
-      Handle<JSObject>::vmcast(&runtime.functionPrototype),
-      Runtime::makeNullHandle<Environment>(),
-      context,
-      nativeFunctionPtr,
-      methodName,
-      paramCount,
-      Runtime::makeNullHandle<JSObject>());
+      runtime, context, nativeFunctionPtr, methodName, paramCount);
 
   auto res = JSObject::defineOwnProperty(
       objectHandle, runtime, propertyName, dpf, method);
@@ -175,15 +168,8 @@ void defineAccessor(
                     createPseudoHandle(vmcast<StringPrimitive>(strRes))))
             .get();
 
-    auto funcRes = NativeFunction::create(
-        runtime,
-        Handle<JSObject>::vmcast(&runtime.functionPrototype),
-        Runtime::makeNullHandle<Environment>(),
-        context,
-        getterFunc,
-        getterFuncName,
-        0,
-        Runtime::makeNullHandle<JSObject>());
+    auto funcRes =
+        NativeFunction::create(runtime, context, getterFunc, getterFuncName, 0);
     lv.getter = funcRes.get();
   }
   if (setterFunc) {
@@ -202,15 +188,8 @@ void defineAccessor(
                     createPseudoHandle(vmcast<StringPrimitive>(strRes))))
             .get();
 
-    auto funcRes = NativeFunction::create(
-        runtime,
-        Handle<JSObject>::vmcast(&runtime.functionPrototype),
-        Runtime::makeNullHandle<Environment>(),
-        context,
-        setterFunc,
-        setterFuncName,
-        1,
-        Runtime::makeNullHandle<JSObject>());
+    auto funcRes =
+        NativeFunction::create(runtime, context, setterFunc, setterFuncName, 1);
     lv.setter = funcRes.get();
   }
 

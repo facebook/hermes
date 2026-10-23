@@ -521,37 +521,6 @@ TEST_F(HiddenClassTest, ForEachProperty) {
   EXPECT_EQ(expectedProperties, propertiesNoAlloc);
 }
 
-TEST_F(HiddenClassTest, ReservedSlots) {
-  auto aHnd = *runtime.getIdentifierTable().getSymbolHandle(
-      runtime, createUTF16Ref(u"a"));
-  for (unsigned i = 0; i <= InternalProperty::NumAnonymousInternalProperties;
-       ++i) {
-    Handle<HiddenClass> clazz =
-        runtime.getHiddenClassForPrototype(*runtime.getGlobal(), i);
-    EXPECT_FALSE(clazz->isDictionary());
-    auto addRes = HiddenClass::addProperty(
-        clazz, runtime, *aHnd, PropertyFlags::defaultNewNamedPropertyFlags());
-    ASSERT_RETURNED(addRes);
-    EXPECT_EQ(i, addRes->second);
-  }
-
-  // Verify that the saved HiddenClasses for Proxies and HostObjects are
-  // different from the equivalent "normal" HiddenClasses.
-  EXPECT_NE(
-      *runtime.proxyClass,
-      *runtime.getHiddenClassForPrototype(
-          nullptr, JSObject::numOverlapSlots<JSProxy>()));
-  EXPECT_NE(
-      *runtime.callableProxyClass,
-      *runtime.getHiddenClassForPrototype(
-          nullptr, JSObject::numOverlapSlots<JSCallableProxy>()));
-  EXPECT_NE(
-      *runtime.hostObjectClass,
-      *runtime.getHiddenClassForPrototype(
-          runtime.objectPrototypeRawPtr,
-          JSObject::numOverlapSlots<HostObject>()));
-}
-
 TEST_F(HiddenClassTest, TypedObjectTest) {
   struct : public Locals {
     PinnedValue<HiddenClass> hc;

@@ -49,6 +49,12 @@ void JSArrayBufferBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.setVTable(&JSArrayBuffer::vt);
 }
 
+PseudoHandle<JSArrayBuffer> JSArrayBuffer::create(Runtime &runtime) {
+  auto *cell = runtime.makeAFixed<JSArrayBuffer, HasFinalizer::Yes>(
+      runtime, runtime.arrayBufferPrototype, runtime.classJSArrayBuffer);
+  return JSObjectInit::initToPseudoHandle(runtime, cell);
+}
+
 PseudoHandle<JSArrayBuffer> JSArrayBuffer::create(
     Runtime &runtime,
     Handle<JSObject> parentHandle) {
@@ -56,7 +62,7 @@ PseudoHandle<JSArrayBuffer> JSArrayBuffer::create(
       runtime,
       parentHandle,
       runtime.getHiddenClassForPrototype(
-          *parentHandle, numOverlapSlots<JSArrayBuffer>()));
+          *parentHandle, runtime.classJSArrayBuffer));
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 

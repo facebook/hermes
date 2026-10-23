@@ -63,23 +63,17 @@ HermesValue createErrorConstructor(Runtime &runtime) {
 
   auto getter = NativeFunction::create(
       runtime,
-      Handle<JSObject>::vmcast(&runtime.functionPrototype),
-      Runtime::makeNullHandle<Environment>(),
       nullptr,
       errorStackGetter,
       Predefined::getSymbolID(Predefined::emptyString),
-      0,
-      Runtime::makeNullHandle<JSObject>());
+      0);
 
   auto setter = NativeFunction::create(
       runtime,
-      Handle<JSObject>::vmcast(&runtime.functionPrototype),
-      Runtime::makeNullHandle<Environment>(),
       nullptr,
       errorStackSetter,
       Predefined::getSymbolID(Predefined::emptyString),
-      1,
-      Runtime::makeNullHandle<JSObject>());
+      1);
 
   // Save the accessors on the runtime so we can use them for captureStackTrace.
   runtime.jsErrorStackAccessor =
@@ -194,7 +188,7 @@ static CallResult<HermesValue> constructErrorObject(
           !args.isConstructorCall() ||
           (args.getNewTarget().getRaw() ==
            errConstructor->getHermesValue().getRaw()))) {
-    lv.selfParent = *errConstructorProto;
+    lv.self = JSError::create(runtime, *errConstructorProto);
   } else {
     CallResult<PseudoHandle<JSObject>> thisParentRes =
         NativeConstructor::parentForNewThis_RJS(
@@ -205,8 +199,8 @@ static CallResult<HermesValue> constructErrorObject(
       return ExecutionStatus::EXCEPTION;
     }
     lv.selfParent = std::move(*thisParentRes);
+    lv.self = JSError::create(runtime, lv.selfParent);
   }
-  lv.self = JSError::create(runtime, lv.selfParent);
 
   // Record the stack trace, skipping this entry.
   JSError::recordStackTrace(lv.self, runtime, true);
