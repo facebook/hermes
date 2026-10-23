@@ -2493,20 +2493,31 @@ class FlowChecker::ExprVisitor {
             llvh::dyn_cast<ESTree::IdentifierNode>(node->_callee)) {
       sema::Decl *decl = outer_.getDecl(identCallee);
       if (decl->generic) {
-        if (node->_typeArguments) {
+        // The number of explicitly provided type arguments (0 if none).
+        size_t numProvided = node->_typeArguments
+            ? llvh::cast<ESTree::TypeParameterInstantiationNode>(
+                  node->_typeArguments)
+                  ->_params.size()
+            : 0;
+        if (node->_typeArguments &&
+            numProvided >= outer_.getGenericInfoMustExist(decl).numTypeParams) {
+          // All type arguments provided (or too many, which errors during
+          // specialization): specialize directly.
           outer_.resolveCallToGenericFunctionSpecialization(
               node, identCallee, decl);
         } else {
-          // Attempt to infer the type arguments.
+          // No or partial type arguments: infer the missing trailing ones.
           auto [visited, typeArgs] =
               outer_.inferTypeArgumentsForGenericFunctionCall(
                   node, identCallee, decl);
           if (visited)
             shouldVisitArguments = false;
           if (typeArgs.empty()) {
-            outer_.sm_.error(
-                node->getStartLoc(),
-                "could not infer type arguments for generic function");
+            // Partial explicit type args already reported what's missing.
+            if (!visited || !node->_typeArguments)
+              outer_.sm_.error(
+                  node->getStartLoc(),
+                  "ft: could not infer type arguments for generic function");
             return;
           }
           outer_.resolveCallToGenericFunctionSpecializationWithParsedTypes(
@@ -2569,8 +2580,34 @@ class FlowChecker::ExprVisitor {
           shouldVisitArguments = false;
           overloadResolved = true;
         } else if (llvh::isa<GenericType>(field->type->info)) {
-          outer_.resolveCallToGenericMethodSpecialization(
-              node, memCallee, field->method);
+          size_t numProvided =
+              llvh::cast<ESTree::TypeParameterInstantiationNode>(
+                  node->_typeArguments)
+                  ->_params.size();
+          if (numProvided >= outer_.getGenericMethodInfoMustExist(field->method)
+                                 .numTypeParams) {
+            // All type arguments provided (or too many, which errors during
+            // specialization): specialize directly.
+            outer_.resolveCallToGenericMethodSpecialization(
+                node, memCallee, field->method);
+          } else {
+            // Partial type arguments: infer the missing trailing ones.
+            auto [didVisitArgs, typeArgs] =
+                outer_.inferTypeArgumentsForGenericMethodCall(
+                    node, memCallee, field->method);
+            if (didVisitArgs)
+              shouldVisitArguments = false;
+            if (typeArgs.empty()) {
+              // The missing type argument was already reported.
+              if (!didVisitArgs)
+                outer_.sm_.error(
+                    node->getStartLoc(),
+                    "ft: could not infer type arguments for generic method");
+              return;
+            }
+            outer_.resolveCallToGenericMethodSpecializationWithParsedTypes(
+                node, memCallee, typeArgs, field->method);
+          }
         } else {
           outer_.sm_.error(
               node->_typeArguments->getSourceRange(),
@@ -3439,26 +3476,45 @@ class FlowChecker::ExprVisitor {
       ESTree::NewExpressionNode *node,
       ESTree::Node *parent,
       Type *constraint) {
-    visitESTreeChildren(*this, node, nullptr);
+    auto *identCallee = llvh::dyn_cast<ESTree::IdentifierNode>(node->_callee);
+    sema::Decl *genericDecl = nullptr;
+    if (identCallee && outer_.getDecl(identCallee)->generic)
+      genericDecl = outer_.getDecl(identCallee);
 
-    // Resolve generics using type arguments if necessary.
-    if (auto *identCallee =
-            llvh::dyn_cast<ESTree::IdentifierNode>(node->_callee)) {
-      sema::Decl *decl = outer_.getDecl(identCallee);
-      if (decl->generic) {
+    // Partial type arguments: infer the missing trailing ones from the
+    // constructor arguments, which visits them.
+    if (genericDecl && node->_typeArguments &&
+        llvh::cast<ESTree::TypeParameterInstantiationNode>(node->_typeArguments)
+                ->_params.size() <
+            outer_.getGenericInfoMustExist(genericDecl).numTypeParams) {
+      auto [visited, typeArgs] =
+          outer_.inferTypeArgumentsForGenericClassNew(node, genericDecl);
+      if (typeArgs.empty()) {
+        if (!visited)
+          outer_.sm_.error(
+              node->_typeArguments->getSourceRange(),
+              "ft: could not infer type arguments for generic class");
+        return;
+      }
+      outer_.resolveGenericClassSpecializationWithParsedTypes(
+          identCallee, node->getSourceRange(), typeArgs, genericDecl);
+    } else {
+      visitESTreeChildren(*this, node, nullptr);
+      // Resolve generics using type arguments if necessary.
+      if (genericDecl) {
         if (!node->_typeArguments) {
           outer_.sm_.error(
               node->_callee->getSourceRange(), "ft: type arguments required");
           return;
         }
-
         outer_.resolveGenericClassSpecialization(
             identCallee,
             llvh::cast<ESTree::TypeParameterInstantiationNode>(
                 node->_typeArguments),
-            decl);
+            genericDecl);
       }
-    } else if (node->_typeArguments) {
+    }
+    if (!identCallee && node->_typeArguments) {
       // Generics handled above.
       outer_.sm_.error(
           node->_callee->getSourceRange(),
