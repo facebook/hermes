@@ -220,7 +220,7 @@ ExecutionStatus JSRegExp::initializeGroupNameMappingObj(
 
   auto objRes = JSObject::create(
       runtime,
-      runtime.objectPrototype,
+      Runtime::makeNullHandle<JSObject>(),
       runtime.classJSObject,
       parsedMappings.size());
   lv.obj = objRes.get();
