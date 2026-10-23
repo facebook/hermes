@@ -95,8 +95,8 @@ SHLegacyValue _interpreter_create_array_from_buffer(
     unsigned numLiterals,
     unsigned bufferIndex);
 
-/// Alternative to _sh_ljs_create_regexp that allows using the precompiled
-/// regexp bytecode.
+/// Alternative to _sh_ljs_create_regexp that reads the precompiled regexp
+/// bytecode from the CodeBlock.
 SHLegacyValue _interpreter_create_regexp(
     SHRuntime *shr,
     SHCodeBlock *codeBlock,
