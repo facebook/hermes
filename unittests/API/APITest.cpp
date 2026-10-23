@@ -427,21 +427,14 @@ class HermesRuntimeTest : public ::testing::TestWithParam<RuntimeFactory>,
                           public HermesRuntimeTestBase {
  public:
   HermesRuntimeTest() : HermesRuntimeTestBase(GetParam()()) {}
-
-  /// Evaluate the given buffer containing either source or bytecode in the
-  /// runtime and return the result.
-  Value evaluateSourceOrBytecode(
-      const std::shared_ptr<const Buffer> &buf,
-      const std::string &sourceURL) {
-    // HermesSandboxRuntime does not permit bytecode in evaluateJavaScript, so
-    // check for it and call the appropriate method.
-    if (auto *sbrt = dynamic_cast<HermesSandboxRuntime *>(rt.get()))
-      if (HermesSandboxRuntime::isHermesBytecode(buf->data(), buf->size()))
-        return sbrt->evaluateHermesBytecode(buf, sourceURL);
-
-    return rt->evaluateJavaScript(buf, sourceURL);
-  }
 };
+
+/// Like HermesRuntimeTest, but for tests that run bytecode from
+/// hermes::compileJS, so it leaves out HermesSandboxRuntime. The sandbox's VM
+/// comes from the revision the sandbox was last generated at, and may misread
+/// bytecode from the compiler linked into this test even when the bytecode
+/// version matches.
+class HermesRuntimeBytecodeTest : public HermesRuntimeTest {};
 
 // In JSC there's a bug where host functions are always ran with a this in
 // nonstrict mode so this must be a hermes only test. See
@@ -665,7 +658,7 @@ TEST(HermesRuntimeDecoratorTest, CreateArrayBufferCallsWith) {
   EXPECT_EQ(crt.count.exited, 1);
 }
 
-TEST_P(HermesRuntimeTest, BytecodeTest) {
+TEST_P(HermesRuntimeBytecodeTest, BytecodeTest) {
   auto *api = castInterface<IHermesRootAPI>(makeHermesRootAPI());
   const uint8_t shortBytes[] = {1, 2, 3};
   EXPECT_FALSE(api->isHermesBytecode(shortBytes, 0));
@@ -678,7 +671,7 @@ TEST_P(HermesRuntimeTest, BytecodeTest) {
   ASSERT_TRUE(hermes::compileJS("x = 1", bytecode));
   EXPECT_TRUE(api->isHermesBytecode(
       reinterpret_cast<const uint8_t *>(bytecode.data()), bytecode.size()));
-  evaluateSourceOrBytecode(
+  rt->evaluateJavaScript(
       std::unique_ptr<StringBuffer>(new StringBuffer(bytecode)), "");
   EXPECT_EQ(rt->global().getProperty(*rt, "x").getNumber(), 1);
 
@@ -699,7 +692,7 @@ TEST(HermesRuntimePreparedJavaScriptTest, BytecodeTest) {
   EXPECT_EQ(rt->global().getProperty(*rt, "q").getNumber(), 2);
 }
 
-TEST_P(HermesRuntimeTest, CompileWithSourceMapTest) {
+TEST_P(HermesRuntimeBytecodeTest, CompileWithSourceMapTest) {
   /* original source:
   const a: number = 12;
   class MyClass {
@@ -750,7 +743,7 @@ c.doSomething(a, 15);
   EXPECT_TRUE(api->isHermesBytecode(
       reinterpret_cast<const uint8_t *>(bytecode.data()), bytecode.size()));
   try {
-    evaluateSourceOrBytecode(
+    rt->evaluateJavaScript(
         std::unique_ptr<StringBuffer>(new StringBuffer(bytecode)), "");
     FAIL() << "Expected JSIException";
   } catch (const facebook::jsi::JSIException &err) {
@@ -760,7 +753,7 @@ c.doSomething(a, 15);
   }
 }
 
-TEST_P(HermesRuntimeTest, JumpTableBytecodeTest) {
+TEST_P(HermesRuntimeBytecodeTest, JumpTableBytecodeTest) {
   std::string code = R"xyz(
     (function(){
 var i = 0;
@@ -782,7 +775,7 @@ var i = 0;
   std::string bytecode;
   ASSERT_TRUE(hermes::compileJS(code, bytecode));
   auto ret =
-      evaluateSourceOrBytecode(std::make_unique<StringBuffer>(bytecode), "");
+      rt->evaluateJavaScript(std::make_unique<StringBuffer>(bytecode), "");
   ASSERT_EQ(ret.asNumber(), 5.0);
 }
 
@@ -1196,28 +1189,40 @@ TEST_P(HermesRuntimeTest, WeakReferences) {
   EXPECT_TRUE(wo.lock(*rt).isUndefined());
 }
 
-TEST_P(HermesRuntimeTest, SourceURLAppearsInBacktraceTest) {
-  std::string sourceURL = "//SourceURLAppearsInBacktraceTest/Test/URL";
-  std::string sourceCode = R"(
+/// The source URL and the throwing source of SourceURLAppearsInBacktraceTest.
+constexpr const char *kBacktraceTestURL =
+    "//SourceURLAppearsInBacktraceTest/Test/URL";
+constexpr const char *kBacktraceTestSource = R"(
 function thrower() { throw new Error('Test Error Message')}
 function throws1() { thrower(); }
 throws1();
 )";
-  std::string bytecode;
-  bool compiled = hermes::compileJS(sourceCode, sourceURL.c_str(), bytecode);
-  ASSERT_TRUE(compiled) << "JS source should have compiled";
 
-  for (const std::string &code : {sourceCode, bytecode}) {
-    bool caught = false;
-    try {
-      evaluateSourceOrBytecode(std::make_unique<StringBuffer>(code), sourceURL);
-    } catch (facebook::jsi::JSError &err) {
-      caught = true;
-      EXPECT_TRUE(err.getStack().find(sourceURL) != std::string::npos)
-          << "Backtrace should contain source URL";
-    }
-    EXPECT_TRUE(caught) << "JS should have thrown an exception";
+/// Evaluate \p code, which must throw, in \p rt with kBacktraceTestURL as the
+/// source URL, and check that the URL appears in the backtrace.
+void expectSourceURLInBacktrace(Runtime &rt, const std::string &code) {
+  bool caught = false;
+  try {
+    rt.evaluateJavaScript(
+        std::make_unique<StringBuffer>(code), kBacktraceTestURL);
+  } catch (facebook::jsi::JSError &err) {
+    caught = true;
+    EXPECT_TRUE(err.getStack().find(kBacktraceTestURL) != std::string::npos)
+        << "Backtrace should contain source URL";
   }
+  EXPECT_TRUE(caught) << "JS should have thrown an exception";
+}
+
+TEST_P(HermesRuntimeTest, SourceURLAppearsInBacktraceTest) {
+  expectSourceURLInBacktrace(*rt, kBacktraceTestSource);
+}
+
+TEST_P(HermesRuntimeBytecodeTest, SourceURLAppearsInBacktraceTest) {
+  std::string bytecode;
+  bool compiled =
+      hermes::compileJS(kBacktraceTestSource, kBacktraceTestURL, bytecode);
+  ASSERT_TRUE(compiled) << "JS source should have compiled";
+  expectSourceURLInBacktrace(*rt, bytecode);
 }
 
 TEST_P(HermesRuntimeTest, HostObjectAsParentTest) {
@@ -4527,4 +4532,9 @@ INSTANTIATE_TEST_CASE_P(
     Runtimes,
     HermesRuntimeTest,
     ::testing::ValuesIn(runtimeGeneratorsWithSandBox()));
+
+INSTANTIATE_TEST_CASE_P(
+    Runtimes,
+    HermesRuntimeBytecodeTest,
+    ::testing::ValuesIn(runtimeGenerators()));
 } // namespace
