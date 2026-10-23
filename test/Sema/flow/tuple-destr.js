@@ -63,7 +63,7 @@ let [anyNumber, anyString]: [number, string] = anyVar; // implicit checked cast
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                ArrayExpression : %tuple.3
 // CHECK-NEXT:                    NumericLiteral : 1
-// CHECK-NEXT:                    BooleanLiteral : boolean
+// CHECK-NEXT:                    BooleanLiteral : true
 // CHECK-NEXT:                    Id 'inner' [D:E:%d.2 'inner'] : %tuple.2
 // CHECK-NEXT:                Id 'outer' [D:E:%d.3 'outer']
 // CHECK-NEXT:        VariableDeclaration

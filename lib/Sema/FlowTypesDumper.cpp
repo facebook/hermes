@@ -58,6 +58,8 @@ void FlowTypesDumper::printTypeRef(
   } else if (auto *numLit = llvh::dyn_cast<NumberLiteralType>(type)) {
     char buf[NUMBER_TO_STRING_BUF_SIZE];
     os << numberToString(numLit->getValue(), buf, sizeof(buf));
+  } else if (auto *boolLit = llvh::dyn_cast<BooleanLiteralType>(type)) {
+    os << (boolLit->getValue() ? "true" : "false");
   } else if (!type->isSingleton())
     os << "%" << getTypeAsVarName(type) << "." << getNumber(type);
   else
@@ -261,6 +263,12 @@ void FlowTypesDumper::printTypeDescription(
       char buf[NUMBER_TO_STRING_BUF_SIZE];
       os << numberToString(
           llvh::cast<NumberLiteralType>(type)->getValue(), buf, sizeof(buf));
+      break;
+    }
+
+    case TypeKind::BooleanLiteral: {
+      bool value = llvh::cast<BooleanLiteralType>(type)->getValue();
+      os << (value ? "true" : "false");
       break;
     }
 

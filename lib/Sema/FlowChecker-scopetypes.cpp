@@ -145,6 +145,11 @@ class FlowChecker::FindLoopingTypes {
     return false;
   }
 
+  bool isLooping(Type *, BooleanLiteralType *) {
+    // Literals carry no nested types.
+    return false;
+  }
+
   bool isLooping(Type *, TypeWithId *type) {
     // Nominal type. Stop checking for recursion.
     return false;
@@ -1025,7 +1030,10 @@ class FlowChecker::DeclareScopeTypes {
     llvh::SmallVector<Type *, 4> nonLoopingTypes{};
     llvh::SmallVector<Type *, 4> loopingTypes{};
     UnionType::canonicalizeTypes(
-        unionType->getTypes(), nonLoopingTypes, loopingTypes);
+        unionType->getTypes(),
+        nonLoopingTypes,
+        loopingTypes,
+        outer.flowContext_.getBoolean());
 
     LLVM_DEBUG(
         llvh::dbgs() << "Result type for union: " << nonLoopingTypes.size()

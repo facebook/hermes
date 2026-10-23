@@ -101,7 +101,7 @@ let trec: TRec;
 // CHECK-NEXT:                        StringLiteral : "hi"
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'y'
-// CHECK-NEXT:                        BooleanLiteral : boolean
+// CHECK-NEXT:                        BooleanLiteral : true
 // CHECK-NEXT:                Id 'tdup' [D:E:%d.6 'tdup']
 // CHECK-NEXT:        TypeAlias
 // CHECK-NEXT:            Id 'TRec'

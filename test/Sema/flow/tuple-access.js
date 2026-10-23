@@ -38,7 +38,7 @@ let l: number = x.length
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                ArrayExpression : %tuple.2
 // CHECK-NEXT:                    NumericLiteral : 1
-// CHECK-NEXT:                    BooleanLiteral : boolean
+// CHECK-NEXT:                    BooleanLiteral : true
 // CHECK-NEXT:                Id 'x' [D:E:%d.2 'x']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator

@@ -100,7 +100,7 @@ let merged: {[string]: number | boolean} = {...d, ...plain};
 // CHECK-NEXT:                ObjectExpression : %object.4
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'a'
-// CHECK-NEXT:                        BooleanLiteral : boolean
+// CHECK-NEXT:                        BooleanLiteral : true
 // CHECK-NEXT:                Id 'plain' [D:E:%d.6 'plain']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
