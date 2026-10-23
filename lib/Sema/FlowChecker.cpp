@@ -1586,6 +1586,12 @@ void FlowChecker::visit(ESTree::VariableDeclarationNode *node) {
       }
       visitExpression(declarator->_init, declarator, constraint);
     }
+    auto defaultsIt = declPatternDefaults_.find(declarator->_id);
+    if (defaultsIt != declPatternDefaults_.end()) {
+      auto defaults = std::move(defaultsIt->second);
+      declPatternDefaults_.erase(defaultsIt);
+      checkDestructuringDefaults(defaults);
+    }
     if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(declarator->_id)) {
       if (!declarator->_init)
         continue;
@@ -1823,7 +1829,8 @@ template <typename RecordLeafCB>
 void FlowChecker::resolveDestructuringTypes(
     ESTree::Node *pattern,
     Type *patternType,
-    RecordLeafCB recordLeaf) {
+    RecordLeafCB recordLeaf,
+    llvh::SmallVectorImpl<DestructuringDefault> &defaults) {
   // Use a worklist to avoid recursion.
   llvh::SmallVector<std::pair<ESTree::Node *, Type *>, 4> worklist{};
   worklist.emplace_back(pattern, patternType);
@@ -1902,6 +1909,30 @@ void FlowChecker::resolveDestructuringTypes(
             "ft: incompatible type for object pattern, "
             "expected object type");
       }
+    } else if (
+        auto *assign = llvh::dyn_cast<ESTree::AssignmentPatternNode>(node)) {
+      // A defaulted binding `x = default` inside a destructuring pattern.
+      // The caller checks it once every binding is recorded, so a default may
+      // reference an earlier binding in the same pattern, e.g.
+      // `let {a, b = a} = o`.
+      defaults.emplace_back(assign, t);
+      worklist.emplace_back(assign->_left, t);
+    }
+  }
+}
+
+void FlowChecker::checkDestructuringDefaults(
+    llvh::ArrayRef<DestructuringDefault> defaults) {
+  for (auto [assign, t] : defaults) {
+    visitExpression(assign->_right, assign, t);
+    Type *initType = getNodeTypeOrAny(assign->_right);
+    CanFlowResult cf = canAFlowIntoB(initType, t);
+    if (!cf.canFlow) {
+      sm_.error(
+          assign->_right->getSourceRange(),
+          "ft: incompatible default value type");
+    } else {
+      assign->_right = implicitCheckedCast(assign->_right, t, cf);
     }
   }
 }
@@ -1909,12 +1940,16 @@ void FlowChecker::resolveDestructuringTypes(
 void FlowChecker::assignDestructuringParamTypes(
     ESTree::Node *pattern,
     Type *paramType) {
+  // Param defaults can't see body declarations, so check them right away.
+  llvh::SmallVector<DestructuringDefault, 2> defaults{};
   resolveDestructuringTypes(
       pattern,
       paramType,
       [this](sema::Decl *decl, Type *t, ESTree::IdentifierNode *) {
         declTypes_.try_emplace(decl, t);
-      });
+      },
+      defaults);
+  checkDestructuringDefaults(defaults);
 }
 
 template <typename OnChildCB>
@@ -1929,6 +1964,13 @@ bool FlowChecker::expandTupleDestructuring(
       sm_.error(
           rest->getSourceRange(),
           "ft: rest element not allowed when destructuring a tuple");
+      return false;
+    }
+    if (llvh::isa<ESTree::AssignmentPatternNode>(&element)) {
+      sm_.error(
+          element.getSourceRange(),
+          "ft: default values are not yet supported "
+          "in typed tuple destructuring");
       return false;
     }
     if (i >= tuple->getTypes().size()) {
@@ -2351,13 +2393,17 @@ class FlowChecker::AnnotateScopeDecls {
       ESTree::VariableDeclaratorNode *declarator,
       ESTree::PatternNode *pattern,
       Type *patternType) {
+    llvh::SmallVector<DestructuringDefault, 2> defaults{};
     outer.resolveDestructuringTypes(
         pattern,
         patternType,
         [this, declarator](
             sema::Decl *decl, Type *t, ESTree::IdentifierNode *id) {
           outer.recordDecl(decl, t, id, declarator);
-        });
+        },
+        defaults);
+    if (!defaults.empty())
+      outer.declPatternDefaults_[pattern] = std::move(defaults);
   }
 
   void annotateFunctionDeclaration(

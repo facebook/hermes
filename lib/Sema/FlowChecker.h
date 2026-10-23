@@ -520,18 +520,35 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// to each leaf identifier and recording them in declTypes_.
   void assignDestructuringParamTypes(ESTree::Node *pattern, Type *paramType);
 
+  /// A destructuring default and the type it must flow into.
+  using DestructuringDefault =
+      std::pair<ESTree::AssignmentPatternNode *, Type *>;
+
+  /// Defaults in declaration patterns, keyed by the declarator's pattern.
+  /// They are checked in visit(VariableDeclarationNode) rather than during
+  /// AnnotateScopeDecls, when other declarations may not be typed yet.
+  llvh::DenseMap<ESTree::Node *, llvh::SmallVector<DestructuringDefault, 2>>
+      declPatternDefaults_{};
+
   /// Walk a destructuring \p pattern, annotating every nested pattern node and
   /// leaf binding identifier with the type derived from \p patternType. For
   /// each leaf binding identifier, \p recordLeaf is invoked with its decl, its
   /// resolved type, and the identifier node, allowing the caller to record the
   /// binding in the way appropriate to its context (function parameter, var
   /// declaration, etc.).
+  /// Defaults are appended to \p defaults for the caller to check with
+  /// checkDestructuringDefaults once the bindings they may reference are typed.
   /// May report errors.
   template <typename RecordLeafCB>
   void resolveDestructuringTypes(
       ESTree::Node *pattern,
       Type *patternType,
-      RecordLeafCB recordLeaf);
+      RecordLeafCB recordLeaf,
+      llvh::SmallVectorImpl<DestructuringDefault> &defaults);
+
+  /// Visit each destructuring default and check it flows into its type.
+  void checkDestructuringDefaults(
+      llvh::ArrayRef<DestructuringDefault> defaults);
 
   /// Expand a tuple destructuring pattern: validate element count and call
   /// \p onChild for each (element, type) pair.
