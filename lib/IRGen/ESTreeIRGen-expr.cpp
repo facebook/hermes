@@ -1044,6 +1044,8 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genMemberExpression(
           Builder.getLiteralUndefined()};
     }
     if (llvh::isa<flow::ClassType>(
+            flowContext_.getNodeTypeOrAny(superNode)->info) ||
+        llvh::isa<flow::ClassConstructorType>(
             flowContext_.getNodeTypeOrAny(superNode)->info)) {
       auto *property = llvh::dyn_cast<ESTree::IdentifierNode>(mem->_property);
       if (!property || mem->_computed) {
@@ -1439,9 +1441,8 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
       }
     } else {
       auto *loadProp = Builder.createLoadPropertyInst(baseValue, propValue);
-      loadProp->setType(
-          getTypeContext().unionTy(
-              Type::createString(), Type::createUndefined()));
+      loadProp->setType(getTypeContext().unionTy(
+          Type::createString(), Type::createUndefined()));
       auto *cast =
           Builder.createCheckedTypeCastInst(loadProp, Type::createString());
       return MemberExpressionResult{cast, nullptr, baseValue};
@@ -1460,8 +1461,11 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
 ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitTypedSuperLoad(
     ESTree::SuperNode *superNode,
     ESTree::IdentifierNode *property) {
-  auto *classType = llvh::cast<flow::ClassType>(
-      flowContext_.getNodeTypeOrAny(superNode)->info);
+  auto *superType = flowContext_.getNodeTypeOrAny(superNode)->info;
+  const bool isStatic = llvh::isa<flow::ClassConstructorType>(superType);
+  auto *classType = isStatic
+      ? llvh::cast<flow::ClassConstructorType>(superType)->getClassTypeInfo()
+      : llvh::cast<flow::ClassType>(superType);
   auto propName = Identifier::getFromPointer(
       llvh::cast<ESTree::IdentifierNode>(property)->_name);
   Value *thisValue = genThisExpression();
@@ -1473,6 +1477,26 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitTypedSuperLoad(
     Value *closure = emitLoad(getDeclData(decl), false);
     return MemberExpressionResult{
         closure, declFunctions_.lookup(decl), thisValue};
+  }
+
+  // Static members are represented by scope variables rather than slots on
+  // the constructor object. Resolve static accessors through the superclass
+  // type and call them with the current class as the receiver, as required by
+  // super property semantics.
+  if (isStatic) {
+    auto *staticType = classType->getStaticObjectTypeInfo();
+    assert(staticType && "typed static super must have a static object type");
+    auto optField = staticType->findPublicField(propName);
+    assert(optField && "static super property must typecheck");
+    const auto *field = optField->getField();
+    if (field->hasGetter()) {
+      assert(field->method && "static getter must have a method");
+      auto *getterKey = ESTree::getPropertyIdentifier(field->method->_key);
+      sema::Decl *decl = semCtx_.getExpressionDecl(getterKey);
+      Value *call = emitTypedGetterCall(decl, thisValue, field->type);
+      return MemberExpressionResult{call, nullptr, thisValue};
+    }
+    llvm_unreachable("static super member should have a Decl");
   }
 
   if (auto optFieldLookup = classType->findPublicField(propName)) {
@@ -1565,6 +1589,28 @@ void ESTreeIRGen::emitMemberStore(
 
   // If \p thisValue is set, this is a store to `super`.
   if (thisValue) {
+    // Static super accessors use the superclass's static type, while the
+    // setter receiver remains the current class.
+    if (auto *consType = llvh::dyn_cast<flow::ClassConstructorType>(
+            flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
+      if (!mem->_computed) {
+        auto *classTypeInfo =
+            llvh::cast<flow::ClassType>(consType->getClassType()->info);
+        auto *staticInfo = classTypeInfo->getStaticObjectTypeInfo();
+        auto optField = staticInfo
+            ? findFieldForMemberProp(mem, staticInfo)
+            : OptValue<flow::ClassType::FieldLookupEntry>();
+        if (optField && optField->getField()->hasSetter()) {
+          const auto *field = optField->getField();
+          assert(field->setterMethod && "static setter must have a method");
+          auto *setterKey =
+              ESTree::getPropertyIdentifier(field->setterMethod->_key);
+          sema::Decl *decl = semCtx_.getExpressionDecl(setterKey);
+          emitTypedSetterCall(decl, thisValue, storedValue);
+          return;
+        }
+      }
+    }
     // Check for typed accessor setter on super.
     if (auto *classType = llvh::dyn_cast<flow::ClassType>(
             flowContext_.getNodeTypeOrAny(mem->_object)->info)) {

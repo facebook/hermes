@@ -1000,7 +1000,8 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
       ESTree::MethodDefinitionNode *method,
       SMRange errorRange,
       llvh::ArrayRef<Type *> typeArgTypes,
-      Type *classType);
+      Type *classType,
+      Type *thisType);
 
   /// Implementation for specializing generics: handles cloning, caching,
   /// and insertion. Caller handles scope management and typechecking.
@@ -1015,7 +1016,8 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
       GenericInfo<ESTree::Node> &generic,
       sema::LexicalScope *cloneScope,
       SMRange errorRange,
-      llvh::ArrayRef<Type *> typeArgTypes);
+      llvh::ArrayRef<Type *> typeArgTypes,
+      Type *cacheDiscriminator = nullptr);
 
   /// \param key the property key to attempt to convert to an identifier,
   ///   e.g. StringLiteralNode, IdentifierNode, or NumericLiteralNode.

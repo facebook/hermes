@@ -1351,7 +1351,8 @@ void FlowChecker::visit(ESTree::MethodDefinitionNode *node) {
         *this,
         fe,
         funcType,
-        curClassContext_->classType,
+        node->_static ? curClassContext_->newTargetType
+                      : curClassContext_->classType,
         /* newTargetType */ flowContext_.getVoid());
 
     // For static methods on generic classes, replace the class type
@@ -3324,7 +3325,8 @@ std::pair<ESTree::Node *, bool> FlowChecker::specializeGenericImpl(
     GenericInfo<ESTree::Node> &generic,
     sema::LexicalScope *cloneScope,
     SMRange errorRange,
-    llvh::ArrayRef<Type *> typeArgTypes) {
+    llvh::ArrayRef<Type *> typeArgTypes,
+    Type *cacheDiscriminator) {
   assert(cloneScope && "must have cloneScope");
 
   // Extract info from types.
@@ -3332,6 +3334,13 @@ std::pair<ESTree::Node *, bool> FlowChecker::specializeGenericImpl(
   for (Type *type : typeArgTypes) {
     assert(type->info && "missing type info for generic specialization");
     typeArgs.push_back(type->info);
+  }
+  // Include the receiver in a generic method's cache key. Inherited generic
+  // methods can be specialized for different receiver types, which affects
+  // the type of `this` in the specialized body.
+  if (cacheDiscriminator) {
+    assert(cacheDiscriminator->info && "missing cache discriminator type info");
+    typeArgs.push_back(cacheDiscriminator->info);
   }
 
   // Retrieve specialization if it exists.
@@ -3942,9 +3951,14 @@ void FlowChecker::resolveCallToGenericMethodSpecialization(
 
   // Get the object type to use as the 'this' type.
   Type *objType = getNodeTypeOrAny(callee->_object);
+  Type *thisType = objType;
+  if (llvh::isa<ESTree::SuperNode>(callee->_object) && curFunctionContext_ &&
+      curFunctionContext_->thisParamType) {
+    thisType = curFunctionContext_->thisParamType;
+  }
 
   auto result = specializeGenericMethodWithParsedTypes(
-      method, node->getSourceRange(), typeArgTypes, objType);
+      method, node->getSourceRange(), typeArgTypes, objType, thisType);
 
   if (result.type) {
     setNodeType(callee, result.type);
@@ -3964,9 +3978,14 @@ void FlowChecker::resolveCallToGenericMethodSpecializationWithParsedTypes(
 
   // Get the object type to use as the 'this' type.
   Type *objType = getNodeTypeOrAny(callee->_object);
+  Type *thisType = objType;
+  if (llvh::isa<ESTree::SuperNode>(callee->_object) && curFunctionContext_ &&
+      curFunctionContext_->thisParamType) {
+    thisType = curFunctionContext_->thisParamType;
+  }
 
   auto result = specializeGenericMethodWithParsedTypes(
-      method, node->getSourceRange(), typeArgTypes, objType);
+      method, node->getSourceRange(), typeArgTypes, objType, thisType);
 
   if (result.type) {
     setNodeType(callee, result.type);
@@ -4031,11 +4050,12 @@ FlowChecker::specializeGenericMethodWithParsedTypes(
     ESTree::MethodDefinitionNode *method,
     SMRange errorRange,
     llvh::ArrayRef<Type *> typeArgTypes,
-    Type *classType) {
+    Type *classType,
+    Type *thisType) {
   GenericInfo<ESTree::Node> &generic = getGenericMethodInfoMustExist(method);
 
   auto [specialization, wasNewlyCreated] = specializeGenericImpl(
-      generic, generic.classScope, errorRange, typeArgTypes);
+      generic, generic.classScope, errorRange, typeArgTypes, thisType);
   if (!specialization) {
     return {};
   }
@@ -4094,11 +4114,7 @@ FlowChecker::specializeGenericMethodWithParsedTypes(
       classTypeForContext = ct->getClassType();
     ClassContext classContext(*this, classTypeForContext, classType, nullptr);
     FunctionContext functionContext(
-        *this,
-        specializedFE,
-        ftype,
-        classTypeForContext,
-        flowContext_.getVoid());
+        *this, specializedFE, ftype, thisType, flowContext_.getVoid());
     visitFunctionLike(
         specializedFE, specializedFE->_body, specializedFE->_params);
   } else {
