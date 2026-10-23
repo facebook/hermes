@@ -794,7 +794,6 @@ void emit_stringprim_get_length_and_flags(
 
 /// Emit code to initialize the fields on a JSObject.
 /// \param xObj contains a pointer to the object to initialise.
-/// \param xParent contains a compressed pointer to the parent object.
 /// \param xTempOrPropStorageOpt is a temporary register. It may contain
 ///   a pointer to the PropStorage. If \p HasPropStorage is true, it's
 ///   used to initialize the PropStorage, otherwise it's used as a temporary
@@ -805,7 +804,6 @@ void emit_stringprim_get_length_and_flags(
 void emit_jsobject_init(
     a64::Assembler &a,
     const a64::GpX &xObj,
-    const a64::GpX &xParent,
     const a64::GpX &xTempOrPropStorageOpt,
     bool hasPropStorage,
     const a64::GpX &xClazzOpt = a64::GpX{});

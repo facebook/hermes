@@ -127,7 +127,6 @@ void emit_stringprim_get_length_and_flags(
 void emit_jsobject_init(
     a64::Assembler &a,
     const a64::GpX &xObj,
-    const a64::GpX &xParent,
     const a64::GpX &xTempOrPropStorageOpt,
     bool hasPropStorage,
     const a64::GpX &xClazzOpt) {
@@ -157,15 +156,7 @@ void emit_jsobject_init(
   // obj->parent = xParent
   // obj->clazz = xClazz (may be the same as xTemp).
   assert(xClazz.isValid());
-  static_assert(
-      offsetof(SHJSObject, clazz) - offsetof(SHJSObject, parent) ==
-          sizeof(CompressedPointer),
-      "clazz and parent must be adjacent to use stp");
-  if constexpr (sizeof(CompressedPointer) == 4)
-    a.stp(
-        xParent.w(), xClazz.w(), a64::Mem(xObj, offsetof(SHJSObject, parent)));
-  else
-    a.stp(xParent, xClazz, a64::Mem(xObj, offsetof(SHJSObject, parent)));
+  emit_store_cp(a, xClazz, a64::Mem(xObj, offsetof(SHJSObject, clazz)));
 
   // If !hasPropStorage, obj->propStorage = nullptr.
 

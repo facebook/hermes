@@ -59,7 +59,6 @@ typedef struct SHGCCell {
 typedef struct SHJSObject {
   SHGCCell base;
   SHObjectFlags flags;
-  SHCompressedPointerRawType parent;
   SHCompressedPointerRawType clazz;
   SHCompressedPointerRawType propStorage;
 } SHJSObject;

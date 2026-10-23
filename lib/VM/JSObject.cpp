@@ -80,7 +80,6 @@ void JSObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const JSObject *>(cell);
   mb.setVTable(&JSObject::vt);
   mb.setJitCall(&JSObject::_jitCallImpl);
-  mb.addField("parent", &self->parent_);
   mb.addField("class", &self->clazzDoNotAccessDirectly_);
   mb.addField("propStorage", &self->propStorage_);
 
@@ -328,7 +327,6 @@ CallResult<bool> JSObject::setParent(
   // 9.
   lv.clazz = HiddenClass::updateObjectParent(
       lv.clazz, runtime, createPseudoHandle(*lv.parent));
-  lv.self->parent_.set(runtime, *lv.parent, runtime.getHeap());
   lv.self->updateClass(runtime, *lv.clazz);
 
   // 10.

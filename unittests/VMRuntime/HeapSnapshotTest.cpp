@@ -823,8 +823,8 @@ using HeapSnapshotRuntimeTest = RuntimeTestFixture;
 
 template <typename T>
 size_t firstNamedPropertyEdge() {
-  // parent, __proto__, class, directProp$i
-  return JSObject::DIRECT_PROPERTY_SLOTS - JSObject::numOverlapSlots<T>() + 3;
+  // __proto__, class, directProp$i
+  return JSObject::DIRECT_PROPERTY_SLOTS - JSObject::numOverlapSlots<T>() + 2;
 }
 
 TEST_F(HeapSnapshotRuntimeTest, FunctionLocationForLazyCode) {

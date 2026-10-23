@@ -47,13 +47,7 @@ void Emitter::newObject(FR frRes) {
       xTemp2,
       slowPathLab);
 
-  // Get the parent.
-  a.ldr(xTemp1, a64::Mem(xRuntime, offsetof(Runtime, objectPrototype)));
-  emit_sh_ljs_get_pointer(a, xTemp1, xTemp1);
-  emit_sh_cp_encode_non_null(a, xTemp1);
-
-  emit_jsobject_init(
-      a, xRes, /* xParent */ xTemp1, /* xTempOrPropStorageOpt */ xTemp2, false);
+  emit_jsobject_init(a, xRes, /* xTempOrPropStorageOpt */ xTemp2, false);
 
   // Add the object tag to the result.
   emit_sh_ljs_object(a, xRes);
@@ -187,13 +181,7 @@ void Emitter::newObjectWithParent(
       slowPathLab);
 
   // Initialize the object.
-  emit_jsobject_init(
-      a,
-      xNewObjPtr,
-      /* xParent */ xTemp2,
-      /* xTempOrPropStorageOpt */ xTemp1,
-      false,
-      xClazz);
+  emit_jsobject_init(a, xNewObjPtr, xTemp1, false, xClazz);
 
   auto hwRes = getOrAllocFRInGpX(frRes, false, HWReg::gpX(0));
   frUpdatedWithHW(frRes, hwRes, FRType::Pointer);
@@ -358,15 +346,10 @@ void Emitter::newObjectWithBuffer(
         slowPathLab);
   }
 
-  // Get the parent.
-  a.ldr(xTmp, a64::Mem(xRuntime, offsetof(Runtime, objectPrototypeRawPtr)));
-  emit_sh_cp_encode_non_null(a, xTmp);
-
   // Initialize the JSObject to have the correct parent/HC.
   emit_jsobject_init(
       a,
       xObj,
-      /* xParent */ xTmp,
       /* xTempOrPropStorageOpt */ xTmp2,
       numIndirectSlots > 0,
       /* xClazz */ xClazz);
