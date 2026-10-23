@@ -84,7 +84,7 @@ function g({k = 'd'}: {+[key: string]: mixed}): mixed {
 // CHECK-NEXT:                ObjectExpression : %object.2
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'x'
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 1
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'y'
 // CHECK-NEXT:                        StringLiteral : "hello"
@@ -97,7 +97,7 @@ function g({k = 'd'}: {+[key: string]: mixed}): mixed {
 // CHECK-NEXT:                        Id 'x'
 // CHECK-NEXT:                        AssignmentPattern
 // CHECK-NEXT:                            Id 'x' [D:E:%d.3 'x'] : number
-// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                            NumericLiteral : 7
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'y'
 // CHECK-NEXT:                        AssignmentPattern
@@ -118,7 +118,7 @@ function g({k = 'd'}: {+[key: string]: mixed}): mixed {
 // CHECK-NEXT:                    Id 'a'
 // CHECK-NEXT:                    AssignmentPattern
 // CHECK-NEXT:                        Id 'a' [D:E:%d.10 'a'] : number
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 5
 // CHECK-NEXT:                Property
 // CHECK-NEXT:                    Id 'b'
 // CHECK-NEXT:                    Id 'b' [D:E:%d.11 'b'] : string

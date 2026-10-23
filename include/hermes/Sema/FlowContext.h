@@ -50,13 +50,15 @@ namespace flow {
   _HERMES_SEMA_FLOW_DEFKIND(Class)                     \
   _HERMES_SEMA_FLOW_DEFKIND(ClassConstructor)          \
   _HERMES_SEMA_FLOW_DEFKIND(InferencePlaceholderArray) \
-  _HERMES_SEMA_FLOW_DEFKIND(StringLiteral)
+  _HERMES_SEMA_FLOW_DEFKIND(StringLiteral)             \
+  _HERMES_SEMA_FLOW_DEFKIND(NumberLiteral)
 
 /// Each literal TypeKind and the primary TypeKind it widens into. Every kind
 /// in [_FirstLiteral, _LastLiteral] must appear here, and they must be the
 /// last kinds in \c TypeKind.
-#define _HERMES_SEMA_FLOW_LITERAL_BASES \
-  _HERMES_SEMA_FLOW_DEFLITERAL(StringLiteral, String)
+#define _HERMES_SEMA_FLOW_LITERAL_BASES               \
+  _HERMES_SEMA_FLOW_DEFLITERAL(StringLiteral, String) \
+  _HERMES_SEMA_FLOW_DEFLITERAL(NumberLiteral, Number)
 
 enum class TypeKind : uint8_t {
 #define _HERMES_SEMA_FLOW_DEFKIND(name) name,
@@ -72,7 +74,7 @@ enum class TypeKind : uint8_t {
   _FirstFunction = UntypedFunction,
   _LastFunction = NativeFunction,
   _FirstLiteral = StringLiteral,
-  _LastLiteral = StringLiteral,
+  _LastLiteral = NumberLiteral,
 };
 
 /// The number of distinct TypeKind values.
@@ -535,6 +537,31 @@ class StringLiteralType : public TypeInfo {
 
   static bool classof(const TypeInfo *t) {
     return t->getKind() == TypeKind::StringLiteral;
+  }
+};
+
+/// The type of a single numeric literal, e.g. the type 1. Carries the literal
+/// value. A NumberLiteralType flows into Number, and into another
+/// NumberLiteralType only when the value is identical.
+class NumberLiteralType : public TypeInfo {
+  /// The literal value.
+  double value_;
+
+ public:
+  explicit NumberLiteralType(double value)
+      : TypeInfo(TypeKind::NumberLiteral), value_(value) {}
+
+  /// \return the literal value.
+  double getValue() const {
+    return value_;
+  }
+
+  int _compareImpl(const NumberLiteralType *other, CompareState &state) const;
+  bool _equalsImpl(const NumberLiteralType *other, CompareState &state) const;
+  unsigned _hashImpl() const;
+
+  static bool classof(const TypeInfo *t) {
+    return t->getKind() == TypeKind::NumberLiteral;
   }
 };
 
@@ -1310,6 +1337,11 @@ class FlowContext {
   StringLiteralType *createStringLiteral(UniqueString *value) {
     assert(value);
     return &allocStringLiteral_.emplace_back(value);
+  }
+  NumberLiteralType *createNumberLiteral(double value) {
+    // -0 and 0 are the same literal type, so store +0 for both: the value is
+    // emitted as the default of literal-typed fields.
+    return &allocNumberLiteral_.emplace_back(value == 0 ? 0.0 : value);
   }
   ExactObjectType *createExactObject(
       llvh::ArrayRef<ExactObjectType::Field> fields,

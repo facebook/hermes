@@ -60,4 +60,4 @@ function test(arr: number[]): number[] {
 // CHECK-NEXT:                                    BinaryExpression : number
 // CHECK-NEXT:                                        Id 'n' [D:E:%d.6 'n'] : number
 // CHECK-NEXT:                                        BinOp +
-// CHECK-NEXT:                                        NumericLiteral : number
+// CHECK-NEXT:                                        NumericLiteral : 1

@@ -46,11 +46,11 @@ function f(a: any, u: number|string, n: number) {
 // CHECK-NEXT:            Id 'n' [D:E:%d.6 'n']
 // CHECK-NEXT:            BlockStatement
 // CHECK-NEXT:                ExpressionStatement
-// CHECK-NEXT:                    AssignmentExpression : number
+// CHECK-NEXT:                    AssignmentExpression : 5
 // CHECK-NEXT:                        Id 'n' [D:E:%d.6 'n'] : number
-// CHECK-NEXT:                        AssignmentExpression : number
+// CHECK-NEXT:                        AssignmentExpression : 5
 // CHECK-NEXT:                            Id 'u' [D:E:%d.5 'u'] : %union.2
-// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                            NumericLiteral : 5
 // CHECK-NEXT:                VariableDeclaration
 // CHECK-NEXT:                    VariableDeclarator
 // CHECK-NEXT:                        Id 'n1' [D:E:%d.7 'n1']

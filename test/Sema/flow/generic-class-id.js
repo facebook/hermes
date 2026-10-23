@@ -134,7 +134,7 @@ const s: string = i2.val;
 // CHECK-NEXT:                    Id 'ID' [D:E:%d.8 'ID'] : %class_constructor.3
 // CHECK-NEXT:                    TypeParameterInstantiation
 // CHECK-NEXT:                        NumberTypeAnnotation
-// CHECK-NEXT:                    NumericLiteral : number
+// CHECK-NEXT:                    NumericLiteral : 1
 // CHECK-NEXT:                Id 'i1' [D:E:%d.3 'i1']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator

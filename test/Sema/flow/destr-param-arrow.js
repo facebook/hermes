@@ -197,7 +197,7 @@ const cORest: ({a: number, b: number}) => number =
 // CHECK-NEXT:                        ObjectExpression : %object.13
 // CHECK-NEXT:                            Property
 // CHECK-NEXT:                                Id 'x'
-// CHECK-NEXT:                                NumericLiteral : number
+// CHECK-NEXT:                                NumericLiteral : 0
 // CHECK-NEXT:                    BlockStatement
 // CHECK-NEXT:                        VariableDeclaration
 // CHECK-NEXT:                            VariableDeclarator
@@ -239,7 +239,7 @@ const cORest: ({a: number, b: number}) => number =
 // CHECK-NEXT:                        ObjectExpression : %object.13
 // CHECK-NEXT:                            Property
 // CHECK-NEXT:                                Id 'x'
-// CHECK-NEXT:                                NumericLiteral : number
+// CHECK-NEXT:                                NumericLiteral : 0
 // CHECK-NEXT:                    BlockStatement
 // CHECK-NEXT:                        ReturnStatement
 // CHECK-NEXT:                            Id 'x' [D:E:%d.27 'x'] : number

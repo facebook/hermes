@@ -45,4 +45,4 @@ class A {
 // CHECK-NEXT:                    Id 'x'
 // CHECK-NEXT:                    ImplicitCheckedCast : number
 // CHECK-NEXT:                        TypeCastExpression : any
-// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                            NumericLiteral : 1

@@ -47,17 +47,17 @@ v3 = [4, "def"];
 // CHECK-NEXT:            CallExpression : any
 // CHECK-NEXT:                Id 'f1' [D:E:%d.2 'f1'] : %function.3
 // CHECK-NEXT:                ArrayExpression : %tuple.2
-// CHECK-NEXT:                    NumericLiteral : number
+// CHECK-NEXT:                    NumericLiteral : 1
 // CHECK-NEXT:                    StringLiteral : "abc"
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                ConditionalExpression : %tuple.2
 // CHECK-NEXT:                    Id 'flag' [D:E:%d.9 'flag'] : any
 // CHECK-NEXT:                    ArrayExpression : %tuple.2
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 2
 // CHECK-NEXT:                        StringLiteral : "def"
 // CHECK-NEXT:                    ArrayExpression : %tuple.2
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 1
 // CHECK-NEXT:                        StringLiteral : "abc"
 // CHECK-NEXT:                Id 'v1' [D:E:%d.3 'v1']
 // CHECK-NEXT:        VariableDeclaration
@@ -66,7 +66,7 @@ v3 = [4, "def"];
 // CHECK-NEXT:                    LogicalExpression : %union.4
 // CHECK-NEXT:                        Id 'flag' [D:E:%d.9 'flag'] : any
 // CHECK-NEXT:                        ArrayExpression : %tuple.2
-// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                            NumericLiteral : 3
 // CHECK-NEXT:                            StringLiteral : "def"
 // CHECK-NEXT:                Id 'v2' [D:E:%d.4 'v2']
 // CHECK-NEXT:        VariableDeclaration
@@ -76,5 +76,5 @@ v3 = [4, "def"];
 // CHECK-NEXT:            AssignmentExpression : %tuple.2
 // CHECK-NEXT:                Id 'v3' [D:E:%d.5 'v3'] : %tuple.2
 // CHECK-NEXT:                ArrayExpression : %tuple.2
-// CHECK-NEXT:                    NumericLiteral : number
+// CHECK-NEXT:                    NumericLiteral : 4
 // CHECK-NEXT:                    StringLiteral : "def"

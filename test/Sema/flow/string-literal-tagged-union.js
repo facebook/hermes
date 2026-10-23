@@ -14,12 +14,10 @@ type Circle = {tag: 'circle', radius: number};
 type Square = {tag: 'square', side: number};
 type Shape = Circle | Square;
 
-// Each object literal flows into the matching arm of the union, because the
-// 'tag' field is typed as a string literal type (intrinsic to the literal),
-// even though the constraint here is a union (so no per-field constraint is
-// threaded into the object literal).
-let c: Shape = {tag: 'circle', radius: 1};
-let s: Shape = {tag: 'square', side: 2};
+let c: Circle = {tag: 'circle', radius: 1};
+let s: Square = {tag: 'square', side: 2};
+
+let shape: Shape = c;
 
 // The discriminant of a single arm has the literal type.
 let cc: Circle = {tag: 'circle', radius: 3};
@@ -32,21 +30,22 @@ let tag: 'circle' = cc.tag;
 // CHECK-NEXT:  tag: "circle"
 // CHECK-NEXT:  radius: number
 // CHECK-NEXT:})
-// CHECK-NEXT:%union.3 = union(%object.2 | %object.4)
-// CHECK-NEXT:%object.4 = object({
+// CHECK-NEXT:%object.3 = object({
 // CHECK-NEXT:  tag: "square"
 // CHECK-NEXT:  side: number
 // CHECK-NEXT:})
+// CHECK-NEXT:%union.4 = union(%object.2 | %object.3)
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:        Decl %d.2 'c' Let : %union.3
-// CHECK-NEXT:        Decl %d.3 's' Let : %union.3
-// CHECK-NEXT:        Decl %d.4 'cc' Let : %object.2
-// CHECK-NEXT:        Decl %d.5 'tag' Let : "circle"
-// CHECK-NEXT:        Decl %d.6 'arguments' Var Arguments
+// CHECK-NEXT:        Decl %d.2 'c' Let : %object.2
+// CHECK-NEXT:        Decl %d.3 's' Let : %object.3
+// CHECK-NEXT:        Decl %d.4 'shape' Let : %union.4
+// CHECK-NEXT:        Decl %d.5 'cc' Let : %object.2
+// CHECK-NEXT:        Decl %d.6 'tag' Let : "circle"
+// CHECK-NEXT:        Decl %d.7 'arguments' Var Arguments
 
 // CHECK:FunctionExpression : %untyped_function.1
 // CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
@@ -86,18 +85,22 @@ let tag: 'circle' = cc.tag;
 // CHECK-NEXT:                        StringLiteral : "circle"
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'radius'
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 1
 // CHECK-NEXT:                Id 'c' [D:E:%d.2 'c']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                ObjectExpression : %object.4
+// CHECK-NEXT:                ObjectExpression : %object.3
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'tag'
 // CHECK-NEXT:                        StringLiteral : "square"
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'side'
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 2
 // CHECK-NEXT:                Id 's' [D:E:%d.3 's']
+// CHECK-NEXT:        VariableDeclaration
+// CHECK-NEXT:            VariableDeclarator
+// CHECK-NEXT:                Id 'c' [D:E:%d.2 'c'] : %object.2
+// CHECK-NEXT:                Id 'shape' [D:E:%d.4 'shape']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                ObjectExpression : %object.2
@@ -106,11 +109,11 @@ let tag: 'circle' = cc.tag;
 // CHECK-NEXT:                        StringLiteral : "circle"
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'radius'
-// CHECK-NEXT:                        NumericLiteral : number
-// CHECK-NEXT:                Id 'cc' [D:E:%d.4 'cc']
+// CHECK-NEXT:                        NumericLiteral : 3
+// CHECK-NEXT:                Id 'cc' [D:E:%d.5 'cc']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                MemberExpression : "circle"
-// CHECK-NEXT:                    Id 'cc' [D:E:%d.4 'cc'] : %object.2
+// CHECK-NEXT:                    Id 'cc' [D:E:%d.5 'cc'] : %object.2
 // CHECK-NEXT:                    Id 'tag'
-// CHECK-NEXT:                Id 'tag' [D:E:%d.5 'tag']
+// CHECK-NEXT:                Id 'tag' [D:E:%d.6 'tag']

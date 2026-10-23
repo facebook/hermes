@@ -161,7 +161,7 @@ let s: string = fg('hi');
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            CallExpression : void
 // CHECK-NEXT:                Id 'f4' [D:E:%d.5 'f4'] : %function.7
-// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:                NumericLiteral : 1
 // CHECK-NEXT:        FunctionDeclaration : %function.8
 // CHECK-NEXT:            Id 'f5' [D:E:%d.6 'f5']
 // CHECK-NEXT:            Id 'x' [D:E:%d.23 'x']

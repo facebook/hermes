@@ -141,7 +141,7 @@ const after: ({x: number}, string) => string = ({x}, s) => s;
 // CHECK-NEXT:                        ObjectExpression : %object.2
 // CHECK-NEXT:                            Property
 // CHECK-NEXT:                                Id 'x'
-// CHECK-NEXT:                                NumericLiteral : number
+// CHECK-NEXT:                                NumericLiteral : 5
 // CHECK-NEXT:                    BlockStatement
 // CHECK-NEXT:                        ReturnStatement
 // CHECK-NEXT:                            Id 'x' [D:E:%d.15 'x'] : number

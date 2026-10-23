@@ -78,16 +78,16 @@ type G = (...rest: MyArr) => void;
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            CallExpression : void
 // CHECK-NEXT:                Id 'foo' [D:E:%d.2 'foo'] : %function.2
-// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:                NumericLiteral : 1
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            CallExpression : void
 // CHECK-NEXT:                Id 'foo' [D:E:%d.2 'foo'] : %function.2
-// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:                NumericLiteral : 1
 // CHECK-NEXT:                StringLiteral : "a"
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            CallExpression : void
 // CHECK-NEXT:                Id 'foo' [D:E:%d.2 'foo'] : %function.2
-// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:                NumericLiteral : 1
 // CHECK-NEXT:                StringLiteral : "a"
 // CHECK-NEXT:                StringLiteral : "b"
 // CHECK-NEXT:                StringLiteral : "c"
@@ -102,9 +102,9 @@ type G = (...rest: MyArr) => void;
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            CallExpression : void
 // CHECK-NEXT:                Id 'bar' [D:E:%d.3 'bar'] : %function.5
-// CHECK-NEXT:                NumericLiteral : number
-// CHECK-NEXT:                NumericLiteral : number
-// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:                NumericLiteral : 1
+// CHECK-NEXT:                NumericLiteral : 2
+// CHECK-NEXT:                NumericLiteral : 3
 // CHECK-NEXT:        TypeAlias
 // CHECK-NEXT:            Id 'F'
 // CHECK-NEXT:            FunctionTypeAnnotation

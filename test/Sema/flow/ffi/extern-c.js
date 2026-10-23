@@ -69,7 +69,7 @@ let load  = $SHBuiltin.extern_c({}, function load(addr: c_ptr): c_u8 {throw 0});
 // CHECK-NEXT:                        Id 'mode' [D:E:%d.10 'mode']
 // CHECK-NEXT:                        BlockStatement
 // CHECK-NEXT:                            ThrowStatement
-// CHECK-NEXT:                                NumericLiteral : number
+// CHECK-NEXT:                                NumericLiteral : 0
 // CHECK-NEXT:                Id 'fopen' [D:E:%d.2 'fopen']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
@@ -84,7 +84,7 @@ let load  = $SHBuiltin.extern_c({}, function load(addr: c_ptr): c_u8 {throw 0});
 // CHECK-NEXT:                        Id 'mode' [D:E:%d.13 'mode']
 // CHECK-NEXT:                        BlockStatement
 // CHECK-NEXT:                            ThrowStatement
-// CHECK-NEXT:                                NumericLiteral : number
+// CHECK-NEXT:                                NumericLiteral : 0
 // CHECK-NEXT:                Id 'fopen1' [D:E:%d.3 'fopen1']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
@@ -98,5 +98,5 @@ let load  = $SHBuiltin.extern_c({}, function load(addr: c_ptr): c_u8 {throw 0});
 // CHECK-NEXT:                        Id 'addr' [D:E:%d.15 'addr']
 // CHECK-NEXT:                        BlockStatement
 // CHECK-NEXT:                            ThrowStatement
-// CHECK-NEXT:                                NumericLiteral : number
+// CHECK-NEXT:                                NumericLiteral : 0
 // CHECK-NEXT:                Id 'load' [D:E:%d.4 'load']

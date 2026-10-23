@@ -49,7 +49,7 @@ function delBadDotKey(d: {[number]: string}): void {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:{{.*}}object-indexer-member-error.js:12:12: error: ft: object index type number incompatible with index signature string
+// CHECK:{{.*}}object-indexer-member-error.js:12:12: error: ft: object index type 0 incompatible with index signature string
 // CHECK-NEXT:  return d[0];
 // CHECK-NEXT:           ^
 // CHECK-NEXT:{{.*}}object-indexer-member-error.js:17:5: error: ft: cannot assign to readonly indexer
@@ -67,7 +67,7 @@ function delBadDotKey(d: {[number]: string}): void {
 // CHECK-NEXT:{{.*}}object-indexer-member-error.js:37:12: error: ft: cannot assign to readonly indexer
 // CHECK-NEXT:  delete o["k"];
 // CHECK-NEXT:           ^~~
-// CHECK-NEXT:{{.*}}object-indexer-member-error.js:42:12: error: ft: object index type number incompatible with index signature string
+// CHECK-NEXT:{{.*}}object-indexer-member-error.js:42:12: error: ft: object index type 0 incompatible with index signature string
 // CHECK-NEXT:  delete d[0];
 // CHECK-NEXT:           ^
 // CHECK-NEXT:{{.*}}object-indexer-member-error.js:47:12: error: ft: object index type string incompatible with index signature number

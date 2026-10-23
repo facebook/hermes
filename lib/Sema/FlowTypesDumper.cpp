@@ -8,6 +8,7 @@
 #include "FlowTypesDumper.h"
 
 #include "hermes/AST/RecursiveVisitor.h"
+#include "hermes/Support/Conversions.h"
 
 namespace hermes {
 namespace flow {
@@ -52,9 +53,12 @@ size_t FlowTypesDumper::getNumber(const TypeInfo *type) {
 void FlowTypesDumper::printTypeRef(
     llvh::raw_ostream &os,
     const TypeInfo *type) {
-  if (auto *strLit = llvh::dyn_cast<StringLiteralType>(type))
+  if (auto *strLit = llvh::dyn_cast<StringLiteralType>(type)) {
     os << '"' << strLit->getValue()->str() << '"';
-  else if (!type->isSingleton())
+  } else if (auto *numLit = llvh::dyn_cast<NumberLiteralType>(type)) {
+    char buf[NUMBER_TO_STRING_BUF_SIZE];
+    os << numberToString(numLit->getValue(), buf, sizeof(buf));
+  } else if (!type->isSingleton())
     os << "%" << getTypeAsVarName(type) << "." << getNumber(type);
   else
     os << getTypeAsVarName(type);
@@ -252,6 +256,13 @@ void FlowTypesDumper::printTypeDescription(
       os << '"' << llvh::cast<StringLiteralType>(type)->getValue()->str()
          << '"';
       break;
+
+    case TypeKind::NumberLiteral: {
+      char buf[NUMBER_TO_STRING_BUF_SIZE];
+      os << numberToString(
+          llvh::cast<NumberLiteralType>(type)->getValue(), buf, sizeof(buf));
+      break;
+    }
 
     case TypeKind::ExactObject: {
       auto *exactObj = llvh::cast<ExactObjectType>(type);

@@ -45,5 +45,5 @@ let ch: string = s[0];
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                MemberExpression : string
 // CHECK-NEXT:                    Id 's' [D:E:%d.2 's'] : string
-// CHECK-NEXT:                    NumericLiteral : number
+// CHECK-NEXT:                    NumericLiteral : 0
 // CHECK-NEXT:                Id 'ch' [D:E:%d.4 'ch']

@@ -108,7 +108,7 @@ new F<number>();
 // CHECK-NEXT:    BlockStatement
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:                NumericLiteral : 0
 // CHECK-NEXT:                Id 'counter' [D:E:%d.2 'counter']
 // CHECK-NEXT:        ClassDeclaration Scope %s.2
 // CHECK-NEXT:            Id 'A' [D:E:%d.3 'A']

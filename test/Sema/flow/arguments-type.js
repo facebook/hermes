@@ -86,4 +86,4 @@ function baz(a: number): bool {
 // CHECK-NEXT:                        MemberExpression : number
 // CHECK-NEXT:                            Id 'arguments' [D:E:%d.13 'arguments'] : any
 // CHECK-NEXT:                            Id 'length'
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 1
