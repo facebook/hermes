@@ -125,13 +125,13 @@ function delWO(o: WO): void {
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                MemberExpression : number
 // CHECK-NEXT:                    Id 'd' [D:E:%d.2 'd'] : %object.2
-// CHECK-NEXT:                    StringLiteral : string
+// CHECK-NEXT:                    StringLiteral : "x"
 // CHECK-NEXT:                Id 'n' [D:E:%d.3 'n']
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            AssignmentExpression : number
 // CHECK-NEXT:                MemberExpression : number
 // CHECK-NEXT:                    Id 'd' [D:E:%d.2 'd'] : %object.2
-// CHECK-NEXT:                    StringLiteral : string
+// CHECK-NEXT:                    StringLiteral : "y"
 // CHECK-NEXT:                NumericLiteral : number
 // CHECK-NEXT:        TypeAlias
 // CHECK-NEXT:            Id 'NumDict'
@@ -150,11 +150,11 @@ function delWO(o: WO): void {
 // CHECK-NEXT:                    NumericLiteral : number
 // CHECK-NEXT:                Id 's' [D:E:%d.5 's']
 // CHECK-NEXT:        ExpressionStatement
-// CHECK-NEXT:            AssignmentExpression : string
+// CHECK-NEXT:            AssignmentExpression : "x"
 // CHECK-NEXT:                MemberExpression : string
 // CHECK-NEXT:                    Id 'nd' [D:E:%d.4 'nd'] : %object.3
 // CHECK-NEXT:                    NumericLiteral : number
-// CHECK-NEXT:                StringLiteral : string
+// CHECK-NEXT:                StringLiteral : "x"
 // CHECK-NEXT:        TypeAlias
 // CHECK-NEXT:            Id 'RO'
 // CHECK-NEXT:            ObjectTypeAnnotation
@@ -176,7 +176,7 @@ function delWO(o: WO): void {
 // CHECK-NEXT:                ReturnStatement
 // CHECK-NEXT:                    MemberExpression : number
 // CHECK-NEXT:                        Id 'o' [D:E:%d.12 'o'] : %object.4
-// CHECK-NEXT:                        StringLiteral : string
+// CHECK-NEXT:                        StringLiteral : "k"
 // CHECK-NEXT:        FunctionDeclaration : %function.7
 // CHECK-NEXT:            Id 'writeWO' [D:E:%d.7 'writeWO']
 // CHECK-NEXT:            Id 'o' [D:E:%d.14 'o']
@@ -185,7 +185,7 @@ function delWO(o: WO): void {
 // CHECK-NEXT:                    AssignmentExpression : number
 // CHECK-NEXT:                        MemberExpression : number
 // CHECK-NEXT:                            Id 'o' [D:E:%d.14 'o'] : %object.5
-// CHECK-NEXT:                            StringLiteral : string
+// CHECK-NEXT:                            StringLiteral : "k"
 // CHECK-NEXT:                        NumericLiteral : number
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
@@ -207,7 +207,7 @@ function delWO(o: WO): void {
 // CHECK-NEXT:            UnaryExpression : boolean
 // CHECK-NEXT:                MemberExpression : number
 // CHECK-NEXT:                    Id 'd' [D:E:%d.2 'd'] : %object.2
-// CHECK-NEXT:                    StringLiteral : string
+// CHECK-NEXT:                    StringLiteral : "y"
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            UnaryExpression : boolean
 // CHECK-NEXT:                MemberExpression : number
@@ -226,4 +226,4 @@ function delWO(o: WO): void {
 // CHECK-NEXT:                    UnaryExpression : boolean
 // CHECK-NEXT:                        MemberExpression : number
 // CHECK-NEXT:                            Id 'o' [D:E:%d.16 'o'] : %object.5
-// CHECK-NEXT:                            StringLiteral : string
+// CHECK-NEXT:                            StringLiteral : "k"

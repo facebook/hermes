@@ -136,7 +136,7 @@ function main(
 // CHECK-NEXT:                ExpressionStatement
 // CHECK-NEXT:                    BinaryExpression : boolean
 // CHECK-NEXT:                        Id 's' [D:E:%d.7 's'] : string
-// CHECK-NEXT:                        StringLiteral : string
+// CHECK-NEXT:                        StringLiteral : "x"
 // CHECK-NEXT:                ExpressionStatement
 // CHECK-NEXT:                    BinaryExpression : boolean
 // CHECK-NEXT:                        Id 'optFoo' [D:E:%d.10 'optFoo'] : %union.6

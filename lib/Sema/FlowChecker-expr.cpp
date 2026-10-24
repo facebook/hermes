@@ -72,8 +72,13 @@ void FlowChecker::matchConstraintToType(
       continue;
 
     if (llvh::isa<InferencePlaceholderType>(constraint->info)) {
-      // Found a placeholder, replace it with the type that matches it.
-      constraint->info = type->info;
+      // Found a placeholder, replace it with the type that matches it. Widen
+      // fresh literal types so that e.g. head(['a', 'b']) infers T = string,
+      // not T = "a".
+      TypeKind kind = widenLiteralKind(type->info->getKind());
+      constraint->info = type->info->isLiteral()
+          ? flowContext_.getSingletonType(kind)->info
+          : type->info;
       continue;
     }
 
@@ -145,6 +150,8 @@ void FlowChecker::matchConstraintToType(
       // InferencePlaceholderArray is only used as constraints, never as
       // actual types, so both sides having this kind shouldn't happen.
       case TypeKind::InferencePlaceholderArray:
+      // Literals carry no nested types to match.
+      case TypeKind::StringLiteral:
         continue;
 
       case TypeKind::Union:
@@ -891,6 +898,19 @@ class FlowChecker::ExprVisitor {
       }
     }
 
+    // A union of literals (e.g. "a" | "b") supports the members of its base
+    // type. Cast the object so its node type reflects that.
+    if (llvh::isa<UnionType>(objType->info)) {
+      Type *widened = outer_.widenLiteralType(objType);
+      if (widened != objType && !llvh::isa<UnionType>(widened->info)) {
+        objType = widened;
+        node->_object = outer_.implicitCheckedCast(
+            node->_object, widened, {.canFlow = true, .needCheckedCast = true});
+      } else {
+        objType = widened;
+      }
+    }
+
     // Attempt to narrow object type if it doesn't currently support member
     // access.
     if (Type *narrowedObjType = outer_.getNonOptionalSingleType(objType)) {
@@ -911,7 +931,10 @@ class FlowChecker::ExprVisitor {
       resType = visitMemberExactObject(node, parent, exactObjType, isWrite);
     } else if (auto *tupleType = llvh::dyn_cast<TupleType>(objType->info)) {
       resType = visitMemberTuple(node, tupleType);
-    } else if (llvh::isa<StringType>(objType->info)) {
+    } else if (
+        llvh::isa<StringType>(objType->info) ||
+        llvh::isa<StringLiteralType>(objType->info)) {
+      // A string literal type supports all the operations of String.
       resType = visitMemberString(node);
     } else if (llvh::isa<NumberType>(objType->info) && !node->_computed) {
       resType = visitMemberNumber(node);
@@ -1092,7 +1115,10 @@ class FlowChecker::ExprVisitor {
         actualElemTy = outer_.getNodeTypeOrAny(elem);
       }
 
-      elTypes.insert(actualElemTy);
+      // elTypes only matters without an Array constraint, where fresh literal
+      // element types are widened (['a','b'] infers Array<string>). Widen
+      // each element now so the union doesn't grow with every literal.
+      elTypes.insert(outer_.widenLiteralType(actualElemTy));
       if (constraintElemTy) {
         // If there's a constraint on the element type, check that each
         // element conforms and insert implicit casts when necessary.
@@ -1135,7 +1161,9 @@ class FlowChecker::ExprVisitor {
             "ft: empty array with no context, assuming 'any' array");
         elemUnion = outer_.flowContext_.getAny();
       } else {
-        // Otherwise, construct a union of all the element types.
+        // Otherwise, construct a union of all the (widened) element types; an
+        // explicit Array<"a"> annotation is handled above via the constraint
+        // and keeps the literal type.
         elemUnion = outer_.flowContext_.createType(
             outer_.flowContext_.maybeCreateUnion(elTypes.getArrayRef()));
       }
@@ -1376,6 +1404,16 @@ class FlowChecker::ExprVisitor {
           "will result in an indexer");
     }
 
+    // An un-annotated object literal (no contextual type) widens its fresh
+    // literal field types to their base types, mirroring let/var widening
+    // (e.g. {x: 'a'} infers {x: string}). When a constraint is present --
+    // including a union constraint used for discriminated unions -- the literal
+    // field types are kept so the object can flow into the expected arm.
+    if (!constraint) {
+      for (auto &f : fields)
+        f.type = outer_.widenLiteralType(f.type);
+    }
+
     // Produce an indexer object if any spread had an indexer or any computed
     // property was present. The key and value types are the unions of all
     // contributing key and value types.
@@ -1390,6 +1428,9 @@ class FlowChecker::ExprVisitor {
             outer_.flowContext_.createType(outer_.flowContext_.maybeCreateUnion(
                 computedKeyTypes.getArrayRef()));
       }
+      // An un-annotated indexer object widens fresh literal key types too.
+      if (!constraint)
+        indexerKeyType = outer_.widenLiteralType(indexerKeyType);
       // Named properties use string keys, so they require a string-keyed
       // indexer (field names cannot index a number-keyed indexer).
       if (!fields.empty() &&
@@ -1407,6 +1448,10 @@ class FlowChecker::ExprVisitor {
         valueTypes.insert(vt);
       Type *valueType = outer_.flowContext_.createType(
           outer_.flowContext_.maybeCreateUnion(valueTypes.getArrayRef()));
+      // Widen fresh literal indexer value types (computed/spread values) when
+      // there is no contextual constraint, mirroring the field widening above.
+      if (!constraint)
+        valueType = outer_.widenLiteralType(valueType);
       ExactObjectType::Indexer indexer{
           indexerKeyType, valueType, FieldVariance::None};
       outer_.setNodeType(
@@ -1444,7 +1489,13 @@ class FlowChecker::ExprVisitor {
       ESTree::StringLiteralNode *node,
       ESTree::Node *parent,
       Type *constraint) {
-    outer_.setNodeType(node, outer_.flowContext_.getString());
+    // Type a string literal as its own StringLiteralType. It flows into String,
+    // so this is compatible with String contexts; un-annotated let/var
+    // declarations widen it back to String during inference.
+    outer_.setNodeType(
+        node,
+        outer_.flowContext_.createType(
+            outer_.flowContext_.createStringLiteral(node->_value), node));
   }
   void visit(
       ESTree::TemplateLiteralNode *node,
@@ -1659,6 +1710,10 @@ class FlowChecker::ExprVisitor {
 
   /// \return nullptr if the operation is not supported.
   Type *determineBinopType(BinopKind op, TypeKind lk, TypeKind rk) {
+    // Literal types behave like their widened base types for operators.
+    lk = widenLiteralKind(lk);
+    rk = widenLiteralKind(rk);
+
     struct BinTypes {
       BinopKind op;
       TypeKind res;
@@ -1850,14 +1905,17 @@ class FlowChecker::ExprVisitor {
       return;
     }
 
-    Type *res =
-        determineBinopType(op, lt->info->getKind(), rt->info->getKind());
+    // Unions of literals (e.g. "a" | "b") behave like their base type.
+    Type *res = determineBinopType(
+        op,
+        outer_.widenLiteralType(lt)->info->getKind(),
+        outer_.widenLiteralType(rt)->info->getKind());
     if (!res) {
       outer_.sm_.error(
           node->getSourceRange(),
           llvh::Twine("ft: incompatible binary operation: ") +
               node->_operator->str() + " cannot be applied to " +
-              lt->info->getKindName() + " and " + rt->info->getKindName());
+              lt->messageString() + " and " + rt->messageString());
       res = outer_.flowContext_.getAny();
     }
 
@@ -1868,6 +1926,9 @@ class FlowChecker::ExprVisitor {
       ESTree::UnaryExpressionNode *node,
       UnopKind op,
       TypeKind argKind) {
+    // Literal types behave like their widened base types for operators.
+    argKind = widenLiteralKind(argKind);
+
     struct UnTypes {
       UnopKind op;
       TypeKind res;
@@ -1952,7 +2013,9 @@ class FlowChecker::ExprVisitor {
 
     Type *res;
     if (Type *t = determineUnopType(
-            node, unopKind(node->_operator->str()), argType->info->getKind())) {
+            node,
+            unopKind(node->_operator->str()),
+            outer_.widenLiteralType(argType)->info->getKind())) {
       res = t;
     } else {
       outer_.sm_.error(
@@ -2134,8 +2197,8 @@ class FlowChecker::ExprVisitor {
 
       Type *opResType = determineBinopType(
           assignKind(node->_operator->str()),
-          lt->info->getKind(),
-          rt->info->getKind());
+          outer_.widenLiteralType(lt)->info->getKind(),
+          outer_.widenLiteralType(rt)->info->getKind());
 
       if (!opResType) {
         outer_.sm_.error(

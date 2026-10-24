@@ -138,7 +138,7 @@ class C extends A {}
 // CHECK-NEXT:            ClassBody
 // CHECK-NEXT:                ClassProperty : string
 // CHECK-NEXT:                    Id 'z' [D:E:%d.8 'z']
-// CHECK-NEXT:                    StringLiteral : string
+// CHECK-NEXT:                    StringLiteral : "hello"
 // CHECK-NEXT:                MethodDefinition : %function.7
 // CHECK-NEXT:                    Id 'foo' [D:E:%d.9 'foo']
 // CHECK-NEXT:                    FunctionExpression : %function.7

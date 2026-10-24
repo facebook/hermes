@@ -70,7 +70,7 @@ function f(x: any) {
 // CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:    BlockStatement
 // CHECK-NEXT:        ExpressionStatement
-// CHECK-NEXT:            StringLiteral : string
+// CHECK-NEXT:            StringLiteral : "use strict"
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                ObjectExpression : %object.2
@@ -79,7 +79,7 @@ function f(x: any) {
 // CHECK-NEXT:                        NumericLiteral : number
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'b'
-// CHECK-NEXT:                        StringLiteral : string
+// CHECK-NEXT:                        StringLiteral : "x"
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'c'
 // CHECK-NEXT:                        BooleanLiteral : boolean
