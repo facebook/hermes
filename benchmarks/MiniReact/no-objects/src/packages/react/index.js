@@ -147,14 +147,12 @@ export function useState<T>(
   // NOTE: this should just work because of subtying, State<T> should be subtype of State<mixed>
   workInProgressState = CHECKED_CAST<State<mixed>>(state);
   return [
-    // Untyped check that the existing state value has the correct type,
-    // This is safe if components follow the rules of hooks
-    CHECKED_CAST<T>(state.value),
+    state.value,
     (updater: Updater<T>): void => {
       const update = new Update<mixed>(
         fiber,
         CHECKED_CAST<State<mixed>>(state),
-        CHECKED_CAST<Updater<mixed>>(updater),
+        updater,
       );
       if (workInProgressFiber !== null) {
         // called during render
@@ -216,7 +214,7 @@ class Update<T> {
     } else {
       // NOTE: The type of Updater<T> is meant to expresss `T (not function) | T (function of T => T)`
       // thus the fact that updater is *not* a function here means it is a T
-      value = CHECKED_CAST<T>(updater);
+      value = updater;
     }
     const changed = !Object.is(state.value, value);
     state.value = value;
@@ -345,7 +343,7 @@ class Root {
           // JSON.stringify only for object props; quote strings directly.
           let valueStr: string;
           if (typeof propValue === 'string') {
-            valueStr = '"' + CHECKED_CAST<string>(propValue) + '"';
+            valueStr = '"' + propValue + '"';
           } else if (
             typeof propValue === 'number' ||
             typeof propValue === 'boolean'
@@ -525,10 +523,7 @@ class Root {
         if (childElement == null) {
           continue;
         }
-        const child = this.mountFiber(
-          CHECKED_CAST<React$Node>(childElement),
-          parentFiber,
-        );
+        const child = this.mountFiber(childElement, parentFiber);
         if (prev !== null) {
           prev.sibling = child;
         } else {

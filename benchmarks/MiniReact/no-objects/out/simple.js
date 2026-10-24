@@ -149,11 +149,8 @@
     }
     // NOTE: this should just work because of subtying, State<T> should be subtype of State<mixed>
     M$react_index$INTERNAL$workInProgressState = M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$State<mixed>>(state);
-    return [
-    // Untyped check that the existing state value has the correct type,
-    // This is safe if components follow the rules of hooks
-    M$sh_CHECKED_CAST$default<T>(state.value), (updater: M$react_index$INTERNAL$Updater<T>): void => {
-      const update = new M$react_index$INTERNAL$Update<mixed>(fiber, M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$State<mixed>>(state), M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$Updater<mixed>>(updater));
+    return [state.value, (updater: M$react_index$INTERNAL$Updater<T>): void => {
+      const update = new M$react_index$INTERNAL$Update<mixed>(fiber, M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$State<mixed>>(state), updater);
       if (M$react_index$INTERNAL$workInProgressFiber !== null) {
         // called during render
         M$react_index$INTERNAL$renderPhaseUpdateQueue.push(update);
@@ -204,7 +201,7 @@
       } else {
         // NOTE: The type of Updater<T> is meant to expresss `T (not function) | T (function of T => T)`
         // thus the fact that updater is *not* a function here means it is a T
-        value = M$sh_CHECKED_CAST$default<T>(updater);
+        value = updater;
       }
       const changed = !Object.is(state.value, value);
       state.value = value;
@@ -296,7 +293,7 @@
               // JSON.stringify only for object props; quote strings directly.
               let valueStr: string;
               if (typeof propValue === 'string') {
-                valueStr = '"' + M$sh_CHECKED_CAST$default<string>(propValue) + '"';
+                valueStr = '"' + propValue + '"';
               } else if (typeof propValue === 'number' || typeof propValue === 'boolean') {
                 valueStr = String(propValue);
               } else {
@@ -447,7 +444,7 @@
           if (childElement == null) {
             continue;
           }
-          const child = this.mountFiber(M$sh_CHECKED_CAST$default<M$react_index$React$Node>(childElement), parentFiber);
+          const child = this.mountFiber(childElement, parentFiber);
           if (prev !== null) {
             prev.sibling = child;
           } else {
