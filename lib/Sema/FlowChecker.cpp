@@ -927,6 +927,10 @@ class FlowChecker::ParseClassType {
           outer_.semContext_.setExpressionDecl(keyId, decl);
         }
 
+        // A setter's return value is discarded, so it always returns void.
+        Type *defaultReturnType =
+            isSetter ? outer_.flowContext_.getVoid() : nullptr;
+
         if (method->_static && classTypeParams_) {
           ScopeRAII staticScope(outer_);
           shadowClassTypeParamsWithEmpty();
@@ -935,7 +939,7 @@ class FlowChecker::ParseClassType {
               fe->_returnType,
               fe->_async,
               fe->_generator,
-              nullptr,
+              defaultReturnType,
               classConsType_ ? classConsType_ : classType);
         } else {
           methodType = outer_.parseFunctionType(
@@ -943,7 +947,7 @@ class FlowChecker::ParseClassType {
               fe->_returnType,
               fe->_async,
               fe->_generator,
-              nullptr,
+              defaultReturnType,
               method->_static && classConsType_ ? classConsType_ : classType);
         }
       }
@@ -955,6 +959,12 @@ class FlowChecker::ParseClassType {
           outer_.sm_.error(
               method->getStartLoc(),
               "ft: setter must have exactly one parameter");
+          return outer_.flowContext_.getAny();
+        }
+        if (fnType && !llvh::isa<VoidType>(fnType->getReturnType()->info)) {
+          outer_.sm_.error(
+              fe->_returnType->getSourceRange(),
+              "ft: setter return type must be void");
           return outer_.flowContext_.getAny();
         }
       }
@@ -1123,7 +1133,7 @@ class FlowChecker::ParseClassType {
           auto *setterFn =
               llvh::cast<TypedFunctionType>(existingField->setterType->info);
           Type *setterParamType = setterFn->getParams()[0].type;
-          if (getterRetType != setterParamType) {
+          if (!getterRetType->info->equals(setterParamType->info)) {
             outer_.sm_.error(
                 method->_key->getStartLoc(),
                 "ft: getter return type must match setter parameter type");
@@ -1137,7 +1147,7 @@ class FlowChecker::ParseClassType {
           auto *setterFn = llvh::cast<TypedFunctionType>(methodType->info);
           Type *setterParamType = setterFn->getParams()[0].type;
           // Validate setter param type matches getter return type.
-          if (existingField->type != setterParamType) {
+          if (!existingField->type->info->equals(setterParamType->info)) {
             outer_.sm_.error(
                 method->_key->getStartLoc(),
                 "ft: setter parameter type must match getter return type");
@@ -1406,6 +1416,16 @@ void FlowChecker::visit(ESTree::MethodDefinitionNode *node) {
       assert(funcType && "overload type missing — overload not registered");
     }
 
+    if (node->_kind == kw_.identGet || node->_kind == kw_.identSet) {
+      // Accessors keep the property type in Field::type.
+      // The function type of this specific accessor lives in
+      // getterType/setterType.
+      funcType = node->_kind == kw_.identGet ? optField->getField()->getterType
+                                             : optField->getField()->setterType;
+      if (!funcType)
+        return;
+    }
+
     // Typecheck overriding methods.
     // Private methods are not inherited, so they don't need to be checked.
     // Skip override checking for overloaded methods — each overload has a
@@ -1413,7 +1433,8 @@ void FlowChecker::visit(ESTree::MethodDefinitionNode *node) {
     Type *superClassType =
         curClassContext_->getClassTypeInfo()->getSuperClass();
     if (!optField->getField()->isPrivate &&
-        !optField->getField()->isOverloaded() && superClassType) {
+        !optField->getField()->isOverloaded() &&
+        !optField->getField()->isAccessor() && superClassType) {
       auto *superClassTypeInfo = llvh::cast<ClassType>(superClassType->info);
       OptValue<ClassType::FieldLookupEntry> superIt;
       if (node->_static) {
@@ -1452,6 +1473,7 @@ void FlowChecker::visit(ESTree::MethodDefinitionNode *node) {
         funcType,
         curClassContext_->classType,
         /* newTargetType */ flowContext_.getVoid());
+    functionContext.isSetter = node->_kind == kw_.identSet;
 
     // For static methods on generic classes, replace the class type
     // parameters with Empty since static methods can't reference them.
@@ -1606,6 +1628,14 @@ void FlowChecker::visit(ESTree::ForStatementNode *node) {
 }
 
 void FlowChecker::visit(ESTree::ReturnStatementNode *node) {
+  // The setter's return type is void, so an `any` value would otherwise be
+  // accepted and fail its checked cast at runtime.
+  if (curFunctionContext_->isSetter && node->_argument) {
+    visitExpression(node->_argument, node, nullptr);
+    sm_.error(node->getSourceRange(), "ft: setter cannot return a value");
+    return;
+  }
+
   auto *ftype = llvh::dyn_cast<TypedFunctionType>(
       curFunctionContext_->functionType->info);
   visitExpression(

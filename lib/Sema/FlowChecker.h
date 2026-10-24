@@ -1272,6 +1272,9 @@ class FlowChecker::FunctionContext {
   /// Depending on the compilation mode, usages may be invalid.
   Type *const newTargetType;
 
+  /// Whether this is the body of a setter, which may not return a value.
+  bool isSetter = false;
+
   FunctionContext(const FunctionContext &) = delete;
   void operator=(const FunctionContext &) = delete;
 

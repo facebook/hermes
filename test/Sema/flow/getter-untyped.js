@@ -42,8 +42,8 @@ class Baz {
 // CHECK-NEXT:%class_constructor.3 = class_constructor(%class.2)
 // CHECK-NEXT:%class_constructor.4 = class_constructor(%class.9)
 // CHECK-NEXT:%class_constructor.5 = class_constructor(%class.10)
-// CHECK-NEXT:%function.6 = function(this: %class.9, v: any): any
-// CHECK-NEXT:%function.7 = function(this: %class.10, v: any): any
+// CHECK-NEXT:%function.6 = function(this: %class.9, v: any): void
+// CHECK-NEXT:%function.7 = function(this: %class.10, v: any): void
 // CHECK-NEXT:%class.8 = class( {
 // CHECK-NEXT:  x [final]: any
 // CHECK-NEXT:})

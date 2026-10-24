@@ -37,7 +37,7 @@ function write(a: A) {
 // CHECK-NEXT:%class_constructor.3 = class_constructor(%class.2)
 // CHECK-NEXT:%function.4 = function(): number
 // CHECK-NEXT:%function.5 = function(this: %class.2): number
-// CHECK-NEXT:%function.6 = function(this: %class.2, v: number): any
+// CHECK-NEXT:%function.6 = function(this: %class.2, v: number): void
 // CHECK-NEXT:%function.7 = function(a: %class.2): any
 // CHECK-NEXT:%class.8 = class( {
 // CHECK-NEXT:  acc [final]: number
@@ -67,7 +67,7 @@ function write(a: A) {
 // CHECK-NEXT:            Decl %d.10 'arguments' Var Arguments
 // CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.6
-// CHECK-NEXT:            Decl %d.11 'v' Parameter : any
+// CHECK-NEXT:            Decl %d.11 'v' Parameter : number
 // CHECK-NEXT:            Decl %d.12 'arguments' Var Arguments
 // CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.7
