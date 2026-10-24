@@ -82,4 +82,22 @@ print(singleUndef.join(','));
 print(mixed.toString());
 // CHECK-NEXT: 1,,,3
 
+// Objects are converted with toString(), not valueOf().
+class VT {
+  valueOf(): number { return 1; }
+  toString(): string { return 'vt'; }
+}
+const objs: VT[] = [new VT(), new VT()];
+print(objs.join('-'));
+// CHECK-NEXT: vt-vt
+
+// Symbols throw, as in ToString.
+const syms: symbol[] = [Symbol('s')];
+try {
+  syms.join();
+} catch (e) {
+  print(e.name);
+}
+// CHECK-NEXT: TypeError
+
 })();
