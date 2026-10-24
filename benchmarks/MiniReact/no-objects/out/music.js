@@ -661,14 +661,11 @@
     return (props: M$react_index$Props): M$react_index$React$MixedElement => comp(props, null);
   }
   /* file: app/music/data/albums.js */
-  type M$albums$Album = any;
-  // TODO: Need Object support
-  // export type Album = {
-  //   name: string
-  //   artist: string
-  //   cover: string
-  // };
-
+  type M$albums$Album = {|
+    name: string,
+    artist: string,
+    cover: string,
+  |};
   const M$albums$listenNowAlbums: M$albums$Album[] = [{
     name: 'React Rendezvous',
     artist: 'Ethan Byte',
