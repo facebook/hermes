@@ -160,6 +160,15 @@ class B extends A {
 }
 ```
 
+`C.prototype` is the object holding the class's methods. It is read-only, and only methods that live on it are reachable: `@Hermes.final`, private and accessor members are stored in variables instead and cannot be read through it.
+```
+class A { foo(): number { return 1; } }
+const f = A.prototype.foo; // OK
+A.prototype.foo = f; // ERROR
+```
+
+A method read through `.prototype` is selected statically, not dispatched on the receiver.
+
 ### Optional Types
 
 The `?` indicates that a type may also be either `null` or `void`:

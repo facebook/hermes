@@ -30,7 +30,7 @@ f<Derived>(new Derived());
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:{{.*}}generic-bounds-alias-chain-error.js:24:5: error: ft: incompatible initialization type: cannot assign class Other to class
+// CHECK:{{.*}}generic-bounds-alias-chain-error.js:24:5: error: ft: incompatible initialization type: cannot assign class Other to class Base
 // CHECK-NEXT:let c: Wrap2<Base> = new Other();
 // CHECK-NEXT:    ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // CHECK-NEXT:{{.*}}generic-bounds-alias-chain-error.js:28:2: error: ft: type argument for type parameter 'T' is incompatible with its bound

@@ -129,6 +129,9 @@ static void messageStringImpl(const Type *type, llvh::raw_ostream &os) {
          << llvh::cast<ESTree::IdentifierNode>(
                 llvh::cast<ESTree::ClassDeclarationNode>(type->node)->_id)
                 ->_name->str();
+    } else if (classType->getClassName().isValid()) {
+      // Types with no declaration node, e.g. the home object of `C.prototype`.
+      os << "class " << classType->getClassName().str();
     } else {
       os << "class";
     }

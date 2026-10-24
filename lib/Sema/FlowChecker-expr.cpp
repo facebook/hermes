@@ -517,8 +517,29 @@ class FlowChecker::ExprVisitor {
       // TODO: class declaration location.
       outer_.sm_.error(
           node->_property->getSourceRange(),
-          "ft: property " + name.str() + " not defined in class " +
-              classType->getClassNameOrDefault());
+          classType->isHomeObject()
+              ? "ft: property " + name.str() +
+                  " not defined on the prototype object"
+              : "ft: property " + name.str() + " not defined in class " +
+                  classType->getClassNameOrDefault());
+      return outer_.flowContext_.getAny();
+    }
+
+    // Only members stored on the object live on the home object; final
+    // methods, private methods and accessors are in Variables instead.
+    if (classType->isHomeObject() && !field->isStoredOnObject()) {
+      outer_.sm_.error(
+          node->_property->getSourceRange(),
+          "ft: property " + name.str() + " is not stored on the prototype");
+      return outer_.flowContext_.getAny();
+    }
+
+    // Prototype members are read-only.
+    if (classType->isHomeObject() &&
+        classifyMemberAccess(node, parent, isWrite).write) {
+      outer_.sm_.error(
+          node->_property->getSourceRange(),
+          "ft: cannot assign to a prototype method");
       return outer_.flowContext_.getAny();
     }
 
@@ -574,6 +595,18 @@ class FlowChecker::ExprVisitor {
       propId = llvh::cast<ESTree::IdentifierNode>(node->_property);
       name = Identifier::getFromPointer(propId->_name);
     }
+    // `prototype` exposes the home object, it's not an ordinary field.
+    // Reject writes.
+    if (name.getUnderlyingPointer() == outer_.kw_.identPrototype) {
+      if (classifyMemberAccess(node, parent, isWrite).write) {
+        outer_.sm_.error(
+            node->_property->getSourceRange(),
+            "ft: cannot assign to prototype");
+        return outer_.flowContext_.getAny();
+      }
+      return classTypeInfo->getHomeObjectType();
+    }
+
     auto *staticInfo = classTypeInfo->getStaticObjectTypeInfo();
     OptValue<ClassType::FieldLookupEntry> optStaticField;
     if (staticInfo) {
@@ -2230,7 +2263,8 @@ class FlowChecker::ExprVisitor {
           return;
         }
         const ClassType::Field *accessorField = nullptr;
-        if (auto *classType = llvh::dyn_cast<ClassType>(objType->info)) {
+        if (auto *classType = llvh::dyn_cast<ClassType>(objType->info);
+            classType && classType->getHomeObjectTypeInfo()) {
           accessorField = findAccessorField(
               outer_.astContext_,
               mem->_property,
@@ -2616,7 +2650,8 @@ class FlowChecker::ExprVisitor {
 
       // Look up the method in the appropriate type.
       const ClassType::Field *field = nullptr;
-      if (auto *classType = llvh::dyn_cast<ClassType>(objType->info)) {
+      if (auto *classType = llvh::dyn_cast<ClassType>(objType->info);
+          classType && !classType->isHomeObject()) {
         field =
             outer_.lookupPropertyOnClass(classType, name, memCallee->_property)
                 .second;
@@ -2678,6 +2713,9 @@ class FlowChecker::ExprVisitor {
               "ft: type arguments provided for non-generic method");
           return;
         }
+      } else if (llvh::isa<ClassType>(objType->info)) {
+        // Nothing to specialize: handle unique cases like C.prototype.
+        resolveMemberExpressionType(memCallee, node, /*isWrite*/ false);
       }
     } else if (node->_typeArguments) {
       // Generics handled above.
@@ -2714,7 +2752,8 @@ class FlowChecker::ExprVisitor {
         name = Identifier::getFromPointer(id->_name);
       }
 
-      if (auto *classType = llvh::dyn_cast<flow::ClassType>(objType->info)) {
+      if (auto *classType = llvh::dyn_cast<flow::ClassType>(objType->info);
+          classType && !classType->isHomeObject()) {
         field =
             outer_
                 .lookupPropertyOnClass(classType, name, methodCallee->_property)

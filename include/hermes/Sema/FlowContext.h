@@ -973,6 +973,15 @@ class ClassType : public TypeWithId {
       return method != nullptr || setterMethod != nullptr || isOverloaded();
     }
 
+    /// Whether the field's value lives in a slot on the object itself, i.e. it
+    /// can be read by loading the field from the object. False for final and
+    /// private methods and for accessors, which live in Variables.
+    bool isStoredOnObject() const {
+      // TODO: This is a temporary implementation: once layoutSlotIR goes
+      // away this must be implemented without it.
+      return layoutSlotIR.hasValue();
+    }
+
     /// Whether this field is an accessor (getter and/or setter).
     bool isAccessor() const {
       return getterType || setterType;
@@ -1019,7 +1028,9 @@ class ClassType : public TypeWithId {
   Type *constructorType_ = nullptr;
   /// The .prototype property ([[HomeObject]] in the spec) contains methods.
   /// This class encodes those methods.
-  /// ClassTypes which represent home objects have null homeObjectType_.
+  /// Null for the ClassTypes that represent home objects and static objects.
+  /// Home objects are reachable as expression types (via `C.prototype`), so
+  /// you must check this before assuming it exists.
   Type *homeObjectType_ = nullptr;
   /// The type encoding static properties and methods of the class.
   /// Null if the class has no static elements.
@@ -1115,6 +1126,11 @@ class ClassType : public TypeWithId {
     assert(isInitialized());
     return llvh::cast_or_null<ClassType>(
         homeObjectType_ ? homeObjectType_->info : nullptr);
+  }
+  /// A ClassType which has no home object of its own is itself a home object.
+  bool isHomeObject() const {
+    assert(isInitialized());
+    return !homeObjectType_;
   }
   Type *getStaticObjectType() const {
     assert(isInitialized());

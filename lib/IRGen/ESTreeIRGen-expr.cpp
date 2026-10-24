@@ -1273,6 +1273,15 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
           return MemberExpressionResult{call, nullptr, baseValue};
         }
       }
+      // `A.prototype` reads the home object, which is stored as a named
+      // property on the constructor closure by genClassDeclaration.
+      // Type it as the home object so that PrLoad on the result is legal.
+      if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(mem->_property);
+          id && id->_name == kw_.identPrototype) {
+        auto *load = Builder.createLoadPropertyInst(baseValue, propValue);
+        load->setType(flowTypeToIRType(flowContext_.getNodeTypeOrAny(mem)));
+        return MemberExpressionResult{load, nullptr, baseValue};
+      }
     }
   }
 
@@ -1321,7 +1330,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
         optFieldLookup = classType->findPublicField(propIdent);
         propName = Builder.getLiteralString(propIdent);
       }
-      if (optFieldLookup) {
+      if (optFieldLookup && optFieldLookup->getField()->isStoredOnObject()) {
         size_t fieldIndex = *optFieldLookup->getField()->layoutSlotIR;
         Type irType = flowTypeToIRType(optFieldLookup->getField()->type);
         TypeContext &tc = getTypeContext();
@@ -1391,6 +1400,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
       assert(
           !field->finalMethod &&
           "final methods should be handled by the Decl early return");
+      assert(field->isStoredOnObject() && "method must be on the home object");
       size_t methodIndex = *field->layoutSlotIR;
       // Lookup method on the parent, return baseValue in the result to
       // correctly populate 'this' argument.
@@ -1552,7 +1562,8 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitTypedSuperLoad(
         closure, declFunctions_.lookup(decl), thisValue};
   }
 
-  if (auto optFieldLookup = classType->findPublicField(propName)) {
+  if (auto optFieldLookup = classType->findPublicField(propName);
+      optFieldLookup && optFieldLookup->getField()->isStoredOnObject()) {
     // Found the field on the class, so load it directly from 'this'.
     size_t fieldIndex = *optFieldLookup->getField()->layoutSlotIR;
     return MemberExpressionResult{
@@ -1582,6 +1593,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitTypedSuperLoad(
   assert(
       !field->finalMethod &&
       "final methods should be handled by the Decl early return");
+  assert(field->isStoredOnObject() && "method must be on the home object");
   size_t methodIndex = *field->layoutSlotIR;
   // Lookup method on the parent, return thisValue in the result to
   // correctly populate 'this' argument.
@@ -1619,6 +1631,7 @@ void ESTreeIRGen::emitTypedFieldStore(
   }
   assert(optFieldLookup && "field lookup must succeed after typechecking");
   const auto *field = optFieldLookup->getField();
+  assert(field->isStoredOnObject() && "field must be stored on the object");
   size_t fieldIndex = *field->layoutSlotIR;
   Builder.createPrStoreInst(
       value,
