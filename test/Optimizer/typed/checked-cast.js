@@ -23,13 +23,25 @@ exports.next = next
 
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) empty: any, empty: any, %next(): functionCode
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) empty: any, empty: any, %Cls(): functionCode
-// CHECK-NEXT:  %3 = AllocTypedNonEnumObjectInst (:object) null: null
-// CHECK-NEXT:       StorePropertyStrictInst %3: object, %2: object, "prototype": string
-// CHECK-NEXT:       StorePropertyStrictInst %1: object, %0: object, "next": string
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %Symbol(): functionCode
+// CHECK-NEXT:  %1 = AllocTypedNonEnumObjectInst (:object) null: null
+// CHECK-NEXT:       StorePropertyStrictInst %1: object, %0: object, "prototype": string
+// CHECK-NEXT:  %3 = AllocObjectLiteralInst (:object) empty: any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) empty: any, empty: any, %next(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) empty: any, empty: any, %Cls(): functionCode
+// CHECK-NEXT:  %6 = AllocTypedNonEnumObjectInst (:object) null: null
+// CHECK-NEXT:       StorePropertyStrictInst %6: object, %5: object, "prototype": string
+// CHECK-NEXT:       StorePropertyStrictInst %4: object, %3: object, "next": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:base constructor Symbol(): any [typed,noReturn]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "TypeError": string
+// CHECK-NEXT:  %1 = CreateThisInst (:undefined|object) %0: any, %0: any, empty: any
+// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, %0: any, %1: undefined|object, "Symbol is not a constructor": string
+// CHECK-NEXT:  %3 = GetConstructedObjectInst (:object) %1: undefined|object, %2: any
+// CHECK-NEXT:       ThrowInst %3: object
 // CHECK-NEXT:function_end
 
 // CHECK:function next(ptr: undefined|null|object): object [typed]

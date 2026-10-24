@@ -596,12 +596,12 @@ Value *ESTreeIRGen::emitTypedClassAllocation(
       }
     } else {
       // Class element is a field.
-      // Need to emit an IDZ check for types that can't have a primitive
-      // default.
-      Value *initValue =
-          getTypeContext().canBePrimitive(flowTypeToIRType(field.type))
-          ? getDefaultInitValue(field.type)
-          : Builder.getLiteralUninit();
+      // Types without a representable literal default (object types and symbol)
+      // are stored uninitialized and IDZ-checked on load.
+      Type irType = flowTypeToIRType(field.type);
+      Value *initValue = getTypeContext().isIDZType(irType)
+          ? Builder.getLiteralUninit()
+          : getDefaultInitValue(field.type);
       propMap[*field.layoutSlotIR] = {name, initValue};
     }
   };
@@ -653,13 +653,19 @@ Value *ESTreeIRGen::getDefaultInitValue(flow::Type *type) {
     case flow::TypeKind::BigInt:
       return Builder.getLiteralBigInt(
           Mod->getContext().getIdentifier("0").getUnderlyingPointer());
+    case flow::TypeKind::Symbol:
     case flow::TypeKind::Any:
     case flow::TypeKind::Empty:
     case flow::TypeKind::Mixed:
       return Builder.getLiteralUndefined();
-    case flow::TypeKind::Union:
-      return getDefaultInitValue(
-          llvh::cast<flow::UnionType>(type->info)->getTypes()[0]);
+    case flow::TypeKind::Union: {
+      for (auto *arm : llvh::cast<flow::UnionType>(type->info)->getTypes()) {
+        // Try to find a type that is not IDZ.
+        if (!getTypeContext().isIDZType(flowTypeToIRType(arm->info)))
+          return getDefaultInitValue(arm);
+      }
+      return Builder.getLiteralPositiveZero();
+    }
     case flow::TypeKind::TypedFunction:
     case flow::TypeKind::NativeFunction:
     case flow::TypeKind::UntypedFunction:
@@ -693,6 +699,8 @@ Type ESTreeIRGen::flowTypeToIRType(flow::TypeInfo *flowType) {
     case flow::TypeKind::Number:
     case flow::TypeKind::NumberLiteral:
       return Type::createNumber();
+    case flow::TypeKind::Symbol:
+      return Type::createSymbol();
     case flow::TypeKind::BigInt:
       return Type::createBigInt();
     case flow::TypeKind::Any:

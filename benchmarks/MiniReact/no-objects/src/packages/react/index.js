@@ -31,7 +31,7 @@ function padString(str: string, len: number): string {
 type React$ElementType =
   | string
   | Component /* TODO: React$AbstractComponent<empty, mixed> */
-  | number /* TODO: symbol */;
+  | symbol;
 
 /**
  * Type of a React element. React elements are commonly created using JSX
@@ -72,7 +72,7 @@ export type React$Node = React$NodeWithoutArray[] | React$NodeWithoutArray;
  */
 type React$Key = string | number;
 
-const REACT_FRAGMENT_TYPE: number = 1 /* Symbol.for('react.fragment') */;
+const REACT_FRAGMENT_TYPE: symbol = Symbol.for('react.fragment');
 
 /* eslint-disable lint/strictly-null, lint/react-state-props-mutation, lint/flow-react-element */
 

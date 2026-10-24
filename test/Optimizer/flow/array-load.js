@@ -26,15 +26,27 @@ sink(main);
 // CHECK-NEXT:  %2 = AllocTypedNonEnumObjectInst (:object) null: null
 // CHECK-NEXT:       StoreFrameInst %0: environment, %2: object, [%VS0.?Array.prototype]: object
 // CHECK-NEXT:       StorePropertyStrictInst %2: object, %1: object, "prototype": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %main(): functionCode
-// CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst (:any) globalObject: object, "sink": string
-// CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %5: object
-// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) empty: any, empty: any, %Symbol(): functionCode
+// CHECK-NEXT:  %6 = AllocTypedNonEnumObjectInst (:object) null: null
+// CHECK-NEXT:       StorePropertyStrictInst %6: object, %5: object, "prototype": string
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %VS0: any, %main(): functionCode
+// CHECK-NEXT:  %9 = TryLoadGlobalPropertyInst (:any) globalObject: object, "sink": string
+// CHECK-NEXT:  %10 = CallInst (:any) %9: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %8: object
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function Array(): undefined
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:base constructor Symbol(): any [typed,noReturn]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "TypeError": string
+// CHECK-NEXT:  %1 = CreateThisInst (:undefined|object) %0: any, %0: any, empty: any
+// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, %0: any, %1: undefined|object, "Symbol is not a constructor": string
+// CHECK-NEXT:  %3 = GetConstructedObjectInst (:object) %1: undefined|object, %2: any
+// CHECK-NEXT:       ThrowInst %3: object
 // CHECK-NEXT:function_end
 
 // CHECK:function main(): number
