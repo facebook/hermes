@@ -813,15 +813,10 @@ class FlowChecker::DeclareScopeTypes {
       aliasIt->second.classSpecialization =
           sourceIt->second.classSpecialization;
     }
-
-    if (outer.flowContext_.isArrayClassType(source)) {
-      outer.flowContext_.registerArrayClassType(
-          type, outer.flowContext_.getArrayElementType(source));
-    }
   }
 
   /// Refresh alias Types that copied a forward generic class, since the source
-  /// TypeInfo and Array registration can change during completion/fixup.
+  /// TypeInfo can change during completion/fixup.
   void syncForwardGenericClassAliasCopies() {
     for (auto &resolution : typeAliasResolutions) {
       if (Type *source = getForwardGenericClassAliasSource(resolution.first)) {
@@ -1156,24 +1151,6 @@ class FlowChecker::DeclareScopeTypes {
     Type *classType =
         llvh::cast<ClassConstructorType>(classConsType->info)->getClassType();
     type->info = classType->info;
-
-    // If this is an Array<T> specialization, register it so that
-    // isArrayClassType works during body typechecking.
-    // Uses getSpecializedArrayClassType which handles registration.
-    // Also register the placeholder type so isArrayClassType works for
-    // types created during scope-types resolution (e.g. rest param types
-    // in function type annotations).
-    if (typeDecl->genericClassDecl == outer.arrayClassDecl_ &&
-        generic.typeArgTypes.size() == 1) {
-      outer.getSpecializedArrayClassType(
-          generic.typeArgTypes[0], generic.annotation->getSourceRange());
-      // Also register the placeholder `type` created during scope-types.
-      // getSpecializedArrayClassType registers the canonical classType from
-      // the specialized Decl, but `type` is a different Type* (the forward
-      // generic placeholder). isArrayClassType checks by pointer, so both
-      // must be registered.
-      outer.flowContext_.registerArrayClassType(type, generic.typeArgTypes[0]);
-    }
   }
 
   /// Fixup a union by first fixing up any non-looping arms then
