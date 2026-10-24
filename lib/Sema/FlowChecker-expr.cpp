@@ -2815,6 +2815,60 @@ class FlowChecker::ExprVisitor {
       return;
     }
 
+    // A plain call `X(...)` on a typed class dispatches to the class's static
+    // `SH_call` method, if it declares one. This allows a class to be invoked
+    // without `new` (e.g. `Symbol()`). The callee must name a class
+    // declaration, since dispatch is resolved statically and IRGen loads
+    // SH_call from its decl. If there is no usable `SH_call`, fall through to
+    // the regular "callee is not a function" error below.
+    auto *calleeIdent = llvh::dyn_cast<ESTree::IdentifierNode>(node->_callee);
+    sema::Decl *calleeDecl =
+        calleeIdent ? outer_.getDecl(calleeIdent) : nullptr;
+    if (auto *consType = llvh::dyn_cast<ClassConstructorType>(calleeType->info);
+        consType && calleeDecl && calleeDecl->kind == sema::Decl::Kind::Class) {
+      ClassType *classInfo = consType->getClassTypeInfo();
+      ClassType *staticInfo = classInfo->getStaticObjectTypeInfo();
+      OptValue<ClassType::FieldLookupEntry> optCall;
+      if (staticInfo)
+        optCall = staticInfo->findPublicField(
+            Identifier::getFromPointer(outer_.kw_.identSHCall));
+      // Only a genuine static method (not a data field or accessor named
+      // SH_call) can be dispatched to. A data field of function type would
+      // otherwise satisfy the TypedFunctionType check below but crash IRGen,
+      // which assumes a method.
+      if (optCall && optCall->getField()->isMethod() &&
+          !optCall->getField()->isAccessor()) {
+        const ClassType::Field *field = optCall->getField();
+        if (field->isOverloaded()) {
+          // Overloaded SH_call requires extra work to support because we don't
+          // have an extra IdentifierNodes to use to store overload data.
+          // Leave it unsupported for now.
+          outer_.sm_.error(
+              node->getStartLoc(),
+              "ft: overloaded SH_call method not supported");
+          outer_.setNodeType(node, outer_.flowContext_.getAny());
+          return;
+        }
+
+        if (auto *ftype =
+                llvh::dyn_cast<TypedFunctionType>(field->type->info)) {
+          llvh::ArrayRef<TypedFunctionType::Param> params = ftype->getParams();
+          if (shouldVisitArguments) {
+            size_t i = 0;
+            for (ESTree::Node &argNode : node->_arguments) {
+              Type *argConstraint =
+                  i < params.size() ? params[i].type : nullptr;
+              visitESTreeNodeNoReplace(*this, &argNode, node, argConstraint);
+              ++i;
+            }
+          }
+          outer_.setNodeType(node, ftype->getReturnType());
+          checkCallArgumentTypes(params, node, node->_arguments, "function");
+          return;
+        }
+      }
+    }
+
     if (!llvh::isa<BaseFunctionType>(calleeType->info)) {
       outer_.sm_.error(
           node->_callee->getSourceRange(), "ft: callee is not a function");

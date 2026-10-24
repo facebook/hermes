@@ -1008,6 +1008,9 @@ class ESTreeIRGen {
   /// Emits the actual call for \p call, and is used as a helper function for
   /// genCallExpr and genOptionalCallExpr.
   /// \param newTarget the new.target, undefined if not a constructor call.
+  /// \param calleeFuncType the resolved callee's function type, when it differs
+  ///   from the callee node's type (e.g. an SH_call dispatch, where the callee
+  ///   node is the class constructor). nullptr to use the callee node's type.
   /// \return the result value of the call.
   Value *emitCall(
       ESTree::CallExpressionLikeNode *call,
@@ -1015,7 +1018,8 @@ class ESTreeIRGen {
       Value *target,
       bool calleeIsAlwaysClosure,
       Value *thisVal,
-      Value *newTarget);
+      Value *newTarget,
+      flow::BaseFunctionType *calleeFuncType = nullptr);
 
   struct MemberExpressionResult {
     /// Value of the looked up property.

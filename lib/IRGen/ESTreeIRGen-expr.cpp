@@ -499,14 +499,35 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
   Value *callee;
   Value *target = Builder.getEmptySentinel();
   bool calleeIsAlwaysClosure = false;
+  // Function type of the resolved callee when it differs from the callee
+  // node's type (SH_call dispatch).
+  flow::BaseFunctionType *calleeFuncType = nullptr;
   Value *newTarget = Builder.getLiteralUndefined();
   // If this is nonnull, the call is a super() call, and
   // we should call the field initialization function for the
   // given class type immediately after.
   flow::ClassType *fieldInitClassType = nullptr;
 
-  // Handle MemberExpression expression calls that sets the 'this' property.
-  if (auto *Mem = llvh::dyn_cast<ESTree::MemberExpressionNode>(call->_callee)) {
+  if (auto *consType = llvh::dyn_cast<flow::ClassConstructorType>(
+          flowContext_.getNodeTypeOrAny(call->_callee)->info)) {
+    // A plain call `X(...)` on a typed class dispatches to the class's static
+    // `SH_call` method (the FlowChecker guarantees it exists for this to
+    // type-check).
+    auto *classInfo = consType->getClassTypeInfo();
+    auto *staticInfo = classInfo->getStaticObjectTypeInfo();
+    auto optCall = staticInfo->findPublicField(
+        Identifier::getFromPointer(kw_.identSHCall));
+    const flow::ClassType::Field *field = optCall->getField();
+    sema::Decl *decl = semCtx_.getExpressionDecl(field->staticKeyNode);
+    callee = emitLoad(getDeclData(decl), false);
+    target = declFunctions_.lookup(decl);
+    calleeIsAlwaysClosure = target != nullptr;
+    calleeFuncType = llvh::cast<flow::BaseFunctionType>(field->type->info);
+    // `this` for the static method is the class constructor object.
+    thisVal = genExpression(call->_callee);
+  } else if (
+      auto *Mem = llvh::dyn_cast<ESTree::MemberExpressionNode>(call->_callee)) {
+    // Handle MemberExpression expression calls that sets the 'this' property.
     // Check for SHBuiltin.
     if (llvh::isa<ESTree::SHBuiltinNode>(Mem->_object)) {
       return genSHBuiltin(
@@ -575,8 +596,14 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
     callee = genExpression(call->_callee);
   }
 
-  Value *res =
-      emitCall(call, callee, target, calleeIsAlwaysClosure, thisVal, newTarget);
+  Value *res = emitCall(
+      call,
+      callee,
+      target,
+      calleeIsAlwaysClosure,
+      thisVal,
+      newTarget,
+      calleeFuncType);
   if (fieldInitClassType) {
     emitTypedFieldInitCall(fieldInitClassType);
   }
@@ -898,7 +925,8 @@ Value *ESTreeIRGen::emitCall(
     Value *target,
     bool calleeIsAlwaysClosure,
     Value *thisVal,
-    Value *newTarget) {
+    Value *newTarget,
+    flow::BaseFunctionType *calleeFuncType) {
   bool hasSpread = false;
   for (auto &arg : getArguments(call)) {
     if (llvh::isa<ESTree::SpreadElementNode>(&arg)) {
@@ -920,8 +948,11 @@ Value *ESTreeIRGen::emitCall(
         newTarget,
         thisVal,
         args);
-    if (auto *baseFunctionType = llvh::dyn_cast<flow::BaseFunctionType>(
-            flowContext_.getNodeTypeOrAny(getCallee(call))->info)) {
+    auto *baseFunctionType = calleeFuncType
+        ? calleeFuncType
+        : llvh::dyn_cast<flow::BaseFunctionType>(
+              flowContext_.getNodeTypeOrAny(getCallee(call))->info);
+    if (baseFunctionType) {
       // Every BaseFunctionType currently is going to be compiled to a
       // NativeJSFunction, so always set this flag.
       // Eventually we will have bytecode, etc.

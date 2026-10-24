@@ -42,4 +42,18 @@
   // CHECK-NEXT: true
   print(eq(s, Symbol.for('z')));
   // CHECK-NEXT: false
+
+  // Symbol(desc) dispatches to the static SH_call and returns a fresh symbol.
+  const u: symbol = Symbol('desc');
+  print(typeof u);
+  // CHECK-NEXT: symbol
+
+  // Symbol() may be called with no description.
+  const v: symbol = Symbol();
+  print(typeof v);
+  // CHECK-NEXT: symbol
+
+  // Unregistered symbols are always distinct.
+  print(Symbol('desc') === u);
+  // CHECK-NEXT: false
 })();
