@@ -29,8 +29,11 @@ return foo;
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) empty: any, empty: any, %Symbol(): functionCode
 // CHECK-NEXT:  %4 = AllocTypedNonEnumObjectInst (:object) null: null
 // CHECK-NEXT:       StorePropertyStrictInst %4: object, %3: object, "prototype": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) empty: any, empty: any, %foo(): functionCode
-// CHECK-NEXT:       ReturnInst %6: object
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) empty: any, empty: any, %Object(): functionCode
+// CHECK-NEXT:  %7 = AllocTypedNonEnumObjectInst (:object) null: null
+// CHECK-NEXT:       StorePropertyStrictInst %7: object, %6: object, "prototype": string
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) empty: any, empty: any, %foo(): functionCode
+// CHECK-NEXT:        ReturnInst %9: object
 // CHECK-NEXT:function_end
 
 // CHECK:function Array(): undefined
@@ -45,6 +48,11 @@ return foo;
 // CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, %0: any, %1: undefined|object, "Symbol is not a constructor": string
 // CHECK-NEXT:  %3 = GetConstructedObjectInst (:object) %1: undefined|object, %2: any
 // CHECK-NEXT:       ThrowInst %3: object
+// CHECK-NEXT:function_end
+
+// CHECK:function Object(): undefined
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(x: object, sink: any): undefined [typed]

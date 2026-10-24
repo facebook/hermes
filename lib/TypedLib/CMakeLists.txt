@@ -19,6 +19,7 @@ set(typedlib_sources
   "04-set.js"
   "05-number.js"
   "05-symbol.js"
+  "06-object.js"
 )
 list(SORT typedlib_sources)
 

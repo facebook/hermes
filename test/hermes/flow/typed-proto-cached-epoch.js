@@ -35,7 +35,11 @@ print(addProp(a).foo, a.m(), new A(20).m());
 // CHECK: 1 10 20
 
 // Array fast path through a typed prototype.
-(Object: any).setPrototypeOf((globalThis: any).Array.prototype, new A(30));
+// Typed code's Object is the TypedLib class, so use the global one.
+(globalThis: any).Object.setPrototypeOf(
+  (globalThis: any).Array.prototype,
+  new A(30),
+);
 const arr: any = (globalThis: any).Array.of(1, 2, 3);
 arr.push(4);
 print(arr.join(","));

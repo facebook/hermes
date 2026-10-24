@@ -26,13 +26,16 @@ exports.next = next
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %Symbol(): functionCode
 // CHECK-NEXT:  %1 = AllocTypedNonEnumObjectInst (:object) null: null
 // CHECK-NEXT:       StorePropertyStrictInst %1: object, %0: object, "prototype": string
-// CHECK-NEXT:  %3 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) empty: any, empty: any, %next(): functionCode
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) empty: any, empty: any, %Cls(): functionCode
-// CHECK-NEXT:  %6 = AllocTypedNonEnumObjectInst (:object) null: null
-// CHECK-NEXT:       StorePropertyStrictInst %6: object, %5: object, "prototype": string
-// CHECK-NEXT:       StorePropertyStrictInst %4: object, %3: object, "next": string
-// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) empty: any, empty: any, %Object(): functionCode
+// CHECK-NEXT:  %4 = AllocTypedNonEnumObjectInst (:object) null: null
+// CHECK-NEXT:       StorePropertyStrictInst %4: object, %3: object, "prototype": string
+// CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) empty: any
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) empty: any, empty: any, %next(): functionCode
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) empty: any, empty: any, %Cls(): functionCode
+// CHECK-NEXT:  %9 = AllocTypedNonEnumObjectInst (:object) null: null
+// CHECK-NEXT:        StorePropertyStrictInst %9: object, %8: object, "prototype": string
+// CHECK-NEXT:        StorePropertyStrictInst %7: object, %6: object, "next": string
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:base constructor Symbol(): any [typed,noReturn]
@@ -42,6 +45,11 @@ exports.next = next
 // CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, %0: any, %1: undefined|object, "Symbol is not a constructor": string
 // CHECK-NEXT:  %3 = GetConstructedObjectInst (:object) %1: undefined|object, %2: any
 // CHECK-NEXT:       ThrowInst %3: object
+// CHECK-NEXT:function_end
+
+// CHECK:function Object(): undefined
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function next(ptr: undefined|null|object): object [typed]
