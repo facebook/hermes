@@ -277,6 +277,8 @@ const [x, y]: [number, string] = [1, "abc"];
 const {a, b}: {a: number, b: number} = obj;
 ```
 
+Destructuring names in object patterns can have defaults, but typed tuple and `Array<T>` patterns don't support defaults yet.
+
 ### Spread in Array Literals
 
 Spread of an array into an array literal is supported.
