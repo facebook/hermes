@@ -123,8 +123,8 @@
    */
   initial: T): [T, M$react_index$INTERNAL$SetState<T>] {
     M$react_invariant$default(M$react_index$INTERNAL$workInProgressFiber !== null && M$react_index$INTERNAL$workInProgressRoot !== null, 'useState() called outside of render');
-    const root: M$react_index$INTERNAL$Root = M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$Root>(M$react_index$INTERNAL$workInProgressRoot);
-    const fiber: M$react_index$INTERNAL$Fiber = M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$Fiber>(M$react_index$INTERNAL$workInProgressFiber);
+    const root: M$react_index$INTERNAL$Root = M$react_index$INTERNAL$workInProgressRoot;
+    const fiber: M$react_index$INTERNAL$Fiber = M$react_index$INTERNAL$workInProgressFiber;
     let state: M$react_index$INTERNAL$State<T>;
     const _workInProgressState: M$react_index$INTERNAL$State<mixed> | null = M$react_index$INTERNAL$workInProgressState;
     if (_workInProgressState === null) {
@@ -212,21 +212,16 @@
     }
   }
   class M$react_index$INTERNAL$Root {
-    root: M$react_index$INTERNAL$Fiber | null;
-    element: M$react_index$React$MixedElement | null;
-    updateQueue: M$react_index$INTERNAL$Update<mixed>[];
-    constructor() {
-      this.root = null;
-      this.element = null;
-      this.updateQueue = ([]: M$react_index$INTERNAL$Update<mixed>[]);
-    }
+    root: M$react_index$INTERNAL$Fiber | null = null;
+    element: M$react_index$React$MixedElement | null = null;
+    updateQueue: M$react_index$INTERNAL$Update<mixed>[] = ([]: M$react_index$INTERNAL$Update<mixed>[]);
     notify(update: M$react_index$INTERNAL$Update<mixed>): void {
       this.updateQueue.push(update);
       if (this.updateQueue.length === 1) {
         M$sh_microtask$queueMicrotask((): void => {
           const element = this.element;
           M$react_invariant$default(element !== null, 'Expected an element to be set after rendering');
-          this.doWork(M$sh_CHECKED_CAST$default<M$react_index$React$MixedElement>(element));
+          this.doWork(element);
         });
       }
     }
@@ -240,7 +235,7 @@
     }
     toString(): string {
       M$react_invariant$default(this.root !== null, 'Expected root to be rendered');
-      const root: M$react_index$INTERNAL$Fiber = M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$Fiber>(this.root);
+      const root: M$react_index$INTERNAL$Fiber = this.root;
       const output: string[] = [];
       this.printFiber(root, output, 0);
       return output.join('\n');
@@ -269,20 +264,19 @@
       }
       while (fiber !== null) {
         // Render the fiber, which creates child/sibling nodes
-        let fiber2: M$react_index$INTERNAL$Fiber = M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$Fiber>(fiber);
-        this.renderFiber(fiber2);
+        this.renderFiber(fiber);
         // advance to the next fiber
-        if (fiber2.child !== null) {
-          fiber = fiber2.child;
-        } else if (fiber2.sibling !== null) {
-          fiber = fiber2.sibling;
+        if (fiber.child !== null) {
+          fiber = fiber.child;
+        } else if (fiber.sibling !== null) {
+          fiber = fiber.sibling;
         } else {
-          fiber = fiber2.parent;
-          while (fiber !== null && M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$Fiber>(fiber).sibling === null) {
-            fiber = M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$Fiber>(fiber).parent;
+          fiber = fiber.parent;
+          while (fiber !== null && fiber.sibling === null) {
+            fiber = fiber.parent;
           }
           if (fiber !== null) {
-            fiber = M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$Fiber>(fiber).sibling;
+            fiber = fiber.sibling;
           }
         }
       }
@@ -331,8 +325,8 @@
     printChildren(fiber: M$react_index$INTERNAL$Fiber, out: string[], level: number): void {
       let current: M$react_index$INTERNAL$Fiber | null = fiber.child;
       while (current !== null) {
-        this.printFiber(M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$Fiber>(current), out, level);
-        current = M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$Fiber>(current).sibling;
+        this.printFiber(current, out, level);
+        current = current.sibling;
       }
     }
     renderFiber(fiber: M$react_index$INTERNAL$Fiber): void {
@@ -407,12 +401,10 @@
           M$react_invariant$default(typeof element.type === 'string', 'Expected a host component name such as "div" or "span", got ' + typeof element.type);
           const type: M$react_index$INTERNAL$FiberType = new M$react_index$INTERNAL$FiberTypeHost(M$sh_CHECKED_CAST$default<string>(element.type));
           M$react_invariant$default((element.props: any) !== null && typeof element.props === 'object', 'Expected component props');
-          // const {children, ...props} = element.props;
-          const children = element.props.children;
-          const props = {
-            ...element.props
-          };
-          delete props.children;
+          const {
+            children,
+            ...props
+          } = element.props;
           fiber = new M$react_index$INTERNAL$Fiber(type, props, element.key);
           this.mountChildren(M$sh_CHECKED_CAST$default<M$react_index$React$Node>(children), fiber);
         } else {
@@ -448,7 +440,7 @@
           }
           const child = this.mountFiber(M$sh_CHECKED_CAST$default<M$react_index$React$Node>(childElement), parentFiber);
           if (prev !== null) {
-            M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$Fiber>(prev).sibling = child;
+            prev.sibling = child;
           } else {
             // set parent to point to first child
             parentFiber.child = child;
@@ -470,12 +462,10 @@
           case 'host':
             {
               M$react_invariant$default((element.props: any) !== null && typeof element.props === 'object', 'Expected component props');
-              // const {children, ...props} = element.props;
-              const children = element.props.children;
-              const props = {
-                ...element.props
-              };
-              delete props.children;
+              const {
+                children,
+                ...props
+              } = element.props;
               prevChild.props = props;
               this.reconcileChildren(prevChild, (children: any));
               break;
@@ -513,25 +503,25 @@
           parent.child = null;
         } else if (childrenArray.length === 1) {
           parent.child = this.reconcileFiber(parent, prevChild, childrenArray[0]);
-          M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$Fiber>(parent.child).sibling = null;
+          parent.child.sibling = null;
         } else {
           this.reconcileMultipleChildren(parent, childrenArray);
         }
       } else if (typeof children === 'string') {
-        if (prevChild === null || M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$Fiber>(prevChild).type.kind !== 'text') {
+        if (prevChild === null || prevChild.type.kind !== 'text') {
           const type = new M$react_index$INTERNAL$FiberTypeText(M$sh_CHECKED_CAST$default<string>(children));
           const child = new M$react_index$INTERNAL$Fiber(type, {}, null);
           parent.child = child;
         } else {
-          M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$FiberTypeText>(M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$Fiber>(prevChild).type).text = M$sh_CHECKED_CAST$default<string>(children);
+          M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$FiberTypeText>(prevChild.type).text = M$sh_CHECKED_CAST$default<string>(children);
         }
       } else if (children != null) {
         parent.child = this.reconcileFiber(parent, prevChild, M$sh_CHECKED_CAST$default<M$react_index$React$MixedElement>(children));
-        M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$Fiber>(parent.child).sibling = null;
+        parent.child.sibling = null;
       } else {
         parent.child = null;
         if (prevChild !== null) {
-          M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$Fiber>(prevChild).parent = null;
+          prevChild.parent = null;
         }
       }
     }
@@ -541,10 +531,10 @@
       const keyedChildren: any = new Map<M$react_index$INTERNAL$Fiber, M$react_index$INTERNAL$Fiber>();
       let current: M$react_index$INTERNAL$Fiber | null = parent.child;
       while (current !== null) {
-        if (M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$Fiber>(current).key !== null) {
-          keyedChildren.set(M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$Fiber>(current).key, current);
+        if (current.key !== null) {
+          keyedChildren.set(current.key, current);
         }
-        current = M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$Fiber>(current).sibling;
+        current = current.sibling;
       }
       let prev: M$react_index$INTERNAL$Fiber | null = null; // previous fiber at this key/index
       let prevByIndex: M$react_index$INTERNAL$Fiber | null = parent.child; // keep track of prev fiber at this index
@@ -557,13 +547,13 @@
           child = this.mountFiber(childElement, parent);
         }
         if (prev !== null) {
-          M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$Fiber>(prev).sibling = child;
+          prev.sibling = child;
         } else {
           // set parent to point to first child
           parent.child = child;
         }
         prev = child;
-        prevByIndex = prevByIndex !== null ? M$sh_CHECKED_CAST$default<M$react_index$INTERNAL$Fiber>(prevByIndex).sibling : null;
+        prevByIndex = prevByIndex !== null ? prevByIndex.sibling : null;
       }
     }
   }
@@ -633,12 +623,10 @@
    */
   class M$react_index$INTERNAL$State<T> {
     value: T;
-    next: M$react_index$INTERNAL$State<T> | null;
-    prev: M$react_index$INTERNAL$State<T> | null;
+    next: M$react_index$INTERNAL$State<T> | null = null;
+    prev: M$react_index$INTERNAL$State<T> | null = null;
     constructor(value: T) {
       this.value = value;
-      this.next = null;
-      this.prev = null;
     }
   }
   /**
@@ -648,19 +636,15 @@
   class M$react_index$INTERNAL$Fiber {
     type: M$react_index$INTERNAL$FiberType;
     props: M$react_index$Props;
-    parent: M$react_index$INTERNAL$Fiber | null;
-    child: M$react_index$INTERNAL$Fiber | null;
-    sibling: M$react_index$INTERNAL$Fiber | null;
-    state: M$react_index$INTERNAL$State<mixed> | null;
+    parent: M$react_index$INTERNAL$Fiber | null = null;
+    child: M$react_index$INTERNAL$Fiber | null = null;
+    sibling: M$react_index$INTERNAL$Fiber | null = null;
+    state: M$react_index$INTERNAL$State<mixed> | null = null;
     key: M$react_index$INTERNAL$React$Key | null;
     constructor(type: M$react_index$INTERNAL$FiberType, props: M$react_index$Props, key: M$react_index$INTERNAL$React$Key | null) {
       this.type = type;
       this.props = props;
       this.key = key;
-      this.parent = null;
-      this.child = null;
-      this.sibling = null;
-      this.state = null;
     }
   }
   function M$react_index$jsx(type: M$react_index$INTERNAL$React$ElementType, props: M$react_index$Props, key: M$react_index$INTERNAL$React$Key | null): M$react_index$React$MixedElement {
