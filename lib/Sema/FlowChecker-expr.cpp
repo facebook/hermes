@@ -2552,6 +2552,48 @@ class FlowChecker::ExprVisitor {
     // These are handled in the parent node.
   }
 
+  /// Look up the class field referenced by a named method call on a class.
+  /// \pre \p callee must not be computed.
+  /// \return the found Field, nullptr if none could be found.
+  const ClassType::Field *lookupCallMemberField(
+      ESTree::MemberExpressionNode *callee,
+      Type *objType) {
+    assert(!callee->_computed && "property must be non-computed");
+    bool isPrivate;
+    Identifier name;
+    if (auto *pn = llvh::dyn_cast<ESTree::PrivateNameNode>(callee->_property)) {
+      isPrivate = true;
+      name = outer_.astContext_.getPrivateNameIdentifier(
+          llvh::cast<ESTree::IdentifierNode>(pn->_id)->_name);
+    } else {
+      isPrivate = false;
+      name = Identifier::getFromPointer(
+          llvh::cast<ESTree::IdentifierNode>(callee->_property)->_name);
+    }
+
+    // Home objects (i.e. prototype receivers) are deliberately excluded. They
+    // have no home object of their own, and the members the callers care about
+    // (overloaded, generic and final methods) are exactly the ones not stored
+    // on the prototype, so the access is diagnosed by
+    // resolveMemberExpressionType and the callee type is any.
+    if (auto *classType = llvh::dyn_cast<ClassType>(objType->info);
+        classType && !classType->isHomeObject()) {
+      return outer_.lookupPropertyOnClass(classType, name, callee->_property)
+          .second;
+    }
+
+    auto *consType = llvh::dyn_cast<ClassConstructorType>(objType->info);
+    if (!consType)
+      return nullptr;
+    auto *classTypeInfo = llvh::cast<ClassType>(consType->getClassType()->info);
+    auto *staticInfo = classTypeInfo->getStaticObjectTypeInfo();
+    if (!staticInfo)
+      return nullptr;
+    auto field = isPrivate ? staticInfo->findPrivateField(name)
+                           : staticInfo->findPublicField(name);
+    return field ? field->getField() : nullptr;
+  }
+
   void visit(
       ESTree::CallExpressionNode *node,
       ESTree::Node *parent,
@@ -2653,40 +2695,7 @@ class FlowChecker::ExprVisitor {
         visitESTreeNode(*this, memCallee->_object, memCallee, nullptr);
       shouldVisitCallee = false;
       Type *objType = outer_.getNodeTypeOrAny(memCallee->_object);
-
-      // Determine property name and whether it's private.
-      bool isPrivate;
-      Identifier name;
-      if (auto *pn =
-              llvh::dyn_cast<ESTree::PrivateNameNode>(memCallee->_property)) {
-        isPrivate = true;
-        name = outer_.astContext_.getPrivateNameIdentifier(
-            llvh::cast<ESTree::IdentifierNode>(pn->_id)->_name);
-      } else {
-        auto *id = llvh::cast<ESTree::IdentifierNode>(memCallee->_property);
-        isPrivate = false;
-        name = Identifier::getFromPointer(id->_name);
-      }
-
-      // Look up the method in the appropriate type.
-      const ClassType::Field *field = nullptr;
-      if (auto *classType = llvh::dyn_cast<ClassType>(objType->info);
-          classType && !classType->isHomeObject()) {
-        field =
-            outer_.lookupPropertyOnClass(classType, name, memCallee->_property)
-                .second;
-      } else if (
-          auto *consType =
-              llvh::dyn_cast<ClassConstructorType>(objType->info)) {
-        auto *classTypeInfo =
-            llvh::cast<ClassType>(consType->getClassType()->info);
-        if (auto *staticInfo = classTypeInfo->getStaticObjectTypeInfo()) {
-          auto optMethod = isPrivate ? staticInfo->findPrivateField(name)
-                                     : staticInfo->findPublicField(name);
-          if (optMethod)
-            field = optMethod->getField();
-        }
-      }
+      const ClassType::Field *field = lookupCallMemberField(memCallee, objType);
 
       if (field) {
         if (field->isOverloaded()) {
@@ -2758,38 +2767,8 @@ class FlowChecker::ExprVisitor {
             llvh::dyn_cast<ESTree::MemberExpressionNode>(node->_callee);
         !overloadResolved && methodCallee && !methodCallee->_computed) {
       Type *objType = outer_.getNodeTypeOrAny(methodCallee->_object);
-      const flow::ClassType::Field *field = nullptr;
-
-      Identifier name;
-      bool isPrivate = false;
-      if (auto *pn = llvh::dyn_cast<ESTree::PrivateNameNode>(
-              methodCallee->_property)) {
-        name = outer_.astContext_.getPrivateNameIdentifier(
-            llvh::cast<ESTree::IdentifierNode>(pn->_id)->_name);
-        isPrivate = true;
-      } else {
-        auto *id = llvh::cast<ESTree::IdentifierNode>(methodCallee->_property);
-        name = Identifier::getFromPointer(id->_name);
-      }
-
-      if (auto *classType = llvh::dyn_cast<flow::ClassType>(objType->info);
-          classType && !classType->isHomeObject()) {
-        field =
-            outer_
-                .lookupPropertyOnClass(classType, name, methodCallee->_property)
-                .second;
-      } else if (
-          auto *consType =
-              llvh::dyn_cast<flow::ClassConstructorType>(objType->info)) {
-        auto *classTypeInfo =
-            llvh::cast<flow::ClassType>(consType->getClassType()->info);
-        if (auto *staticInfo = classTypeInfo->getStaticObjectTypeInfo()) {
-          auto optMethod = isPrivate ? staticInfo->findPrivateField(name)
-                                     : staticInfo->findPublicField(name);
-          if (optMethod)
-            field = optMethod->getField();
-        }
-      }
+      const ClassType::Field *field =
+          lookupCallMemberField(methodCallee, objType);
       if (field && field->isOverloaded()) {
         if (!resolveOverloadedMethodCall(node, methodCallee, field))
           return;
@@ -2806,41 +2785,12 @@ class FlowChecker::ExprVisitor {
               llvh::dyn_cast<ESTree::MemberExpressionNode>(node->_callee);
           memCallee && !memCallee->_computed) {
         Type *objType = outer_.getNodeTypeOrAny(memCallee->_object);
-
-        // Determine property name and whether it's private.
-        bool isPrivate;
-        Identifier name;
-        if (auto *pn =
-                llvh::dyn_cast<ESTree::PrivateNameNode>(memCallee->_property)) {
-          isPrivate = true;
-          name = outer_.astContext_.getPrivateNameIdentifier(
-              llvh::cast<ESTree::IdentifierNode>(pn->_id)->_name);
-        } else {
-          auto *id = llvh::cast<ESTree::IdentifierNode>(memCallee->_property);
-          isPrivate = false;
-          name = Identifier::getFromPointer(id->_name);
-        }
-
-        OptValue<ClassType::FieldLookupEntry> optMethod;
-        if (auto *classType = llvh::dyn_cast<ClassType>(objType->info)) {
-          auto *homeObj = classType->getHomeObjectTypeInfo();
-          optMethod = isPrivate ? homeObj->findPrivateField(name)
-                                : homeObj->findPublicField(name);
-        } else if (
-            auto *consType =
-                llvh::dyn_cast<ClassConstructorType>(objType->info)) {
-          auto *classTypeInfo =
-              llvh::cast<ClassType>(consType->getClassType()->info);
-          if (auto *staticInfo = classTypeInfo->getStaticObjectTypeInfo()) {
-            optMethod = isPrivate ? staticInfo->findPrivateField(name)
-                                  : staticInfo->findPublicField(name);
-          }
-        }
-
-        if (optMethod && optMethod->getField()->method) {
+        const ClassType::Field *field =
+            lookupCallMemberField(memCallee, objType);
+        if (field && field->method) {
           auto [didVisitArgs, typeArgs] =
               outer_.inferTypeArgumentsForGenericMethodCall(
-                  node, memCallee, optMethod->getField()->method);
+                  node, memCallee, field->method);
           if (didVisitArgs)
             shouldVisitArguments = false;
           if (typeArgs.empty()) {
@@ -2850,7 +2800,7 @@ class FlowChecker::ExprVisitor {
             return;
           }
           outer_.resolveCallToGenericMethodSpecializationWithParsedTypes(
-              node, memCallee, typeArgs, optMethod->getField()->method);
+              node, memCallee, typeArgs, field->method);
           calleeType = outer_.getNodeTypeOrAny(node->_callee);
         }
       }
