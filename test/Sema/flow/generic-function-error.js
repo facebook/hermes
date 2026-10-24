@@ -19,10 +19,10 @@ foo<>();
 // CHECK:{{.*}}generic-function-error.js:12:4: error: type argument mismatch, expected 2, found 3
 // CHECK-NEXT:foo<number, number, number>();
 // CHECK-NEXT:   ^~~~~~~~~~~~~~~~~~~~~~~~
-// CHECK-NEXT:{{.*}}generic-function-error.js:13:4: error: type argument mismatch, expected 2, found 1
+// CHECK-NEXT:{{.*}}generic-function-error.js:13:4: error: ft: could not infer type argument for type parameter 'U'
 // CHECK-NEXT:foo<number>();
 // CHECK-NEXT:   ^~~~~~~~
-// CHECK-NEXT:{{.*}}generic-function-error.js:15:4: error: type argument mismatch, expected 2, found 0
+// CHECK-NEXT:{{.*}}generic-function-error.js:15:4: error: ft: could not infer type argument for type parameter 'T'
 // CHECK-NEXT:foo<>();
 // CHECK-NEXT:   ^~
 // CHECK-NEXT:Emitted 3 errors. exiting.

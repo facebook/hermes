@@ -3952,12 +3952,11 @@ FlowChecker::inferTypeArgumentsForGenericFunctionCall(
   size_t numTypeParams = typeParams->_params.size();
   assert(numTypeParams > 0 && "expected at least one type parameter");
 
-  // Keep pointers to all the placeholder types.
-  llvh::SmallVector<Type *, 2> typeArgs{};
-  for (size_t i = 0; i < numTypeParams; ++i) {
-    typeArgs.push_back(
-        flowContext_.createType(flowContext_.getInferencePlaceholderInfo()));
-  }
+  // Seed the leading type arguments with any explicitly provided ones (parsed
+  // in the call-site scope), and fill the trailing ones with placeholders to be
+  // inferred from the call arguments.
+  llvh::SmallVector<Type *, 2> typeArgs =
+      seedTypeArgsForInference(node->_typeArguments, numTypeParams);
 
   // Infer placeholders from call arguments.
   if (!inferPlaceholdersFromCallArgs(
@@ -3967,7 +3966,92 @@ FlowChecker::inferTypeArgumentsForGenericFunctionCall(
           typeArgs,
           oldDecl->scope,
           node)) {
-    // Failed to infer.
+    if (node->_typeArguments)
+      reportUninferredTypeArg(typeParams, typeArgs, node->_typeArguments);
+    return {true, {}};
+  }
+
+  return {true, std::move(typeArgs)};
+}
+
+llvh::SmallVector<Type *, 2> FlowChecker::seedTypeArgsForInference(
+    ESTree::Node *typeArgsNode,
+    size_t numTypeParams) {
+  // Explicit type arguments are parsed in the call-site scope.
+  llvh::SmallVector<Type *, 2> typeArgs{};
+  if (auto *node = llvh::cast_or_null<ESTree::TypeParameterInstantiationNode>(
+          typeArgsNode)) {
+    for (ESTree::Node &arg : node->_params)
+      typeArgs.push_back(parseTypeAnnotation(&arg));
+  }
+  assert(
+      typeArgs.size() < numTypeParams &&
+      "explicit type args must be partial when inferring");
+  while (typeArgs.size() < numTypeParams) {
+    typeArgs.push_back(
+        flowContext_.createType(flowContext_.getInferencePlaceholderInfo()));
+  }
+  return typeArgs;
+}
+
+void FlowChecker::reportUninferredTypeArg(
+    ESTree::TypeParameterDeclarationNode *typeParams,
+    llvh::ArrayRef<Type *> typeArgs,
+    ESTree::Node *typeArgsNode) {
+  size_t i = 0;
+  for (ESTree::Node &param : typeParams->_params) {
+    if (llvh::isa<InferencePlaceholderType>(typeArgs[i++]->info)) {
+      sm_.error(
+          typeArgsNode->getSourceRange(),
+          llvh::Twine(
+              "ft: could not infer type argument for type parameter '") +
+              llvh::cast<ESTree::TypeParameterNode>(&param)->_name->str() +
+              "'");
+      return;
+    }
+  }
+}
+
+std::pair<bool, llvh::SmallVector<Type *, 2>>
+FlowChecker::inferTypeArgumentsForGenericClassNew(
+    ESTree::NewExpressionNode *node,
+    sema::Decl *oldDecl) {
+  GenericInfo<ESTree::Node> &generic = getGenericInfoMustExist(oldDecl);
+  auto *classDecl =
+      llvh::dyn_cast<ESTree::ClassDeclarationNode>(generic.originalNode);
+  if (!classDecl)
+    return {false, {}};
+
+  // Inference uses the explicit constructor's params; an implicit one has none
+  // that mention the class's type parameters.
+  ESTree::FunctionExpressionNode *ctor = nullptr;
+  for (ESTree::Node &member :
+       llvh::cast<ESTree::ClassBodyNode>(classDecl->_body)->_body) {
+    auto *method = llvh::dyn_cast<ESTree::MethodDefinitionNode>(&member);
+    if (method && method->_kind == kw_.identConstructor) {
+      ctor = llvh::cast<ESTree::FunctionExpressionNode>(method->_value);
+      break;
+    }
+  }
+  if (!ctor)
+    return {false, {}};
+
+  auto *typeParams = llvh::cast<ESTree::TypeParameterDeclarationNode>(
+      classDecl->_typeParameters);
+  llvh::SmallVector<Type *, 2> typeArgs = seedTypeArgsForInference(
+      node->_typeArguments, typeParams->_params.size());
+
+  // Parse the constructor's param types in the class's declaration scope.
+  if (!inferPlaceholdersFromCallArgs(
+          typeParams,
+          ctor->_params,
+          node->_arguments,
+          typeArgs,
+          oldDecl->scope,
+          node,
+          /*receiverType=*/nullptr,
+          generic.bindingTableScope)) {
+    reportUninferredTypeArg(typeParams, typeArgs, node->_typeArguments);
     return {true, {}};
   }
 
@@ -4073,6 +4157,22 @@ Type *FlowChecker::resolveGenericClassSpecialization(
   }
   // Set these unconditionally, but it's not actually necessary if this is
   // called from a GenericTypeAnnotation.
+  semContext_.setExpressionDecl(nameNode, newDecl);
+  setNodeType(nameNode, classConsType);
+  return llvh::cast<ClassConstructorType>(classConsType->info)->getClassType();
+}
+
+Type *FlowChecker::resolveGenericClassSpecializationWithParsedTypes(
+    ESTree::IdentifierNode *nameNode,
+    SMRange errorRange,
+    llvh::ArrayRef<Type *> typeArgTypes,
+    sema::Decl *oldDecl) {
+  sema::Decl *newDecl = specializeGenericWithParsedTypes(
+                            oldDecl, errorRange, typeArgTypes, oldDecl->scope)
+                            .first;
+  if (!newDecl)
+    return flowContext_.getAny();
+  Type *classConsType = getDeclType(newDecl);
   semContext_.setExpressionDecl(nameNode, newDecl);
   setNodeType(nameNode, classConsType);
   return llvh::cast<ClassConstructorType>(classConsType->info)->getClassType();
@@ -4243,12 +4343,11 @@ FlowChecker::inferTypeArgumentsForGenericMethodCall(
   size_t numTypeParams = typeParams->_params.size();
   assert(numTypeParams > 0 && "expected at least one type parameter");
 
-  // Keep pointers to all the placeholder types.
-  llvh::SmallVector<Type *, 2> typeArgs{};
-  for (size_t i = 0; i < numTypeParams; ++i) {
-    typeArgs.push_back(
-        flowContext_.createType(flowContext_.getInferencePlaceholderInfo()));
-  }
+  // Seed the leading type arguments with any explicitly provided ones (parsed
+  // in the call-site scope), and fill the trailing ones with placeholders to be
+  // inferred from the call arguments.
+  llvh::SmallVector<Type *, 2> typeArgs =
+      seedTypeArgsForInference(node->_typeArguments, numTypeParams);
 
   // Get the object type to use for receiver type inference.
   Type *objType = getNodeTypeOrAny(callee->_object);
@@ -4269,7 +4368,8 @@ FlowChecker::inferTypeArgumentsForGenericMethodCall(
           node,
           objType,
           generic.bindingTableScope)) {
-    // Failed to infer.
+    if (node->_typeArguments)
+      reportUninferredTypeArg(typeParams, typeArgs, node->_typeArguments);
     return {true, {}};
   }
 
