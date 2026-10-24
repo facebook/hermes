@@ -930,8 +930,9 @@ class FlowChecker::ParseClassType {
       Type *fieldType = methodType;
       if (isGetter) {
         getterFnType = methodType;
-        auto *fnType = llvh::cast<TypedFunctionType>(methodType->info);
-        fieldType = fnType->getReturnType();
+        auto *fnType = llvh::dyn_cast<TypedFunctionType>(methodType->info);
+        fieldType =
+            fnType ? fnType->getReturnType() : outer_.flowContext_.getAny();
       } else if (isSetter) {
         setterFnType = methodType;
         fieldType = outer_.flowContext_.getVoid();
@@ -1044,8 +1045,7 @@ class FlowChecker::ParseClassType {
         // Merge the pair.
         if (isGetter) {
           // Adding getter to existing setter.
-          auto *fnType = llvh::cast<TypedFunctionType>(methodType->info);
-          Type *getterRetType = fnType->getReturnType();
+          Type *getterRetType = fieldType;
           // Validate getter return type matches setter param type.
           auto *setterFn =
               llvh::cast<TypedFunctionType>(existingField->setterType->info);
