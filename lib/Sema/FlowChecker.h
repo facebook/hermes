@@ -685,7 +685,9 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   ///   type is not yet available (e.g., for class expressions).
   /// \param classTypeParameters the TypeParameterDeclaration node for the
   ///   class, used to shadow type params with empty for static members.
-  void parseClassType(
+  /// \return false if any error was reported while parsing the class, in which
+  ///   case some members may be missing from the ClassType.
+  bool parseClassType(
       ESTree::Node *superClass,
       ESTree::Node *superTypeParameters,
       ESTree::Node *body,

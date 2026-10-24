@@ -668,23 +668,36 @@ class FlowChecker::ParseClassType {
       fieldType = outer_.flowContext_.getAny();
     }
 
-    // Check if the field is inherited, and reuse the index.
+    // Check if an instance field is inherited, and reuse the index.
     // Private fields are never inherited.
-    // Static fields look up in the super's staticObjectType.
+    // Inherited statics are always an error; the super's staticObjectType
+    // field name map already covers the whole superclass chain.
     const ClassType::Field *superField = nullptr;
     if (!isPrivate && superClassType) {
       auto *superClassTypeInfo = llvh::cast<ClassType>(superClassType->info);
       if (isStatic) {
         if (auto *superStaticInfo =
                 superClassTypeInfo->getStaticObjectTypeInfo()) {
-          auto superIt = superStaticInfo->findPublicField(name);
-          if (superIt) {
-            superField = superIt->getField();
-            if (!fieldType->info->equals(superField->type->info)) {
+          if (auto superIt = superStaticInfo->findPublicField(name)) {
+            const ClassType::Field *inherited = superIt->getField();
+            if (inherited->isMethod()) {
               outer_.sm_.error(
-                  prop->getStartLoc(),
-                  "ft: incompatible field type for override");
+                  id->getStartLoc(),
+                  "ft: cannot override method " + name.str() + " with a field");
+            } else {
+              // Statics live in Variables instead of slots on the class, so a
+              // redeclaration would create a second, independent storage
+              // location: a base-constructor-typed value holding the subclass
+              // would still read the base class's Variable.
+              outer_.sm_.error(
+                  id->getStartLoc(),
+                  "ft: cannot override static field " + name.str());
+              if (ESTree::IdentifierNode *prevId = inherited->staticKeyNode)
+                outer_.sm_.note(
+                    prevId->getSourceRange(),
+                    "ft: previous declaration of " + name.str());
             }
+            return outer_.flowContext_.getAny();
           }
         }
       } else {
@@ -696,7 +709,29 @@ class FlowChecker::ParseClassType {
                 prop->getStartLoc(),
                 "ft: incompatible field type for override");
           }
+        } else if (superClassTypeInfo->getHomeObjectTypeInfo()->findPublicField(
+                       name)) {
+          // Methods live on the home object and fields on the instance, so a
+          // field shadowing an inherited method would create two independent
+          // storage locations for the same name.
+          outer_.sm_.error(
+              id->getStartLoc(),
+              "ft: cannot override method " + name.str() + " with a field");
+          return outer_.flowContext_.getAny();
         }
+      }
+    }
+
+    // Fields and methods share a namespace, so check the method names too.
+    if (!isStatic) {
+      auto methodIt = methodNames.find(name.getUnderlyingPointer());
+      if (methodIt != methodNames.end()) {
+        outer_.sm_.error(
+            id->getStartLoc(), "ft: field " + name.str() + " already declared");
+        outer_.sm_.note(
+            methodIt->second->getSourceRange(),
+            "ft: previous declaration of " + name.str());
+        return outer_.flowContext_.getAny();
       }
     }
 
@@ -949,11 +984,23 @@ class FlowChecker::ParseClassType {
           if (auto *superStaticInfo =
                   superClassTypeInfo->getStaticObjectTypeInfo()) {
             superIt = superStaticInfo->findPublicField(name);
+            if (superIt && !superIt->getField()->isMethod()) {
+              outer_.sm_.error(
+                  id->getSourceRange(),
+                  "ft: cannot override field " + name.str() + " with a method");
+              return outer_.flowContext_.getAny();
+            }
           }
         } else {
           superIt =
               superClassTypeInfo->getHomeObjectTypeInfo()->findPublicField(
                   name);
+          if (!superIt && superClassTypeInfo->findPublicField(name)) {
+            outer_.sm_.error(
+                id->getSourceRange(),
+                "ft: cannot override field " + name.str() + " with a method");
+            return outer_.flowContext_.getAny();
+          }
         }
         if (superIt) {
           if (fe->_typeParameters) {
@@ -982,6 +1029,20 @@ class FlowChecker::ParseClassType {
         }
       }
 
+      // Check the field names too.
+      if (!method->_static) {
+        auto fieldIt = fieldNames.find(name.getUnderlyingPointer());
+        if (fieldIt != fieldNames.end()) {
+          outer_.sm_.error(
+              method->_key->getStartLoc(),
+              "ft: method " + name.str() + " already declared");
+          outer_.sm_.note(
+              fieldIt->second->getSourceRange(),
+              "ft: previous declaration of " + name.str());
+          return outer_.flowContext_.getAny();
+        }
+      }
+
       // Check if the method is already declared.
       // Allow getter+setter pairs with the same name.
       auto &nameMap = method->_static ? staticNames : methodNames;
@@ -993,6 +1054,18 @@ class FlowChecker::ParseClassType {
         // Try to merge getter+setter pair. Find the existing field.
         ClassType::Field *existingField =
             &fieldVec[idxMap[name.getUnderlyingPointer()]];
+        // Statics share a single namespace, so the existing declaration may be
+        // a field. Report the conflict before the accessor/overload merging
+        // below, which assumes the existing declaration is a method.
+        if (!existingField->isMethod()) {
+          outer_.sm_.error(
+              method->_key->getStartLoc(),
+              "ft: method " + name.str() + " already declared");
+          outer_.sm_.note(
+              it->second->getSourceRange(),
+              "ft: previous declaration of " + name.str());
+          return outer_.flowContext_.getAny();
+        }
         bool canMerge = (isGetter && existingField->hasSetter() &&
                          !existingField->hasGetter()) ||
             (isSetter && existingField->hasGetter() &&
@@ -1155,7 +1228,7 @@ class FlowChecker::ParseClassType {
   }
 };
 
-void FlowChecker::parseClassType(
+bool FlowChecker::parseClassType(
     ESTree::Node *superClass,
     ESTree::Node *superTypeArguments,
     ESTree::Node *body,
@@ -1163,6 +1236,7 @@ void FlowChecker::parseClassType(
     sema::LexicalScope *classScope,
     Type *classConsType,
     ESTree::Node *classTypeParameters) {
+  unsigned errorsBefore = sm_.getErrorCount();
   ParseClassType(
       *this,
       superClass,
@@ -1172,6 +1246,7 @@ void FlowChecker::parseClassType(
       classScope,
       classConsType,
       classTypeParameters);
+  return sm_.getErrorCount() == errorsBefore;
 }
 
 void FlowChecker::visitClassNode(
@@ -1196,16 +1271,14 @@ void FlowChecker::visit(ESTree::ClassExpressionNode *node) {
   Type *consType =
       flowContext_.createType(flowContext_.createClassConstructor(classType));
 
-  unsigned errorsBefore = sm_.getErrorCount();
-  parseClassType(
-      node->_superClass,
-      node->_superTypeArguments,
-      node->_body,
-      classType,
-      node->getScope(),
-      consType,
-      node->_typeParameters);
-  if (sm_.getErrorCount() != errorsBefore) {
+  if (!parseClassType(
+          node->_superClass,
+          node->_superTypeArguments,
+          node->_body,
+          classType,
+          node->getScope(),
+          consType,
+          node->_typeParameters)) {
     // Failed to parse class.
     return;
   }
@@ -1315,12 +1388,14 @@ void FlowChecker::visit(ESTree::MethodDefinitionNode *node) {
                      ->getHomeObjectTypeInfo()
                      ->findPublicField(name);
     }
-    if (!optField.hasValue()) {
-      // This only happens if the class failed to parse, avoid assertion
-      // failures (defensive programming).
-      sm_.error(
-          node->_key->getSourceRange(),
-          llvh::Twine("ft: cannot find method: ") + name.str());
+    // The member must have been populated on this class, not merely inherited.
+    // A dropped member (due to a reported error) resolves to the superclass's
+    // entry of the same name, whose type describes a different declaration.
+    ClassType *owner = node->_static
+        ? curClassContext_->getClassTypeInfo()->getStaticObjectTypeInfo()
+        : curClassContext_->getClassTypeInfo()->getHomeObjectTypeInfo();
+    if (!optField.hasValue() || optField->classType != owner) {
+      assert(sm_.getErrorCount() && "member dropped without an error");
       return;
     }
     Type *funcType = optField->getField()->type;
@@ -4122,7 +4197,7 @@ void FlowChecker::typecheckGenericClassSpecialization(
         classConsType,
         specialization->getScope());
   } else {
-    parseClassType(
+    bool success = parseClassType(
         specialization->_superClass,
         specialization->_superTypeArguments,
         specialization->_body,
@@ -4130,12 +4205,15 @@ void FlowChecker::typecheckGenericClassSpecialization(
         specialization->getScope(),
         classConsType,
         specialization->_typeParameters);
-    typecheckQueue_.emplace_back(
-        specialization,
-        bindingTable_.getCurrentScope(),
-        classType,
-        classConsType,
-        specialization->getScope());
+    if (success) {
+      // Don't bother typechecking if parsing failed.
+      typecheckQueue_.emplace_back(
+          specialization,
+          bindingTable_.getCurrentScope(),
+          classType,
+          classConsType,
+          specialization->getScope());
+    }
   }
 }
 

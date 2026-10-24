@@ -15,19 +15,32 @@ class A {
 // CHECK: {{.*}}class-static-error.js:13:10: error: ft: field x already declared
 // CHECK: {{.*}}class-static-error.js:12:3: note: ft: previous declaration of x
 
-// Incompatible static override.
+// A static field may not be overridden, even with the same type: statics live
+// in Variables, so the subclass would get a second storage location.
 class B {
   static y: number = 1;
 }
 class C extends B {
-  static y: string = "bad";
+  static y: number = 2;
 }
-// CHECK: {{.*}}class-static-error.js:23:3: error: ft: incompatible field type for override
+// CHECK: {{.*}}class-static-error.js:24:10: error: ft: cannot override static field y
+// CHECK: {{.*}}class-static-error.js:21:10: note: ft: previous declaration of y
+
+// The superclass need not be the immediate parent.
+class E {
+  static z: number = 1;
+}
+class F extends E {}
+class G extends F {
+  static z: number = 2;
+}
+// CHECK: {{.*}}class-static-error.js:35:10: error: ft: cannot override static field z
+// CHECK: {{.*}}class-static-error.js:31:10: note: ft: previous declaration of z
 
 // Duplicate static methods.
 class D {
   static foo(): void {}
   static foo(): void {}
 }
-// CHECK: {{.*}}class-static-error.js:30:10: error: ft: method foo already declared
-// CHECK: {{.*}}class-static-error.js:29:3: note: ft: previous declaration of foo
+// CHECK: {{.*}}class-static-error.js:43:10: error: ft: method foo already declared
+// CHECK: {{.*}}class-static-error.js:42:3: note: ft: previous declaration of foo

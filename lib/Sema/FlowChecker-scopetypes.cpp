@@ -1361,7 +1361,7 @@ class FlowChecker::DeclareScopeTypes {
       // Actually parse and move on to the next one.
       // The superClass node has already been visited,
       // and must have been parsed before the current one.
-      outer.parseClassType(
+      bool success = outer.parseClassType(
           specialization->_superClass,
           specialization->_superTypeArguments,
           specialization->_body,
@@ -1369,6 +1369,10 @@ class FlowChecker::DeclareScopeTypes {
           deferred.classScope,
           deferred.classConsType,
           specialization->_typeParameters);
+      // Members that failed to parse are not in the class,
+      // so typechecking them produces issues.
+      if (!success)
+        continue;
 
       // Don't typecheck right now, because we need to parse everything in
       // current scope before descending into child functions.
