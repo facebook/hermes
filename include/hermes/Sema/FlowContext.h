@@ -892,6 +892,9 @@ class TypeWithId : public TypeInfo {
 class ClassType : public TypeWithId {
  public:
   /// Represents either a class field or a method.
+  /// Non-const members are mutated after construction as the class and its
+  /// subclasses are processed: the getter/setter merge, the overload merge and
+  /// the subclass override marking all update an existing Field in place.
   struct Field {
     const Identifier name;
     /// The type of the field. For accessor fields, this is the getter's
@@ -929,12 +932,17 @@ class ClassType : public TypeWithId {
     ESTree::MethodDefinitionNode *setterMethod = nullptr;
 
     /// Whether this field is a method that has been overridden by a subclass.
-    /// This is the only field that can be modified after initialization, as
-    /// subclasses are processed.
+    /// Set as subclasses are processed, after the field is constructed.
     bool overridden{false};
 
     /// Whether this is a private field for this class.
     bool isPrivate;
+
+    /// Variance of this field (None == invariant), mirroring
+    /// ExactObjectType::Field. Methods and getter-only accessors are ReadOnly,
+    /// setter-only accessors are WriteOnly. Reset to None when a getter and a
+    /// setter are merged into a single field.
+    FieldVariance variance = FieldVariance::None;
 
     /// All overloads for overloaded methods, mapping method AST node to its
     /// type. For non-overloaded methods, this is empty and the existing
@@ -967,7 +975,14 @@ class ClassType : public TypeWithId {
           getterType(getterType),
           setterType(setterType),
           setterMethod(setterMethod),
-          isPrivate(isPrivate) {}
+          isPrivate(isPrivate) {
+      if (isMethod() && !isAccessor())
+        variance = FieldVariance::ReadOnly;
+      else if (isAccessor() && !hasSetter())
+        variance = FieldVariance::ReadOnly;
+      else if (isAccessor() && !hasGetter())
+        variance = FieldVariance::WriteOnly;
+    }
 
     bool isMethod() const {
       return method != nullptr || setterMethod != nullptr || isOverloaded();

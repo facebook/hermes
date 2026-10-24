@@ -543,14 +543,11 @@ class FlowChecker::ExprVisitor {
       return outer_.flowContext_.getAny();
     }
 
-    // Setter-only access is only legal as a write target. The write path
-    // for `=` (and destructuring leaves) passes isWrite=true via
-    // visitAssignmentTarget; everything else reads.
-    if (field->isAccessor() && !field->hasGetter() && !isWrite) {
-      outer_.sm_.error(
-          node->_property->getSourceRange(),
-          "ft: cannot read setter-only property");
+    if (!isDeleteOperand(node, parent) &&
+        !checkFieldVariance(node, parent, field->variance, name, isWrite)) {
+      return outer_.flowContext_.getAny();
     }
+
     // Overloaded methods may only be referenced as a direct call target.
     if (field->isOverloaded()) {
       auto *callParent = llvh::dyn_cast<ESTree::CallExpressionNode>(parent);
@@ -622,14 +619,14 @@ class FlowChecker::ExprVisitor {
       return outer_.flowContext_.getAny();
     }
     const auto *field = optStaticField->getField();
+    if (!isDeleteOperand(node, parent) &&
+        !checkFieldVariance(node, parent, field->variance, name, isWrite)) {
+      return outer_.flowContext_.getAny();
+    }
+
     if (field->isAccessor()) {
       // Static accessor: result type is the field type.
       // Do NOT propagate Decl — IRGen handles the call.
-      if (!field->hasGetter() && !isWrite) {
-        outer_.sm_.error(
-            node->_property->getSourceRange(),
-            "ft: cannot read setter-only property");
-      }
       return field->type;
     }
 
@@ -689,13 +686,54 @@ class FlowChecker::ExprVisitor {
                forOf && forOf->_left == node) {
       k.write = true;
       k.read = false;
-    } else if (auto *un = llvh::dyn_cast<ESTree::UnaryExpressionNode>(parent);
-               un && un->_argument == node &&
-               un->_operator == outer_.kw_.identDelete) {
+    } else if (isDeleteOperand(node, parent)) {
       k.read = false;
       k.write = true;
     }
     return k;
+  }
+
+  /// \return true if \p node is the operand of `delete`. Deleting a class
+  /// member is always rejected by the `delete` visitor, so variance checks
+  /// skip it to avoid a second diagnostic.
+  bool isDeleteOperand(
+      ESTree::MemberExpressionNode *node,
+      ESTree::Node *parent) {
+    auto *un = llvh::dyn_cast<ESTree::UnaryExpressionNode>(parent);
+    return un && un->_argument == node &&
+        un->_operator == outer_.kw_.identDelete;
+  }
+
+  /// Check the access classified for \p node against \p variance, emitting a
+  /// diagnostic if it is forbidden.
+  /// \param name the property name, or invalid for an indexer access.
+  /// \return false if a diagnostic was emitted, true if the access is allowed.
+  bool checkFieldVariance(
+      ESTree::MemberExpressionNode *node,
+      ESTree::Node *parent,
+      FieldVariance variance,
+      Identifier name,
+      bool isWrite) {
+    if (variance == FieldVariance::None)
+      return true;
+
+    MemberAccessKind access = classifyMemberAccess(node, parent, isWrite);
+    bool readOnly = variance == FieldVariance::ReadOnly;
+    if (readOnly ? !access.write : !access.read)
+      return true;
+
+    const char *prefix = readOnly ? "ft: cannot assign to readonly "
+                                  : "ft: cannot read writeonly ";
+    if (name.isValid()) {
+      outer_.sm_.error(
+          node->_property->getSourceRange(),
+          llvh::Twine(prefix) + "property " + name.str());
+    } else {
+      outer_.sm_.error(
+          node->_property->getSourceRange(), llvh::Twine(prefix) + "indexer");
+    }
+
+    return false;
   }
 
   /// Type a member access that resolves through an object \p indexer. \p
@@ -717,16 +755,9 @@ class FlowChecker::ExprVisitor {
               indexer.keyType->messageString());
     }
 
-    MemberAccessKind access = classifyMemberAccess(node, parent, isWrite);
-    if (indexer.variance == FieldVariance::ReadOnly && access.write) {
-      outer_.sm_.error(
-          node->_property->getSourceRange(),
-          "ft: cannot assign to readonly indexer");
-    } else if (indexer.variance == FieldVariance::WriteOnly && access.read) {
-      outer_.sm_.error(
-          node->_property->getSourceRange(),
-          "ft: cannot read writeonly indexer");
-    }
+    // The result is discarded: the access still resolves to the indexer's
+    // value type after the diagnostic. An indexer has no name to report.
+    checkFieldVariance(node, parent, indexer.variance, Identifier{}, isWrite);
 
     // An indexer read resolves to `T`. The underlying load actually yields
     // `T | void` (a missing key reads as `undefined`), but IRGen emits the
@@ -773,17 +804,9 @@ class FlowChecker::ExprVisitor {
     }
     const auto &field = exactObjType->getFields()[*optFieldIdx];
 
-    MemberAccessKind access = classifyMemberAccess(node, parent, isWrite);
-
-    if (field.variance == FieldVariance::ReadOnly && access.write) {
-      outer_.sm_.error(
-          node->_property->getSourceRange(),
-          "ft: cannot assign to readonly property " + id->_name->str());
-    } else if (field.variance == FieldVariance::WriteOnly && access.read) {
-      outer_.sm_.error(
-          node->_property->getSourceRange(),
-          "ft: cannot read writeonly property " + id->_name->str());
-    }
+    // The result is discarded: the access still resolves to the field's type
+    // after the diagnostic.
+    checkFieldVariance(node, parent, field.variance, field.name, isWrite);
     return field.type;
   }
 
@@ -2278,13 +2301,10 @@ class FlowChecker::ExprVisitor {
             accessorField = findAccessorField(
                 outer_.astContext_, mem->_property, staticInfo);
         }
-        if (accessorField) {
-          if (!accessorField->hasSetter()) {
-            outer_.sm_.error(
-                node->getSourceRange(),
-                "ft: cannot assign to getter-only property");
-            return;
-          }
+        // A getter-only write is already reported by checkFieldVariance on the
+        // member-access path, which covers every write form rather than only
+        // assignment.
+        if (accessorField && accessorField->hasSetter()) {
           // Override the LHS type to the setter parameter type so the
           // RHS is checked against it.
           auto *setterFn =

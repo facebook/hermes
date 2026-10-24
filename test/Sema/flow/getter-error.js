@@ -27,10 +27,10 @@ f.x += 1;
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:{{.*}}getter-error.js:23:1: error: ft: cannot assign to getter-only property
+// CHECK:{{.*}}getter-error.js:23:3: error: ft: cannot assign to readonly property x
 // CHECK-NEXT:f.x = 5;
-// CHECK-NEXT:^~~~~~~
-// CHECK-NEXT:{{.*}}getter-error.js:26:1: error: ft: cannot assign to getter-only property
+// CHECK-NEXT:  ^
+// CHECK-NEXT:{{.*}}getter-error.js:26:3: error: ft: cannot assign to readonly property x
 // CHECK-NEXT:f.x += 1;
-// CHECK-NEXT:^~~~~~~~
+// CHECK-NEXT:  ^
 // CHECK-NEXT:Emitted 2 errors. exiting.

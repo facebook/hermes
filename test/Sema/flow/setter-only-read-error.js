@@ -23,13 +23,10 @@ f.x += 1;
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:{{.*}}setter-only-read-error.js:19:5: error: ft: incompatible initialization type: cannot assign void to number
-// CHECK-NEXT:let y: number = f.x;
-// CHECK-NEXT:    ^~~~~~~~~~~~~~~
-// CHECK-NEXT:{{.*}}setter-only-read-error.js:19:19: error: ft: cannot read setter-only property
+// CHECK:{{.*}}setter-only-read-error.js:19:19: error: ft: cannot read writeonly property x
 // CHECK-NEXT:let y: number = f.x;
 // CHECK-NEXT:                  ^
-// CHECK-NEXT:{{.*}}setter-only-read-error.js:22:3: error: ft: cannot read setter-only property
+// CHECK-NEXT:{{.*}}setter-only-read-error.js:22:3: error: ft: cannot read writeonly property x
 // CHECK-NEXT:f.x += 1;
 // CHECK-NEXT:  ^
-// CHECK-NEXT:Emitted 3 errors. exiting.
+// CHECK-NEXT:Emitted 2 errors. exiting.

@@ -1073,6 +1073,9 @@ class FlowChecker::ParseClassType {
           existingField->setterType = methodType;
           existingField->setterMethod = method;
         }
+        // The pair is now both readable and writable, so the getter-only /
+        // setter-only variance set at construction no longer applies.
+        existingField->variance = FieldVariance::None;
         return methodType;
       }
 

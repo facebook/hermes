@@ -160,6 +160,8 @@ class B extends A {
 }
 ```
 
+Methods and getter-only accessors are read-only; setter-only accessors are write-only.
+
 `C.prototype` is the object holding the class's methods. It is read-only, and only methods that live on it are reachable: `@Hermes.final`, private and accessor members are stored in variables instead and cannot be read through it.
 ```
 class A { foo(): number { return 1; } }

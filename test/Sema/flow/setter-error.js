@@ -21,7 +21,7 @@ cc.x = 5;
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:{{.*}}setter-error.js:20:1: error: ft: cannot assign to getter-only property
+// CHECK:{{.*}}setter-error.js:20:4: error: ft: cannot assign to readonly property x
 // CHECK-NEXT:cc.x = 5;
-// CHECK-NEXT:^~~~~~~~
+// CHECK-NEXT:   ^
 // CHECK-NEXT:Emitted 1 errors. exiting.
