@@ -641,6 +641,9 @@ Value *ESTreeIRGen::getDefaultInitValue(flow::Type *type) {
       return Builder.getLiteralString(
           Identifier::getFromPointer(
               llvh::cast<flow::StringLiteralType>(type->info)->getValue()));
+    case flow::TypeKind::NumberLiteral:
+      return Builder.getLiteralNumber(
+          llvh::cast<flow::NumberLiteralType>(type->info)->getValue());
     case flow::TypeKind::CPtr:
     case flow::TypeKind::Number:
       return Builder.getLiteralPositiveZero();
@@ -684,6 +687,7 @@ Type ESTreeIRGen::flowTypeToIRType(flow::TypeInfo *flowType) {
       return Type::createString();
     case flow::TypeKind::CPtr:
     case flow::TypeKind::Number:
+    case flow::TypeKind::NumberLiteral:
       return Type::createNumber();
     case flow::TypeKind::BigInt:
       return Type::createBigInt();

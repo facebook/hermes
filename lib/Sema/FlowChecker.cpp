@@ -660,6 +660,8 @@ class FlowChecker::ParseClassType {
       // property's initializer.
       outer_.visitedInits_.insert(value);
       outer_.visitExpression(value, prop, nullptr);
+      // A class field is mutable, so widen a fresh literal initializer type to
+      // its base type, mirroring let/var widening.
       fieldType = outer_.widenLiteralType(outer_.getNodeTypeOrAny(value));
     } else {
       // Unable to infer, just assume 'any'.
@@ -2769,6 +2771,12 @@ Type *FlowChecker::parseTypeAnnotation(ESTree::Node *node) {
           node);
     case ESTree::NodeKind::NumberTypeAnnotation:
       return flowContext_.getNumber();
+    case ESTree::NodeKind::NumberLiteralTypeAnnotation:
+      return flowContext_.createType(
+          flowContext_.createNumberLiteral(
+              llvh::cast<ESTree::NumberLiteralTypeAnnotationNode>(node)
+                  ->_value),
+          node);
     case ESTree::NodeKind::BigIntTypeAnnotation:
       return flowContext_.getBigInt();
     case ESTree::NodeKind::AnyTypeAnnotation:

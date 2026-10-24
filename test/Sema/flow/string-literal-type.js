@@ -132,7 +132,7 @@ function makeIndexer(k1: string, k2: string) {
 // CHECK-NEXT:                        ObjectExpression : %object.6
 // CHECK-NEXT:                            Property
 // CHECK-NEXT:                                Id 'k1' [D:E:%d.10 'k1'] : string
-// CHECK-NEXT:                                NumericLiteral : number
+// CHECK-NEXT:                                NumericLiteral : 1
 // CHECK-NEXT:                            Property
 // CHECK-NEXT:                                Id 'k2' [D:E:%d.11 'k2'] : string
 // CHECK-NEXT:                                StringLiteral : "v"

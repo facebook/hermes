@@ -41,7 +41,7 @@ let v7 = /1/;
 // CHECK-NEXT:            StringLiteral : "use strict"
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:                NumericLiteral : 1
 // CHECK-NEXT:                Id 'v1' [D:E:%d.2 'v1']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator

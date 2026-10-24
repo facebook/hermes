@@ -118,7 +118,7 @@ f.instance_method();
 // CHECK-NEXT:                            ReturnStatement
 // CHECK-NEXT:                                ImplicitCheckedCast : empty
 // CHECK-NEXT:                                    TypeCastExpression : any
-// CHECK-NEXT:                                        NumericLiteral : number
+// CHECK-NEXT:                                        NumericLiteral : 1
 // CHECK-NEXT:                ClassProperty : empty
 // CHECK-NEXT:                    Id 'static_prop' [D:E:%d.8 'static_prop']
 // CHECK-NEXT:        ClassDeclaration Scope %s.2

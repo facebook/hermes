@@ -26,12 +26,12 @@ var x = 1;
 // CHECK-NEXT:    BlockStatement
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:                NumericLiteral : 1
 // CHECK-NEXT:                Id 'x' [D:E:%d.2 'x']
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            TemplateLiteral : string
 // CHECK-NEXT:                TemplateElement : string
 // CHECK-NEXT:                TemplateElement : string
 // CHECK-NEXT:                TemplateElement : string
-// CHECK-NEXT:                NumericLiteral : number
+// CHECK-NEXT:                NumericLiteral : 123
 // CHECK-NEXT:                Id 'x' [D:E:%d.2 'x'] : number

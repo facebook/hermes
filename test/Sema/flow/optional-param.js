@@ -140,7 +140,7 @@ function assignFewerToMore(): void {
 // CHECK-NEXT:                ExpressionStatement
 // CHECK-NEXT:                    CallExpression : void
 // CHECK-NEXT:                        Id 'cb' [D:E:%d.17 'cb'] : %function.4
-// CHECK-NEXT:                        NumericLiteral : number
+// CHECK-NEXT:                        NumericLiteral : 1
 // CHECK-NEXT:        FunctionDeclaration : %function.3
 // CHECK-NEXT:            Id 'testFewerToMore' [D:E:%d.6 'testFewerToMore']
 // CHECK-NEXT:            BlockStatement

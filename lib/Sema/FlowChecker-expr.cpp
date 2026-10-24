@@ -152,6 +152,7 @@ void FlowChecker::matchConstraintToType(
       case TypeKind::InferencePlaceholderArray:
       // Literals carry no nested types to match.
       case TypeKind::StringLiteral:
+      case TypeKind::NumberLiteral:
         continue;
 
       case TypeKind::Union:
@@ -470,9 +471,7 @@ class FlowChecker::ExprVisitor {
         (node->_computed ||
          !llvh::isa<ESTree::PrivateNameNode>(node->_property))) {
       if (node->_computed) {
-        Type *indexType = outer_.getNodeTypeOrAny(node->_property);
-        if (!llvh::isa<NumberType>(indexType->info) &&
-            !llvh::isa<AnyType>(indexType->info)) {
+        if (!checkNumberIndex(node->_property)) {
           outer_.sm_.error(
               node->_property->getSourceRange(),
               "ft: array index must be a number");
@@ -796,12 +795,27 @@ class FlowChecker::ExprVisitor {
     return outer_.flowContext_.getAny();
   }
 
+  /// \return whether \p index is a number (or any). A union of number
+  /// literals is accepted too, and \p index is cast to number so IRGen sees
+  /// a plain number index.
+  bool checkNumberIndex(ESTree::Node *&index) {
+    Type *indexType = outer_.getNodeTypeOrAny(index);
+    if (llvh::isa<NumberType>(indexType->info) ||
+        llvh::isa<NumberLiteralType>(indexType->info) ||
+        llvh::isa<AnyType>(indexType->info))
+      return true;
+    Type *widened = outer_.widenLiteralType(indexType);
+    if (!llvh::isa<NumberType>(widened->info))
+      return false;
+    index = outer_.implicitCheckedCast(
+        index, widened, {.canFlow = true, .needCheckedCast = true});
+    return true;
+  }
+
   /// Indexed access, .length, or builtin method access on a string.
   Type *visitMemberString(ESTree::MemberExpressionNode *node) {
     if (node->_computed) {
-      Type *indexType = outer_.getNodeTypeOrAny(node->_property);
-      if (!llvh::isa<NumberType>(indexType->info) &&
-          !llvh::isa<AnyType>(indexType->info)) {
+      if (!checkNumberIndex(node->_property)) {
         outer_.sm_.error(
             node->_property->getSourceRange(),
             "ft: string index must be a number");
@@ -936,7 +950,11 @@ class FlowChecker::ExprVisitor {
         llvh::isa<StringLiteralType>(objType->info)) {
       // A string literal type supports all the operations of String.
       resType = visitMemberString(node);
-    } else if (llvh::isa<NumberType>(objType->info) && !node->_computed) {
+    } else if (
+        (llvh::isa<NumberType>(objType->info) ||
+         llvh::isa<NumberLiteralType>(objType->info)) &&
+        !node->_computed) {
+      // A number literal type supports all the operations of Number.
       resType = visitMemberNumber(node);
     } else if (!llvh::isa<AnyType>(objType->info)) {
       if (node->_computed) {
@@ -1588,7 +1606,13 @@ class FlowChecker::ExprVisitor {
       ESTree::NumericLiteralNode *node,
       ESTree::Node *parent,
       Type *constraint) {
-    outer_.setNodeType(node, outer_.flowContext_.getNumber());
+    // Type a numeric literal as its own NumberLiteralType. It flows into
+    // Number, so this is compatible with Number contexts; un-annotated
+    // let/var declarations widen it back to Number during inference.
+    outer_.setNodeType(
+        node,
+        outer_.flowContext_.createType(
+            outer_.flowContext_.createNumberLiteral(node->_value), node));
   }
   void visit(
       ESTree::RegExpLiteralNode *node,
@@ -2220,7 +2244,7 @@ class FlowChecker::ExprVisitor {
           outer_.sm_.error(
               node->getSourceRange(),
               "ft: incompatible assignment type: cannot implicitly cast from " +
-                  rt->messageString() + " to " + lt->messageString());
+                  opResType->messageString() + " to " + lt->messageString());
           res = lt;
         } else if (cf.needCheckedCast) {
           // Insert an ImplicitCheckedCast around the LHS in the
@@ -2868,6 +2892,7 @@ class FlowChecker::ExprVisitor {
     }
     Type *countType = outer_.getNodeTypeOrAny(countArg);
     if (!llvh::isa<NumberType>(countType->info) &&
+        !llvh::isa<NumberLiteralType>(countType->info) &&
         !llvh::isa<AnyType>(countType->info)) {
       outer_.sm_.error(
           countArg->getSourceRange(),

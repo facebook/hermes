@@ -1252,9 +1252,12 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
   // a FastArray will simply return undefined if it is out-of-bounds.
   if (flowContext_.isArrayClassType(
           flowContext_.getNodeTypeOrAny(mem->_object))) {
+    flow::TypeInfo *propInfo =
+        flowContext_.getNodeTypeOrAny(mem->_property)->info;
+    // A number or number-literal index uses the typed fast-array path.
     if (mem->_computed &&
-        llvh::isa<flow::NumberType>(
-            flowContext_.getNodeTypeOrAny(mem->_property)->info)) {
+        (llvh::isa<flow::NumberType>(propInfo) ||
+         llvh::isa<flow::NumberLiteralType>(propInfo))) {
       return MemberExpressionResult{
           Builder.createFastArrayLoadInst(
               baseValue,
@@ -1598,9 +1601,12 @@ void ESTreeIRGen::emitMemberStore(
   // because Array<T> is a ClassType.
   if (flowContext_.isArrayClassType(
           flowContext_.getNodeTypeOrAny(mem->_object))) {
+    flow::TypeInfo *propInfo =
+        flowContext_.getNodeTypeOrAny(mem->_property)->info;
+    // A number or number-literal index uses the typed fast-array path.
     if (mem->_computed &&
-        llvh::isa<flow::NumberType>(
-            flowContext_.getNodeTypeOrAny(mem->_property)->info)) {
+        (llvh::isa<flow::NumberType>(propInfo) ||
+         llvh::isa<flow::NumberLiteralType>(propInfo))) {
       Builder.createFastArrayStoreInst(storedValue, baseValue, propValue);
       return;
     }

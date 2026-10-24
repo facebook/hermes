@@ -30,10 +30,10 @@ function main(
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:{{.*}}equality-strict-error.js:19:3: error: ft: === cannot be applied to "a" and number
+// CHECK:{{.*}}equality-strict-error.js:19:3: error: ft: === cannot be applied to "a" and 1
 // CHECK-NEXT:  "a" === 1;
 // CHECK-NEXT:  ^~~~~~~~~
-// CHECK-NEXT:{{.*}}equality-strict-error.js:20:3: error: ft: !== cannot be applied to number and "a"
+// CHECK-NEXT:{{.*}}equality-strict-error.js:20:3: error: ft: !== cannot be applied to 1 and "a"
 // CHECK-NEXT:  1 !== "a";
 // CHECK-NEXT:  ^~~~~~~~~
 // CHECK-NEXT:{{.*}}equality-strict-error.js:21:3: error: ft: === cannot be applied to number and string

@@ -59,21 +59,25 @@ function f7(k: string): {[string | number]: number} {
 // CHECK-NEXT:  [number]: string
 // CHECK-NEXT:})
 // CHECK-NEXT:%function.9 = function(o: %object.8, k: string): any
-// CHECK-NEXT:%function.10 = function(k: string): %object.14
+// CHECK-NEXT:%function.10 = function(k: string): %object.15
 // CHECK-NEXT:%object.11 = object({
-// CHECK-NEXT:  [string]: %union.15
+// CHECK-NEXT:  [string]: 1
 // CHECK-NEXT:})
 // CHECK-NEXT:%object.12 = object({
-// CHECK-NEXT:  [number]: number
+// CHECK-NEXT:  [string]: %union.16
 // CHECK-NEXT:})
 // CHECK-NEXT:%object.13 = object({
-// CHECK-NEXT:  [%union.16]: %union.16
+// CHECK-NEXT:  [number]: 1
 // CHECK-NEXT:})
 // CHECK-NEXT:%object.14 = object({
-// CHECK-NEXT:  [%union.16]: number
+// CHECK-NEXT:  [%union.17]: %union.18
 // CHECK-NEXT:})
-// CHECK-NEXT:%union.15 = union(number | "s")
-// CHECK-NEXT:%union.16 = union(string | number)
+// CHECK-NEXT:%object.15 = object({
+// CHECK-NEXT:  [%union.17]: number
+// CHECK-NEXT:})
+// CHECK-NEXT:%union.16 = union("s" | 1)
+// CHECK-NEXT:%union.17 = union(string | number)
+// CHECK-NEXT:%union.18 = union(string | 2)
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict mayReachImplicitReturn
@@ -134,20 +138,20 @@ function f7(k: string): {[string | number]: number} {
 // CHECK-NEXT:            Id 'k' [D:E:%d.10 'k']
 // CHECK-NEXT:            BlockStatement
 // CHECK-NEXT:                ReturnStatement
-// CHECK-NEXT:                    ObjectExpression : %object.5
+// CHECK-NEXT:                    ObjectExpression : %object.11
 // CHECK-NEXT:                        Property
 // CHECK-NEXT:                            Id 'k' [D:E:%d.10 'k'] : string
-// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                            NumericLiteral : 1
 // CHECK-NEXT:        FunctionDeclaration : %function.3
 // CHECK-NEXT:            Id 'f2' [D:E:%d.3 'f2']
 // CHECK-NEXT:            Id 'k1' [D:E:%d.12 'k1']
 // CHECK-NEXT:            Id 'k2' [D:E:%d.13 'k2']
 // CHECK-NEXT:            BlockStatement
 // CHECK-NEXT:                ReturnStatement
-// CHECK-NEXT:                    ObjectExpression : %object.11
+// CHECK-NEXT:                    ObjectExpression : %object.12
 // CHECK-NEXT:                        Property
 // CHECK-NEXT:                            Id 'k1' [D:E:%d.12 'k1'] : string
-// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                            NumericLiteral : 1
 // CHECK-NEXT:                        Property
 // CHECK-NEXT:                            Id 'k2' [D:E:%d.13 'k2'] : string
 // CHECK-NEXT:                            StringLiteral : "s"
@@ -159,7 +163,7 @@ function f7(k: string): {[string | number]: number} {
 // CHECK-NEXT:                    ObjectExpression : %object.5
 // CHECK-NEXT:                        Property
 // CHECK-NEXT:                            Id 'k' [D:E:%d.15 'k'] : string
-// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                            NumericLiteral : 2
 // CHECK-NEXT:        FunctionDeclaration : %function.6
 // CHECK-NEXT:            Id 'f4' [D:E:%d.5 'f4']
 // CHECK-NEXT:            Id 'o' [D:E:%d.17 'o']
@@ -171,34 +175,34 @@ function f7(k: string): {[string | number]: number} {
 // CHECK-NEXT:                            Id 'o' [D:E:%d.17 'o'] : %object.5
 // CHECK-NEXT:                        Property
 // CHECK-NEXT:                            Id 'k' [D:E:%d.18 'k'] : string
-// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                            NumericLiteral : 2
 // CHECK-NEXT:        FunctionDeclaration : %function.7
 // CHECK-NEXT:            Id 'f5' [D:E:%d.6 'f5']
 // CHECK-NEXT:            Id 'n' [D:E:%d.20 'n']
 // CHECK-NEXT:            BlockStatement
 // CHECK-NEXT:                ReturnStatement
-// CHECK-NEXT:                    ObjectExpression : %object.12
+// CHECK-NEXT:                    ObjectExpression : %object.13
 // CHECK-NEXT:                        Property
 // CHECK-NEXT:                            Id 'n' [D:E:%d.20 'n'] : number
-// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                            NumericLiteral : 1
 // CHECK-NEXT:        FunctionDeclaration : %function.9
 // CHECK-NEXT:            Id 'f6' [D:E:%d.7 'f6']
 // CHECK-NEXT:            Id 'o' [D:E:%d.22 'o']
 // CHECK-NEXT:            Id 'k' [D:E:%d.23 'k']
 // CHECK-NEXT:            BlockStatement
 // CHECK-NEXT:                ReturnStatement
-// CHECK-NEXT:                    ObjectExpression : %object.13
+// CHECK-NEXT:                    ObjectExpression : %object.14
 // CHECK-NEXT:                        SpreadElement
 // CHECK-NEXT:                            Id 'o' [D:E:%d.22 'o'] : %object.8
 // CHECK-NEXT:                        Property
 // CHECK-NEXT:                            Id 'k' [D:E:%d.23 'k'] : string
-// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                            NumericLiteral : 2
 // CHECK-NEXT:        FunctionDeclaration : %function.10
 // CHECK-NEXT:            Id 'f7' [D:E:%d.8 'f7']
 // CHECK-NEXT:            Id 'k' [D:E:%d.25 'k']
 // CHECK-NEXT:            BlockStatement
 // CHECK-NEXT:                ReturnStatement
-// CHECK-NEXT:                    ObjectExpression : %object.14
+// CHECK-NEXT:                    ObjectExpression : %object.15
 // CHECK-NEXT:                        Property
 // CHECK-NEXT:                            Id 'k' [D:E:%d.25 'k'] : string
-// CHECK-NEXT:                            NumericLiteral : number
+// CHECK-NEXT:                            NumericLiteral : 1
