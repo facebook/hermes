@@ -153,6 +153,7 @@ void FlowChecker::matchConstraintToType(
       // Literals carry no nested types to match.
       case TypeKind::StringLiteral:
       case TypeKind::NumberLiteral:
+      case TypeKind::BooleanLiteral:
         continue;
 
       case TypeKind::Union:
@@ -1501,7 +1502,13 @@ class FlowChecker::ExprVisitor {
       ESTree::BooleanLiteralNode *node,
       ESTree::Node *parent,
       Type *constraint) {
-    outer_.setNodeType(node, outer_.flowContext_.getBoolean());
+    // Type a boolean literal as its own BooleanLiteralType. It flows into
+    // Boolean, so this is compatible with Boolean contexts; un-annotated
+    // let/var declarations widen it back to Boolean during inference.
+    outer_.setNodeType(
+        node,
+        outer_.flowContext_.createType(
+            outer_.flowContext_.createBooleanLiteral(node->_value), node));
   }
   void visit(
       ESTree::StringLiteralNode *node,

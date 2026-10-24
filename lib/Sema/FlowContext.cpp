@@ -191,6 +191,11 @@ static void messageStringImpl(const Type *type, llvh::raw_ostream &os) {
     return;
   }
 
+  if (auto *boolLitType = llvh::dyn_cast<BooleanLiteralType>(type->info)) {
+    os << (boolLitType->getValue() ? "true" : "false");
+    return;
+  }
+
   os << type->info->getKindName();
 }
 
@@ -229,6 +234,8 @@ llvh::StringRef TypeInfo::getKindName() const {
       return "string literal";
     case TypeKind::NumberLiteral:
       return "number literal";
+    case TypeKind::BooleanLiteral:
+      return "boolean literal";
     case TypeKind::CPtr:
       return "c_ptr";
     case TypeKind::Number:
@@ -446,7 +453,8 @@ void UnionType::setCanonicalTypes(
 void UnionType::canonicalizeTypes(
     llvh::ArrayRef<Type *> types,
     llvh::SmallVectorImpl<Type *> &canonicalTypes,
-    llvh::SmallVectorImpl<Type *> &loopingTypes) {
+    llvh::SmallVectorImpl<Type *> &loopingTypes,
+    Type *booleanType) {
   // Copy the union types to canonicalized, but flatten nested unions. Note that
   // there can't be more than one level.
   // The types won't cycle back to the parent because that's checked in
@@ -472,17 +480,17 @@ void UnionType::canonicalizeTypes(
     }
   }
 
-  sortAndUniqueNonLoopingTypes(canonicalTypes);
+  sortAndUniqueNonLoopingTypes(canonicalTypes, booleanType);
   uniqueLoopingTypesSlow(loopingTypes);
 }
 
 void UnionType::sortAndUniqueNonLoopingTypes(
-    llvh::SmallVectorImpl<Type *> &types) {
+    llvh::SmallVectorImpl<Type *> &types,
+    Type *booleanType) {
+  auto less = [](Type *a, Type *b) { return a->info->compare(b->info) < 0; };
   // Sort for predictable order. Literal kinds are the last TypeKinds, so a
   // literal arm is always visited after everything that can absorb it.
-  std::sort(types.begin(), types.end(), [](Type *a, Type *b) {
-    return a->info->compare(b->info) < 0;
-  });
+  std::sort(types.begin(), types.end(), less);
 
   // Mark for removal the identical arms (which are adjacent after sorting)
   // and the literal arms absorbed by an earlier arm.
@@ -509,6 +517,15 @@ void UnionType::sortAndUniqueNonLoopingTypes(
 
   // Remove the marked arms.
   llvh::erase_if(types, [](Type *type) { return type == nullptr; });
+
+  // `true | false` is `boolean`. Both remain only if nothing absorbed them.
+  auto isBoolLiteral = [](Type *t) {
+    return llvh::isa<BooleanLiteralType>(t->info);
+  };
+  if (llvh::count_if(types, isBoolLiteral) == 2) {
+    llvh::erase_if(types, isBoolLiteral);
+    types.insert(llvh::lower_bound(types, booleanType, less), booleanType);
+  }
 }
 
 void UnionType::uniqueLoopingTypesSlow(llvh::SmallVectorImpl<Type *> &types) {
@@ -681,6 +698,23 @@ unsigned NumberLiteralType::_hashImpl() const {
     bits = llvh::DoubleToBits(value_);
   }
   return (unsigned)llvh::hash_combine((uint64_t)TypeKind::NumberLiteral, bits);
+}
+
+int BooleanLiteralType::_compareImpl(
+    const BooleanLiteralType *other,
+    CompareState &state) const {
+  return (int)value_ - (int)other->value_;
+}
+
+bool BooleanLiteralType::_equalsImpl(
+    const BooleanLiteralType *other,
+    CompareState &state) const {
+  return value_ == other->value_;
+}
+
+unsigned BooleanLiteralType::_hashImpl() const {
+  return (unsigned)llvh::hash_combine(
+      (unsigned)TypeKind::BooleanLiteral, (unsigned)value_);
 }
 
 hermes::OptValue<size_t> ExactObjectType::findField(Identifier id) const {
@@ -996,7 +1030,8 @@ TypeInfo *FlowContext::maybeCreateUnion(
   llvh::SmallVector<Type *, 4> canonicalTypes{};
   llvh::SmallVector<Type *, 4> recursiveTypes{};
 
-  UnionType::canonicalizeTypes(types, canonicalTypes, recursiveTypes);
+  UnionType::canonicalizeTypes(
+      types, canonicalTypes, recursiveTypes, getBoolean());
 
   if (excludes.excludeVoid || excludes.excludeNull) {
     // Only look at the first two elements and get the new ending.
@@ -1024,7 +1059,10 @@ UnionType *FlowContext::createPopulatedNullable(Type *type) {
   llvh::SmallVector<Type *, 4> canonicalTypes{};
   llvh::SmallVector<Type *, 4> recursiveTypes{};
   UnionType::canonicalizeTypes(
-      {getVoid(), getNull(), type}, canonicalTypes, recursiveTypes);
+      {getVoid(), getNull(), type},
+      canonicalTypes,
+      recursiveTypes,
+      getBoolean());
 
   // We know that there are at least 2 types, so it will be a union.
   return createCanonicalizedUnion(

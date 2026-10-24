@@ -51,14 +51,16 @@ namespace flow {
   _HERMES_SEMA_FLOW_DEFKIND(ClassConstructor)          \
   _HERMES_SEMA_FLOW_DEFKIND(InferencePlaceholderArray) \
   _HERMES_SEMA_FLOW_DEFKIND(StringLiteral)             \
-  _HERMES_SEMA_FLOW_DEFKIND(NumberLiteral)
+  _HERMES_SEMA_FLOW_DEFKIND(NumberLiteral)             \
+  _HERMES_SEMA_FLOW_DEFKIND(BooleanLiteral)
 
 /// Each literal TypeKind and the primary TypeKind it widens into. Every kind
 /// in [_FirstLiteral, _LastLiteral] must appear here, and they must be the
 /// last kinds in \c TypeKind.
 #define _HERMES_SEMA_FLOW_LITERAL_BASES               \
   _HERMES_SEMA_FLOW_DEFLITERAL(StringLiteral, String) \
-  _HERMES_SEMA_FLOW_DEFLITERAL(NumberLiteral, Number)
+  _HERMES_SEMA_FLOW_DEFLITERAL(NumberLiteral, Number) \
+  _HERMES_SEMA_FLOW_DEFLITERAL(BooleanLiteral, Boolean)
 
 enum class TypeKind : uint8_t {
 #define _HERMES_SEMA_FLOW_DEFKIND(name) name,
@@ -74,7 +76,7 @@ enum class TypeKind : uint8_t {
   _FirstFunction = UntypedFunction,
   _LastFunction = NativeFunction,
   _FirstLiteral = StringLiteral,
-  _LastLiteral = NumberLiteral,
+  _LastLiteral = BooleanLiteral,
 };
 
 /// The number of distinct TypeKind values.
@@ -412,18 +414,21 @@ class UnionType : public SingleType<TypeKind::Union, TypeInfo> {
   /// resolved in the FlowChecker's DeclareScopeTypes call.
   /// This function only works when every element of \p types has itself already
   /// been correctly resolved, with nested unions collapsed and no duplicates.
+  /// \param booleanType the boolean singleton, which replaces `true | false`.
   static void canonicalizeTypes(
       llvh::ArrayRef<Type *> types,
       llvh::SmallVectorImpl<Type *> &nonLoopingTypes,
-      llvh::SmallVectorImpl<Type *> &loopingTypes);
+      llvh::SmallVectorImpl<Type *> &loopingTypes,
+      Type *booleanType);
 
   /// Unique types and sort them according to \c TypeInfo::compare. Also
   /// remove the literal types absorbed by another arm: a literal is absorbed
   /// by its base type (`string | "abc"` is `string`), by `any` and by
-  /// `mixed`.
+  /// `mixed`. `true | false` is replaced with \p booleanType.
   /// \param types the types that are known to be non-recursive.
   static void sortAndUniqueNonLoopingTypes(
-      llvh::SmallVectorImpl<Type *> &types);
+      llvh::SmallVectorImpl<Type *> &types,
+      Type *booleanType);
 
   /// Remove all the duplicates in the list of looping \p types.
   /// Runs in quadratic time on the length of the types because they can't be
@@ -562,6 +567,31 @@ class NumberLiteralType : public TypeInfo {
 
   static bool classof(const TypeInfo *t) {
     return t->getKind() == TypeKind::NumberLiteral;
+  }
+};
+
+/// The type of a single boolean literal, i.e. the type true or the type false.
+/// Carries the literal value. A BooleanLiteralType flows into Boolean, and into
+/// another BooleanLiteralType only when the value is identical.
+class BooleanLiteralType : public TypeInfo {
+  /// The literal value.
+  bool value_;
+
+ public:
+  explicit BooleanLiteralType(bool value)
+      : TypeInfo(TypeKind::BooleanLiteral), value_(value) {}
+
+  /// \return the literal value.
+  bool getValue() const {
+    return value_;
+  }
+
+  int _compareImpl(const BooleanLiteralType *other, CompareState &state) const;
+  bool _equalsImpl(const BooleanLiteralType *other, CompareState &state) const;
+  unsigned _hashImpl() const;
+
+  static bool classof(const TypeInfo *t) {
+    return t->getKind() == TypeKind::BooleanLiteral;
   }
 };
 
@@ -1342,6 +1372,9 @@ class FlowContext {
     // -0 and 0 are the same literal type, so store +0 for both: the value is
     // emitted as the default of literal-typed fields.
     return &allocNumberLiteral_.emplace_back(value == 0 ? 0.0 : value);
+  }
+  BooleanLiteralType *createBooleanLiteral(bool value) {
+    return &allocBooleanLiteral_.emplace_back(value);
   }
   ExactObjectType *createExactObject(
       llvh::ArrayRef<ExactObjectType::Field> fields,

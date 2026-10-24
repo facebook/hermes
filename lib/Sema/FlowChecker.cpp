@@ -2777,6 +2777,12 @@ Type *FlowChecker::parseTypeAnnotation(ESTree::Node *node) {
               llvh::cast<ESTree::NumberLiteralTypeAnnotationNode>(node)
                   ->_value),
           node);
+    case ESTree::NodeKind::BooleanLiteralTypeAnnotation:
+      return flowContext_.createType(
+          flowContext_.createBooleanLiteral(
+              llvh::cast<ESTree::BooleanLiteralTypeAnnotationNode>(node)
+                  ->_value),
+          node);
     case ESTree::NodeKind::BigIntTypeAnnotation:
       return flowContext_.getBigInt();
     case ESTree::NodeKind::AnyTypeAnnotation:

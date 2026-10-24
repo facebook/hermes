@@ -82,7 +82,7 @@ function f(x: any) {
 // CHECK-NEXT:                        StringLiteral : "x"
 // CHECK-NEXT:                    Property
 // CHECK-NEXT:                        Id 'c'
-// CHECK-NEXT:                        BooleanLiteral : boolean
+// CHECK-NEXT:                        BooleanLiteral : true
 // CHECK-NEXT:                Id 'obj' [D:E:%d.2 'obj']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
