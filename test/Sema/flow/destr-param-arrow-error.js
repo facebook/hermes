@@ -8,8 +8,9 @@
 // RUN: (! %shermes -Werror -fno-std-globals --typed --dump-sema %s 2>&1 ) | %FileCheckOrRegen %s --match-full-lines
 
 // Mirror of destr-param-error.js for arrows: destructuring params require a type
-// annotation. The same check applies in a contextually-typed position, since
-// both paths share parseFunctionType (see destr-param-arrow.js).
+// annotation when no constraint determines the parameter type (these consts
+// have no contextual type). When a constraint is present, the annotation may be
+// omitted; see destr-param-arrow-infer.js.
 
 'use strict';
 
@@ -21,10 +22,10 @@ const bad2 = ([a, b]) => {};
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:{{.*}}destr-param-arrow-error.js:17:14: error: ft: destructuring parameters must have a type annotation
+// CHECK:{{.*}}destr-param-arrow-error.js:18:14: error: ft: destructuring parameters must have a type annotation
 // CHECK-NEXT:const bad = ({x}) => {};
 // CHECK-NEXT:             ^~~
-// CHECK-NEXT:{{.*}}destr-param-arrow-error.js:20:15: error: ft: destructuring parameters must have a type annotation
+// CHECK-NEXT:{{.*}}destr-param-arrow-error.js:21:15: error: ft: destructuring parameters must have a type annotation
 // CHECK-NEXT:const bad2 = ([a, b]) => {};
 // CHECK-NEXT:              ^~~~~~
 // CHECK-NEXT:Emitted 2 errors. exiting.

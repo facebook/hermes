@@ -1724,10 +1724,6 @@ void FlowChecker::visitFunctionLike(
       } else if (
           llvh::isa<ESTree::ObjectPatternNode>(assign->_left) ||
           llvh::isa<ESTree::ArrayPatternNode>(assign->_left)) {
-        // Error already emitted in parseFunctionType if no annotation.
-        if (!ESTree::getPatternTypeAnnotation(assign->_left))
-          continue;
-
         // Destructuring param with default value.
         assignDestructuringParamTypes(assign->_left, paramType);
 
@@ -1763,10 +1759,6 @@ void FlowChecker::visitFunctionLike(
     } else if (
         llvh::isa<ESTree::ObjectPatternNode>(&param) ||
         llvh::isa<ESTree::ArrayPatternNode>(&param)) {
-      // Error already emitted in parseFunctionType if no annotation.
-      if (!ESTree::getPatternTypeAnnotation(&param))
-        continue;
-
       // Destructuring param without default value.
       Type *paramType;
       auto *typedFn = llvh::dyn_cast<TypedFunctionType>(
@@ -2580,10 +2572,15 @@ Type *FlowChecker::parseFunctionType(
           llvh::isa<ESTree::ObjectPatternNode>(assign->_left) ||
           llvh::isa<ESTree::ArrayPatternNode>(assign->_left)) {
         // Destructuring param with default value but no annotation.
-        sm_.error(
-            assign->_left->getSourceRange(),
-            "ft: destructuring parameters must have a type annotation");
-        paramsList.push_back({Identifier(), flowContext_.getAny(), true});
+        seenOptional = true;
+        if (!paramConstraintType)
+          sm_.error(
+              assign->_left->getSourceRange(),
+              "ft: destructuring parameters must have a type annotation");
+        paramsList.push_back(
+            {Identifier(),
+             constrainParam(nullptr, paramConstraintType),
+             /*optional=*/true});
       } else {
         sm_.warning(
             n.getSourceRange(),
@@ -2631,10 +2628,14 @@ Type *FlowChecker::parseFunctionType(
         llvh::isa<ESTree::ObjectPatternNode>(&n) ||
         llvh::isa<ESTree::ArrayPatternNode>(&n)) {
       // Destructuring param without annotation.
-      sm_.error(
-          n.getSourceRange(),
-          "ft: destructuring parameters must have a type annotation");
-      paramsList.push_back({Identifier(), flowContext_.getAny(), false});
+      if (!paramConstraintType)
+        sm_.error(
+            n.getSourceRange(),
+            "ft: destructuring parameters must have a type annotation");
+      paramsList.push_back(
+          {Identifier(),
+           constrainParam(nullptr, paramConstraintType),
+           /*optional=*/false});
     } else {
       sm_.warning(
           n.getSourceRange(),
