@@ -251,5 +251,4 @@ int main(int argc, char **argv) {
     CHECK(write(REPRL_CWFD, &status, 4) == 4);
     __sanitizer_cov_reset_edgeguards();
   }
-  return 0;
 }
