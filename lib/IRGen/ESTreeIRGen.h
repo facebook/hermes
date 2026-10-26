@@ -279,7 +279,7 @@ class FunctionContext {
 
   /// Generate a unique string that represents a temporary value. The string
   /// \p hint appears in the name.
-  Identifier genAnonymousLabelName(llvh::StringRef const hint);
+  Identifier genAnonymousLabelName(const llvh::Twine &hint);
 
   /// Initialize an empty goto label. All labels in JavaScript a structured, so
   /// a label is guaranteed to be visited and initialized before it is used.
@@ -648,6 +648,15 @@ class ESTreeIRGen {
   /// Map from a class AST node to its internal variables.
   llvh::DenseMap<ESTree::ClassLikeNode *, LegacyClassVars> legacyClassVars_{};
 
+  /// Hidden variables holding async functions' inner generator closures.
+  /// These need to be cached because the same definition site can be compiled
+  /// multiple times into the same function (e.g. a finally body, which is
+  /// emitted once per control-flow exit path). The async outer function is
+  /// compiled only once and loads a single slot, so every copy of the
+  /// definition site must initialize that same variable.
+  llvh::DenseMap<ESTree::FunctionLikeNode *, Variable *>
+      asyncInnerClosureVars_{};
+
   /// A queue of "entities" that have been forward declared and mapped in
   /// \c compiledEntities_, but need to be actually compiled. This makes the
   /// compiler non-recursive.
@@ -658,7 +667,7 @@ class ESTreeIRGen {
 
   /// Generate a unique string that represents a temporary value. The string \p
   /// hint appears in the name.
-  Identifier genAnonymousLabelName(llvh::StringRef hint) {
+  Identifier genAnonymousLabelName(const llvh::Twine &hint) {
     return curFunction()->genAnonymousLabelName(hint);
   }
 
@@ -1379,13 +1388,46 @@ class ESTreeIRGen {
   /// \param capturedState the relevant captured state.
   /// \param parentNode can optionally be set to the parent AST node of the
   ///  function node.
+  /// \param existingInnerClosureVar if non-null, the hidden generator-closure
+  ///  variable created at the definition site for lazy async compilation. Its
+  ///  slot is lazily populated on the first call. When null, the variable is
+  ///  created here instead.
   /// \return the async Function.
   Function *genAsyncFunction(
       Identifier originalName,
       ESTree::FunctionLikeNode *functionNode,
       VariableScope *parentScope,
       const CapturedState &capturedState,
-      ESTree::Node *parentNode = nullptr);
+      ESTree::Node *parentNode = nullptr,
+      Variable *existingInnerClosureVar = nullptr);
+
+  /// Emit the definition-time initialization of the synthetic generator closure
+  /// slot for an async function.
+  /// In eager mode: the closure is created and stored in the Variable.
+  /// In lazy mode: the variable is created but undefined is stored.
+  /// The Variable itself is created only on the first call for a given
+  /// \p functionNode and cached in \c asyncInnerClosureVars_, but the
+  /// initialization is emitted on every call.
+  /// \return the Variable storing the closure.
+  Variable *initAsyncFunctionInnerClosureVar(
+      Identifier originalName,
+      ESTree::FunctionLikeNode *functionNode,
+      VariableScope *parentVarScope,
+      const CapturedState &capturedState,
+      ESTree::Node *parentNode);
+
+  /// Create the inner generator closure for an async function and store it into
+  /// \p innerClosureVar, in the resolved scope of the variable's parent.
+  /// Shared by the eager definition-site store and the lazy first-call
+  /// initialization.
+  /// \return the created closure.
+  Value *emitCreateAsyncFunctionInnerClosure(
+      Identifier originalName,
+      ESTree::FunctionLikeNode *functionNode,
+      VariableScope *parentVarScope,
+      const CapturedState &capturedState,
+      ESTree::Node *parentNode,
+      Variable *innerClosureVar);
 
   /// In the beginning of an ES5 function, initialize the special captured
   /// variables needed by arrow functions, constructors and methods.
@@ -1509,7 +1551,8 @@ class ESTreeIRGen {
       ESTree::BlockStatementNode *bodyBlock,
       VariableScope *parentVarScope,
       ExtraKey extraKey,
-      const CapturedState &capturedState = {});
+      const CapturedState &capturedState,
+      Variable *asyncFunctionInnerClosureVar = nullptr);
 
   /// Invoked after IR for a function has been emitted to perform any needed
   /// adjustments. Specifically, it updates all catch targets.

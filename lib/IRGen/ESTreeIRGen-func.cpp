@@ -50,7 +50,7 @@ FunctionContext::~FunctionContext() {
   irGen_->functionContext_ = oldContext_;
 }
 
-Identifier FunctionContext::genAnonymousLabelName(llvh::StringRef hint) {
+Identifier FunctionContext::genAnonymousLabelName(const llvh::Twine &hint) {
   llvh::SmallString<16> buf;
   llvh::raw_svector_ostream nameBuilder{buf};
   nameBuilder << "?anon_" << anonymousLabelCounter++ << "_" << hint;
@@ -648,8 +648,20 @@ Function *ESTreeIRGen::genAsyncFunction(
     ESTree::FunctionLikeNode *functionNode,
     VariableScope *parentScope,
     const CapturedState &capturedState,
-    ESTree::Node *parentNode) {
+    ESTree::Node *parentNode,
+    Variable *existingInnerClosureVar) {
   assert(functionNode && "Function AST cannot be null");
+
+  // NOTE: must precede the compiled-entity check below.
+  // IRGen compiles the same function more than once.
+  // The async outer function is compiled only once and unconditionally loads
+  // the hidden inner-closure slot, so every occurrence of the definition site
+  // must emit its own store into that (shared) slot.
+  const bool initializeClosureOnFirstCall = existingInnerClosureVar != nullptr;
+  Variable *asyncFunctionInnerClosureVar = initializeClosureOnFirstCall
+      ? existingInnerClosureVar
+      : initAsyncFunctionInnerClosureVar(
+            originalName, functionNode, parentScope, capturedState, parentNode);
 
   if (auto *compiled = findCompiledEntity(functionNode, ExtraKey::AsyncOuter))
     return llvh::cast<Function>(compiled);
@@ -679,7 +691,8 @@ Function *ESTreeIRGen::genAsyncFunction(
         body,
         parentScope,
         ExtraKey::AsyncOuter,
-        capturedState);
+        capturedState,
+        asyncFunctionInnerClosureVar);
     return asyncFn;
   }
 
@@ -689,7 +702,10 @@ Function *ESTreeIRGen::genAsyncFunction(
                       originalName,
                       parentScope,
                       capturedState,
-                      isAsyncArrow]() {
+                      parentNode,
+                      isAsyncArrow,
+                      asyncFunctionInnerClosureVar,
+                      initializeClosureOnFirstCall]() {
     FunctionContext asyncFnContext{this, asyncFn, functionNode->getSemInfo()};
     Function::ScopedLexicalScopeChange lexScopeChange(
         curFunction()->function,
@@ -714,16 +730,37 @@ Function *ESTreeIRGen::genAsyncFunction(
         DoEmitDeclarations::No,
         parentScope);
 
-    // Build the inner generator. This must be done in the outerFnContext
-    // since it's lexically considered a child function.
-    auto *gen = genGeneratorFunction(
-        genAnonymousLabelName(originalName.isValid() ? originalName.str() : ""),
-        functionNode,
-        curFunction()->curScope()->getVariableScope(),
-        capturedState.homeObject);
+    Value *genClosure =
+        emitLoad(asyncFunctionInnerClosureVar, /* inhibitThrow */ false);
+    if (initializeClosureOnFirstCall) {
+      // Lazy async: the closure slot holds undefined until the first call.
+      // Create the inner generator closure on first call and cache it.
+      auto *loadBlock = Builder.getInsertionBlock();
+      auto *createClosureBlock = Builder.createBasicBlock(asyncFn);
+      auto *continueBlock = Builder.createBasicBlock(asyncFn);
+      Builder.createCondBranchInst(
+          Builder.createBinaryOperatorInst(
+              genClosure,
+              Builder.getLiteralUndefined(),
+              ValueKind::BinaryStrictlyEqualInstKind),
+          createClosureBlock,
+          continueBlock);
 
-    auto *genClosure =
-        Builder.createCreateFunctionInst(curFunction()->curScope(), gen);
+      Builder.setInsertionBlock(createClosureBlock);
+      auto *createdClosure = emitCreateAsyncFunctionInnerClosure(
+          originalName,
+          functionNode,
+          parentScope,
+          capturedState,
+          parentNode,
+          asyncFunctionInnerClosureVar);
+      auto *createdClosureBlock = Builder.getInsertionBlock();
+      Builder.createBranchInst(continueBlock);
+
+      Builder.setInsertionBlock(continueBlock);
+      genClosure = Builder.createPhiInst(
+          {genClosure, createdClosure}, {loadBlock, createdClosureBlock});
+    }
     auto *thisArg = curFunction()->jsParams[0];
     auto *argumentsList = curFunction()->createArgumentsInst;
 
@@ -742,6 +779,83 @@ Function *ESTreeIRGen::genAsyncFunction(
   enqueueCompilation(functionNode, ExtraKey::AsyncOuter, asyncFn, compileFunc);
 
   return asyncFn;
+}
+
+Variable *ESTreeIRGen::initAsyncFunctionInnerClosureVar(
+    Identifier originalName,
+    ESTree::FunctionLikeNode *functionNode,
+    VariableScope *parentVarScope,
+    const CapturedState &capturedState,
+    ESTree::Node *parentNode) {
+  ESTree::BlockStatementNode *body = ESTree::getBlockStatement(functionNode);
+  bool isLazy = body->isLazyFunctionBody;
+
+  // Lazy async stores undefined until the inner closure can be created on the
+  // first call.
+  //
+  // NOTE: The alternative here would be to create and store the closure so
+  // that we don't have to do a check at runtime, just like we do in eager
+  // mode. However, lazy compilation would need a mechanism to replace
+  // multiple functions instead of just the one that was called to trigger
+  // lazy compilation. That's possible, but it's a more invasive change that
+  // introduces far ranging complexity in order to affect a minor optimization
+  // in lazy compilation mode.
+  Type innerClosureType = isLazy
+      ? getTypeContext().unionTy(Type::createObject(), Type::createUndefined())
+      : Type::createObject();
+  // The variable is created once per definition site, but the initialization
+  // below is emitted at every occurrence of that site, since a definition site
+  // can be compiled more than once (e.g. inside a finally block).
+  Variable *&innerClosureVar = asyncInnerClosureVars_[functionNode];
+  if (!innerClosureVar) {
+    innerClosureVar = Builder.createVariable(
+        parentVarScope,
+        genAnonymousLabelName(
+            llvh::Twine(originalName.isValid() ? originalName.str() : "") +
+            "_innerClosure"),
+        innerClosureType,
+        /* hidden */ true);
+  }
+  assert(
+      innerClosureVar->getParent() == parentVarScope &&
+      "async inner closure variable reused from a different scope");
+
+  if (isLazy) {
+    // The generator closure is created lazily on the first call, in
+    // genAsyncFunction; store undefined as the sentinel here.
+    emitStore(
+        Builder.getLiteralUndefined(), innerClosureVar, /* declInit */ true);
+  } else {
+    emitCreateAsyncFunctionInnerClosure(
+        originalName,
+        functionNode,
+        parentVarScope,
+        capturedState,
+        parentNode,
+        innerClosureVar);
+  }
+
+  return innerClosureVar;
+}
+
+Value *ESTreeIRGen::emitCreateAsyncFunctionInnerClosure(
+    Identifier originalName,
+    ESTree::FunctionLikeNode *functionNode,
+    VariableScope *parentVarScope,
+    const CapturedState &capturedState,
+    ESTree::Node *parentNode,
+    Variable *innerClosureVar) {
+  auto *gen = genGeneratorFunction(
+      genAnonymousLabelName(originalName.isValid() ? originalName.str() : ""),
+      functionNode,
+      parentVarScope,
+      capturedState.homeObject,
+      parentNode);
+  auto *scope = llvh::cast<BaseScopeInst>(
+      emitResolveScopeInstIfNeeded(innerClosureVar->getParent()));
+  auto *closure = Builder.createCreateFunctionInst(scope, gen);
+  Builder.createStoreFrameInst(scope, closure, innerClosureVar);
+  return closure;
 }
 
 void ESTreeIRGen::initCaptureStateInES5FunctionHelper() {
@@ -1411,7 +1525,8 @@ void ESTreeIRGen::setupLazyFunction(
     ESTree::BlockStatementNode *bodyBlock,
     VariableScope *parentVarScope,
     ExtraKey extraKey,
-    const CapturedState &capturedState) {
+    const CapturedState &capturedState,
+    Variable *asyncFunctionInnerClosureVar) {
   // Avoid modifying Builder state because this isn't enqueued.
   IRBuilder::SaveRestore saveBuilder{Builder};
 
@@ -1447,6 +1562,7 @@ void ESTreeIRGen::setupLazyFunction(
       capturedState.homeObject,
       constructor,
       initFuncVar,
+      asyncFunctionInnerClosureVar,
       parentVarScope);
   Builder.createUnreachableInst();
 

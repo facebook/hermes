@@ -6485,6 +6485,7 @@ class LazyCompilationDataInst : public Instruction {
     HomeObjectIdx,
     ClsConstructorIdx,
     ClsInstanceElemInitFuncIdx,
+    AsyncFunctionInnerClosureIdx,
     ParentVarScopeIdx
   };
 
@@ -6496,6 +6497,7 @@ class LazyCompilationDataInst : public Instruction {
       Value *capturedHomeObject,
       Value *clsConstructor,
       Value *clsInstanceElemInitFunc,
+      Value *asyncFunctionInnerClosure,
       VariableScope *parentVarScope)
       : Instruction(ValueKind::LazyCompilationDataInstKind), data_(data) {
     // Store the captured variables as EmptySentinel if they were null.
@@ -6513,6 +6515,7 @@ class LazyCompilationDataInst : public Instruction {
     pushOperand(capturedHomeObject);
     pushOperand(clsConstructor);
     pushOperand(clsInstanceElemInitFunc);
+    pushOperand(asyncFunctionInnerClosure);
     // Push all VariableScopes which must be kept alive to properly compile this
     // function.
     // NOTE: LazyCompilationData relies on the fact that we don't delete
@@ -6573,8 +6576,13 @@ class LazyCompilationDataInst : public Instruction {
   Variable *getClsInstaneElemInitFunc() {
     return llvh::dyn_cast<Variable>(getOperand(ClsInstanceElemInitFuncIdx));
   }
+  /// \return the async function inner closure Variable, nullptr if there is
+  /// none.
+  Variable *getAsyncFunctionInnerClosure() {
+    return llvh::dyn_cast<Variable>(getOperand(AsyncFunctionInnerClosureIdx));
+  }
 
-  // Derived constructor `this` (operand at ClsConstructorIdx) can be empty.
+  // Optional lazy-compilation variables can be empty.
   bool acceptsEmptyTypeImpl() const {
     return true;
   }

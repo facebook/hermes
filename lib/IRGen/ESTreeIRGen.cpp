@@ -363,7 +363,10 @@ Function *ESTreeIRGen::doLazyFunction(Function *lazyFunc) {
           lazyFunc->getOriginalOrInferredName(),
           arrow,
           parentVarScope,
-          capturedState);
+          capturedState,
+          /* parentNode */ nullptr,
+          /* existingInnerClosureVar */
+          lazyDataInst->getAsyncFunctionInnerClosure());
     } else {
       compiledFunc = genCapturingFunction(
           lazyFunc->getOriginalOrInferredName(),
@@ -381,7 +384,9 @@ Function *ESTreeIRGen::doLazyFunction(Function *lazyFunc) {
               lazyFunc->getOriginalOrInferredName(),
               node,
               parentVarScope,
-              capturedState)
+              capturedState,
+              /* parentNode */ nullptr,
+              lazyDataInst->getAsyncFunctionInnerClosure())
         : ESTree::isGenerator(node) ? genGeneratorFunction(
                                           lazyFunc->getOriginalOrInferredName(),
                                           node,

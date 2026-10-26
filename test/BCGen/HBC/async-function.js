@@ -45,9 +45,9 @@ var simpleAsyncFE = async function () {
 
 // CHECK:Global String Table:
 // CHECK-NEXT:s0[ASCII, 0..-1]:
-// CHECK-NEXT:s1[ASCII, 0..20]: ?anon_0_simpleAsyncFE
-// CHECK-NEXT:s2[ASCII, 21..39]: ?anon_0_simpleAwait
-// CHECK-NEXT:s3[ASCII, 40..59]: ?anon_0_simpleReturn
+// CHECK-NEXT:s1[ASCII, 0..19]: ?anon_1_simpleReturn
+// CHECK-NEXT:s2[ASCII, 20..38]: ?anon_3_simpleAwait
+// CHECK-NEXT:s3[ASCII, 39..59]: ?anon_6_simpleAsyncFE
 // CHECK-NEXT:s4[ASCII, 60..120]: Generator functions may not be called on executing generators
 // CHECK-NEXT:s5[ASCII, 121..126]: global
 // CHECK-NEXT:i6[ASCII, 127..130] #B553E7BD: done
@@ -81,69 +81,30 @@ var simpleAsyncFE = async function () {
 
 // CHECK:Function<global>(1 params, 4 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000
-// CHECK-NEXT:    CreateTopLevelEnvironment r2, 0
+// CHECK-NEXT:    CreateTopLevelEnvironment r2, 3
 // CHECK-NEXT:    DeclareGlobalVar  "simpleReturn"
 // CHECK-NEXT:    DeclareGlobalVar  "simpleAwait"
 // CHECK-NEXT:    DeclareGlobalVar  "simpleAsyncFE"
+// CHECK-NEXT:    CreateClosure     r1, r2, NCFunction<?anon_1_simpleReturn>
+// CHECK-NEXT:    StoreToEnvironment r2, 0, r1
 // CHECK-NEXT:    CreateClosure     r1, r2, NCFunction<simpleReturn>
 // CHECK-NEXT:    GetGlobalObject   r3
 // CHECK-NEXT:    PutByIdLoose      r3, r1, 0, "simpleReturn"
+// CHECK-NEXT:    CreateClosure     r1, r2, NCFunction<?anon_3_simpleAwait>
+// CHECK-NEXT:    StoreToEnvironment r2, 1, r1
 // CHECK-NEXT:    CreateClosure     r1, r2, NCFunction<simpleAwait>
 // CHECK-NEXT:    GetGlobalObject   r3
 // CHECK-NEXT:    PutByIdLoose      r3, r1, 1, "simpleAwait"
 // CHECK-NEXT:    LoadConstUndefined r3
 // CHECK-NEXT:    Mov               r1, r3
+// CHECK-NEXT:    CreateClosure     r3, r2, NCFunction<?anon_6_simpleAsyncFE>
+// CHECK-NEXT:    StoreToEnvironment r2, 2, r3
 // CHECK-NEXT:    CreateClosure     r2, r2, NCFunction<simpleAsyncFE>
 // CHECK-NEXT:    GetGlobalObject   r3
 // CHECK-NEXT:    PutByIdLoose      r3, r2, 2, "simpleAsyncFE"
 // CHECK-NEXT:    Ret               r1
 
-// CHECK:NCFunction<simpleReturn>(1 params, 17 registers, 0 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0018
-// CHECK-NEXT:    LoadConstUndefined r4
-// CHECK-NEXT:    Mov               r5, r4
-// CHECK-NEXT:    LoadParam         r4, 0
-// CHECK-NEXT:    CoerceThisNS      r4, r4
-// CHECK-NEXT:    GetParentEnvironment r3, 0
-// CHECK-NEXT:    CreateEnvironment r3, r3, 0
-// CHECK-NEXT:    CreateClosure     r3, r3, NCFunction<?anon_0_simpleReturn>
-// CHECK-NEXT:    GetBuiltinClosure r1, "HermesBuiltin.spawnAsync"
-// CHECK-NEXT:    ReifyArgumentsLoose r5
-// CHECK-NEXT:    LoadConstUndefined r2
-// CHECK-NEXT:    Call4             r1, r1, r2, r3, r4, r5
-// CHECK-NEXT:    Ret               r1
-
-// CHECK:NCFunction<simpleAwait>(1 params, 17 registers, 0 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0020
-// CHECK-NEXT:    LoadConstUndefined r4
-// CHECK-NEXT:    Mov               r5, r4
-// CHECK-NEXT:    LoadParam         r4, 0
-// CHECK-NEXT:    CoerceThisNS      r4, r4
-// CHECK-NEXT:    GetParentEnvironment r3, 0
-// CHECK-NEXT:    CreateEnvironment r3, r3, 0
-// CHECK-NEXT:    CreateClosure     r3, r3, NCFunction<?anon_0_simpleAwait>
-// CHECK-NEXT:    GetBuiltinClosure r1, "HermesBuiltin.spawnAsync"
-// CHECK-NEXT:    ReifyArgumentsLoose r5
-// CHECK-NEXT:    LoadConstUndefined r2
-// CHECK-NEXT:    Call4             r1, r1, r2, r3, r4, r5
-// CHECK-NEXT:    Ret               r1
-
-// CHECK:NCFunction<simpleAsyncFE>(1 params, 17 registers, 0 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0028
-// CHECK-NEXT:    LoadConstUndefined r4
-// CHECK-NEXT:    Mov               r5, r4
-// CHECK-NEXT:    LoadParam         r4, 0
-// CHECK-NEXT:    CoerceThisNS      r4, r4
-// CHECK-NEXT:    GetParentEnvironment r3, 0
-// CHECK-NEXT:    CreateEnvironment r3, r3, 0
-// CHECK-NEXT:    CreateClosure     r3, r3, NCFunction<?anon_0_simpleAsyncFE>
-// CHECK-NEXT:    GetBuiltinClosure r1, "HermesBuiltin.spawnAsync"
-// CHECK-NEXT:    ReifyArgumentsLoose r5
-// CHECK-NEXT:    LoadConstUndefined r2
-// CHECK-NEXT:    Call4             r1, r1, r2, r3, r4, r5
-// CHECK-NEXT:    Ret               r1
-
-// CHECK:NCFunction<?anon_0_simpleReturn>(1 params, 3 registers, 0 numbers, 0 non-pointers):
+// CHECK:NCFunction<?anon_1_simpleReturn>(1 params, 3 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:    GetParentEnvironment r0, 0
 // CHECK-NEXT:    GetParentEnvironment r1, 0
 // CHECK-NEXT:    CreateEnvironment r1, r1, 7
@@ -155,10 +116,25 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    StoreNPToEnvironment r1, 2, r2
 // CHECK-NEXT:    LoadConstZero     r2
 // CHECK-NEXT:    StoreNPToEnvironment r1, 6, r2
-// CHECK-NEXT:    CreateGenerator   r1, r1, Function<?anon_0_simpleReturn>
+// CHECK-NEXT:    CreateGenerator   r1, r1, Function<?anon_1_simpleReturn>
 // CHECK-NEXT:    Ret               r1
 
-// CHECK:NCFunction<?anon_0_simpleAwait>(1 params, 3 registers, 0 numbers, 0 non-pointers):
+// CHECK:NCFunction<simpleReturn>(1 params, 17 registers, 0 numbers, 0 non-pointers):
+// CHECK-NEXT:Offset in debug table: source 0x0018
+// CHECK-NEXT:    LoadConstUndefined r4
+// CHECK-NEXT:    Mov               r5, r4
+// CHECK-NEXT:    LoadParam         r4, 0
+// CHECK-NEXT:    CoerceThisNS      r4, r4
+// CHECK-NEXT:    GetParentEnvironment r3, 0
+// CHECK-NEXT:    CreateEnvironment r0, r3, 0
+// CHECK-NEXT:    LoadFromEnvironment r3, r3, 0
+// CHECK-NEXT:    GetBuiltinClosure r1, "HermesBuiltin.spawnAsync"
+// CHECK-NEXT:    ReifyArgumentsLoose r5
+// CHECK-NEXT:    LoadConstUndefined r2
+// CHECK-NEXT:    Call4             r1, r1, r2, r3, r4, r5
+// CHECK-NEXT:    Ret               r1
+
+// CHECK:NCFunction<?anon_3_simpleAwait>(1 params, 3 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:    GetParentEnvironment r0, 0
 // CHECK-NEXT:    GetParentEnvironment r1, 0
 // CHECK-NEXT:    CreateEnvironment r1, r1, 9
@@ -170,10 +146,25 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    StoreNPToEnvironment r1, 8, r2
 // CHECK-NEXT:    LoadConstZero     r2
 // CHECK-NEXT:    StoreNPToEnvironment r1, 7, r2
-// CHECK-NEXT:    CreateGenerator   r1, r1, Function<?anon_0_simpleAwait>
+// CHECK-NEXT:    CreateGenerator   r1, r1, Function<?anon_3_simpleAwait>
 // CHECK-NEXT:    Ret               r1
 
-// CHECK:NCFunction<?anon_0_simpleAsyncFE>(1 params, 3 registers, 0 numbers, 0 non-pointers):
+// CHECK:NCFunction<simpleAwait>(1 params, 17 registers, 0 numbers, 0 non-pointers):
+// CHECK-NEXT:Offset in debug table: source 0x0020
+// CHECK-NEXT:    LoadConstUndefined r4
+// CHECK-NEXT:    Mov               r5, r4
+// CHECK-NEXT:    LoadParam         r4, 0
+// CHECK-NEXT:    CoerceThisNS      r4, r4
+// CHECK-NEXT:    GetParentEnvironment r3, 0
+// CHECK-NEXT:    CreateEnvironment r0, r3, 0
+// CHECK-NEXT:    LoadFromEnvironment r3, r3, 1
+// CHECK-NEXT:    GetBuiltinClosure r1, "HermesBuiltin.spawnAsync"
+// CHECK-NEXT:    ReifyArgumentsLoose r5
+// CHECK-NEXT:    LoadConstUndefined r2
+// CHECK-NEXT:    Call4             r1, r1, r2, r3, r4, r5
+// CHECK-NEXT:    Ret               r1
+
+// CHECK:NCFunction<?anon_6_simpleAsyncFE>(1 params, 3 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:    GetParentEnvironment r0, 0
 // CHECK-NEXT:    GetParentEnvironment r1, 0
 // CHECK-NEXT:    CreateEnvironment r1, r1, 9
@@ -185,10 +176,25 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    StoreNPToEnvironment r1, 8, r2
 // CHECK-NEXT:    LoadConstZero     r2
 // CHECK-NEXT:    StoreNPToEnvironment r1, 7, r2
-// CHECK-NEXT:    CreateGenerator   r1, r1, Function<?anon_0_simpleAsyncFE>
+// CHECK-NEXT:    CreateGenerator   r1, r1, Function<?anon_6_simpleAsyncFE>
 // CHECK-NEXT:    Ret               r1
 
-// CHECK:Function<?anon_0_simpleReturn>(1 params, 17 registers, 0 numbers, 0 non-pointers):
+// CHECK:NCFunction<simpleAsyncFE>(1 params, 17 registers, 0 numbers, 0 non-pointers):
+// CHECK-NEXT:Offset in debug table: source 0x0028
+// CHECK-NEXT:    LoadConstUndefined r4
+// CHECK-NEXT:    Mov               r5, r4
+// CHECK-NEXT:    LoadParam         r4, 0
+// CHECK-NEXT:    CoerceThisNS      r4, r4
+// CHECK-NEXT:    GetParentEnvironment r3, 0
+// CHECK-NEXT:    CreateEnvironment r0, r3, 0
+// CHECK-NEXT:    LoadFromEnvironment r3, r3, 2
+// CHECK-NEXT:    GetBuiltinClosure r1, "HermesBuiltin.spawnAsync"
+// CHECK-NEXT:    ReifyArgumentsLoose r5
+// CHECK-NEXT:    LoadConstUndefined r2
+// CHECK-NEXT:    Call4             r1, r1, r2, r3, r4, r5
+// CHECK-NEXT:    Ret               r1
+
+// CHECK:Function<?anon_1_simpleReturn>(1 params, 17 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0030
 // CHECK-NEXT:    LoadParam         r3, 2
 // CHECK-NEXT:    LoadParam         r4, 1
@@ -273,7 +279,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:1: start = L4, end = L10, target = L5
 // CHECK-NEXT:2: start = L3, end = L5, target = L5
 
-// CHECK:Function<?anon_0_simpleAwait>(1 params, 21 registers, 0 numbers, 0 non-pointers):
+// CHECK:Function<?anon_3_simpleAwait>(1 params, 21 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0045
 // CHECK-NEXT:    LoadParam         r3, 2
 // CHECK-NEXT:    LoadParam         r4, 1
@@ -403,7 +409,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:3: start = L7, end = L15, target = L8
 // CHECK-NEXT:4: start = L6, end = L8, target = L8
 
-// CHECK:Function<?anon_0_simpleAsyncFE>(1 params, 21 registers, 0 numbers, 0 non-pointers):
+// CHECK:Function<?anon_6_simpleAsyncFE>(1 params, 21 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0064
 // CHECK-NEXT:    LoadParam         r3, 2
 // CHECK-NEXT:    LoadParam         r4, 1
@@ -544,15 +550,15 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    bc 6: line 10 col 1
 // CHECK-NEXT:    bc 11: line 10 col 1
 // CHECK-NEXT:    bc 16: line 10 col 1
-// CHECK-NEXT:    bc 28: line 10 col 1
-// CHECK-NEXT:    bc 41: line 10 col 1
-// CHECK-NEXT:    bc 59: line 19 col 19
-// CHECK-NEXT:  0x0018  function idx 1, starts at line 10 col 1
-// CHECK-NEXT:    bc 33: line 10 col 1
-// CHECK-NEXT:  0x0020  function idx 2, starts at line 14 col 1
-// CHECK-NEXT:    bc 33: line 14 col 1
-// CHECK-NEXT:  0x0028  function idx 3, starts at line 19 col 21
-// CHECK-NEXT:    bc 33: line 19 col 21
+// CHECK-NEXT:    bc 37: line 10 col 1
+// CHECK-NEXT:    bc 59: line 10 col 1
+// CHECK-NEXT:    bc 86: line 19 col 19
+// CHECK-NEXT:  0x0018  function idx 2, starts at line 10 col 1
+// CHECK-NEXT:    bc 32: line 10 col 1
+// CHECK-NEXT:  0x0020  function idx 4, starts at line 14 col 1
+// CHECK-NEXT:    bc 32: line 14 col 1
+// CHECK-NEXT:  0x0028  function idx 6, starts at line 19 col 21
+// CHECK-NEXT:    bc 32: line 19 col 21
 // CHECK-NEXT:  0x0030  function idx 7, starts at line 10 col 1
 // CHECK-NEXT:    bc 43: line 10 col 1
 // CHECK-NEXT:    bc 121: line 11 col 3
