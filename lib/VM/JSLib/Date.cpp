@@ -511,9 +511,9 @@ CallResult<HermesValue> dateParse_RJS(void *, Runtime &runtime) {
     return ExecutionStatus::EXCEPTION;
   }
   lv.stringValue = std::move(*res);
-  return HermesValue::encodeTrustedNumberValue(parseDate(
+  return HermesValue::encodeTrustedNumberValue(timeClip(parseDate(
       StringPrimitive::createStringView(runtime, lv.stringValue),
-      runtime.getJSLibStorage()->localTimeOffsetCache));
+      runtime.getJSLibStorage()->localTimeOffsetCache)));
 }
 
 CallResult<HermesValue> dateUTC_RJS(void *, Runtime &runtime) {
