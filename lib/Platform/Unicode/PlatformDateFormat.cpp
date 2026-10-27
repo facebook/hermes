@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <ctime>
+#include <limits>
 
 namespace hermes {
 namespace platform_unicode {
@@ -102,30 +103,56 @@ int64_t equivalentYear(int64_t year) {
   return 2001;
 }
 
-/// \return the host's UTC offset in seconds at \p epochSecs, positive east of
+/// \return whether \p epochMs, which falls in the civil year \p year, must be
+/// remapped onto an equivalent year before it is passed to localtime_r
+/// (localtime_s on Windows).
+///
+/// Outside Windows, this matches the native range of LocalTimeOffsetCache
+/// (kMinNativeTimeMs and kMaxNativeTimeMs in hermes/VM/JSLib/DateCache.h), so
+/// that toLocaleString() and the Date getters pass the same times to the OS
+/// unchanged. With a 32-bit time_t, both remap the times outside that range,
+/// but onto different equivalent years, so their offsets can differ there.
+/// That header is not included here because lib/Platform must not depend on
+/// lib/VM.
+bool needsEquivalentYear(int64_t epochMs, int64_t year) {
+#ifdef _WINDOWS
+  // MSVC's localtime_s rejects a negative time_t outright. The upper bound
+  // keeps the original window, which ends 18 days before
+  // LocalTimeOffsetCache's Windows limit of 2^31-1 s.
+  (void)epochMs;
+  return year < 1970 || year > 2037;
+#else
+  (void)year;
+  // A 64-bit time_t represents every Date value, and localtime_r then follows
+  // the timezone's history and current rules.
+  if (sizeof(time_t) >= sizeof(int64_t))
+    return false;
+  // Compare milliseconds, as LocalTimeOffsetCache does.
+  constexpr int64_t maxTimeMs =
+      (int64_t)std::numeric_limits<int32_t>::max() * 1000;
+  return epochMs < -maxTimeMs || epochMs > maxTimeMs;
+#endif
+}
+
+/// \return the host's UTC offset in seconds at \p epochMs, positive east of
 /// Greenwich.
 ///
-/// Years outside what localtime_r can represent are remapped onto an
+/// Times for which needsEquivalentYear() returns true are remapped onto an
 /// equivalent year first, which preserves the weekday and leap-year character
 /// and therefore the daylight-saving transitions the host would apply.
-int64_t localOffsetSeconds(int64_t epochSecs) {
+int64_t localOffsetSeconds(int64_t epochMs) {
+  int64_t msOfSecond;
+  int64_t epochSecs = floorDiv(epochMs, 1000, &msOfSecond);
   int64_t secsOfDay;
   int64_t days = floorDiv(epochSecs, SECONDS_PER_DAY, &secsOfDay);
   CivilDate civil = civilFromDays(days);
 
-  // time_t is 64-bit on every platform Hermes targets, but localtime_r's
-  // behavior outside roughly [1970, 2038] is unspecified in practice, so
-  // remap anything beyond that window. The lower bound also keeps probeSecs
-  // non-negative, which MSVC's localtime_s requires -- it rejects a negative
-  // time_t outright.
-  //
-  // Remapping years before 1970 trades accuracy for that safety: the host
-  // applies its *current* DST rule to the remapped (2000-2027) date, not the
-  // historical rule tzdata records for the real year, so a zone whose DST
-  // rule changed over time can be off by an hour versus ICU, which does use
-  // the historical rule. TZ=EST+5, with no DST at any date, hides this.
+  // Remapping trades accuracy for range: the host applies its rules for the
+  // remapped (2000-2027) date, not the history tzdata records for the real
+  // year, so a zone whose rules changed over time can be off versus ICU.
+  // TZ=EST+5, with no DST at any date, hides this.
   int64_t probeSecs = epochSecs;
-  if (civil.year < 1970 || civil.year > 2037) {
+  if (needsEquivalentYear(epochMs, civil.year)) {
     int64_t eqYear = equivalentYear(civil.year);
     probeSecs =
         daysFromCivil(eqYear, civil.month, civil.day) * SECONDS_PER_DAY +
@@ -183,7 +210,8 @@ void formatDateTimeFixed(
 
   // Floor rather than truncate, so times before the epoch do not round up.
   int64_t utcSecs = (int64_t)std::floor(unixtimeMs / 1000.0);
-  int64_t localSecs = utcSecs + localOffsetSeconds(utcSecs);
+  int64_t localSecs =
+      utcSecs + localOffsetSeconds((int64_t)std::floor(unixtimeMs));
 
   int64_t secsOfDay;
   int64_t days = floorDiv(localSecs, SECONDS_PER_DAY, &secsOfDay);
