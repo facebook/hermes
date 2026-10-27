@@ -127,10 +127,12 @@ TEST_F(DateFormatTest, PadsMinutesAndSecondsButNotHourOrDay) {
 
 TEST_F(DateFormatTest, HandlesTheExtremesOfTheJavaScriptDateRange) {
   // +-8.64e15 ms is the range Date can represent, and is exactly 1e8 days.
-  // These are far outside what time_t and localtime_r support, so they
-  // exercise the equivalent-year remapping. Pinning the full string, not
-  // just the year, is what actually tests that the remapping preserves the
-  // month, day and time of day, not only the year.
+  // On Windows and with a 32-bit time_t, these exercise the equivalent-year
+  // remapping; with a 64-bit time_t elsewhere, localtime_r gets them
+  // unchanged. Pinning the full string, not just the year, checks the month,
+  // day and time of day at both ends of the range. It cannot catch a remap
+  // that loses them: the remapped time only feeds the UTC offset, and
+  // TZ=EST+5 has the same offset at every date.
   EXPECT_EQ(fmt(8.64e15, true, true), "Sep 12, 275760, 7:00:00 PM");
   EXPECT_EQ(fmt(-8.64e15, true, true), "Apr 19, -271821, 7:00:00 PM");
 }
