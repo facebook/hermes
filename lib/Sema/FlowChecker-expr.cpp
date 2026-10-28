@@ -38,26 +38,6 @@
 namespace hermes {
 namespace flow {
 
-/// Find an accessor field for \p property in \p classInfo, or return nullptr.
-static const ClassType::Field *findAccessorField(
-    Context &astContext,
-    ESTree::Node *property,
-    ClassType *classInfo) {
-  OptValue<ClassType::FieldLookupEntry> opt;
-  if (auto *pn = llvh::dyn_cast<ESTree::PrivateNameNode>(property)) {
-    Identifier name = astContext.getPrivateNameIdentifier(
-        llvh::cast<ESTree::IdentifierNode>(pn->_id)->_name);
-    opt = classInfo->findPrivateField(name);
-  } else {
-    Identifier name = Identifier::getFromPointer(
-        llvh::cast<ESTree::IdentifierNode>(property)->_name);
-    opt = classInfo->findPublicField(name);
-  }
-  if (opt && opt->getField()->isAccessor())
-    return opt->getField();
-  return nullptr;
-}
-
 void FlowChecker::matchConstraintToType(
     Type *startConstraint,
     const Type *startType) {
@@ -566,7 +546,7 @@ class FlowChecker::ExprVisitor {
     if (!checkGenericMethodReference(node, parent, type, name))
       return outer_.flowContext_.getAny();
 
-    return type;
+    return getClassFieldAccessType(field, type, isWrite);
   }
 
   /// \return the Decl of the specialization of the generic class
@@ -730,11 +710,11 @@ class FlowChecker::ExprVisitor {
     }
 
     if (field->isAccessor()) {
-      // Static accessor: result type is the field type.
+      // Static accessor: select the getter result or setter parameter type.
       // Do NOT propagate Decl — IRGen handles the call.
       // A write through 'super' is fine here: the setter receives the
       // receiver as 'this', exactly as in ES.
-      return field->type;
+      return getClassFieldAccessType(field, field->type, isWrite);
     }
 
     // In ES a write to an inherited static data property creates an own
@@ -850,6 +830,22 @@ class FlowChecker::ExprVisitor {
     }
 
     return false;
+  }
+
+  /// \return the value type of \p field for this access. A write to an accessor
+  /// uses the setter parameter type; everything else uses \p readType, which
+  /// for a getter is its result type. Only a setter-only field can actually
+  /// differ: a getter/setter pair must declare the same type, and the other
+  /// write forms (+=, ++) are rejected as reads of a write-only property.
+  Type *getClassFieldAccessType(
+      const ClassType::Field *field,
+      Type *readType,
+      bool isWrite) {
+    if (!isWrite || !field->hasSetter())
+      return readType;
+    // setterType is always a TypedFunctionType with one param.
+    auto *setterFn = llvh::cast<TypedFunctionType>(field->setterType->info);
+    return setterFn->getParams()[0].type;
   }
 
   /// Type a member access that resolves through an object \p indexer. \p
@@ -1121,6 +1117,53 @@ class FlowChecker::ExprVisitor {
       return;
     }
     visitESTreeNode(*this, target, parent, constraint);
+  }
+
+  /// Check that the source type \p srcType supplied to the already-visited
+  /// destructuring target \p target can reach it. \p kind names the kind of
+  /// destructuring for the diagnostic. No ImplicitCheckedCast is inserted for
+  /// a narrowing source: there is no RHS expression node to hang one on, so
+  /// IRGen narrows the value instead, in LReference::emitStore. That only
+  /// covers identifier and member targets; a nested pattern target needs no
+  /// narrowing because it is typed equal to the source.
+  void checkDestructuringTarget(
+      ESTree::Node *target,
+      Type *srcType,
+      const char *kind) {
+    Type *targetType = outer_.getNodeTypeOrAny(target);
+    if (outer_.tryNarrowType(srcType, targetType).second.canFlow)
+      return;
+    outer_.sm_.error(
+        target->getSourceRange(),
+        llvh::Twine("ft: incompatible ") + kind +
+            " destructuring target type: cannot implicitly cast from " +
+            srcType->messageString() + " to " + targetType->messageString());
+  }
+
+  /// \return the type a destructuring pattern whose parent is \p parent should
+  /// be typed from, given the \p constraint the parent forwarded. An unknown
+  /// source is 'any'. A `?T` source narrows to T only for the outermost
+  /// pattern, where the enclosing assignment inserts the checked cast on its
+  /// RHS, as it did before the pattern was typed from the source. A nested
+  /// pattern has no expression node to hang a cast on, so it keeps the
+  /// optional type and is rejected as not destructurable.
+  Type *destructuringSourceType(ESTree::Node *parent, Type *constraint) {
+    if (!constraint)
+      return outer_.flowContext_.getAny();
+    if (llvh::isa<ESTree::AssignmentExpressionNode>(parent))
+      if (Type *nonOpt = FlowChecker::getNonOptionalSingleType(constraint))
+        return nonOpt;
+    return constraint;
+  }
+
+  /// \return a callback for the expand* helpers that types each child of
+  /// \p pattern from the source type it receives and checks it. \p kind names
+  /// the kind of destructuring for the diagnostic.
+  auto destructuringChildVisitor(ESTree::Node *pattern, const char *kind) {
+    return [this, pattern, kind](ESTree::Node *target, Type *srcType) {
+      visitAssignmentTarget(target, pattern, srcType);
+      checkDestructuringTarget(target, srcType, kind);
+    };
   }
 
   /// Compute and set the type of \p node, assuming its \c _object (and
@@ -2366,16 +2409,13 @@ class FlowChecker::ExprVisitor {
       return;
     }
 
-    // For a plain '=' assignment whose LHS is an ArrayPattern, visit the
-    // RHS first so its type can be used as the constraint when typing the
-    // pattern. We don't pass a constraint back to the RHS — destructuring
-    // from an array literal isn't useful in practice, so we don't bother
-    // preserving the legacy LHS-first walk for that case.
-    bool arrayPatternLHS = node->_operator == outer_.kw_.identEqual &&
-        llvh::isa<ESTree::ArrayPatternNode>(node->_left);
+    // Destructuring evaluates the RHS first. Use its type as the constraint
+    // when typing the target pattern.
+    bool destructuringLHS = node->_operator == outer_.kw_.identEqual &&
+        llvh::isa<ESTree::PatternNode>(node->_left);
 
     Type *lhsConstraint = nullptr;
-    if (arrayPatternLHS) {
+    if (destructuringLHS) {
       visitESTreeNode(*this, node->_right, node, nullptr);
       lhsConstraint = outer_.getNodeTypeOrAny(node->_right);
     }
@@ -2387,12 +2427,11 @@ class FlowChecker::ExprVisitor {
     else
       visitESTreeNode(*this, node->_left, node, lhsConstraint);
 
-    // Check if the LHS is an accessor property.
+    // Handle the assignment side of the fact that we specially handle
+    // 'length' for FastArrays.
     if (auto *mem = llvh::dyn_cast<ESTree::MemberExpressionNode>(node->_left)) {
       if (!mem->_computed) {
         auto *objType = outer_.getNodeTypeOrAny(mem->_object);
-        // Handle the assignment side of the fact that we specially handle
-        // 'length' for FastArrays.
         if (outer_.flowContext_.isArrayClassType(objType)) {
           auto *id = llvh::cast<ESTree::IdentifierNode>(mem->_property);
           outer_.sm_.error(
@@ -2401,32 +2440,6 @@ class FlowChecker::ExprVisitor {
                   "' of typed Array");
           return;
         }
-        const ClassType::Field *accessorField = nullptr;
-        if (auto *classType = llvh::dyn_cast<ClassType>(objType->info);
-            classType && classType->getHomeObjectTypeInfo()) {
-          accessorField = findAccessorField(
-              outer_.astContext_,
-              mem->_property,
-              classType->getHomeObjectTypeInfo());
-        } else if (
-            auto *consType =
-                llvh::dyn_cast<ClassConstructorType>(objType->info)) {
-          auto *classTypeInfo =
-              llvh::cast<ClassType>(consType->getClassType()->info);
-          if (auto *staticInfo = classTypeInfo->getStaticObjectTypeInfo())
-            accessorField = findAccessorField(
-                outer_.astContext_, mem->_property, staticInfo);
-        }
-        // A getter-only write is already reported by checkFieldVariance on the
-        // member-access path, which covers every write form rather than only
-        // assignment.
-        if (accessorField && accessorField->hasSetter()) {
-          // Override the LHS type to the setter parameter type so the
-          // RHS is checked against it.
-          auto *setterFn =
-              llvh::cast<TypedFunctionType>(accessorField->setterType->info);
-          outer_.setNodeType(node->_left, setterFn->getParams()[0].type);
-        }
       }
     }
 
@@ -2434,7 +2447,7 @@ class FlowChecker::ExprVisitor {
 
     Type *res;
     if (node->_operator->str() == "=") {
-      if (!arrayPatternLHS) {
+      if (!destructuringLHS) {
         // Use the type of the LHS as the constraint for the RHS for '='.
         visitESTreeNode(*this, node->_right, node, lt);
       }
@@ -2509,107 +2522,87 @@ class FlowChecker::ExprVisitor {
       ESTree::ArrayPatternNode *node,
       ESTree::Node *parent,
       Type *constraint) {
-    // This is only invoked for the LHS of an AssignmentExpression — variable
-    // declaration patterns are handled directly by AnnotateScopeDecls.
+    // This is invoked for the LHS of an AssignmentExpression and for a
+    // pattern nested in another pattern — variable declaration patterns are
+    // handled directly by AnnotateScopeDecls.
     assert(
         !llvh::isa<ESTree::VariableDeclaratorNode>(parent) &&
         "use AnnotateScopeDecls for declarations");
 
-    /// Verify that an already-visited non-pattern child's type is compatible
-    /// with the expected element type of the destructuring.
-    auto checkChild = [this](ESTree::Node *target, Type *expected) {
-      Type *ct = outer_.getNodeTypeOrAny(target);
-      CanFlowResult cf = outer_.canAFlowIntoB(expected, ct);
-      if (!cf.canFlow || cf.needCheckedCast) {
-        outer_.sm_.error(
-            target->getSourceRange(),
-            "ft: incompatible element type in array destructuring");
-      }
-    };
+    // The enclosing assignment (or pattern) forwards the source type as
+    // \p constraint. We use it to type the pattern in a single pass, so IRGen
+    // can dispatch on the pattern's own type. Each element is also checked
+    // against the type it actually receives, because a nested pattern has no
+    // enclosing assignment to do it afterwards.
+    Type *src = destructuringSourceType(parent, constraint);
 
-    // When the parent assignment knows the RHS type, it forwards it as
-    // \p constraint. We use it to type the pattern correctly in a single
-    // pass: an Array<T> constraint flows T into each element (and Array<T>
-    // into a trailing rest binding), so IRGen dispatches to
-    // emitDestructuringTypedArray. Other constraints (or no constraint) fall
-    // through to the legacy tuple-of-children-types behavior, which lets
-    // the assignment's tryNarrowType check element compatibility.
-    if (outer_.flowContext_.isArrayClassType(constraint)) {
-      // Default values aren't supported in typed array destructuring yet.
-      // Emit a clear Sema error here so users don't get IRGen's generic
-      // "unsupported destructuring target" message.
-      for (ESTree::Node &child : node->_elements) {
-        if (llvh::isa<ESTree::AssignmentPatternNode>(&child)) {
-          outer_.sm_.error(
-              child.getSourceRange(),
-              "ft: default values are not yet supported "
-              "in typed array destructuring");
-          outer_.setNodeType(node, outer_.flowContext_.getAny());
-          return;
-        }
-      }
-
-      outer_.setNodeType(node, constraint);
-      Type *elemType = outer_.flowContext_.getArrayElementType(constraint);
-
-      for (ESTree::Node &child : node->_elements) {
-        if (llvh::isa<ESTree::EmptyNode>(&child))
-          continue;
-        if (auto *rest = llvh::dyn_cast<ESTree::RestElementNode>(&child)) {
-          // Rest binding receives the array type itself.
-          visitAssignmentTarget(rest->_argument, &child, constraint);
-          if (!llvh::isa<ESTree::ArrayPatternNode>(rest->_argument)) {
-            checkChild(rest->_argument, constraint);
-          }
-          break;
-        }
-        visitAssignmentTarget(&child, node, elemType);
-        if (!llvh::isa<ESTree::ArrayPatternNode>(&child)) {
-          checkChild(&child, elemType);
-        }
-      }
+    // Errors inside the expansions below are already reported, and there is
+    // nothing further to check either way.
+    if (outer_.flowContext_.isArrayClassType(src)) {
+      outer_.setNodeType(node, src);
+      (void)outer_.expandArrayDestructuring(
+          node, src, destructuringChildVisitor(node, "array"));
       return;
     }
 
-    // For tuple constraints, rest elements are not permitted. The parser
-    // guarantees rest, if present, is the last element. Setting the node
-    // type to any short-circuits the assignment-level narrow check so the
-    // user only sees the actionable rest-rejection error.
-    if (constraint && llvh::isa<TupleType>(constraint->info) &&
-        !node->_elements.empty()) {
-      if (auto *rest = llvh::dyn_cast<ESTree::RestElementNode>(
-              &node->_elements.back())) {
-        outer_.sm_.error(
-            rest->getSourceRange(),
-            "ft: rest element not allowed when destructuring a tuple");
-        outer_.setNodeType(node, outer_.flowContext_.getAny());
-        return;
-      }
+    if (auto *tupleTy = llvh::dyn_cast<TupleType>(src->info)) {
+      outer_.setNodeType(node, src);
+      (void)outer_.expandTupleDestructuring(
+          node, tupleTy, destructuringChildVisitor(node, "tuple"));
+      return;
     }
 
-    // Annotate the children of the array pattern. All slots are write
-    // bindings; route each through visitAssignmentTarget.
+    // A known source type that is none of the above cannot be destructured as
+    // an array. Same diagnostic as the declaration path in AnnotateScopeDecls.
+    if (!llvh::isa<AnyType>(src->info)) {
+      outer_.sm_.error(
+          node->getSourceRange(),
+          "ft: incompatible type for array pattern, expected tuple or array");
+      outer_.setNodeType(node, outer_.flowContext_.getAny());
+      return;
+    }
+
+    // The source type is unknown. The elements come from the iterator protocol
+    // at runtime, so the pattern has no static type and IRGen narrows each
+    // store. All slots are write bindings; route each through
+    // visitAssignmentTarget.
+    outer_.setNodeType(node, outer_.flowContext_.getAny());
     for (ESTree::Node &child : node->_elements)
       visitAssignmentTarget(&child, node, nullptr);
-
-    llvh::SmallVector<Type *, 4> types;
-    for (ESTree::Node &elem : node->_elements)
-      types.push_back(outer_.getNodeTypeOrAny(&elem));
-
-    outer_.setNodeType(
-        node,
-        outer_.flowContext_.createType(
-            outer_.flowContext_.createTuple(types), node));
   }
 
-  /// Object destructuring LHS (`({x: a.b} = src)`). The parser converts an
-  /// object literal in an assignment LHS into an ObjectPatternNode. Each
-  /// property's `_value` is a write target; a trailing `RestElement`
-  /// argument is also a write binding.
+  /// Object destructuring LHS (`({x: a.b} = src)`) or a nested object pattern.
+  /// The parser converts an object literal in an assignment LHS into an
+  /// ObjectPatternNode. Each property's `_value` is a write target; a trailing
+  /// `RestElement` argument is also a write binding. \p constraint is the
+  /// source type the pattern destructures, when it is known.
   void visit(
       ESTree::ObjectPatternNode *node,
       ESTree::Node *parent,
       Type *constraint) {
+    Type *src = destructuringSourceType(parent, constraint);
+
+    if (auto *objType = llvh::dyn_cast<ExactObjectType>(src->info)) {
+      // Type the pattern from the source and check each property against the
+      // field it receives.
+      outer_.setNodeType(node, src);
+      (void)outer_.expandObjectDestructuring(
+          node, objType, destructuringChildVisitor(node, "object"));
+      return;
+    }
+
+    // A known source type that is not an object cannot be destructured. Same
+    // diagnostic as the declaration path in AnnotateScopeDecls.
+    if (!llvh::isa<AnyType>(src->info)) {
+      outer_.sm_.error(
+          node->getSourceRange(),
+          "ft: incompatible type for object pattern, expected object type");
+      outer_.setNodeType(node, outer_.flowContext_.getAny());
+      return;
+    }
+
+    // The source type is unknown or 'any'; leave the pattern untyped and just
+    // annotate the write targets.
     for (ESTree::Node &child : node->_properties) {
       if (auto *prop = llvh::dyn_cast<ESTree::PropertyNode>(&child)) {
         // The key is read as a property name; not a value position.
@@ -2631,7 +2624,26 @@ class FlowChecker::ExprVisitor {
       ESTree::Node *parent,
       Type *constraint) {
     visitAssignmentTarget(node->_left, node, constraint);
-    visitESTreeNode(*this, node->_right, node, nullptr);
+    Type *targetType = outer_.getNodeTypeOrAny(node->_left);
+    visitESTreeNode(*this, node->_right, node, targetType);
+    // The default is stored into the target when the source property is
+    // missing, so it has to be assignable to it. This applies to a nested
+    // pattern target too: it was typed from the source, and the default takes
+    // the source's place. A pattern target requires an exact flow, because
+    // nothing narrows the value before it is destructured -- see
+    // checkDestructuringTarget.
+    Type *defaultType = outer_.getNodeTypeOrAny(node->_right);
+    CanFlowResult cf = outer_.tryNarrowType(defaultType, targetType).second;
+    if (!cf.canFlow ||
+        (cf.needCheckedCast && llvh::isa<ESTree::PatternNode>(node->_left))) {
+      outer_.sm_.error(
+          node->_right->getSourceRange(),
+          "ft: incompatible destructuring default type: cannot implicitly "
+          "cast from " +
+              defaultType->messageString() + " to " +
+              targetType->messageString());
+    }
+    outer_.setNodeType(node, targetType);
   }
 
   /// Rest binding (`[...rest]` or `{...rest}` LHS). The argument is a

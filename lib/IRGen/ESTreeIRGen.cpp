@@ -1353,14 +1353,21 @@ void ESTreeIRGen::emitDestructuringTypedObject(
       Identifier key = getNameFieldFromID(
           llvh::cast<ESTree::IdentifierNode>(propNode->_key));
       excludedItems.push_back(Builder.getLiteralString(key));
+      // The target is evaluated before the property is read.
+      LReference lref = createLRef(valueNode, declInit);
       Value *loaded = Builder.createLoadPropertyInst(source, key);
-      // Apply the default (if any) before narrowing: a missing key reads as
-      // `undefined`, which selects the initializer rather than throwing. With
-      // no initializer the cast narrows `T | void` to `T`, so a missing key
-      // throws.
-      Value *optInit = emitOptionalInitialization(loaded, init, nameHint);
-      Value *cast = Builder.createCheckedTypeCastInst(optInit, valueIRType);
-      createLRef(valueNode, declInit).emitStore(cast);
+      // With no initializer the cast narrows `T | void` to `T`, so a missing
+      // key throws. With one, a missing key reads as `undefined` and selects
+      // the initializer, whose type may differ from `T`, so only the loaded
+      // value is narrowed.
+      if (init) {
+        Value *cast = Builder.createCheckedTypeCastInst(
+            loaded,
+            getTypeContext().unionTy(valueIRType, Type::createUndefined()));
+        lref.emitStore(emitOptionalInitialization(cast, init, nameHint));
+      } else {
+        lref.emitStore(Builder.createCheckedTypeCastInst(loaded, valueIRType));
+      }
     }
     return;
   }
@@ -1435,14 +1442,14 @@ void ESTreeIRGen::emitDestructuringTypedObject(
     consumed.set(srcIdx);
 
     const auto &field = srcType->getFields()[srcIdx];
+    // The target is evaluated before the property is read.
+    LReference lref = createLRef(valueNode, declInit);
     Value *loaded = Builder.createPrLoadInst(
         source,
         srcIdx,
         Builder.getLiteralString(field.name),
         flowTypeToIRType(field.type));
-    Value *optInit = emitOptionalInitialization(loaded, init, nameHint);
-    LReference lref = createLRef(valueNode, declInit);
-    lref.emitStore(optInit);
+    lref.emitStore(emitOptionalInitialization(loaded, init, nameHint));
   }
 }
 

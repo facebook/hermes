@@ -596,7 +596,8 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
       llvh::ArrayRef<DestructuringDefault> defaults);
 
   /// Expand a tuple destructuring pattern: validate element count and call
-  /// \p onChild for each (element, type) pair.
+  /// \p onChild for each (element, type) pair. A hole consumes an element
+  /// without invoking \p onChild.
   /// \return false if there was a size mismatch error.
   template <typename OnChildCB>
   LLVM_NODISCARD bool expandTupleDestructuring(
@@ -1471,7 +1472,9 @@ inline bool FlowChecker::expandTupleDestructuring(
       tooFewTupleElements = true;
       break;
     }
-    onChild(&element, tuple->getTypes()[i]);
+    // A hole ([, x]) still consumes a tuple element, but binds nothing.
+    if (!llvh::isa<ESTree::EmptyNode>(&element))
+      onChild(&element, tuple->getTypes()[i]);
     ++i;
   }
   if (tooFewTupleElements || i != tuple->getTypes().size()) {

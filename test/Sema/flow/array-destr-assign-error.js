@@ -22,10 +22,10 @@ let n: number = 0;
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:{{.*}}array-destr-assign-error.js:16:2: error: ft: incompatible element type in array destructuring
+// CHECK:{{.*}}array-destr-assign-error.js:16:2: error: ft: incompatible array destructuring target type: cannot implicitly cast from number to string
 // CHECK-NEXT:[s] = arr;
 // CHECK-NEXT: ^
-// CHECK-NEXT:{{.*}}array-destr-assign-error.js:21:8: error: ft: incompatible element type in array destructuring
+// CHECK-NEXT:{{.*}}array-destr-assign-error.js:21:8: error: ft: incompatible array destructuring target type: cannot implicitly cast from class Array<number> to class Array<string>
 // CHECK-NEXT:[n, ...badRest] = arr;
 // CHECK-NEXT:       ^~~~~~~
 // CHECK-NEXT:Emitted 2 errors. exiting.
