@@ -890,6 +890,13 @@ class FlowChecker::ParseClassType {
             "ft: computed property names in classes are unsupported");
         return outer_.flowContext_.getAny();
       }
+      if (!privateNameNode &&
+          !llvh::isa<ESTree::IdentifierNode>(method->_key)) {
+        outer_.sm_.error(
+            method->_key->getSourceRange(),
+            "ft: method name must be an identifier");
+        return outer_.flowContext_.getAny();
+      }
       if (fe->_async || fe->_generator) {
         outer_.sm_.error(
             method->getStartLoc(), "ft: async/generator methods unsupported");
@@ -1429,6 +1436,9 @@ void FlowChecker::visit(ESTree::MethodDefinitionNode *node) {
                        ->getHomeObjectTypeInfo()
                        ->findPrivateField(name);
       }
+    } else if (!llvh::isa<ESTree::IdentifierNode>(node->_key)) {
+      // Reported when the class was parsed.
+      return;
     } else if (node->_static) {
       name = Identifier::getFromPointer(
           llvh::cast<ESTree::IdentifierNode>(node->_key)->_name);
