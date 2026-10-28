@@ -54,14 +54,8 @@ class Over {
 Over(1);
 // CHECK: {{.*}}class-sh-call-error.js:54:1: error: ft: overloaded SH_call method not supported
 
-// Dispatch requires the callee to name a class declaration.
-const Expr = class {
-  static SH_call(): number {
-    return 1;
-  }
-};
-Expr();
-// CHECK: {{.*}}class-sh-call-error.js:63:1: error: ft: callee is not a function
+// Dispatch requires the callee to name a class declaration. Class expressions
+// can't declare statics at all, see class-expr-static-error.js.
 class Target {
   constructor() {
     new.target();
@@ -70,4 +64,4 @@ class Target {
     return 1;
   }
 }
-// CHECK: {{.*}}class-sh-call-error.js:67:5: error: ft: callee is not a function
+// CHECK: {{.*}}class-sh-call-error.js:61:5: error: ft: callee is not a function

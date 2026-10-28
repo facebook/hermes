@@ -1274,6 +1274,42 @@ void FlowChecker::visitClassNode(
 void FlowChecker::visit(ESTree::ClassExpressionNode *node) {
   visitExpression(node->_superClass, node, nullptr);
 
+  // Class expressions are lowered by the legacy IRGen path, which doesn't
+  // create the Variables that typed statics, and private and final methods,
+  // are stored in. Accessors must be final, so they are covered too. It also
+  // doesn't support typed private fields.
+  bool hasUnsupported = false;
+  for (ESTree::Node &member :
+       llvh::cast<ESTree::ClassBodyNode>(node->_body)->_body) {
+    const char *what = nullptr;
+    if (auto *prop = llvh::dyn_cast<ESTree::ClassPropertyNode>(&member)) {
+      if (prop->_static)
+        what = "static members";
+    } else if (
+        auto *prop =
+            llvh::dyn_cast<ESTree::ClassPrivatePropertyNode>(&member)) {
+      what = prop->_static ? "static members" : "private fields";
+    } else if (
+        auto *method = llvh::dyn_cast<ESTree::MethodDefinitionNode>(&member)) {
+      if (method->_static)
+        what = "static members";
+      else if (llvh::isa<ESTree::PrivateNameNode>(method->_key))
+        what = "private methods";
+      else if (hermes::findDecorator(
+                   method->_decorators, {kw_.identHermes, kw_.identFinal}))
+        what = "final methods";
+    }
+    if (what) {
+      sm_.error(
+          member.getSourceRange(),
+          llvh::Twine("ft: ") + what +
+              " are not supported in class expressions");
+      hasUnsupported = true;
+    }
+  }
+  if (hasUnsupported)
+    return;
+
   auto *id = llvh::cast_or_null<ESTree::IdentifierNode>(node->_id);
   Type *classType = flowContext_.createType(flowContext_.createClass(
       id ? Identifier::getFromPointer(id->_name) : Identifier{}));
