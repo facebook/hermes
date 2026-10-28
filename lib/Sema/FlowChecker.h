@@ -455,6 +455,33 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   void
   visitExpression(ESTree::Node *node, ESTree::Node *parent, Type *constraint);
 
+  /// Invoke the expression visitor on \p node in write position, so member
+  /// expression leaves are classified as writes rather than reads.
+  /// \param constraint the constraint the visitor will attempt to match.
+  void visitAssignmentTarget(
+      ESTree::Node *node,
+      ESTree::Node *parent,
+      Type *constraint);
+
+  /// \return the type each iteration of \p node produces, or nullptr if that is
+  /// only known at runtime.
+  Type *forOfElementType(ESTree::ForOfStatementNode *node);
+
+  /// Visit \p left, the left-hand side of a for-in/of loop, which is either a
+  /// declaration or a write target, and check that it can hold \p srcType —
+  /// the value the loop feeds it on each iteration, or nullptr if that is only
+  /// known at runtime. \p kind names the loop and the source for the
+  /// diagnostic.
+  /// A pattern LHS in expression position is not checked as a whole: it is
+  /// checked leaf by leaf by its own visitor, and its own type is either
+  /// \p srcType (redundant) or an invariant aggregate of its targets (which
+  /// would compare falsely).
+  void visitLoopTarget(
+      ESTree::Node *left,
+      ESTree::Node *parent,
+      Type *srcType,
+      const char *kind);
+
   void visit(ESTree::ExpressionStatementNode *node);
   void visit(ESTree::IfStatementNode *node);
   void visit(ESTree::SwitchStatementNode *node);

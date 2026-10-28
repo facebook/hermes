@@ -339,6 +339,8 @@ const {a, b}: {a: number, b: number} = obj;
 
 Destructuring names in object patterns can have defaults, but typed tuple and `Array<T>` patterns don't support defaults yet.
 
+An unannotated `let`/`const` loop variable is typed from the loop: the element type for `for-of` over a typed array, `string` for `for-in`, and `any` otherwise. Loop targets are checked against that type. An annotated destructuring pattern must match it exactly (no implicit casts), since its leaves are read without a runtime check.
+
 ### Spread in Array Literals
 
 Spread of an array into an array literal is supported.

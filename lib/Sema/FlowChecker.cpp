@@ -1642,24 +1642,106 @@ void FlowChecker::visit(ESTree::DoWhileStatementNode *node) {
   visitESTreeNode(*this, node->_body, node);
   visitExpression(node->_test, node, nullptr);
 }
+Type *FlowChecker::forOfElementType(ESTree::ForOfStatementNode *node) {
+  // Only a typed array produces a statically known element. for-await iterates
+  // the async iterator protocol, which yields 'any' whatever the source is.
+  Type *rightType = getNodeTypeOrAny(node->_right);
+  if (node->_await || !flowContext_.isArrayClassType(rightType))
+    return nullptr;
+  return flowContext_.getArrayElementType(rightType);
+}
+
+void FlowChecker::visitLoopTarget(
+    ESTree::Node *left,
+    ESTree::Node *parent,
+    Type *srcType,
+    const char *kind) {
+  auto *declaration = llvh::dyn_cast<ESTree::VariableDeclarationNode>(left);
+  if (declaration) {
+    visitESTreeNode(*this, left, parent);
+  } else {
+    // Pass the source type as the constraint so a destructuring target is
+    // typed against what it actually receives instead of as a bare tuple.
+    visitAssignmentTarget(left, parent, srcType);
+  }
+
+  // Without a statically known source type the loop produces `any`. That
+  // still matters for an annotated pattern, which must fit exactly below.
+  if (!srcType)
+    srcType = flowContext_.getAny();
+
+  ESTree::Node *targetNode = left;
+  Type *lt;
+  if (declaration) {
+    if (declaration->_declarations.empty())
+      return;
+    targetNode = llvh::cast<ESTree::VariableDeclaratorNode>(
+                     &declaration->_declarations.front())
+                     ->_id;
+    // An annotated loop variable is typed from its annotation instead of from
+    // what the loop feeds it, so it needs the same check as the expression
+    // form. Without an annotation the two are the same type and this is a
+    // no-op.
+    lt = llvh::isa<ESTree::IdentifierNode>(targetNode)
+        ? flowContext_.findDeclType(
+              getDecl(llvh::cast<ESTree::IdentifierNode>(targetNode)))
+        : flowContext_.findNodeType(targetNode);
+  } else {
+    // A pattern is checked leaf by leaf by its own visitor; its own type is
+    // either srcType (redundant) or an invariant aggregate of its targets,
+    // which would compare falsely.
+    if (llvh::isa<ESTree::PatternNode>(left))
+      return;
+    lt = getNodeTypeOrAny(left);
+  }
+  if (!lt)
+    return;
+  bool canFlow;
+  if (llvh::isa<ESTree::IdentifierNode>(targetNode)) {
+    // A single variable is stored into, so LReference::emitStore narrows.
+    canFlow = tryNarrowType(srcType, lt).second.canFlow;
+  } else {
+    // An annotated pattern is destructured directly out of the loop value, so
+    // there is no store to hang a narrowing cast on. Require an exact fit: a
+    // cast to a tuple or object type is not actually checked, so allowing one
+    // here would destructure a value that may not have the assumed shape.
+    CanFlowResult cf = canAFlowIntoB(srcType, lt);
+    canFlow = cf.canFlow && !cf.needCheckedCast;
+  }
+  if (canFlow)
+    return;
+  sm_.error(
+      targetNode->getSourceRange(),
+      llvh::Twine("ft: incompatible ") + kind +
+          " type: cannot implicitly cast from " + srcType->messageString() +
+          " to " + lt->messageString());
+}
+
 void FlowChecker::visit(ESTree::ForOfStatementNode *node) {
   if (!resolveScopeTypesAndAnnotate(node, node->getScope()))
     return;
-  if (llvh::isa<ESTree::VariableDeclarationNode>(node->_left))
-    visitESTreeNode(*this, node->_left, node);
-  else
-    visitExpression(node->_left, node, nullptr);
-  visitExpression(node->_right, node, nullptr);
+  // A declaration left-hand side takes its type from the iterable, so
+  // annotation has to visit the iterable to record the declaration; it marks
+  // the iterable in visitedInits_ and the mark is consumed here so it is not
+  // visited twice. That puts the iterable in the same position as a
+  // `let x = init` initializer, with the same caveat: it is visited before the
+  // loop variable is declared. Any other left-hand side needs no annotation,
+  // so the iterable is visited here instead.
+  if (!visitedInits_.erase(node->_right))
+    visitExpression(node->_right, node, nullptr);
+  visitLoopTarget(node->_left, node, forOfElementType(node), "for-of element");
   visitESTreeNode(*this, node->_body, node);
 }
 void FlowChecker::visit(ESTree::ForInStatementNode *node) {
   if (!resolveScopeTypesAndAnnotate(node, node->getScope()))
     return;
-  if (llvh::isa<ESTree::VariableDeclarationNode>(node->_left))
-    visitESTreeNode(*this, node->_left, node);
-  else
-    visitExpression(node->_left, node, nullptr);
+  // Visit the iterable before the left-hand side, matching the evaluation
+  // order. The key type is the constant 'string', so unlike for-of, annotating
+  // the loop variable doesn't depend on the iterable's type.
   visitExpression(node->_right, node, nullptr);
+  // for-in always produces a string key, so a target that can't hold one is
+  // statically wrong.
+  visitLoopTarget(node->_left, node, flowContext_.getString(), "for-in target");
   visitESTreeNode(*this, node->_body, node);
 }
 void FlowChecker::visit(ESTree::ForStatementNode *node) {
@@ -1751,10 +1833,12 @@ void FlowChecker::visit(ESTree::VariableDeclarationNode *node) {
       declPatternDefaults_.erase(defaultsIt);
       checkDestructuringDefaults(defaults);
     }
-    if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(declarator->_id)) {
-      if (!declarator->_init)
-        continue;
+    // A loop head declarator has no initializer, and implicitCheckedCast
+    // would dereference the null node to copy its location.
+    if (!declarator->_init)
+      continue;
 
+    if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(declarator->_id)) {
       sema::Decl *decl = getDecl(id);
       Type *lt = getDeclType(decl);
       Type *rt = getNodeTypeOrAny(declarator->_init);
@@ -2264,7 +2348,7 @@ class FlowChecker::AnnotateScopeDecls {
               llvh::dyn_cast<ESTree::VariableDeclarationNode>(declNode)) {
         // VariableDeclaration.
         //
-        annotateVariableDeclaration(declaration);
+        annotateVariableDeclaration(declaration, scopeNode);
       } else if (llvh::isa<ESTree::FunctionDeclarationNode>(declNode)) {
         // FunctionDeclaration: already annotated in the hoisting pass above.
         //
@@ -2289,7 +2373,27 @@ class FlowChecker::AnnotateScopeDecls {
   }
 
   void annotateVariableDeclaration(
-      ESTree::VariableDeclarationNode *declaration) {
+      ESTree::VariableDeclarationNode *declaration,
+      ESTree::Node *scopeNode) {
+    // A for-in/of loop variable has no initializer; it takes its type from what
+    // the loop feeds it. For for-of that is the element type of the iterable,
+    // which is inferred here so that it is visited in the same position as a
+    // `let x = init` initializer; for for-in it is always a string key.
+    //
+    // A `var` loop variable is hoisted out of the loop scope by DeclCollector,
+    // so scopeNode is the enclosing function and it keeps 'any'.
+    Type *noInitType = outer.flowContext_.getAny();
+    if (auto *forOf = llvh::dyn_cast<ESTree::ForOfStatementNode>(scopeNode)) {
+      // visit(ForOfStatementNode *) relies on visitedInits_ to not visit the
+      // iterable a second time.
+      outer.visitExpression(forOf->_right, forOf, nullptr);
+      outer.visitedInits_.insert(forOf->_right);
+      if (Type *elemType = outer.forOfElementType(forOf))
+        noInitType = elemType;
+    } else if (llvh::isa<ESTree::ForInStatementNode>(scopeNode)) {
+      noInitType = outer.flowContext_.getString();
+    }
+
     /// Attempt to infer the RHS of the declarator by calling the typecheck
     /// visitor on it to see if it's able to associate a type with the init
     /// node.
@@ -2334,6 +2438,8 @@ class FlowChecker::AnnotateScopeDecls {
                 ? outer.widenLiteralType(inferred)
                 : inferred;
           }
+        } else if (!id->_typeAnnotation) {
+          type = noInitType;
         }
 
         outer.recordDecl(decl, type, id, declarator);
@@ -2345,11 +2451,11 @@ class FlowChecker::AnnotateScopeDecls {
           // setTypesForAnnotatedVariables.
           continue;
         }
-        Type *type = outer.flowContext_.getAny();
+        // It's possible to not have an _init if this declarator is part of a
+        // for loop:
+        // for ([x, y] of iterable) {}
+        Type *type = noInitType;
         if (declarator->_init) {
-          // It's possible to not have an _init if this declarator is part of a
-          // for loop:
-          // for ([x, y] of iterable) {}
           if (Type *inferred = tryInferInitExpression(declarator))
             type = inferred;
         }
@@ -2362,11 +2468,11 @@ class FlowChecker::AnnotateScopeDecls {
           // setTypesForAnnotatedVariables.
           continue;
         }
-        Type *type = outer.flowContext_.getAny();
+        // It's possible to not have an _init if this declarator is part of a
+        // for loop:
+        // for ({x, y} of iterable) {}
+        Type *type = noInitType;
         if (declarator->_init) {
-          // It's possible to not have an _init if this declarator is part of a
-          // for loop:
-          // for ({x, y} of iterable) {}
           if (Type *inferred = tryInferInitExpression(declarator))
             type = inferred;
         }

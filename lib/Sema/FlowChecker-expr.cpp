@@ -754,11 +754,11 @@ class FlowChecker::ExprVisitor {
   };
 
   /// Classify whether \p node is being read, written, or both. \p isWrite is
-  /// set by visitAssignmentTarget for `=` write targets (including leaves
-  /// buried inside destructuring patterns); in that case the access is a pure
-  /// write. Otherwise, the remaining write cases (compound assignment,
-  /// ++/--, for-in/of LHS) each put the MemberExpression directly under
-  /// the relevant parent, so a bottom-up parent check is sufficient.
+  /// set by visitAssignmentTarget for pure write targets — `=` LHS (including
+  /// leaves buried inside destructuring patterns) and for-in/of LHS. In the
+  /// remaining write cases (compound assignment, ++/--, delete) the
+  /// MemberExpression sits directly under the relevant parent, so a bottom-up
+  /// parent check is sufficient to classify them.
   MemberAccessKind classifyMemberAccess(
       ESTree::MemberExpressionNode *node,
       ESTree::Node *parent,
@@ -774,14 +774,6 @@ class FlowChecker::ExprVisitor {
     } else if (auto *upd = llvh::dyn_cast<ESTree::UpdateExpressionNode>(parent);
                upd && upd->_argument == node) {
       k.write = true;
-    } else if (auto *forIn = llvh::dyn_cast<ESTree::ForInStatementNode>(parent);
-               forIn && forIn->_left == node) {
-      k.write = true;
-      k.read = false;
-    } else if (auto *forOf = llvh::dyn_cast<ESTree::ForOfStatementNode>(parent);
-               forOf && forOf->_left == node) {
-      k.write = true;
-      k.read = false;
     } else if (isDeleteOperand(node, parent)) {
       k.read = false;
       k.write = true;
@@ -4130,6 +4122,14 @@ void FlowChecker::visitExpression(
     Type *constraint) {
   ExprVisitor v(*this);
   visitESTreeNode(v, node, parent, constraint);
+}
+
+void FlowChecker::visitAssignmentTarget(
+    ESTree::Node *node,
+    ESTree::Node *parent,
+    Type *constraint) {
+  ExprVisitor v(*this);
+  v.visitAssignmentTarget(node, parent, constraint);
 }
 
 } // namespace flow
