@@ -2168,6 +2168,17 @@ class FlowChecker::ExprVisitor {
       ESTree::BinaryExpressionNode *node,
       ESTree::Node *parent,
       Type *constraint) {
+    // Private brand checks ('#x in o') aren't supported: typed private names
+    // aren't resolved to Decls that IRGen can use outside a member access.
+    if (llvh::isa<ESTree::PrivateNameNode>(node->_left)) {
+      outer_.sm_.error(
+          node->_left->getSourceRange(),
+          "ft: private brand checks ('#x in obj') are not supported");
+      visitESTreeNode(*this, node->_right, node, nullptr);
+      outer_.setNodeType(node, outer_.flowContext_.getBoolean());
+      return;
+    }
+
     visitESTreeNode(*this, node->_left, node, nullptr);
     visitESTreeNode(*this, node->_right, node, nullptr);
     Type *lt = outer_.getNodeTypeOrAny(node->_left);
