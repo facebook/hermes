@@ -12,6 +12,7 @@
 #include "llvh/ADT/Hashing.h"
 #include "llvh/ADT/STLExtras.h"
 #include "llvh/ADT/ScopeExit.h"
+#include "llvh/ADT/SmallPtrSet.h"
 #include "llvh/Support/MathExtras.h"
 
 #include <cmath>
@@ -104,7 +105,19 @@ static bool listsMatchSlow(
   return matched.all();
 }
 
-static void messageStringImpl(const Type *type, llvh::raw_ostream &os) {
+/// \param active the Types currently being printed, to stop at recursive
+///   types that have no alias name.
+static void messageStringImpl(
+    const Type *type,
+    llvh::raw_ostream &os,
+    llvh::SmallPtrSetImpl<const Type *> &active) {
+  if (!active.insert(type).second) {
+    os << "...";
+    return;
+  }
+  auto popActive =
+      llvh::make_scope_exit([type, &active]() { active.erase(type); });
+
 #if HERMES_PARSE_FLOW
   if (type->node && llvh::isa<ESTree::TypeAliasNode>(type->node)) {
     // Return the name along with the kind of the type.
@@ -141,7 +154,7 @@ static void messageStringImpl(const Type *type, llvh::raw_ostream &os) {
       for (const Type *arg : classType->getTypeArgs()) {
         if (!first)
           os << ", ";
-        messageStringImpl(arg, os);
+        messageStringImpl(arg, os, active);
         first = false;
       }
       os << '>';
@@ -156,7 +169,7 @@ static void messageStringImpl(const Type *type, llvh::raw_ostream &os) {
       if (!first) {
         os << " | ";
       }
-      messageStringImpl(t, os);
+      messageStringImpl(t, os, active);
       first = false;
     }
     os << ')';
@@ -164,7 +177,7 @@ static void messageStringImpl(const Type *type, llvh::raw_ostream &os) {
   }
 
   if (auto *arrayType = llvh::dyn_cast<ArrayType>(type->info)) {
-    messageStringImpl(arrayType->getElement(), os);
+    messageStringImpl(arrayType->getElement(), os, active);
     os << "[]";
     return;
   }
@@ -176,7 +189,7 @@ static void messageStringImpl(const Type *type, llvh::raw_ostream &os) {
       if (!first) {
         os << ", ";
       }
-      messageStringImpl(t, os);
+      messageStringImpl(t, os, active);
       first = false;
     }
     os << ']';
@@ -207,7 +220,8 @@ static void messageStringImpl(const Type *type, llvh::raw_ostream &os) {
 std::string Type::messageString() const {
   std::string result;
   llvh::raw_string_ostream os(result);
-  messageStringImpl(this, os);
+  llvh::SmallPtrSet<const Type *, 8> active{};
+  messageStringImpl(this, os, active);
   return os.str();
 }
 
