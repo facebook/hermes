@@ -1447,6 +1447,7 @@ LazyCompilationDataInst *IRBuilder::createLazyCompilationDataInst(
     Variable *homeObject,
     Variable *classCtxConstructor,
     Variable *classCtxInitFuncVar,
+    Variable *asyncFunctionInnerClosureVar,
     VariableScope *parentVarScope) {
   auto *inst = new LazyCompilationDataInst(
       std::move(data),
@@ -1459,6 +1460,9 @@ LazyCompilationDataInst *IRBuilder::createLazyCompilationDataInst(
                           : getEmptySentinel(),
       classCtxInitFuncVar ? static_cast<Value *>(classCtxInitFuncVar)
                           : getEmptySentinel(),
+      asyncFunctionInnerClosureVar
+          ? static_cast<Value *>(asyncFunctionInnerClosureVar)
+          : getEmptySentinel(),
       parentVarScope);
   insert(inst);
   return inst;

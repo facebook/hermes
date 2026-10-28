@@ -792,6 +792,7 @@ class IRBuilder {
       Variable *homeObject,
       Variable *classCtxConstructor,
       Variable *classCtxInitFuncVar,
+      Variable *asyncFunctionInnerClosureVar,
       VariableScope *parentVarScope);
 
   EvalCompilationDataInst *createEvalCompilationDataInst(
