@@ -1,0 +1,148 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+// RUN: %shermes -O0 -fno-std-globals -typed -dump-ir %s | %FileCheckOrRegen %s --match-full-lines
+
+'use strict';
+
+function f(a: number, b: string): void {}
+
+// A tuple spread is expanded into one PrLoadInst per element, followed by an
+// ordinary direct call. No array is allocated and no builtin is invoked.
+function spread(t: [number, string]): void {
+  f(...t);
+}
+
+// Mixed with an ordinary argument.
+function mixed(t: [string]): void {
+  f(1, ...t);
+}
+
+// An empty tuple still evaluates its source, but contributes no arguments.
+function mk(): [] {
+  return [];
+}
+function emptyTuple(t: [number, string]): void {
+  f(...t, ...mk());
+}
+
+// Auto-generated content below. Please do not modify manually.
+
+// CHECK:scope %VS0 []
+
+// CHECK:function global(): any
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %""(): functionCode
+// CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
+// CHECK-NEXT:  %5 = CallInst [njsf] (:any) %3: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: object
+// CHECK-NEXT:       StoreStackInst %5: any, %1: any
+// CHECK-NEXT:  %7 = LoadStackInst (:any) %1: any
+// CHECK-NEXT:       ReturnInst %7: any
+// CHECK-NEXT:function_end
+
+// CHECK:scope %VS1 [exports: any, f: any, spread: any, mixed: any, mk: any, emptyTuple: any]
+
+// CHECK:function ""(exports: any): any
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %exports: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.exports]: any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %VS1: any, %f(): functionCode
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: object, [%VS1.f]: any
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %VS1: any, %spread(): functionCode
+// CHECK-NEXT:       StoreFrameInst %1: environment, %6: object, [%VS1.spread]: any
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %1: environment, %VS1: any, %mixed(): functionCode
+// CHECK-NEXT:       StoreFrameInst %1: environment, %8: object, [%VS1.mixed]: any
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %1: environment, %VS1: any, %mk(): functionCode
+// CHECK-NEXT:        StoreFrameInst %1: environment, %10: object, [%VS1.mk]: any
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %1: environment, %VS1: any, %emptyTuple(): functionCode
+// CHECK-NEXT:        StoreFrameInst %1: environment, %12: object, [%VS1.emptyTuple]: any
+// CHECK-NEXT:        ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:scope %VS2 [a: any, b: any]
+
+// CHECK:function f(a: number, b: string): any [typed]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:number) %a: number
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: number, [%VS2.a]: any
+// CHECK-NEXT:  %4 = LoadParamInst (:string) %b: string
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: string, [%VS2.b]: any
+// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:scope %VS3 [t: any]
+
+// CHECK:function spread(t: object): any [typed]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:object) %t: object
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [%VS3.t]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %0: environment, [%VS1.f]: any
+// CHECK-NEXT:  %5 = CheckedTypeCastInst (:object) %4: any, type(object)
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [%VS3.t]: any
+// CHECK-NEXT:  %7 = CheckedTypeCastInst (:object) %6: any, type(object)
+// CHECK-NEXT:  %8 = PrLoadInst (:number) %7: object, 0: number, "0": string
+// CHECK-NEXT:  %9 = PrLoadInst (:string) %7: object, 1: number, "1": string
+// CHECK-NEXT:  %10 = CallInst [njsf] (:undefined) %5: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %8: number, %9: string
+// CHECK-NEXT:        ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:scope %VS4 [t: any]
+
+// CHECK:function mixed(t: object): any [typed]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS4: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:object) %t: object
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [%VS4.t]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %0: environment, [%VS1.f]: any
+// CHECK-NEXT:  %5 = CheckedTypeCastInst (:object) %4: any, type(object)
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [%VS4.t]: any
+// CHECK-NEXT:  %7 = CheckedTypeCastInst (:object) %6: any, type(object)
+// CHECK-NEXT:  %8 = PrLoadInst (:string) %7: object, 0: number, "0": string
+// CHECK-NEXT:  %9 = CallInst [njsf] (:undefined) %5: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 1: number, %8: string
+// CHECK-NEXT:        ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:scope %VS5 []
+
+// CHECK:function mk(): any [typed]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS5: any, %0: environment
+// CHECK-NEXT:  %2 = AllocObjectLiteralInst (:object) empty: any
+// CHECK-NEXT:       ReturnInst %2: object
+// CHECK-NEXT:function_end
+
+// CHECK:scope %VS6 [t: any]
+
+// CHECK:function emptyTuple(t: object): any [typed]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS6: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:object) %t: object
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [%VS6.t]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %0: environment, [%VS1.f]: any
+// CHECK-NEXT:  %5 = CheckedTypeCastInst (:object) %4: any, type(object)
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [%VS6.t]: any
+// CHECK-NEXT:  %7 = CheckedTypeCastInst (:object) %6: any, type(object)
+// CHECK-NEXT:  %8 = PrLoadInst (:number) %7: object, 0: number, "0": string
+// CHECK-NEXT:  %9 = PrLoadInst (:string) %7: object, 1: number, "1": string
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) %0: environment, [%VS1.mk]: any
+// CHECK-NEXT:  %11 = CheckedTypeCastInst (:object) %10: any, type(object)
+// CHECK-NEXT:  %12 = CallInst [njsf] (:object) %11: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %13 = CallInst [njsf] (:undefined) %5: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %8: number, %9: string
+// CHECK-NEXT:        ReturnInst undefined: undefined
+// CHECK-NEXT:function_end

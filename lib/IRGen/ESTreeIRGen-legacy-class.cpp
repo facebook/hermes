@@ -711,11 +711,8 @@ Value *ESTreeIRGen::genLegacyDirectSuper(ESTree::CallExpressionNode *call) {
 
   // We don't call into emitCall here because we need to generate the IR for the
   // arguments before generating the IR for the `this` value.
-  bool hasSpread = llvh::any_of(getArguments(call), [](auto &arg) {
-    return llvh::isa<ESTree::SpreadElementNode>(&arg);
-  });
   Value *superRes;
-  if (hasSpread) {
+  if (!canEmitTypedCallArguments(getArguments(call))) {
     auto *args = genArrayFromElements(getArguments(call));
     superRes = genBuiltinCall(
         BuiltinMethod::HermesBuiltin_applyWithNewTarget,
@@ -725,9 +722,7 @@ Value *ESTreeIRGen::genLegacyDirectSuper(ESTree::CallExpressionNode *call) {
          newTarget});
   } else {
     CallInst::ArgumentList args;
-    for (auto &arg : getArguments(call)) {
-      args.push_back(genExpression(&arg));
-    }
+    emitTypedCallArguments(getArguments(call), /* offset */ 0, args);
     auto *thisVal = Builder.createCreateThisInst(callee, newTarget);
     auto *callInst = Builder.createCallInst(
         callee,

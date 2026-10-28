@@ -353,6 +353,34 @@ Spread of an array into an array literal is supported.
 const xs: number[] = [1, 2, ...other];
 ```
 
+### Spread in Calls
+
+Only a tuple can be spread into a call, because only a tuple has a width that
+is known at compile time. The elements are read out individually and passed as
+ordinary arguments, so the call is a direct call, and arity and element types
+are checked as if the elements had been written out by hand.
+
+```
+function f(a: number, b: string): void {}
+const t: [number, string] = [1, "abc"];
+f(...t);          // same as f(t[0], t[1])
+f(...t, ...([]: []));
+```
+
+This works in calls, method calls, `new`, `super()`, `fn.call()` and
+`$SHBuiltin.call()`. In the last two, the `this` argument is consumed
+positionally and cannot itself be a spread.
+
+`Array.push()` is the exception: it is special-cased rather than treated as a
+real function, so it takes an array spread and rejects a tuple one.
+
+An array cannot be spread into a call: its length is not known at compile time,
+so neither is the call's arity. An untyped callee accepts an array spread, but
+not alongside a tuple spread, because tuples are not iterable.
+
+An element whose type needs a checked cast to reach the parameter type is
+rejected, because there is no argument expression to attach the cast to.
+
 ### Overloading
 
 Class methods can be overloaded using the `@Hermes.overload` decoration. Overloaded methods must be final.
@@ -395,8 +423,8 @@ Loose equality (`==` and `!=`) is generally disallowed. To compare two values of
 
 ### Not supported (yet)
 
-* Spread arguments in calls (`f(...args)`).
-* Rest elements in destructuring (`{a, ...rest}`, `[a, ...rest]`).
+* Spreading an array into a call (`f(...args)` where `args` is an array).
+* Rest elements in tuple destructuring (`[a, ...rest]` on a tuple).
 * Spread elements in tuple literals.
 * `async` methods and generator methods.
 * Computed property names in class definitions.

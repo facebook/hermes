@@ -2974,6 +2974,7 @@ class FlowChecker::ExprVisitor {
     // If the callee has no type, we have nothing to do/check.
     if (llvh::isa<AnyType>(calleeType->info)) {
       visitESTreeNodeList(*this, node->_arguments, node, nullptr);
+      checkMixedSpreads(node->_arguments);
       return;
     }
 
@@ -3015,15 +3016,8 @@ class FlowChecker::ExprVisitor {
         if (auto *ftype =
                 llvh::dyn_cast<TypedFunctionType>(field->type->info)) {
           llvh::ArrayRef<TypedFunctionType::Param> params = ftype->getParams();
-          if (shouldVisitArguments) {
-            size_t i = 0;
-            for (ESTree::Node &argNode : node->_arguments) {
-              Type *argConstraint =
-                  i < params.size() ? params[i].type : nullptr;
-              visitESTreeNodeNoReplace(*this, &argNode, node, argConstraint);
-              ++i;
-            }
-          }
+          if (shouldVisitArguments)
+            visitCallArgumentsWithConstraints(node->_arguments, node, params);
           outer_.setNodeType(node, ftype->getReturnType());
           checkCallArgumentTypes(params, node, node->_arguments, "function");
           return;
@@ -3040,6 +3034,7 @@ class FlowChecker::ExprVisitor {
     // If the callee is an untyped function, we have nothing to check.
     if (llvh::isa<UntypedFunctionType>(calleeType->info)) {
       visitESTreeNodeList(*this, node->_arguments, node, nullptr);
+      checkMixedSpreads(node->_arguments);
       outer_.setNodeType(node, outer_.flowContext_.getAny());
       return;
     }
@@ -3056,17 +3051,8 @@ class FlowChecker::ExprVisitor {
       params = nftype->getParams();
     }
 
-    if (shouldVisitArguments) {
-      size_t i = 0;
-      for (ESTree::Node &argNode : node->_arguments) {
-        // Constrain types of arguments before visiting when possible.
-        Type *argConstraint = i < params.size() ? params[i].type : nullptr;
-        // Don't bother with error reporting here, we'll report them later
-        // when we actually try to typecheck the arguments.
-        visitESTreeNodeNoReplace(*this, &argNode, node, argConstraint);
-        ++i;
-      }
-    }
+    if (shouldVisitArguments)
+      visitCallArgumentsWithConstraints(node->_arguments, node, params);
 
     if (auto *ftype = llvh::dyn_cast<TypedFunctionType>(calleeType->info)) {
       Type *expectedThisType = ftype->getThisParam()
@@ -3304,6 +3290,9 @@ class FlowChecker::ExprVisitor {
           call->getSourceRange(), "ft: call requires at least two arguments");
       return;
     }
+    // The callee and 'this' are consumed positionally.
+    if (!checkSpreadInLeadingArgs(call, 2))
+      return;
     ESTree::Node *callee = &*it;
     visitESTreeNode(*this, callee, call, nullptr);
 
@@ -3322,6 +3311,7 @@ class FlowChecker::ExprVisitor {
     if (llvh::isa<AnyType>(calleeType->info)) {
       ++it;
       visitRemainingArgumentsWithoutConstraint();
+      flattenedArgCount(call->_arguments, 2, /* reportErrors */ true);
       return;
     }
     if (!llvh::isa<BaseFunctionType>(calleeType->info)) {
@@ -3345,6 +3335,7 @@ class FlowChecker::ExprVisitor {
     if (!ftype) {
       ++it;
       visitRemainingArgumentsWithoutConstraint();
+      flattenedArgCount(call->_arguments, 2, /* reportErrors */ true);
       outer_.setNodeType(call, outer_.flowContext_.getAny());
       return;
     }
@@ -3358,18 +3349,17 @@ class FlowChecker::ExprVisitor {
       return;
     }
 
-    size_t i = 0;
-    for (auto e = call->_arguments.end(); it != e; ++it) {
-      Type *constraint =
-          i < ftype->getParams().size() ? ftype->getParams()[i].type : nullptr;
-      visitESTreeNodeNoReplace(*this, &*it, call, constraint);
-      ++i;
-    }
+    // Visit thisArg with no parameter constraint (it is bound to 'this',
+    // not to a regular parameter).
+    ESTree::Node *thisArg = &*it;
+    visitESTreeNodeNoReplace(*this, thisArg, call, nullptr);
+
+    visitCallArgumentsWithConstraints(
+        call->_arguments, call, ftype->getParams(), 2);
 
     Type *expectedThisType = ftype->getThisParam()
         ? ftype->getThisParam()
         : outer_.flowContext_.getAny();
-    ESTree::Node *thisArg = &*it;
     Type *thisArgType = outer_.getNodeTypeOrAny(thisArg);
     if (!outer_.canAFlowIntoB(thisArgType->info, expectedThisType->info)
              .canFlow) {
@@ -3389,6 +3379,10 @@ class FlowChecker::ExprVisitor {
       ESTree::CallExpressionNode *call,
       ESTree::Node *fn,
       Type *fnType) {
+    // 'this' is consumed positionally.
+    if (!checkSpreadInLeadingArgs(call, 1))
+      return;
+
     auto it = call->_arguments.begin();
 
     /// Visit the rest of the arguments without any constraints,
@@ -3416,6 +3410,7 @@ class FlowChecker::ExprVisitor {
     // If the receiver is an untyped function, we have nothing to check.
     if (!ftype) {
       visitRemainingArgumentsWithoutConstraint();
+      flattenedArgCount(call->_arguments, 1, /* reportErrors */ true);
       outer_.setNodeType(call, outer_.flowContext_.getAny());
       return;
     }
@@ -3433,16 +3428,10 @@ class FlowChecker::ExprVisitor {
     // not to a regular parameter).
     ESTree::Node *thisArg = &*it;
     visitESTreeNodeNoReplace(*this, thisArg, call, nullptr);
-    ++it;
 
     // Visit remaining args with constraints from the function's parameters.
-    size_t i = 0;
-    for (auto e = call->_arguments.end(); it != e; ++it) {
-      Type *constraint =
-          i < ftype->getParams().size() ? ftype->getParams()[i].type : nullptr;
-      visitESTreeNodeNoReplace(*this, &*it, call, constraint);
-      ++i;
-    }
+    visitCallArgumentsWithConstraints(
+        call->_arguments, call, ftype->getParams(), 1);
 
     Type *expectedThisType = ftype->getThisParam()
         ? ftype->getThisParam()
@@ -3881,8 +3870,10 @@ class FlowChecker::ExprVisitor {
 
     Type *calleeType = outer_.getNodeTypeOrAny(node->_callee);
     // If the callee has no type, we have nothing to do/check.
-    if (llvh::isa<AnyType>(calleeType->info))
+    if (llvh::isa<AnyType>(calleeType->info)) {
+      checkMixedSpreads(node->_arguments);
       return;
+    }
 
     if (!llvh::isa<ClassConstructorType>(calleeType->info)) {
       outer_.sm_.error(
@@ -3957,6 +3948,135 @@ class FlowChecker::ExprVisitor {
     }
   }
 
+  /// \param reportErrors false to check silently, for overload resolution.
+  /// \return the number of call arguments \p arg contributes. A spread of a
+  ///   tuple contributes one argument per tuple element, since it is expanded
+  ///   statically; anything else contributes one. Reports an error and returns
+  ///   None for a spread that cannot be expanded statically.
+  OptValue<size_t> spreadWidth(ESTree::Node *arg, bool reportErrors) {
+    auto *spread = llvh::dyn_cast<ESTree::SpreadElementNode>(arg);
+    if (!spread)
+      return 1;
+
+    Type *spreadTy = outer_.getNodeTypeOrAny(spread->_argument);
+    if (auto *tupleTy = llvh::dyn_cast<TupleType>(spreadTy->info))
+      return tupleTy->getTypes().size();
+
+    if (reportErrors) {
+      // An array's length is not known statically, so the call's arity would
+      // be unknown and the arguments could not be read out individually.
+      if (outer_.flowContext_.isArrayClassType(spreadTy)) {
+        outer_.sm_.error(
+            spread->getSourceRange(),
+            "ft: cannot spread an array into a call, because its length is "
+            "not known at compile time; use a tuple");
+      } else {
+        outer_.sm_.error(
+            spread->getSourceRange(), "ft: spread argument must be a tuple");
+      }
+    }
+    return llvh::None;
+  }
+
+  /// Report an error if \p arguments spread a tuple alongside a spread that
+  /// cannot be expanded statically. IRGen then builds the whole argument list
+  /// dynamically, through the iterator protocol, and a tuple is not iterable.
+  void checkMixedSpreads(ESTree::NodeList &arguments) {
+    ESTree::Node *tupleSpread = nullptr;
+    bool hasOtherSpread = false;
+    for (ESTree::Node &arg : arguments) {
+      auto *spread = llvh::dyn_cast<ESTree::SpreadElementNode>(&arg);
+      if (!spread)
+        continue;
+      if (llvh::isa<TupleType>(
+              outer_.getNodeTypeOrAny(spread->_argument)->info))
+        tupleSpread = tupleSpread ? tupleSpread : spread;
+      else
+        hasOtherSpread = true;
+    }
+    if (tupleSpread && hasOtherSpread) {
+      outer_.sm_.error(
+          tupleSpread->getSourceRange(),
+          "ft: cannot spread a tuple alongside a spread that is not a tuple");
+    }
+  }
+
+  /// Visit the call arguments in \p arguments, skipping the first \p offset,
+  /// constraining each to the type of the parameter it will be passed to.
+  /// A spread element has no single parameter, so it is visited without a
+  /// constraint and advances the parameter index by the number of arguments
+  /// it contributes.
+  /// Errors are not reported here; checkCallArgumentTypes() reports them when
+  /// it typechecks the arguments.
+  void visitCallArgumentsWithConstraints(
+      ESTree::NodeList &arguments,
+      ESTree::Node *callNode,
+      llvh::ArrayRef<TypedFunctionType::Param> params,
+      uint32_t offset = 0) {
+    auto it = arguments.begin();
+    std::advance(it, offset);
+    size_t i = 0;
+    for (auto e = arguments.end(); it != e; ++it) {
+      bool isSpread = llvh::isa<ESTree::SpreadElementNode>(&*it);
+      Type *argConstraint =
+          !isSpread && i < params.size() ? params[i].type : nullptr;
+      visitESTreeNodeNoReplace(*this, &*it, callNode, argConstraint);
+      // A spread's width is only known once it has been visited.
+      OptValue<size_t> width = spreadWidth(&*it, /* reportErrors */ false);
+      i += width ? *width : 1;
+    }
+  }
+
+  /// \return the number of arguments in \p arguments, skipping the first
+  ///   \p offset, with tuple spread elements expanded to their element count.
+  ///   None if a spread cannot be expanded statically, in which case an error
+  ///   was reported when \p reportErrors.
+  /// The paths that return without typechecking their arguments call this and
+  /// discard the result, purely to report those errors: that is what lets
+  /// IRGen assume every surviving spread is a spread of a tuple.
+  OptValue<size_t> flattenedArgCount(
+      ESTree::NodeList &arguments,
+      uint32_t offset,
+      bool reportErrors) {
+    size_t numArgs = 0;
+    for (ESTree::Node &arg : arguments) {
+      if (offset) {
+        --offset;
+        continue;
+      }
+      OptValue<size_t> width = spreadWidth(&arg, reportErrors);
+      if (!width)
+        return llvh::None;
+      numArgs += *width;
+    }
+    return numArgs;
+  }
+
+  /// Report an error if any of the first \p argCountToNotAllowSpreads arguments
+  /// of \p call is a spread element. Those slots are consumed positionally as
+  /// the callee or 'this', so they cannot be expanded. On error, recover by
+  /// visiting the arguments unconstrained and typing the call as 'any'.
+  ///
+  /// \return false if an error was reported.
+  bool checkSpreadInLeadingArgs(
+      ESTree::CallExpressionNode *call,
+      uint32_t argCountToNotAllowSpreads) {
+    auto it = call->_arguments.begin();
+    for (uint32_t i = 0;
+         i < argCountToNotAllowSpreads && it != call->_arguments.end();
+         ++i, ++it) {
+      if (!llvh::isa<ESTree::SpreadElementNode>(&*it))
+        continue;
+      outer_.sm_.error(
+          it->getSourceRange(),
+          "ft: spread element not allowed in this argument position");
+      visitESTreeNodeList(*this, call->_arguments, call, nullptr);
+      outer_.setNodeType(call, outer_.flowContext_.getAny());
+      return false;
+    }
+    return true;
+  }
+
   /// Check the types of the supplied arguments, adding checked casts if
   /// needed. If \p reportErrors is false, silently check without emitting
   /// errors or inserting casts.
@@ -3969,7 +4089,15 @@ class FlowChecker::ExprVisitor {
       const llvh::Twine &calleeName,
       uint32_t offset = 0,
       bool reportErrors = true) {
-    size_t numArgs = arguments.size() - offset;
+    auto begin = arguments.begin();
+    std::advance(begin, offset);
+
+    OptValue<size_t> flatCount =
+        flattenedArgCount(arguments, offset, reportErrors);
+    if (!flatCount)
+      return false;
+    size_t numArgs = *flatCount;
+
     bool hasRest = !params.empty() && params.back().rest;
     size_t numNonRestParams = hasRest ? params.size() - 1 : params.size();
 
@@ -4028,66 +4156,93 @@ class FlowChecker::ExprVisitor {
       return false;
     }
 
-    auto begin = arguments.begin();
-    std::advance(begin, offset);
-
-    // Check the type of each argument.
+    // argIndex counts flattened arguments, so it advances by the element
+    // count across a tuple spread.
     size_t argIndex = 0;
-    for (auto it = begin, e = arguments.end(); it != e; ++argIndex, ++it) {
-      ESTree::Node *arg = &*it;
 
-      if (llvh::isa<ESTree::SpreadElementNode>(arg)) {
-        if (reportErrors) {
-          outer_.sm_.error(
-              arg->getSourceRange(), "ft: argument spread is not supported");
-        }
-        return false;
-      }
+    /// Check one flattened argument of type \p argType against the parameter
+    /// it is passed to, and consume its index. Errors are reported at \p loc.
+    /// \param castIt the argument to replace if a checked cast is needed, or
+    ///   nullptr if there is no argument node to hold the cast, which is the
+    ///   case for a tuple spread element.
+    /// \return false if an error was reported.
+    auto checkOne = [this,
+                     &arguments,
+                     &params,
+                     &argIndex,
+                     &calleeName,
+                     numNonRestParams,
+                     restElementType,
+                     reportErrors](
+                        Type *argType,
+                        llvh::SMRange loc,
+                        ESTree::NodeList::iterator *castIt) -> bool {
+      // A rest param without an Array<T> type is not checked.
+      Type *expectedType =
+          argIndex < numNonRestParams ? params[argIndex].type : restElementType;
+      size_t paramIndex = argIndex++;
+      if (!expectedType)
+        return true;
 
-      Type *expectedType;
-      if (argIndex < numNonRestParams) {
-        expectedType = params[argIndex].type;
-      } else if (restElementType) {
-        expectedType = restElementType;
-      } else {
-        // Rest param without Array<T> type, skip checking.
-        continue;
-      }
-
-      Type *argType = outer_.getNodeTypeOrAny(arg);
       auto [argTypeNarrow, cf] = outer_.tryNarrowType(argType, expectedType);
-
       if (!cf.canFlow) {
         if (reportErrors) {
           std::string argTypeStr = argType->messageString();
           std::string expectedTypeStr = expectedType->messageString();
-          if (argIndex < numNonRestParams && params[argIndex].name.isValid()) {
+          if (paramIndex < numNonRestParams &&
+              params[paramIndex].name.isValid()) {
             outer_.sm_.error(
-                arg->getSourceRange(),
+                loc,
                 "ft: " + calleeName + " parameter '" +
-                    params[argIndex].name.str() +
+                    params[paramIndex].name.str() +
                     "' type mismatch: cannot assign " + argTypeStr + " to " +
                     expectedTypeStr);
           } else {
             outer_.sm_.error(
-                arg->getSourceRange(),
+                loc,
                 "ft: " + calleeName + " parameter #" +
-                    llvh::Twine(argIndex + 1) +
+                    llvh::Twine(paramIndex + 1) +
                     " type mismatch: cannot assign " + argTypeStr + " to " +
                     expectedTypeStr);
           }
         }
         return false;
       }
-      // If a cast is needed, replace the argument with the cast.
-      if (reportErrors && cf.needCheckedCast && outer_.compile_) {
-        // Insert the new node before the current node and erase the
-        // current one.
-        auto newIt = arguments.insert(
-            it, *outer_.implicitCheckedCast(arg, argTypeNarrow, cf));
-        arguments.erase(it);
-        it = newIt;
+
+      if (!cf.needCheckedCast)
+        return true;
+      if (!castIt) {
+        if (reportErrors) {
+          outer_.sm_.error(
+              loc, "ft: spread element with checked cast not supported");
+        }
+        return false;
       }
+      // Insert the cast before the current node and erase the current one.
+      if (reportErrors && outer_.compile_) {
+        auto newIt = arguments.insert(
+            *castIt, *outer_.implicitCheckedCast(&**castIt, argTypeNarrow, cf));
+        arguments.erase(*castIt);
+        *castIt = newIt;
+      }
+      return true;
+    };
+
+    for (auto it = begin, e = arguments.end(); it != e; ++it) {
+      // A spread of a tuple is expanded statically into one argument per
+      // element. IRGen loads the elements directly, so there is no argument
+      // node on which to hang a checked cast.
+      if (auto *spread = llvh::dyn_cast<ESTree::SpreadElementNode>(&*it)) {
+        auto *tupleTy = llvh::cast<TupleType>(
+            outer_.getNodeTypeOrAny(spread->_argument)->info);
+        for (Type *elemType : tupleTy->getTypes())
+          if (!checkOne(elemType, spread->getSourceRange(), nullptr))
+            return false;
+        continue;
+      }
+
+      if (!checkOne(outer_.getNodeTypeOrAny(&*it), it->getSourceRange(), &it))
+        return false;
     }
 
     return true;

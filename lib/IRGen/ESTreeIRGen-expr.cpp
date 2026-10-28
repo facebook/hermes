@@ -437,11 +437,17 @@ void ESTreeIRGen::genFastArrayPush(Value *array, ESTree::Node &arg) {
   }
 
   auto *spread = llvh::cast<ESTree::SpreadElementNode>(&arg);
-  // TODO: Support spreading non-arrays.
-  assert(
-      flowContext_.isArrayClassType(
-          flowContext_.getNodeTypeOrAny(spread->_argument)) &&
-      "Spread argument must be an array.");
+
+  // Array.push() is typed as 'any', so the FlowChecker does not check its
+  // arguments at all and anything can reach us here. Spreading a tuple will
+  // work on its own once push() is a real function instead of a special case.
+  // TODO: Represent Array.push() as a real function.
+  if (!flowContext_.isArrayClassType(
+          flowContext_.getNodeTypeOrAny(spread->_argument))) {
+    Mod->getContext().getSourceErrorManager().error(
+        spread->getSourceRange(), "spread argument must be an array");
+    return;
+  }
 
   auto *elems = genExpression(spread->_argument);
   // Append the elements from the spread argument to the target array.
@@ -806,30 +812,34 @@ Value *ESTreeIRGen::genSHBuiltin(
 }
 
 Value *ESTreeIRGen::genSHBuiltinCall(ESTree::CallExpressionNode *call) {
-  llvh::SmallVector<Value *, 4> args{};
-  Value *callee = nullptr;
-  Value *thisValue = nullptr;
-
-  for (ESTree::Node &arg : call->_arguments) {
-    Value *argVal = genExpression(&arg);
-    if (!callee) {
-      // First, fill the callee (required).
-      callee = argVal;
-    } else if (!thisValue) {
-      // Then, fill the thisValue (required).
-      thisValue = argVal;
-    } else {
-      // Any remaining args are passed through to the function.
-      args.push_back(argVal);
-    }
-  }
-
-  if (!thisValue) {
+  if (call->_arguments.size() < 2) {
     Mod->getContext().getSourceErrorManager().error(
         call->getSourceRange(),
         "SH builtin 'call' requires at least 2 arguments");
     return Builder.getLiteralUndefined();
   }
+
+  // $SHBuiltin is recognized in untyped code too, where the FlowChecker never
+  // runs, so this must be a diagnostic rather than an assert. The first two
+  // arguments are consumed positionally, so neither the callee nor 'this' may
+  // be a spread.
+  auto it = call->_arguments.begin();
+  ESTree::Node *calleeNode = &*it++;
+  ESTree::Node *thisNode = &*it;
+  if (llvh::isa<ESTree::SpreadElementNode>(calleeNode) ||
+      llvh::isa<ESTree::SpreadElementNode>(thisNode) ||
+      !canEmitTypedCallArguments(call->_arguments)) {
+    Mod->getContext().getSourceErrorManager().error(
+        call->getSourceRange(),
+        "unsupported spread argument in $SHBuiltin.call");
+    return Builder.getLiteralUndefined();
+  }
+
+  Value *callee = genExpression(calleeNode);
+  Value *thisValue = genExpression(thisNode);
+  // Any remaining args are passed through to the function.
+  CallInst::ArgumentList args;
+  emitTypedCallArguments(call->_arguments, /* offset */ 2, args);
 
   return Builder.createCallInst(
       callee, /* newTarget */ Builder.getLiteralUndefined(), thisValue, args);
@@ -858,19 +868,22 @@ Value *ESTreeIRGen::genSHBuiltinObjectProps(
 Value *ESTreeIRGen::genTypedFunctionPrototypeCall(
     ESTree::CallExpressionNode *call,
     ESTree::MemberExpressionNode *mem) {
+  // The 'this' argument is consumed positionally, so it may not be a spread.
+  assert(
+      canEmitTypedCallArguments(call->_arguments) &&
+      (call->_arguments.empty() ||
+       !llvh::isa<ESTree::SpreadElementNode>(&call->_arguments.front())) &&
+      "unexpandable spread should have been rejected by the typechecker");
+
   Value *callee = genExpression(mem->_object);
   Value *thisValue = Builder.getLiteralUndefined();
-  llvh::SmallVector<Value *, 4> args{};
-  bool sawThis = false;
-  for (ESTree::Node &arg : call->_arguments) {
-    Value *v = genExpression(&arg);
-    if (!sawThis) {
-      thisValue = v;
-      sawThis = true;
-    } else {
-      args.push_back(v);
-    }
+  uint32_t offset = 0;
+  if (!call->_arguments.empty()) {
+    thisValue = genExpression(&call->_arguments.front());
+    offset = 1;
   }
+  CallInst::ArgumentList args;
+  emitTypedCallArguments(call->_arguments, offset, args);
   return Builder.createCallInst(
       callee,
       /* newTarget */ Builder.getLiteralUndefined(),
@@ -970,6 +983,49 @@ Value *ESTreeIRGen::genSHBuiltinImport(ESTree::CallExpressionNode *call) {
   return genExpression(importExp);
 }
 
+bool ESTreeIRGen::canEmitTypedCallArguments(ESTree::NodeList &arguments) {
+  for (ESTree::Node &arg : arguments) {
+    auto *spread = llvh::dyn_cast<ESTree::SpreadElementNode>(&arg);
+    if (spread &&
+        !llvh::isa<flow::TupleType>(
+            flowContext_.getNodeTypeOrAny(spread->_argument)->info))
+      return false;
+  }
+  return true;
+}
+
+void ESTreeIRGen::emitTypedCallArguments(
+    ESTree::NodeList &arguments,
+    uint32_t offset,
+    CallInst::ArgumentList &args) {
+  auto it = arguments.begin();
+  std::advance(it, offset);
+  for (auto e = arguments.end(); it != e; ++it) {
+    auto *spread = llvh::dyn_cast<ESTree::SpreadElementNode>(&*it);
+    if (!spread) {
+      args.push_back(genExpression(&*it));
+      continue;
+    }
+
+    // A tuple is an object with the properties "0", "1", ..., so read each
+    // element out with a PrLoadInst, exactly as a tuple member access does.
+    // Evaluate the tuple itself exactly once, even if it is empty and
+    // contributes no arguments.
+    auto *tupleType = llvh::cast<flow::TupleType>(
+        flowContext_.getNodeTypeOrAny(spread->_argument)->info);
+    Value *tuple = genExpression(spread->_argument);
+    uint32_t index = 0;
+    for (flow::Type *elemType : tupleType->getTypes()) {
+      args.push_back(Builder.createPrLoadInst(
+          tuple,
+          index,
+          Builder.getLiteralString(llvh::Twine(index)),
+          flowTypeToIRType(elemType)));
+      ++index;
+    }
+  }
+}
+
 Value *ESTreeIRGen::emitCall(
     ESTree::CallExpressionLikeNode *call,
     Value *callee,
@@ -978,18 +1034,9 @@ Value *ESTreeIRGen::emitCall(
     Value *thisVal,
     Value *newTarget,
     flow::BaseFunctionType *calleeFuncType) {
-  bool hasSpread = false;
-  for (auto &arg : getArguments(call)) {
-    if (llvh::isa<ESTree::SpreadElementNode>(&arg)) {
-      hasSpread = true;
-    }
-  }
-
-  if (!hasSpread) {
+  if (canEmitTypedCallArguments(getArguments(call))) {
     CallInst::ArgumentList args;
-    for (auto &arg : getArguments(call)) {
-      args.push_back(genExpression(&arg));
-    }
+    emitTypedCallArguments(getArguments(call), /* offset */ 0, args);
 
     auto *callInst = Builder.createCallInst(
         callee,
@@ -1016,8 +1063,8 @@ Value *ESTreeIRGen::emitCall(
     return callInst;
   }
 
-  // Otherwise, there exists a spread argument, so the number of arguments
-  // is variable.
+  // Otherwise, there exists a spread argument that cannot be expanded
+  // statically, so the number of arguments is variable.
   // Generate IR for this by creating an array and populating it with the
   // arguments.
   auto *args = genArrayFromElements(getArguments(call));
@@ -1036,18 +1083,8 @@ Value *ESTreeIRGen::emitNativeCall(
     flow::NativeFunctionType *natFuncType) {
   Value *callee = genExpression(call->_callee);
 
-  llvh::SmallVector<Value *, 4> args{};
-  for (auto &arg : getArguments(call)) {
-    if (llvh::isa<ESTree::SpreadElementNode>(&arg)) {
-      // TODO: this should have been rejected by the typechecker.
-      Mod->getContext().getSourceErrorManager().error(
-          call->getSourceRange(),
-          "spread arguments are not supported for native functions");
-      return Builder.getLiteralUndefined();
-    }
-
-    args.push_back(genExpression(&arg));
-  }
+  CallInst::ArgumentList args;
+  emitTypedCallArguments(getArguments(call), /* offset */ 0, args);
 
   return Builder.createNativeCallInst(
       flowTypeToIRType(natFuncType->getReturnType()),
@@ -1082,9 +1119,7 @@ Value *ESTreeIRGen::genBuiltinMethodCall(
   // Generate the arguments.
   Value *receiver = genExpression(memExpr->_object);
   CallInst::ArgumentList args;
-  for (auto &arg : call->_arguments) {
-    args.push_back(genExpression(&arg));
-  }
+  emitTypedCallArguments(call->_arguments, /* offset */ 0, args);
 
   // Find the function based on the closure creation.
   Function *func = nullptr;
@@ -3316,18 +3351,15 @@ Value *ESTreeIRGen::genNewExpr(ESTree::NewExpressionNode *N) {
 
   Value *callee = genExpression(N->_callee);
 
-  bool hasSpread = false;
-  for (auto &arg : N->_arguments) {
-    if (llvh::isa<ESTree::SpreadElementNode>(&arg)) {
-      hasSpread = true;
-    }
-  }
+  bool canEmitTypedArgs = canEmitTypedCallArguments(N->_arguments);
 
   // Is this a statically typed new?
   if (auto *consType = llvh::dyn_cast<flow::ClassConstructorType>(
           flowContext_.getNodeTypeOrAny(N->_callee)->info)) {
     flow::ClassType *classType = consType->getClassTypeInfo();
-    assert(!hasSpread && "statically typed spread is not supported");
+    assert(
+        canEmitTypedArgs &&
+        "unexpandable spread should have been rejected by the typechecker");
 
     // If we know the ClassType but it hasn't been populated in
     // classConstructors_ yet, then it must occur later in the same function.
@@ -3359,12 +3391,12 @@ Value *ESTreeIRGen::genNewExpr(ESTree::NewExpressionNode *N) {
     // Call the constructor, if necessary. There is always a constructor,
     // either explicit or implicit. We must invoke it if it has an explicit
     // type, performs field initializations, or has a super class to forward
-    // to.
+    // to. An implicit constructor takes no arguments, so there is nothing to
+    // evaluate when the call is skipped.
     if (classType->getConstructorType() || classType->getSuperClass() ||
         (classFieldInitInfo_.find(classType) != classFieldInitInfo_.end())) {
       CallInst::ArgumentList args;
-      for (auto &arg : N->_arguments)
-        args.push_back(genExpression(&arg));
+      emitTypedCallArguments(N->_arguments, /* offset */ 0, args);
 
       Function *target = it->second.constructorFunc;
       Builder.createCallInst(
@@ -3379,18 +3411,16 @@ Value *ESTreeIRGen::genNewExpr(ESTree::NewExpressionNode *N) {
     return newInst;
   }
 
-  if (!hasSpread) {
+  if (canEmitTypedArgs) {
     CallInst::ArgumentList args;
-    for (auto &arg : N->_arguments) {
-      args.push_back(genExpression(&arg));
-    }
+    emitTypedCallArguments(N->_arguments, /* offset */ 0, args);
     auto *thisArg = Builder.createCreateThisInst(callee, callee);
     auto *res = Builder.createCallInst(callee, callee, thisArg, args);
     return Builder.createGetConstructedObjectInst(thisArg, res);
   }
 
-  // Otherwise, there exists a spread argument, so the number of arguments
-  // is variable.
+  // Otherwise, there exists a spread argument that cannot be expanded
+  // statically, so the number of arguments is variable.
   // Generate IR for this by creating an array and populating it with the
   // arguments, then calling HermesInternal.apply.
   auto *args = genArrayFromElements(N->_arguments);

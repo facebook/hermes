@@ -3890,12 +3890,41 @@ bool FlowChecker::inferPlaceholdersFromCallArgs(
 
   // Snapshot which constraints are simple (direct InferencePlaceholder),
   // since pass 1 will mutate them.
-  size_t numCallArgs = callArgs.size();
-  llvh::BitVector isSimple(std::max(numCallArgs, callArgConstraints.size()));
+  llvh::BitVector isSimple(callArgConstraints.size());
   for (size_t i = 0, e = callArgConstraints.size(); i < e; ++i) {
     if (callArgConstraints[i] &&
         llvh::isa<InferencePlaceholderType>(callArgConstraints[i]->info))
       isSimple.set(i);
+  }
+  auto constraintAt = [&callArgConstraints](size_t paramIdx) -> Type * {
+    return paramIdx < callArgConstraints.size() ? callArgConstraints[paramIdx]
+                                                : nullptr;
+  };
+
+  // A tuple spread supplies one argument per element, so record the index of
+  // the param each call argument starts at. A spread's width is only known
+  // once it has been typed, so visit spreads first, unconstrained, and match
+  // their element types against the params they supply directly.
+  // Any other spread counts as one argument; checkCallArgumentTypes() rejects
+  // it after inference.
+  llvh::SmallVector<size_t, 4> firstParamIdx;
+  size_t numFlatArgs = 0;
+  for (ESTree::Node &arg : callArgs) {
+    firstParamIdx.push_back(numFlatArgs);
+    auto *spread = llvh::dyn_cast<ESTree::SpreadElementNode>(&arg);
+    if (!spread) {
+      ++numFlatArgs;
+      continue;
+    }
+    visitExpression(spread, callNode, nullptr);
+    auto *tupleTy =
+        llvh::dyn_cast<TupleType>(getNodeTypeOrAny(spread->_argument)->info);
+    if (!tupleTy) {
+      ++numFlatArgs;
+      continue;
+    }
+    for (Type *elemType : tupleTy->getTypes())
+      matchConstraintToType(constraintAt(numFlatArgs++), elemType);
   }
 
   // Pass 1: visit arguments with simple placeholder constraints (bare T).
@@ -3905,12 +3934,13 @@ bool FlowChecker::inferPlaceholdersFromCallArgs(
   {
     size_t argIdx = 0;
     for (ESTree::Node &arg : callArgs) {
-      if (isSimple[argIdx])
-        visitExpression(&arg, callNode, callArgConstraints[argIdx]);
-      ++argIdx;
+      size_t paramIdx = firstParamIdx[argIdx++];
+      if (!llvh::isa<ESTree::SpreadElementNode>(&arg) &&
+          paramIdx < isSimple.size() && isSimple[paramIdx])
+        visitExpression(&arg, callNode, callArgConstraints[paramIdx]);
     }
     // Infer void for simple placeholder params with no corresponding arg.
-    for (size_t i = numCallArgs, e = callArgConstraints.size(); i < e; ++i) {
+    for (size_t i = numFlatArgs, e = callArgConstraints.size(); i < e; ++i) {
       if (isSimple[i])
         callArgConstraints[i]->info = flowContext_.getVoidInfo();
     }
@@ -3920,13 +3950,10 @@ bool FlowChecker::inferPlaceholdersFromCallArgs(
   {
     size_t argIdx = 0;
     for (ESTree::Node &arg : callArgs) {
-      if (!isSimple[argIdx]) {
-        Type *constraint = argIdx < callArgConstraints.size()
-            ? callArgConstraints[argIdx]
-            : nullptr;
-        visitExpression(&arg, callNode, constraint);
-      }
-      ++argIdx;
+      size_t paramIdx = firstParamIdx[argIdx++];
+      if (!llvh::isa<ESTree::SpreadElementNode>(&arg) &&
+          !(paramIdx < isSimple.size() && isSimple[paramIdx]))
+        visitExpression(&arg, callNode, constraintAt(paramIdx));
     }
   }
 

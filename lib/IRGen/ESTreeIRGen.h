@@ -1066,6 +1066,25 @@ class ESTreeIRGen {
   /// For now, this just evaluates to the third argument of \p call.
   Value *genSHBuiltinImport(ESTree::CallExpressionNode *call);
 
+  /// \return true if every spread element in \p arguments spreads a tuple, and
+  ///   so the argument list can be expanded statically by
+  ///   emitTypedCallArguments(). Note that a list without any spread element
+  ///   trivially satisfies this.
+  bool canEmitTypedCallArguments(ESTree::NodeList &arguments);
+
+  /// Generate the values of \p arguments into \p args, skipping the first
+  /// \p offset arguments. A spread of a tuple is expanded statically into one
+  /// PrLoadInst per tuple element; this is the only form of spread supported,
+  /// since a tuple is the only spreadable value whose width is known at
+  /// compile time.
+  /// \pre every argument at or after \p offset that is a spread element
+  ///   spreads a tuple, and none of the first \p offset arguments is a spread
+  ///   element, since those are consumed positionally by the caller.
+  void emitTypedCallArguments(
+      ESTree::NodeList &arguments,
+      uint32_t offset,
+      CallInst::ArgumentList &args);
+
   /// Emits the actual call for \p call, and is used as a helper function for
   /// genCallExpr and genOptionalCallExpr.
   /// \param newTarget the new.target, undefined if not a constructor call.
