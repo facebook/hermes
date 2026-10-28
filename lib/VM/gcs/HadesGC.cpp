@@ -1303,8 +1303,6 @@ HadesGC::HadesGC(
 
 HadesGC::~HadesGC() {
   crashMgr_->removeCustomData("HermesGC");
-  // finalizeAll calls waitForCollectionToFinish, so there should be no ongoing
-  // collection.
   assert(
       concurrentPhase_ == Phase::None &&
       "Must call finalizeAll before destructor.");
@@ -1631,9 +1629,10 @@ void HadesGC::oldGenCollection(std::string cause, bool forceCompaction) {
   // 64-bit system: 64-bit HermesValues can be updated in one atomic
   // instruction. Start up a separate thread for doing marking work.
   // NOTE: Since the "this" value (the HadesGC instance) is copied to the
-  // executor, the GC cannot be destructed until the new thread completes. This
-  // means that before destroying the GC, waitForCollectionToFinish must be
-  // called.
+  // executor, the task must not outlive the GC. finalizeAll() ends any ongoing
+  // collection, so a task that is still queued, or paused on ogPauseCondVar_,
+  // at that point does no more work. When ~HadesGC destroys
+  // backgroundExecutor_, ~Executor runs any queued task and joins the thread.
   collectOGInBackground();
   // Use concurrentPhase_ to be able to tell when the collection finishes.
 }
