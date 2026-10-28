@@ -934,7 +934,8 @@ void ClassType::init(
     Type *homeObjectType,
     Type *staticObjectType,
     Type *superClass,
-    size_t numLayoutSlots) {
+    size_t numLayoutSlots,
+    Type *classConsType) {
   fields_.reserve(fields.size());
   fields_.append(fields.begin(), fields.end());
 
@@ -943,6 +944,7 @@ void ClassType::init(
   staticObjectType_ = staticObjectType;
   superClass_ = superClass;
   numLayoutSlots_ = numLayoutSlots;
+  classConsType_ = classConsType;
 
   if (superClass) {
     auto *superClassInfo = llvh::cast_or_null<ClassType>(superClass_->info);

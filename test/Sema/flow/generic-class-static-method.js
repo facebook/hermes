@@ -7,8 +7,9 @@
 
 // RUN: %shermes -fno-std-globals -typed -dump-sema %s | %FileCheckOrRegen %s --match-full-lines
 
-// Static members on generic classes should see type parameters as empty,
-// since it's not possible to write e.g. Foo<number>.bar().
+// Static members on generic classes are reached without type arguments, so
+// they can't reference the type parameters (see
+// class-static-type-param-error.js).
 
 class Foo<T> {
   x: T;
@@ -16,12 +17,12 @@ class Foo<T> {
     return this.x;
   }
   static static_method(): void {
-    let y: T;
+    let y: number;
   }
-  static static_returns_t(): T {
+  static static_returns_number(): number {
     return (1: any);
   }
-  static static_prop: T;
+  static static_prop: number;
 }
 
 let f = new Foo<number>();
@@ -38,14 +39,14 @@ f.instance_method();
 // CHECK-NEXT:%class_constructor.3 = class_constructor(%class.2)
 // CHECK-NEXT:%function.4 = function(this: %class.2): number
 // CHECK-NEXT:%function.5 = function(this: %class_constructor.3): void
-// CHECK-NEXT:%function.6 = function(this: %class_constructor.3): empty
+// CHECK-NEXT:%function.6 = function(this: %class_constructor.3): number
 // CHECK-NEXT:%class.7 = class( {
 // CHECK-NEXT:  instance_method [final]: %function.4
 // CHECK-NEXT:})
 // CHECK-NEXT:%class.8 = class( {
 // CHECK-NEXT:  static_method [final]: %function.5
-// CHECK-NEXT:  static_returns_t [final]: %function.6
-// CHECK-NEXT:  static_prop: empty
+// CHECK-NEXT:  static_returns_number [final]: %function.6
+// CHECK-NEXT:  static_prop: number
 // CHECK-NEXT:})
 
 // CHECK:SemContext
@@ -59,7 +60,7 @@ f.instance_method();
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:        Scope %s.3
 // CHECK-NEXT:            Decl %d.6 'static_method' Const
-// CHECK-NEXT:            Decl %d.7 'static_returns_t' Const
+// CHECK-NEXT:            Decl %d.7 'static_returns_number' Const
 // CHECK-NEXT:            Decl %d.8 'static_prop' Const
 // CHECK-NEXT:    Func strict noImplicitReturn
 // CHECK-NEXT:        Scope %s.4
@@ -78,7 +79,7 @@ f.instance_method();
 // CHECK-NEXT:            Decl %d.13 'arguments' Var Arguments
 // CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.9
-// CHECK-NEXT:            Decl %d.14 'y' Let : empty
+// CHECK-NEXT:            Decl %d.14 'y' Let : number
 // CHECK-NEXT:            Decl %d.15 'arguments' Var Arguments
 // CHECK-NEXT:    Func strict noImplicitReturn
 // CHECK-NEXT:        Scope %s.10
@@ -112,14 +113,14 @@ f.instance_method();
 // CHECK-NEXT:                                VariableDeclarator
 // CHECK-NEXT:                                    Id 'y' [D:E:%d.14 'y']
 // CHECK-NEXT:                MethodDefinition : %function.6
-// CHECK-NEXT:                    Id 'static_returns_t' [D:E:%d.7 'static_returns_t']
+// CHECK-NEXT:                    Id 'static_returns_number' [D:E:%d.7 'static_returns_number']
 // CHECK-NEXT:                    FunctionExpression : %function.6
 // CHECK-NEXT:                        BlockStatement
 // CHECK-NEXT:                            ReturnStatement
-// CHECK-NEXT:                                ImplicitCheckedCast : empty
+// CHECK-NEXT:                                ImplicitCheckedCast : number
 // CHECK-NEXT:                                    TypeCastExpression : any
 // CHECK-NEXT:                                        NumericLiteral : 1
-// CHECK-NEXT:                ClassProperty : empty
+// CHECK-NEXT:                ClassProperty : number
 // CHECK-NEXT:                    Id 'static_prop' [D:E:%d.8 'static_prop']
 // CHECK-NEXT:        ClassDeclaration Scope %s.2
 // CHECK-NEXT:            Id 'Foo' [D:E:%d.2 'Foo']
@@ -144,7 +145,7 @@ f.instance_method();
 // CHECK-NEXT:                                VariableDeclarator
 // CHECK-NEXT:                                    Id 'y' [D:E:%d.10 'y']
 // CHECK-NEXT:                MethodDefinition
-// CHECK-NEXT:                    Id 'static_returns_t'
+// CHECK-NEXT:                    Id 'static_returns_number'
 // CHECK-NEXT:                    FunctionExpression
 // CHECK-NEXT:                        BlockStatement
 // CHECK-NEXT:                            ReturnStatement

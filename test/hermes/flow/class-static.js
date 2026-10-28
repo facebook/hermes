@@ -113,3 +113,121 @@ print(Counter.next());
 // CHECK-NEXT: 1
 print(Counter.next());
 // CHECK-NEXT: 2
+
+// Test writing a static private field, in every form.
+class W {
+  static #n: number = 1;
+  static bump(): void {
+    W.#n = 5;
+    W.#n += 10;
+    W.#n++;
+  }
+  @Hermes.final static get val(): number {
+    return W.#n;
+  }
+  @Hermes.final static set val(v: number) {
+    W.#n = v;
+  }
+}
+print("static private writes");
+// CHECK-LABEL: static private writes
+W.bump();
+print(W.val);
+// CHECK-NEXT: 16
+W.val = 7;
+print(W.val);
+// CHECK-NEXT: 7
+
+// Static fields are default-initialized before any initializer runs, so a
+// reference to a field declared later reads the default, matching the way
+// instance fields behave. The same holds through 'this' and private names.
+class FR {
+  static a: number = FR.b;
+  static s: string = FR.t;
+  static #x: number = this.#y;
+  static b: number = 1;
+  static t: string = 'hi';
+  static #y: number = 2;
+  static get(): string {
+    return `${FR.a},${FR.s},${FR.#x},${FR.b},${FR.t},${FR.#y}`;
+  }
+}
+print("static forward ref");
+// CHECK-LABEL: static forward ref
+print(FR.get());
+// CHECK-NEXT: 0,,0,1,hi,2
+
+// The defaults are stored at the top of the scope, but the initializer runs at
+// the class declaration, so it sees the effects of preceding code.
+let tick: number = 0;
+function bump(): number {
+  tick = tick + 1;
+  return tick;
+}
+tick = 41;
+class Seq {
+  static n: number = bump();
+}
+print(Seq.n);
+// CHECK-NEXT: 42
+
+// Methods are installed before any initializer runs, so calling one declared
+// later works.
+class D {
+  static v: number = D.#m();
+  static #m(): number {
+    return 42;
+  }
+}
+print(D.v);
+// CHECK-NEXT: 42
+
+// A field whose type has no representable default is left uninitialized, so a
+// forward reference throws while the class is being defined, rather than
+// handing out a bogus value.
+class E {
+  x: number = 3;
+}
+
+function defineF(): void {
+  class F {
+    static early: E = F.late;
+    static late: E = new E();
+  }
+}
+
+try {
+  defineF();
+} catch (e) {
+  print(e.name);
+}
+// CHECK-NEXT: ReferenceError
+
+class G {
+  static late: E = new E();
+  static early: E = G.late;
+}
+print(G.early.x, G.early === G.late);
+// CHECK-NEXT: 3 true
+
+// A generic class gets one initializer function per specialization, from a
+// cloned AST.
+let boxInitCount: number = 0;
+
+class Box<T> {
+  static initialized: number = countBoxInit();
+  value: T;
+  constructor(v: T) {
+    this.value = v;
+  }
+}
+
+function countBoxInit(): number {
+  boxInitCount++;
+  return boxInitCount;
+}
+
+print(new Box<number>(3).value, new Box<string>('s').value);
+// CHECK-NEXT: 3 s
+print(boxInitCount);
+// CHECK-NEXT: 2

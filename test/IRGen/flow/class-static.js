@@ -9,9 +9,16 @@
 
 'use strict';
 
+// Declared before the class, so the stores of the defaults are visibly hoisted
+// above it while the static elements initializer stays at the declaration.
+let before: number = 1;
+
 class A {
   static x: number = 42;
   static foo(): number { return 1; }
+  // 'this' is the class, so this reads the static field's variable rather than
+  // a property off the receiver.
+  static viaThis(): number { return this.x; }
   bar(): number { return 2; }
 }
 
@@ -32,7 +39,7 @@ class A {
 // CHECK-NEXT:       ReturnInst %7: any
 // CHECK-NEXT:function_end
 
-// CHECK:scope %VS1 [exports: any, A: any, x: number, foo: object, ?A.prototype: object]
+// CHECK:scope %VS1 [exports: any, before: any, A: any, x: number, foo: empty|object, viaThis: empty|object, ?A.prototype: object]
 
 // CHECK:function ""(exports: any): any
 // CHECK-NEXT:%BB0:
@@ -40,16 +47,24 @@ class A {
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %exports: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.exports]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.before]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.A]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, 42: number, [%VS1.x]: number
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %VS1: any, %foo(): functionCode
-// CHECK-NEXT:       StoreFrameInst %1: environment, %6: object, [%VS1.foo]: object
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %1: environment, %VS1: any, %A(): functionCode
-// CHECK-NEXT:       StoreFrameInst %1: environment, %8: object, [%VS1.A]: any
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %1: environment, %VS1: any, %bar(): functionCode
-// CHECK-NEXT:  %11 = AllocTypedNonEnumObjectInst (:object) null: null, "bar": string, %10: object
-// CHECK-NEXT:        StoreFrameInst %1: environment, %11: object, [%VS1.?A.prototype]: object
-// CHECK-NEXT:        StorePropertyStrictInst %11: object, %8: object, "prototype": string
+// CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS1.x]: number
+// CHECK-NEXT:       StoreFrameInst %1: environment, empty: empty, [%VS1.foo]: empty|object
+// CHECK-NEXT:       StoreFrameInst %1: environment, empty: empty, [%VS1.viaThis]: empty|object
+// CHECK-NEXT:       StoreFrameInst %1: environment, 1: number, [%VS1.before]: any
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %1: environment, %VS1: any, %foo(): functionCode
+// CHECK-NEXT:        StoreFrameInst %1: environment, %10: object, [%VS1.foo]: empty|object
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %1: environment, %VS1: any, %viaThis(): functionCode
+// CHECK-NEXT:        StoreFrameInst %1: environment, %12: object, [%VS1.viaThis]: empty|object
+// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %1: environment, %VS1: any, %A(): functionCode
+// CHECK-NEXT:        StoreFrameInst %1: environment, %14: object, [%VS1.A]: any
+// CHECK-NEXT:  %16 = CreateFunctionInst (:object) %1: environment, %VS1: any, %bar(): functionCode
+// CHECK-NEXT:  %17 = AllocTypedNonEnumObjectInst (:object) null: null, "bar": string, %16: object
+// CHECK-NEXT:        StoreFrameInst %1: environment, %17: object, [%VS1.?A.prototype]: object
+// CHECK-NEXT:        StorePropertyStrictInst %17: object, %14: object, "prototype": string
+// CHECK-NEXT:  %20 = CreateFunctionInst (:object) %1: environment, %VS1: any, %<static_elements_initializer:A>(): functionCode
+// CHECK-NEXT:  %21 = CallInst (:undefined) %20: object, %<static_elements_initializer:A>(): functionCode, true: boolean, %1: environment, undefined: undefined, %14: object
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -64,18 +79,38 @@ class A {
 
 // CHECK:scope %VS3 []
 
-// CHECK:function A(): any
+// CHECK:function viaThis(): any [typed]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
-// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:  %2 = LoadFrameInst (:number) %0: environment, [%VS1.x]: number
+// CHECK-NEXT:       ReturnInst %2: number
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS4 []
 
-// CHECK:function bar(): any [typed]
+// CHECK:function A(): any
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS4: any, %0: environment
+// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:scope %VS5 []
+
+// CHECK:function bar(): any [typed]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS5: any, %0: environment
 // CHECK-NEXT:       ReturnInst 2: number
+// CHECK-NEXT:function_end
+
+// CHECK:scope %VS6 []
+
+// CHECK:function <static_elements_initializer:A>(): undefined
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS6: any, %0: environment
+// CHECK-NEXT:       StoreFrameInst %0: environment, 42: number, [%VS1.x]: number
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

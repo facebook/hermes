@@ -561,6 +561,14 @@ class FlowChecker::DeclareScopeTypes {
         return outer.flowContext_.getAny();
       }
 
+      if (typeDecl->staticTypeParam) {
+        outer.sm_.error(
+            id->getSourceRange(),
+            "ft: class type parameter " + id->_name->str() +
+                " cannot be used in a static member");
+        return outer.flowContext_.getAny();
+      }
+
       if (typeDecl->type && gta->_typeParameters) {
         outer.sm_.error(
             gta->_typeParameters->getSourceRange(),

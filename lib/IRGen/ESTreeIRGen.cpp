@@ -485,19 +485,51 @@ LReference ESTreeIRGen::createLRef(ESTree::Node *node, bool declInit) {
     LLVM_DEBUG(llvh::dbgs() << "Creating an LRef for member expression.\n");
 
     Value *obj;
+    // `thisVal` should only be set for `super` references.
+    Value *thisVal = nullptr;
+    auto *objTypeInfo = flowContext_.getNodeTypeOrAny(ME->_object)->info;
     if (llvh::isa<ESTree::SuperNode>(ME->_object)) {
-      auto *homeObjectVar = curFunction()->capturedState.homeObject;
-      auto *RSI = emitResolveScopeInstIfNeeded(homeObjectVar->getParent());
-      Value *homeObjectVal = Builder.createLoadFrameInst(RSI, homeObjectVar);
-      obj = Builder.createLoadParentNoTrapsInst(homeObjectVal);
+      thisVal = genThisExpression();
+      if (llvh::isa<flow::ClassType>(objTypeInfo) ||
+          llvh::isa<flow::ClassConstructorType>(objTypeInfo)) {
+        if (ME->_computed) {
+          // Only super.foo is supported, matching the load path in
+          // genMemberExpressionWithOperation. Without this the store would
+          // fall through to the untyped path below, which looks the property
+          // up starting at the receiver instead of the superclass.
+          Mod->getContext().getSourceErrorManager().error(
+              ME->getSourceRange(), "unsupported use of 'super'");
+          return LReference(
+              LReference::Kind::Error,
+              this,
+              false,
+              nullptr,
+              nullptr,
+              nullptr,
+              sourceLoc);
+        }
+        // Typed 'super' accesses never consult the object: the member either
+        // lives in a scope Variable, is an accessor called with 'this' as the
+        // receiver, or is a field slot on the receiver. A static
+        // 'super' has no home object at all, and capturedState.homeObject is
+        // populated only for legacy classes, object literal methods and eval,
+        // none of which apply here, so walking it would be invalid.
+        obj = thisVal;
+      } else {
+        auto *homeObjectVar = curFunction()->capturedState.homeObject;
+        assert(homeObjectVar && "homeObjectVar not populated");
+        auto *RSI = emitResolveScopeInstIfNeeded(homeObjectVar->getParent());
+        Value *homeObjectVal = Builder.createLoadFrameInst(RSI, homeObjectVar);
+        obj = Builder.createLoadParentNoTrapsInst(homeObjectVal);
+      }
     } else {
       obj = genExpression(ME->_object);
     }
 
     Value *prop;
-    if (auto *classType = llvh::dyn_cast<flow::ClassType>(
-            flowContext_.getNodeTypeOrAny(ME->_object)->info);
-        classType && !ME->_computed) {
+    if ((llvh::isa<flow::ClassType>(objTypeInfo) ||
+         llvh::isa<flow::ClassConstructorType>(objTypeInfo)) &&
+        !ME->_computed) {
       // Named types shouldn't bother with genMemberExpressionProperty,
       // which is intended for untyped code.
       if (auto *privateName =
@@ -513,11 +545,6 @@ LReference ESTreeIRGen::createLRef(ESTree::Node *node, bool declInit) {
       prop = genMemberExpressionProperty(ME);
     }
 
-    Value *thisVal = nullptr;
-    // `thisVal` should only be set for `super` references.
-    if (llvh::isa<ESTree::SuperNode>(ME->_object)) {
-      thisVal = genThisExpression();
-    }
     return LReference(
         LReference::Kind::Member,
         this,

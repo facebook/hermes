@@ -1077,6 +1077,12 @@ class ClassType : public TypeWithId {
   /// Super class, nullptr if this class doesn't extend anything.
   Type *superClass_ = nullptr;
 
+  /// The ClassConstructorType wrapping this class, i.e. the type of the class
+  /// object itself; distinct from \c constructorType_, which is the function
+  /// type of the constructor's signature. Null for the synthetic home object
+  /// and static object classes, which have no constructor of their own.
+  Type *classConsType_ = nullptr;
+
   /// Number of fields that have IR layout slots.
   /// Final methods don't get layout slots, so this may be less than
   /// fieldNameMap_.size().
@@ -1087,28 +1093,22 @@ class ClassType : public TypeWithId {
       size_t id,
       Identifier className,
       llvh::ArrayRef<Type *> typeArgs);
-  explicit ClassType(
-      size_t id,
-      Identifier className,
-      llvh::ArrayRef<Field> fields,
-      Type *constructorType,
-      Type *homeObjectType,
-      Type *staticObjectType,
-      Type *superClass,
-      size_t numLayoutSlots);
 
   /// Initialize an empty (freshly created) instance. Note that fields are
   /// immutable after this.
   /// \p numLayoutSlots is the number of fields that have layout slots in IR,
   /// which may be less than the number of fields in the field name map
   /// (e.g. final methods don't get layout slots).
+  /// \p classConsType is the ClassConstructorType wrapping this class, null
+  /// for the synthetic home object and static object classes.
   void init(
       llvh::ArrayRef<Field> fields,
       Type *constructorType,
       Type *homeObjectType,
       Type *staticObjectType,
       Type *superClass,
-      size_t numLayoutSlots);
+      size_t numLayoutSlots,
+      Type *classConsType);
 
   static bool classof(const TypeInfo *t) {
     return t->getKind() == TypeKind::Class;
@@ -1195,6 +1195,14 @@ class ClassType : public TypeWithId {
     assert(isInitialized());
     return llvh::cast_or_null<ClassType>(
         superClass_ ? superClass_->info : nullptr);
+  }
+
+  /// \return \c classConsType_, the type of the class object itself. Not to be
+  ///   confused with \c getConstructorType(), which returns the function type
+  ///   of the constructor's signature.
+  Type *getClassConsType() const {
+    assert(isInitialized());
+    return classConsType_;
   }
 
   /// Add a specialized method with its Decl.

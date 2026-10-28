@@ -92,6 +92,9 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
     ESTree::Node *astNode;
     /// When this is a class generic declaration, the Decl of the class.
     sema::Decl *genericClassDecl;
+    /// Whether this shadows a class type parameter inside a static member,
+    /// where referencing it is an error.
+    bool staticTypeParam = false;
     explicit TypeDecl(
         Type *type,
         sema::LexicalScope *scope,
@@ -168,6 +171,10 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
     /// The ClassType containing this generic method.
     /// Null for non-method generics.
     flow::ClassType *containingClassType = nullptr;
+
+    /// The type parameters of the containing class, shadowed when
+    /// specializing a static method. Null if the class isn't generic.
+    ESTree::TypeParameterDeclarationNode *classTypeParams = nullptr;
 
     /// The number of type parameters declared on the generic.
     /// Cached to avoid re-computing it from the AST.
@@ -424,13 +431,10 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
       TypedFunctionType *constraint);
 
   /// Run typechecking on the body of a class that we already have the type for.
-  /// \param classConsType the ClassConstructorType wrapping \p classType, used
-  ///   as the new.target type inside the constructor.
   void visitClassNode(
       ESTree::ClassLikeNode *classNode,
       ESTree::ClassBodyNode *body,
-      Type *classType,
-      Type *classConsType);
+      Type *classType);
 
   void visit(ESTree::ClassExpressionNode *node);
   void visit(ESTree::ClassDeclarationNode *node);
@@ -621,7 +625,21 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// Typecheck the initializer of a public or private class property \p node.
   /// \param value a reference to the property's initializer, which is replaced
   ///   with an implicit checked cast when one is needed.
-  void visitClassProperty(ESTree::Node *node, ESTree::Node *&value);
+  /// \param isStatic whether the property is a static field.
+  void
+  visitClassProperty(ESTree::Node *node, ESTree::Node *&value, bool isStatic);
+
+  /// Shadow the type parameters of the current class, if any, so that
+  /// referencing them inside a static member is an error.
+  /// Must be called after opening a ScopeRAII.
+  void shadowClassTypeParamsInStatic();
+
+  /// Shadow \p typeParams, declared in \p scope, so that referencing them is
+  /// an error. Does nothing if \p typeParams is null.
+  /// Must be called after opening a ScopeRAII.
+  void shadowClassTypeParams(
+      ESTree::TypeParameterDeclarationNode *typeParams,
+      sema::LexicalScope *scope);
 
   /// Return the type associated with a sema::Decl. The association must
   /// exist.
@@ -699,7 +717,7 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
       ESTree::Node *body,
       Type *classType,
       sema::LexicalScope *classScope,
-      Type *classConsType = nullptr,
+      Type *classConsType,
       ESTree::Node *classTypeParameters = nullptr);
 
   /// Visit the \p node for either resolution or parsing and call \p cb on each
@@ -1141,12 +1159,15 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// \param classBody the ClassBodyNode containing the method.
   /// \param classScope the lexical scope of the containing class.
   /// \param classTypeInfo the ClassType containing this method.
+  /// \param classTypeParams the type parameters of the containing class, if
+  ///   any.
   void registerGenericMethod(
       ESTree::MethodDefinitionNode *method,
       ESTree::ClassBodyNode *classBody,
       const TypeBindingTableScopePtrTy &bindingTableScope,
       sema::LexicalScope *classScope,
-      flow::ClassType *classTypeInfo);
+      flow::ClassType *classTypeInfo,
+      ESTree::TypeParameterDeclarationNode *classTypeParams);
 
   /// \pre \p method is a generic method that has been registered.
   /// \return the generic info associated with \p method.
@@ -1201,13 +1222,14 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// \param method the MethodDefinitionNode for the generic method.
   /// \param errorRange used for reporting errors.
   /// \param typeArgTypes the type arguments to specialize with.
-  /// \param classType the ClassType containing this method.
   /// \return the specialized result containing type and method node.
+  /// The declaring class is taken from the method's GenericInfo, not from the
+  /// call site: specializations are cached by type arguments alone, so they
+  /// must not depend on the receiver.
   GenericMethodSpecializationResult specializeGenericMethodWithParsedTypes(
       ESTree::MethodDefinitionNode *method,
       SMRange errorRange,
-      llvh::ArrayRef<Type *> typeArgTypes,
-      Type *classType);
+      llvh::ArrayRef<Type *> typeArgTypes);
 
   /// Implementation for specializing generics: handles cloning, caching,
   /// and insertion. Caller handles scope management and typechecking.
@@ -1278,6 +1300,14 @@ class FlowChecker::FunctionContext {
   /// Depending on the compilation mode, usages may be invalid.
   Type *const newTargetType;
 
+  /// The type "super" refers to in a member access: the superclass instance,
+  /// or the superclass constructor in a static context. Null when there is no
+  /// superclass, and also whenever the enclosing context doesn't thread it
+  /// through, so a member access on "super" must reject a null instead of
+  /// assuming one. Stored rather than derived, like \c thisParamType, because
+  /// arrow functions inherit it from the enclosing context.
+  Type *const superType;
+
   /// Whether this is the body of a setter, which may not return a value.
   bool isSetter = false;
 
@@ -1290,7 +1320,8 @@ class FlowChecker::FunctionContext {
       ESTree::FunctionLikeNode *declCollectorNode,
       Type *functionType,
       Type *thisParamType,
-      Type *newTargetType)
+      Type *newTargetType,
+      Type *superType = nullptr)
       : outer_(outer),
         prevContext_(outer.curFunctionContext_),
         declCollector(
@@ -1300,7 +1331,8 @@ class FlowChecker::FunctionContext {
         functionType(functionType),
         semInfo(declCollectorNode ? declCollectorNode->getSemInfo() : nullptr),
         thisParamType(thisParamType),
-        newTargetType(newTargetType) {
+        newTargetType(newTargetType),
+        superType(superType) {
     assert(
         !declCollectorNode ||
         outer.declCollectorMap_.count(declCollectorNode) &&
@@ -1326,14 +1358,12 @@ class FlowChecker::ClassContext {
   /// The previous context, restored on destruction.
   ClassContext *const prevContext_;
 
-  /// The type of the field initializer function.
-  Type *fieldInitFunctionType_ = nullptr;
+  /// The type of the field initializer function, indexed by whether it is the
+  /// static one. The two differ only in their 'this' param.
+  Type *fieldInitFunctionType_[2] = {nullptr, nullptr};
 
  public:
   Type *const classType;
-
-  /// The type of new.target inside the class, i.e. the class constructor type.
-  Type *const newTargetType;
 
   ESTree::ClassLikeNode *const node;
 
@@ -1343,14 +1373,44 @@ class FlowChecker::ClassContext {
   ClassContext(
       FlowChecker &outer,
       Type *const classType,
-      Type *const newTargetType,
       ESTree::ClassLikeNode *node)
       : outer_(outer),
         prevContext_(outer.curClassContext_),
         classType(classType),
-        newTargetType(newTargetType),
         node(node) {
     outer.curClassContext_ = this;
+  }
+
+  /// \return the type of new.target inside the class, i.e. this class's
+  ///   ClassConstructorType.
+  Type *getNewTargetType() const {
+    Type *consType = getClassTypeInfo()->getClassConsType();
+    assert(consType && "class must have a ClassConstructorType");
+    return consType;
+  }
+
+  /// \return the type of 'this' inside a member of this class: the class
+  ///   constructor in a static context (ES2023 §15.7.14), the instance
+  ///   otherwise.
+  Type *getThisType(bool isStatic) const {
+    return isStatic ? getNewTargetType() : classType;
+  }
+
+  /// \return the type of 'super' inside a member of this class, or nullptr if
+  ///   there is no superclass. A static member's receiver is the class
+  ///   constructor, so 'super' there is the superclass's constructor and
+  ///   resolves against its statics rather than its prototype.
+  Type *getSuperType(bool isStatic) const {
+    Type *superClass = getClassTypeInfo()->getSuperClass();
+    if (!superClass)
+      return nullptr;
+    if (!isStatic)
+      return superClass;
+    auto *superInfo = llvh::cast<ClassType>(superClass->info);
+    assert(
+        superInfo->getClassConsType() &&
+        "a class that can be extended must have a constructor type");
+    return superInfo->getClassConsType();
   }
 
   ~ClassContext() {
@@ -1361,15 +1421,23 @@ class FlowChecker::ClassContext {
     return llvh::cast<ClassType>(classType->info);
   }
 
-  /// \return the fieldInitFunctionType and create it if it doesn't exist.
-  Type *getOrCreateFieldInitFunctionType() {
-    if (!fieldInitFunctionType_) {
-      fieldInitFunctionType_ = outer_.flowContext_.createType(
+  /// \return the type of the initializer function for the static or instance
+  ///   elements, creating it if it doesn't exist. Its 'this' param must agree
+  ///   with the FunctionContext's thisParamType, so the two variants are
+  ///   cached separately.
+  Type *getOrCreateFieldInitFunctionType(bool isStatic) {
+    Type *&cached = fieldInitFunctionType_[isStatic];
+    if (!cached) {
+      cached = outer_.flowContext_.createType(
           outer_.flowContext_.createFunction(
-              outer_.flowContext_.getVoid(), classType, {}, false, false),
+              outer_.flowContext_.getVoid(),
+              getThisType(isStatic),
+              {},
+              false,
+              false),
           node);
     }
-    return fieldInitFunctionType_;
+    return cached;
   }
 
   ClassContext *getPrevContext() const {

@@ -616,7 +616,7 @@ class ESTreeIRGen {
   llvh::DenseMap<const flow::ClassType::Field *, Function *>
       nonOverriddenMethods_{};
 
-  /// Map from a @Hermes.final method Decl to the Function.
+  /// Map from a Variable-backed method Decl to the Function.
   /// Used for direct call optimization, because closures will not live on the
   /// home object and will instead have an associated Variable and Decl.
   llvh::DenseMap<sema::Decl *, Function *> declFunctions_{};
@@ -871,25 +871,46 @@ class ESTreeIRGen {
       const Identifier &className,
       ESTree::Node *superClassNode);
 
-  /// Emit code to allocate an empty instance of the specified class and return
-  /// it.
+  /// Emit code to allocate an empty instance or home object of the specified
+  /// class and return it.
   /// \param parent the parent object of the newly allocated class, nullptr to
   /// default to the Object prototype.
-  /// \param skipPrivateFields whether to skip the private fields.
-  ///   Set to true when the private fields represent methods on the home
-  ///   object which never change and are emitted as Variables, meaning they
-  ///   aren't stored in objects and we shouldn't allocate slots for them at
-  ///   object creation time.
   /// \param propertiesEnumerable whether properties are enumerable. Set to
   ///   false for home objects (class prototypes with methods).
   Value *emitTypedClassAllocation(
       flow::ClassType *classType,
       Value *parent,
-      bool skipPrivateFields,
       bool propertiesEnumerable);
 
   /// Return the default init value for the specified type.
   Value *getDefaultInitValue(flow::Type *type);
+
+  /// \return the initial value for a class member Variable of \p type, and
+  ///   the IR type the Variable must have. Types with no representable literal
+  ///   default start out empty and are checked on load, so their Variable type
+  ///   is widened with empty.
+  std::pair<Value *, Type> getClassMemberVarInit(flow::Type *type);
+
+  /// Store \p init into the Variable backing class member \p decl, creating it
+  /// in the current scope with name \p name and type \p type if needed.
+  /// \return the Variable
+  Variable *defineClassMemberVar(
+      sema::Decl *decl,
+      Identifier name,
+      Type type,
+      Value *init);
+
+  /// Store \p value into the existing Variable backing class member \p decl.
+  /// \return the Variable.
+  Variable *storeClassMemberVar(sema::Decl *decl, Value *value);
+
+  /// Create all Variables backing the members of the typed class \p classDecl
+  /// that live in Variables (static elements, final/private/accessor methods,
+  /// generic method specializations), initialize them to their defaults, and
+  /// bind them to their Decls. The closures themselves are stored later, when
+  /// the class declaration is emitted.
+  /// Must be called at the top of the enclosing scope.
+  void declareTypedClassMemberVars(sema::Decl *classDecl);
 
   /// Convert a Flow type into an IR type. Non-static because it needs the
   /// Module's TypeContext to construct unions.
@@ -1113,19 +1134,17 @@ class ESTreeIRGen {
   void
   emitTypedSetterCall(sema::Decl *decl, Value *thisArg, Value *storedValue);
 
-  /// Emit a final method closure, create a hidden Variable for it, store it,
-  /// and register for direct call optimization. Used for both accessor
-  /// (getter/setter) and non-accessor final methods.
-  void emitTypedFinalMethodClosureStore(
-      const flow::ClassType::Field &field,
+  /// Emit a typed class method closure, store it in the Variable backing
+  /// \p decl, and register it for direct call optimization.
+  void emitTypedClassMethodClosureStore(
       ESTree::MethodDefinitionNode *method,
       sema::Decl *decl);
 
   /// Load a member property from a super.property expression inside a typed
-  /// class method.
-  MemberExpressionResult emitTypedSuperLoad(
-      ESTree::SuperNode *superNode,
-      ESTree::IdentifierNode *property);
+  /// class member, i.e. a method or a field initializer.
+  /// \p mem must be non-computed with an identifier property.
+  /// \pre mem is a typed 'super' load.
+  MemberExpressionResult emitTypedSuperLoad(ESTree::MemberExpressionNode *mem);
 
   /// The Decls holding the accessor closures of a static accessor. Both null
   /// if the property isn't a static accessor.
@@ -1143,7 +1162,8 @@ class ESTreeIRGen {
       ESTree::MemberExpressionNode *mem,
       flow::ClassConstructorType *consType);
 
-  /// Load the value of the class member backed by \p decl's Variable.
+  /// Load the value of the class member backed by \p decl's Variable,
+  /// checking it if the Variable's type admits empty.
   Value *emitLoadClassMemberVar(sema::Decl *decl);
 
   /// \return the home object of \p classInfo, loaded from the Variable that
@@ -1551,14 +1571,14 @@ class ESTreeIRGen {
   ///   instead.
   void emitFunctionEpilogue(Value *returnValue);
 
-  /// Generates (if necessary) the field init function for the class
-  /// of the current class context.  This function performs any
-  /// necessary field initializations for that class.  (This should
-  /// only be called by emitCreateFieldInitFunction, below.)
+  /// Generates (if necessary) the instance or static field init function for
+  /// the class of the current typed class context.
   ///
+  /// \param staticElements true to generate the static elements initializer,
+  ///   false for the instance one.
   /// \return the generated function, or else nullptr if the class has no field
   /// initializers.
-  Function *genFieldInitFunction();
+  Function *genFieldInitFunction(bool staticElements);
 
   /// If there is a field init function associated with the class of
   /// the current class context, emits the instruction for creating

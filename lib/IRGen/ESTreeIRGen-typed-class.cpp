@@ -11,6 +11,56 @@
 namespace hermes {
 namespace irgen {
 
+namespace {
+
+/// Call the appropriate callback for every member of \p type that is backed by
+/// a Variable rather than stored on the object. Generic method declarations
+/// are skipped because their concrete specializations are handled separately.
+/// \p onField defaults to a no-op, for callers that only care about methods.
+template <
+    typename OnMethod,
+    typename OnField = void (*)(const flow::ClassType::Field &)>
+void forEachVariableBackedClassMember(
+    flow::ClassType *type,
+    OnMethod &&onMethod,
+    OnField &&onField = [](const flow::ClassType::Field &) {}) {
+  if (!type)
+    return;
+
+  /// Call onMethod for any non-generic method.
+  /// Specialized generics are handled separately via getSpecializedMethodDecls.
+  auto visitMethod = [&onMethod](ESTree::MethodDefinitionNode *method) {
+    if (!method)
+      return;
+    if (llvh::cast<ESTree::FunctionExpressionNode>(method->_value)
+            ->_typeParameters)
+      return;
+    onMethod(method);
+  };
+
+  for (const flow::ClassType::Field &field : type->getFields()) {
+    if (field.isStoredOnObject())
+      continue;
+
+    if (!field.isMethod()) {
+      onField(field);
+      continue;
+    }
+
+    if (field.isOverloaded()) {
+      for (const auto &overload : field.overloads)
+        visitMethod(overload.first);
+      continue;
+    }
+
+    visitMethod(field.method);
+    // getter is stored in field.method, so that's already covered.
+    visitMethod(field.setterMethod);
+  }
+}
+
+} // namespace
+
 void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
   auto *id = llvh::cast<ESTree::IdentifierNode>(node->_id);
   sema::Decl *decl = getIDDecl(id);
@@ -45,158 +95,17 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
     curFunction()->typedClassContext = savedClsCtx;
   });
 
-  // Emit private methods as variables.
-  for (auto &[name, idx] :
-       classType->getHomeObjectTypeInfo()->getPrivateFieldNameMap()) {
-    const flow::ClassType::Field &field =
-        classType->getHomeObjectTypeInfo()->getFields()[idx];
-    if (field.isMethod() && field.isPrivate) {
-      if (field.isOverloaded()) {
-        // Overloaded final private method: emit each non-generic overload
-        // as its own closure / Variable. Generic overloads are emitted
-        // through specializations.
-        for (auto &[overloadMethod, overloadType] : field.overloads) {
-          if (llvh::isa<flow::GenericType>(overloadType->info))
-            continue;
-          sema::Decl *decl = semCtx_.getExpressionDecl(
-              ESTree::getPropertyIdentifier(overloadMethod->_key));
-          emitTypedFinalMethodClosureStore(field, overloadMethod, decl);
-        }
-        continue;
-      }
-
-      // Skip generic private methods - emitted through specializations.
-      if (llvh::isa<flow::GenericType>(field.type->info))
-        continue;
-
-      if (field.isAccessor()) {
-        if (field.method) {
-          sema::Decl *decl = semCtx_.getExpressionDecl(
-              ESTree::getPropertyIdentifier(field.method->_key));
-          emitTypedFinalMethodClosureStore(field, field.method, decl);
-        }
-        if (field.setterMethod) {
-          sema::Decl *decl = semCtx_.getExpressionDecl(
-              ESTree::getPropertyIdentifier(field.setterMethod->_key));
-          emitTypedFinalMethodClosureStore(field, field.setterMethod, decl);
-        }
-      } else {
-        auto *funcExpr =
-            llvh::cast<ESTree::FunctionExpressionNode>(field.method->_value);
-        Value *function = genFunctionExpression(funcExpr, field.name);
-        Variable *var = Builder.createVariable(
-            curFunction()->curScope()->getVariableScope(),
-            field.name,
-            flowTypeToIRType(field.type),
-            /* hidden */ true);
-        Builder.createStoreFrameInst(curFunction()->curScope(), function, var);
-        sema::Decl *decl = getIDDecl(
-            llvh::cast<ESTree::IdentifierNode>(
-                llvh::cast<ESTree::PrivateNameNode>(field.method->_key)->_id));
-        setDeclData(decl, var);
-      }
-    }
-  }
-
-  // Emit static methods and fields as variables.
-  auto *staticType = classType->getStaticObjectTypeInfo();
-  auto *classBody = llvh::cast<ESTree::ClassBodyNode>(node->_body);
-  for (ESTree::Node &elem : classBody->_body) {
-    if (auto *method = llvh::dyn_cast<ESTree::MethodDefinitionNode>(&elem)) {
-      if (!method->_static)
-        continue;
-      assert(staticType && "must have a staticType if there are static fields");
-      ESTree::IdentifierNode *id;
-      Identifier name;
-      bool isPrivate;
-      if (auto *pn = llvh::dyn_cast<ESTree::PrivateNameNode>(method->_key)) {
-        id = llvh::cast<ESTree::IdentifierNode>(pn->_id);
-        name = Mod->getContext().getPrivateNameIdentifier(id->_name);
-        isPrivate = true;
-      } else {
-        id = llvh::cast<ESTree::IdentifierNode>(method->_key);
-        name = Identifier::getFromPointer(id->_name);
-        isPrivate = false;
-      }
-      auto *funcExpr =
-          llvh::cast<ESTree::FunctionExpressionNode>(method->_value);
-      // Generic static methods are emitted through their specializations.
-      if (funcExpr->_typeParameters)
-        continue;
-      Value *function = genFunctionExpression(funcExpr, name);
-      auto optField = isPrivate ? staticType->findPrivateField(name)
-                                : staticType->findPublicField(name);
-      // For accessor methods, use the accessor function type, not the
-      // field type (which is the getter return type or void).
-      const auto *fieldPtr = optField->getField();
-      flow::Type *flowVarType;
-      if (method->_kind == kw_.identGet && fieldPtr->getterType)
-        flowVarType = fieldPtr->getterType;
-      else if (method->_kind == kw_.identSet && fieldPtr->setterType)
-        flowVarType = fieldPtr->setterType;
-      else if (fieldPtr->isOverloaded()) {
-        // For overloaded static methods, look up this method's type in the
-        // overloads map (fieldPtr->type is null for overloaded fields).
-        flowVarType = fieldPtr->overloads.lookup(method);
-        assert(flowVarType && "static method must exist in overloads");
-        if (llvh::isa<flow::GenericType>(flowVarType->info))
-          continue;
-      } else
-        flowVarType = fieldPtr->type;
-      Variable *var = Builder.createVariable(
-          curFunction()->curScope()->getVariableScope(),
-          name,
-          flowTypeToIRType(flowVarType),
-          /* hidden */ true);
-      Builder.createStoreFrameInst(curFunction()->curScope(), function, var);
-      sema::Decl *decl = semCtx_.getExpressionDecl(id);
-      setDeclData(decl, var);
-      if (auto *CFI = llvh::dyn_cast<CreateFunctionInst>(function)) {
-        declFunctions_.try_emplace(decl, CFI->getFunctionCode());
-      }
-    } else if (auto *prop = llvh::dyn_cast<ESTree::ClassPropertyNode>(&elem)) {
-      if (!prop->_static)
-        continue;
-      assert(staticType && "must have a staticType if there are static fields");
-      auto *id = llvh::cast<ESTree::IdentifierNode>(prop->_key);
-      Identifier name = Identifier::getFromPointer(id->_name);
-      auto optField = staticType->findPublicField(name);
-      assert(optField && "static field must exist in staticObjectType");
-      Type irType = flowTypeToIRType(optField->getField()->type);
-      Variable *var = Builder.createVariable(
-          curFunction()->curScope()->getVariableScope(),
-          name,
-          irType,
-          /* hidden */ true);
-      Value *initValue = prop->_value
-          ? genExpression(prop->_value)
-          : getDefaultInitValue(optField->getField()->type);
-      Builder.createStoreFrameInst(curFunction()->curScope(), initValue, var);
-      sema::Decl *decl = semCtx_.getExpressionDecl(id);
-      setDeclData(decl, var);
-    } else if (
-        auto *prop = llvh::dyn_cast<ESTree::ClassPrivatePropertyNode>(&elem)) {
-      if (!prop->_static)
-        continue;
-      assert(staticType && "must have a staticType if there are static fields");
-      auto *id = llvh::cast<ESTree::IdentifierNode>(prop->_key);
-      Identifier name = Mod->getContext().getPrivateNameIdentifier(id->_name);
-      auto optField = staticType->findPrivateField(name);
-      assert(optField && "private static field must exist in staticObjectType");
-      Type irType = flowTypeToIRType(optField->getField()->type);
-      Variable *var = Builder.createVariable(
-          curFunction()->curScope()->getVariableScope(),
-          name,
-          irType,
-          /* hidden */ true);
-      Value *initValue = prop->_value
-          ? genExpression(prop->_value)
-          : getDefaultInitValue(optField->getField()->type);
-      Builder.createStoreFrameInst(curFunction()->curScope(), initValue, var);
-      sema::Decl *decl = semCtx_.getExpressionDecl(id);
-      setDeclData(decl, var);
-    }
-  }
+  // Store the Variable-backed closure for a method.
+  auto emitMethodClosure = [this](ESTree::MethodDefinitionNode *method) {
+    sema::Decl *decl =
+        semCtx_.getExpressionDecl(ESTree::getPropertyIdentifier(method->_key));
+    assert(decl && "Variable-backed method must have a declaration");
+    emitTypedClassMethodClosureStore(method, decl);
+  };
+  forEachVariableBackedClassMember(
+      classType->getHomeObjectTypeInfo(), emitMethodClosure);
+  forEachVariableBackedClassMember(
+      classType->getStaticObjectTypeInfo(), emitMethodClosure);
 
   // Create the implicit field initializer function; store the closure
   // for it in a variable, and save that variable in a table indexed by
@@ -273,34 +182,14 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
   auto *homeObject = emitTypedClassAllocation(
       classType->getHomeObjectTypeInfo(),
       vtable,
-      /* skipPrivateFields */ true,
       /* propertiesEnumerable */ false);
 
   // Handle generic method specializations.
-  // Compile each specialization, create a Variable, and store the closure.
+  // Compile each specialization and store its closure in the Variable that
+  // was declared at the top of the enclosing scope.
   for (const auto &[specializedMethod, decl] :
        classType->getSpecializedMethodDecls()) {
-    auto *specializedFE =
-        llvh::cast<ESTree::FunctionExpressionNode>(specializedMethod->_value);
-    auto *methodId = ESTree::getPropertyIdentifier(specializedMethod->_key);
-    Identifier name;
-    if (llvh::isa<ESTree::PrivateNameNode>(specializedMethod->_key)) {
-      name = Mod->getContext().getPrivateNameIdentifier(methodId->_name);
-    } else {
-      name = Identifier::getFromPointer(methodId->_name);
-    }
-    Value *function = genFunctionExpression(specializedFE, name);
-    // Create a variable to hold the specialized closure.
-    Variable *var = Builder.createVariable(
-        curFunction()->curScope()->getVariableScope(),
-        decl->name,
-        Type::createObject(),
-        /* hidden */ true);
-    Builder.createStoreFrameInst(curFunction()->curScope(), function, var);
-    setDeclData(decl, var);
-    if (auto *CFI = llvh::dyn_cast<CreateFunctionInst>(function)) {
-      declFunctions_.try_emplace(decl, CFI->getFunctionCode());
-    }
+    emitTypedClassMethodClosureStore(specializedMethod, decl);
   }
 
   // Store the home object in a variable so that we can reference it later,
@@ -349,6 +238,102 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
       homeObject,
       consFunction,
       Builder.getLiteralString(kw_.identPrototype->str()));
+
+  if (Function *staticElementsCode =
+          genFieldInitFunction(/* staticElements */ true)) {
+    CreateFunctionInst *staticElementsFunc = Builder.createCreateFunctionInst(
+        curFunction()->curScope(), staticElementsCode);
+    Builder
+        .createCallInst(
+            staticElementsFunc,
+            staticElementsCode,
+            /* calleeIsAlwaysClosure */ true,
+            /* env */ curFunction()->curScope(),
+            /* newTarget */ Builder.getLiteralUndefined(),
+            consFunction,
+            /* args */ {})
+        ->setType(Type::createUndefined());
+  }
+}
+
+Variable *ESTreeIRGen::defineClassMemberVar(
+    sema::Decl *decl,
+    Identifier name,
+    Type type,
+    Value *init) {
+  if (!decl->customData) {
+    auto *var = Builder.createVariable(
+        curFunction()->curScope()->getVariableScope(),
+        name,
+        type,
+        /* hidden */ true);
+    setDeclData(decl, var);
+  }
+  return storeClassMemberVar(decl, init);
+}
+
+Variable *ESTreeIRGen::storeClassMemberVar(sema::Decl *decl, Value *value) {
+  assert(decl->customData && "class member Variable must be declared first");
+  auto *var = llvh::cast<Variable>(getDeclData(decl));
+  Builder.createStoreFrameInst(
+      emitResolveScopeInstIfNeeded(var->getParent()), value, var);
+  return var;
+}
+
+void ESTreeIRGen::declareTypedClassMemberVars(sema::Decl *classDecl) {
+  flow::Type *declType = flowContext_.findDeclType(classDecl);
+  auto *consType = llvh::dyn_cast_or_null<flow::ClassConstructorType>(
+      declType ? declType->info : nullptr);
+  // A class without a ClassConstructorType is legacy, and has no members in
+  // Variables.
+  if (!consType)
+    return;
+  flow::ClassType *classType = consType->getClassTypeInfo();
+
+  // Closures have no representable literal default, so like object-typed
+  // statics they start out empty and are checked on load.
+  Type closureStorageType =
+      getTypeContext().unionTy(Type::createObject(), Type::createEmpty());
+
+  /// Declare the Variable backing the closure of \p method. The closure itself
+  /// is stored when the class declaration is emitted.
+  auto declareMethodVar = [this, closureStorageType](
+                              ESTree::MethodDefinitionNode *method) {
+    ESTree::IdentifierNode *id = ESTree::getPropertyIdentifier(method->_key);
+    sema::Decl *decl = semCtx_.getExpressionDecl(id);
+    assert(decl && "Variable-backed method must have a declaration");
+    Identifier name = llvh::isa<ESTree::PrivateNameNode>(method->_key)
+        ? Mod->getContext().getPrivateNameIdentifier(id->_name)
+        : Identifier::getFromPointer(id->_name);
+    defineClassMemberVar(
+        decl, name, closureStorageType, Builder.getLiteralEmpty());
+  };
+  auto declareFieldVar = [this](const flow::ClassType::Field &field) {
+    assert(
+        field.staticKeyNode &&
+        "non-method Variable-backed field must be static");
+    sema::Decl *decl = semCtx_.getExpressionDecl(field.staticKeyNode);
+    auto [initValue, storageType] = getClassMemberVarInit(field.type);
+    defineClassMemberVar(decl, field.name, storageType, initValue);
+  };
+
+  // Final, private and accessor methods are not stored on the home object.
+  forEachVariableBackedClassMember(
+      classType->getHomeObjectTypeInfo(), declareMethodVar, declareFieldVar);
+
+  // Specializations of generic methods each get their own Variable.
+  for (const auto &[specializedMethod, specializedDecl] :
+       classType->getSpecializedMethodDecls()) {
+    defineClassMemberVar(
+        specializedDecl,
+        specializedDecl->name,
+        closureStorageType,
+        Builder.getLiteralEmpty());
+  }
+
+  // All static elements are currently Variable-backed.
+  forEachVariableBackedClassMember(
+      classType->getStaticObjectTypeInfo(), declareMethodVar, declareFieldVar);
 }
 
 CreateFunctionInst *ESTreeIRGen::genTypedImplicitConstructor(
@@ -486,20 +471,22 @@ CreateFunctionInst *ESTreeIRGen::genTypedImplicitConstructor(
 Value *ESTreeIRGen::emitTypedClassAllocation(
     flow::ClassType *classType,
     Value *parent,
-    bool skipPrivateFields,
     bool propertiesEnumerable) {
   assert(parent && "parent must be specified");
   // TODO: should create a sealed object, etc.
   AllocTypedObjectInst::ObjectPropertyMap propMap{};
 
   // Number of layout slots, which includes both public and private fields.
-  // Final methods don't get layout slots (they are stored in Variables),
-  // so we use getNumLayoutSlots() instead of getFieldNameMap().size().
+  // Variable-backed methods don't get layout slots, so use
+  // getNumLayoutSlots() instead of getFieldNameMap().size().
   size_t numFields = classType->getNumLayoutSlots();
   propMap.resize(numFields);
   auto addField = [this, &propMap, classType, parent](
                       const flow::ClassType::FieldLookupEntry &entry) {
     const flow::ClassType::Field &field = *entry.getField();
+
+    if (!field.isStoredOnObject())
+      return;
 
     // Verify that each layout slot is filled exactly once.
     assert(
@@ -512,53 +499,7 @@ Value *ESTreeIRGen::emitTypedClassAllocation(
         : static_cast<Literal *>(Builder.getLiteralString(field.name));
 
     if (field.isMethod()) {
-      // Final methods don't get a layout slot in the home object.
-      // They are accessed through Variables instead.
-      if (field.finalMethod) {
-        if (field.isOverloaded()) {
-          // Overloaded final method: emit each overload as a separate
-          // closure.
-          if (entry.classType == classType) {
-            // Field was defined in this class (not inherited).
-            // Emit the code here.
-            auto getFinalDecl = [this](ESTree::MethodDefinitionNode *m) {
-              return semCtx_.getExpressionDecl(
-                  ESTree::getPropertyIdentifier(m->_key));
-            };
-            for (auto &[overloadMethod, overloadType] : field.overloads) {
-              if (llvh::isa<flow::GenericType>(overloadType->info)) {
-                // Generic overload — codegen happens via specializations
-                // emitted from the call site (see FlowChecker overload
-                // resolution).
-                continue;
-              }
-              emitTypedFinalMethodClosureStore(
-                  field, overloadMethod, getFinalDecl(overloadMethod));
-            }
-          }
-          return;
-        }
-        if (field.type && llvh::isa<flow::GenericType>(field.type->info)) {
-          // Generic final method - no codegen needed here.
-          return;
-        }
-        if (entry.classType == classType) {
-          // Non-generic final method defined in this class.
-          auto getFinalDecl = [&](ESTree::MethodDefinitionNode *m) {
-            return semCtx_.getExpressionDecl(
-                ESTree::getPropertyIdentifier(m->_key));
-          };
-          if (field.method) {
-            emitTypedFinalMethodClosureStore(
-                field, field.method, getFinalDecl(field.method));
-          }
-          if (field.setterMethod) {
-            emitTypedFinalMethodClosureStore(
-                field, field.setterMethod, getFinalDecl(field.setterMethod));
-          }
-        }
-      } else if (entry.classType == classType) {
-        // Not declared as a final method.
+      if (entry.classType == classType) {
         // Create the code for the method.
         Value *function = genFunctionExpression(
             llvh::cast<ESTree::FunctionExpressionNode>(field.method->_value),
@@ -607,14 +548,12 @@ Value *ESTreeIRGen::emitTypedClassAllocation(
     flow::ClassType::FieldLookupEntry entry = it.second;
     addField(entry);
   }
-  // Private fields are not stored in the privateFieldNameMap,
-  // so we need to iterate over superclasses to find them.
-  if (!skipPrivateFields) {
-    for (auto *cur = classType; cur; cur = cur->getSuperClassInfo()) {
-      for (const auto &[name, idx] : cur->getPrivateFieldNameMap()) {
-        flow::ClassType::FieldLookupEntry entry{cur, idx};
-        addField(entry);
-      }
+  // Private fields aren't in fieldNameMap_, so iterate over superclasses to
+  // find them. Variable-backed private methods are ignored by addField.
+  for (auto *cur = classType; cur; cur = cur->getSuperClassInfo()) {
+    for (const auto &[name, idx] : cur->getPrivateFieldNameMap()) {
+      flow::ClassType::FieldLookupEntry entry{cur, idx};
+      addField(entry);
     }
   }
 
@@ -677,6 +616,16 @@ Value *ESTreeIRGen::getDefaultInitValue(flow::Type *type) {
       hermes_fatal("invalid typekind");
   }
   llvm_unreachable("all cases handled");
+}
+
+std::pair<Value *, Type> ESTreeIRGen::getClassMemberVarInit(flow::Type *type) {
+  TypeContext &tc = getTypeContext();
+  Type irType = flowTypeToIRType(type);
+  // Types without a representable literal default (object types and symbol)
+  // start out empty, like a TDZ variable, and are checked on load.
+  if (tc.isIDZType(irType))
+    return {Builder.getLiteralEmpty(), tc.unionTy(irType, Type::createEmpty())};
+  return {getDefaultInitValue(type), irType};
 }
 
 Type ESTreeIRGen::flowTypeToIRType(flow::TypeInfo *flowType) {

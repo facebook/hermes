@@ -548,21 +548,60 @@ class FlowChecker::ExprVisitor {
       return outer_.flowContext_.getAny();
     }
 
-    // Overloaded methods may only be referenced as a direct call target.
-    if (field->isOverloaded()) {
-      auto *callParent = llvh::dyn_cast<ESTree::CallExpressionNode>(parent);
-      if (!callParent || callParent->_callee != node) {
-        outer_.sm_.error(
-            node->_property->getSourceRange(),
-            "ft: overloaded method " + name.str() +
-                " cannot be referenced outside a call expression");
-      }
-    }
+    checkOverloadedMethodReference(node, parent, field, name);
+
+    if (!checkGenericMethodReference(node, parent, type, name))
+      return outer_.flowContext_.getAny();
+
     return type;
   }
 
-  /// Static member access via ClassName.property or ClassName.#property.
-  Type *visitMemberClassConstructor(
+  /// \return true if \p node is the callee of \p parent, i.e. it is being
+  ///   called directly rather than referenced as a value.
+  static bool isDirectCallTarget(
+      ESTree::MemberExpressionNode *node,
+      ESTree::Node *parent) {
+    auto *callParent = llvh::dyn_cast<ESTree::CallExpressionNode>(parent);
+    return callParent && callParent->_callee == node;
+  }
+
+  /// Overloaded methods have no single type, so they may only be referenced as
+  /// a direct call target, where overload resolution picks one.
+  void checkOverloadedMethodReference(
+      ESTree::MemberExpressionNode *node,
+      ESTree::Node *parent,
+      const ClassType::Field *field,
+      Identifier name) {
+    if (!field->isOverloaded() || isDirectCallTarget(node, parent))
+      return;
+    outer_.sm_.error(
+        node->_property->getSourceRange(),
+        "ft: overloaded method " + name.str() +
+            " cannot be referenced outside a call expression");
+  }
+
+  /// Generic methods have no concrete type until a call site specializes them,
+  /// so they may only be referenced as a direct call target.
+  /// \return false if the check failed and an error was emitted.
+  bool checkGenericMethodReference(
+      ESTree::MemberExpressionNode *node,
+      ESTree::Node *parent,
+      Type *type,
+      Identifier name) {
+    if (!type || !llvh::isa<GenericType>(type->info) ||
+        isDirectCallTarget(node, parent))
+      return true;
+    outer_.sm_.error(
+        node->_property->getSourceRange(),
+        llvh::Twine("ft: generic method ") + name.str() +
+            " cannot be referenced outside a call expression");
+    return false;
+  }
+
+  /// Static member access, i.e. ClassName.property / ClassName.#property, or
+  /// super.property in a static member, where 'super' is the superclass
+  /// constructor.
+  Type *visitMemberClassStatic(
       ESTree::MemberExpressionNode *node,
       ESTree::Node *parent,
       ClassConstructorType *consType,
@@ -627,20 +666,27 @@ class FlowChecker::ExprVisitor {
     if (field->isAccessor()) {
       // Static accessor: result type is the field type.
       // Do NOT propagate Decl — IRGen handles the call.
+      // A write through 'super' is fine here: the setter receives the
+      // receiver as 'this', exactly as in ES.
       return field->type;
     }
 
-    // Overloaded static methods may only be referenced as a direct call
-    // target.
-    if (field->isOverloaded()) {
-      auto *callParent = llvh::dyn_cast<ESTree::CallExpressionNode>(parent);
-      if (!callParent || callParent->_callee != node) {
-        outer_.sm_.error(
-            node->_property->getSourceRange(),
-            "ft: overloaded method " + name.str() +
-                " cannot be referenced outside a call expression");
-      }
+    // In ES a write through 'super' creates an own property on the receiver,
+    // leaving the superclass's property alone. Statics live in Variables here,
+    // so the write would silently hit the superclass's storage instead.
+    if (llvh::isa<ESTree::SuperNode>(node->_object) &&
+        classifyMemberAccess(node, parent, isWrite).write) {
+      outer_.sm_.error(
+          node->_property->getSourceRange(),
+          llvh::Twine("ft: cannot write to static property ") + name.str() +
+              " through 'super'");
+      return outer_.flowContext_.getAny();
     }
+
+    checkOverloadedMethodReference(node, parent, field, name);
+
+    if (!checkGenericMethodReference(node, parent, field->type, name))
+      return outer_.flowContext_.getAny();
 
     // Propagate the Decl from the definition key to the call-site property
     // so IRGen can look it up.
@@ -1058,7 +1104,7 @@ class FlowChecker::ExprVisitor {
       resType = visitMemberClass(node, parent, objType, classType, isWrite);
     } else if (
         auto *consType = llvh::dyn_cast<ClassConstructorType>(objType->info)) {
-      resType = visitMemberClassConstructor(node, parent, consType, isWrite);
+      resType = visitMemberClassStatic(node, parent, consType, isWrite);
     } else if (
         auto *exactObjType = llvh::dyn_cast<ExactObjectType>(objType->info)) {
       resType = visitMemberExactObject(node, parent, exactObjType, isWrite);
@@ -2932,7 +2978,11 @@ class FlowChecker::ExprVisitor {
                 "ft: 'super' call outside class");
             return;
           }
-          thisArgType = outer_.curClassContext_->classType;
+          // A super member access keeps 'this' as the receiver, which in a
+          // static context is the class constructor rather than an instance.
+          // That distinction is already baked into the enclosing function's
+          // 'this' type.
+          thisArgType = outer_.curFunctionContext_->thisParamType;
         } else {
           thisArgType = outer_.getNodeTypeOrAny(methodCallee->_object);
         }
@@ -3603,6 +3653,18 @@ class FlowChecker::ExprVisitor {
       ESTree::NewExpressionNode *node,
       ESTree::Node *parent,
       Type *constraint) {
+    // In a static member 'this' may be a subclass, which ES would construct,
+    // but the typed constructor call is resolved against the declaring class.
+    if (Type *thisType = outer_.curFunctionContext_->thisParamType; thisType &&
+        llvh::isa<ESTree::ThisExpressionNode>(node->_callee) &&
+        llvh::isa<ClassConstructorType>(thisType->info)) {
+      outer_.sm_.error(
+          node->_callee->getSourceRange(),
+          "ft: 'new this()' is not supported in static members, "
+          "use the class name");
+      return;
+    }
+
     auto *identCallee = llvh::dyn_cast<ESTree::IdentifierNode>(node->_callee);
     sema::Decl *genericDecl = nullptr;
     if (identCallee && outer_.getDecl(identCallee)->generic)
@@ -3708,8 +3770,18 @@ class FlowChecker::ExprVisitor {
       // super() call calls the constructor of the super class.
       outer_.setNodeType(node, superClassType->getConstructorType());
     } else if (llvh::isa<ESTree::MemberExpressionNode>(parent)) {
-      // super.property lookup is on the super class.
-      outer_.setNodeType(node, curClassType->getSuperClass());
+      // super.property looks up on the super class: its prototype normally,
+      // its statics when the receiver is the class constructor. The enclosing
+      // function context records which of the two applies.
+      // A context that doesn't thread superType through can't resolve the
+      // lookup, so reject instead of producing a null type.
+      Type *superType = outer_.curFunctionContext_->superType;
+      if (!superType) {
+        outer_.sm_.error(node->getSourceRange(), "ft: invalid usage of super");
+        outer_.flowContext_.setNodeType(node, outer_.flowContext_.getAny());
+        return;
+      }
+      outer_.setNodeType(node, superType);
     } else {
       outer_.sm_.error(node->getSourceRange(), "ft: invalid usage of super");
       outer_.flowContext_.setNodeType(node, outer_.flowContext_.getAny());
@@ -3870,8 +3942,6 @@ class FlowChecker::ExprVisitor {
       ESTree::TypeParameterInstantiationNode *explicitTypeArgs = nullptr) {
     assert(field->isOverloaded() && "field must be overloaded");
 
-    Type *objType = outer_.getNodeTypeOrAny(callee->_object);
-
     // Pre-parse explicit type arguments if provided.
     llvh::SmallVector<Type *, 2> explicitTypeArgTypes;
     if (explicitTypeArgs) {
@@ -3920,7 +3990,7 @@ class FlowChecker::ExprVisitor {
           typeArgs = std::move(inferred);
         }
         auto result = outer_.specializeGenericMethodWithParsedTypes(
-            overloadMethod, node->getSourceRange(), typeArgs, objType);
+            overloadMethod, node->getSourceRange(), typeArgs);
         if (!result.type)
           continue;
         overloadType = result.type;

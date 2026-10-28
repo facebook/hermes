@@ -941,10 +941,13 @@ void ESTreeIRGen::emitFunctionPrologue(
           flowContext_.getNodeTypeOrAny(funcNode)->info);
       ftype && ftype->getThisParam()) {
     thisParam->setType(flowTypeToIRType(ftype->getThisParam()));
-  } else if (curFunction()->typedClassContext.type) {
+  } else if (
+      flow::ClassType *classInfo = curFunction()->typedClassContext.type) {
     // Field initializers have no FunctionLikeNode, but the 'this' type is
-    // stored in the class.
-    thisParam->setType(flowTypeToIRType(curFunction()->typedClassContext.type));
+    // derived from the class. The static initializer's 'this' is the class
+    // constructor object rather than an instance, but both lower to the same
+    // IR type, so the class is usable for either.
+    thisParam->setType(flowTypeToIRType(classInfo));
   }
 
   // Save the "this" parameter. We will delete it later if unused.
@@ -1125,6 +1128,12 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
                              : (Literal *)Builder.getLiteralUndefined(),
           var);
     }
+
+    // A typed class's static elements and non-virtual methods live in
+    // Variables in this scope. Default them at the top of the scope so that
+    // early reads don't violate compiler invariants.
+    if (decl->kind == sema::Decl::Kind::Class)
+      declareTypedClassMemberVars(decl);
   }
 
   // Generate and initialize the code for the hoisted function declarations
@@ -1373,24 +1382,31 @@ void ESTreeIRGen::emitFunctionEpilogue(Value *returnValue) {
   onCompiledFunction(curFunction()->function);
 }
 
-Function *ESTreeIRGen::genFieldInitFunction() {
+Function *ESTreeIRGen::genFieldInitFunction(bool staticElements) {
   const auto &typedClassContext = curFunction()->typedClassContext;
   ESTree::ClassDeclarationNode *classNode = typedClassContext.node;
-  sema::FunctionInfo *initFuncInfo =
-      ESTree::getDecoration<ESTree::ClassLikeDecoration>(classNode)
-          ->instanceElementsInitFunctionInfo;
+  auto *classDecoration =
+      ESTree::getDecoration<ESTree::ClassLikeDecoration>(classNode);
+  sema::FunctionInfo *initFuncInfo = staticElements
+      ? classDecoration->staticElementsInitFunctionInfo
+      : classDecoration->instanceElementsInitFunctionInfo;
   if (initFuncInfo == nullptr) {
     return nullptr;
   }
 
   // Check if already compiled (e.g., when recompiling a finally block).
-  if (Value *compiled =
-          findCompiledEntity(classNode, ExtraKey::ImplicitFieldInitializer))
+  ExtraKey extraKey = staticElements
+      ? ExtraKey::ImplicitStaticElementsInitializer
+      : ExtraKey::ImplicitFieldInitializer;
+  if (Value *compiled = findCompiledEntity(classNode, extraKey))
     return llvh::cast<Function>(compiled);
 
+  llvh::StringRef namePrefix = staticElements
+      ? "<static_elements_initializer:"
+      : "<instance_members_initializer:";
   auto initFunc = llvh::cast<Function>(Builder.createFunction(
-      (llvh::Twine("<instance_members_initializer:") +
-       typedClassContext.type->getClassName().str() + ">")
+      (llvh::Twine(namePrefix) + typedClassContext.type->getClassName().str() +
+       ">")
           .str(),
       Function::DefinitionKind::ES5Function,
       true /*strictMode*/));
@@ -1399,6 +1415,7 @@ Function *ESTreeIRGen::genFieldInitFunction() {
                       initFunc,
                       initFuncInfo,
                       typedClassContext,
+                      staticElements,
                       parentScope =
                           curFunction()->curScope()->getVariableScope()] {
     FunctionContext newFunctionContext{this, initFunc, initFuncInfo};
@@ -1443,29 +1460,33 @@ Function *ESTreeIRGen::genFieldInitFunction() {
         continue;
       }
 
-      // Skip static fields. They are initialized in genClassDeclaration.
-      if (isStatic || !init)
+      if (isStatic != staticElements || !init)
         continue;
 
       Value *value = genExpression(init);
-      emitTypedFieldStore(
-          typedClassContext.type,
-          getNameFieldFromID(key),
-          isPrivate,
-          genThisExpression(),
-          value);
+      if (staticElements) {
+        auto *id = llvh::cast<ESTree::IdentifierNode>(key);
+        sema::Decl *decl = semCtx_.getExpressionDecl(id);
+        emitStore(value, getDeclData(decl), false);
+      } else {
+        emitTypedFieldStore(
+            typedClassContext.type,
+            getNameFieldFromID(key),
+            isPrivate,
+            genThisExpression(),
+            value);
+      }
     }
 
     emitFunctionEpilogue(Builder.getLiteralUndefined());
     initFunc->setReturnType(Type::createUndefined());
   };
-  enqueueCompilation(
-      classNode, ExtraKey::ImplicitFieldInitializer, initFunc, compileFunc);
+  enqueueCompilation(classNode, extraKey, initFunc, compileFunc);
   return initFunc;
 }
 
 void ESTreeIRGen::emitCreateTypedFieldInitFunction() {
-  Function *initFunc = genFieldInitFunction();
+  Function *initFunc = genFieldInitFunction(/* staticElements */ false);
   if (initFunc == nullptr) {
     return;
   }
@@ -1477,15 +1498,22 @@ void ESTreeIRGen::emitCreateTypedFieldInitFunction() {
 
   CreateFunctionInst *createFieldInitFunc =
       Builder.createCreateFunctionInst(curFunction()->curScope(), initFunc);
-  Variable *fieldInitFuncVar = Builder.createVariable(
-      curFunction()->curScope()->getVariableScope(),
-      (llvh::Twine("<fieldInitFuncVar:") + classType->getClassName().str() +
-       ">"),
-      Type::createObject(),
-      /* hidden */ true);
+  // Reuse the Variable when recompiling (e.g. a class inside a finally block).
+  // The constructor is only compiled once, against the first Variable, so
+  // creating a second one here would leave it loading undefined.
+  if (!classInfo.fieldInitFunctionVar) {
+    classInfo.fieldInitFunctionVar = Builder.createVariable(
+        curFunction()->curScope()->getVariableScope(),
+        (llvh::Twine("<fieldInitFuncVar:") + classType->getClassName().str() +
+         ">"),
+        Type::createObject(),
+        /* hidden */ true);
+  }
+  Variable *fieldInitFuncVar = classInfo.fieldInitFunctionVar;
   Builder.createStoreFrameInst(
-      curFunction()->curScope(), createFieldInitFunc, fieldInitFuncVar);
-  classInfo.fieldInitFunctionVar = fieldInitFuncVar;
+      emitResolveScopeInstIfNeeded(fieldInitFuncVar->getParent()),
+      createFieldInitFunc,
+      fieldInitFuncVar);
 }
 
 void ESTreeIRGen::emitTypedFieldInitCall(flow::ClassType *classType) {

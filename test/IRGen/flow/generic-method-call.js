@@ -47,7 +47,7 @@ let d: string = box.identity("hello");
 // CHECK-NEXT:       ReturnInst %7: any
 // CHECK-NEXT:function_end
 
-// CHECK:scope %VS1 [exports: any, Box: any, box: any, a: any, b: any, c: any, d: any, identity: object, identity#1: object, ?Box.prototype: object]
+// CHECK:scope %VS1 [exports: any, Box: any, identity: empty|object, identity#1: empty|object, box: any, a: any, b: any, c: any, d: any, ?Box.prototype: object]
 
 // CHECK:function ""(exports: any): any
 // CHECK-NEXT:%BB0:
@@ -56,47 +56,53 @@ let d: string = box.identity("hello");
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %exports: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.exports]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.Box]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, empty: empty, [%VS1.identity]: empty|object
+// CHECK-NEXT:       StoreFrameInst %1: environment, empty: empty, [%VS1.identity#1]: empty|object
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.box]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.a]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.b]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.c]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.d]: any
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %1: environment, %VS1: any, %Box(): functionCode
-// CHECK-NEXT:        StoreFrameInst %1: environment, %10: object, [%VS1.Box]: any
-// CHECK-NEXT:  %12 = AllocTypedNonEnumObjectInst (:object) null: null
-// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %1: environment, %VS1: any, %identity(): functionCode
-// CHECK-NEXT:        StoreFrameInst %1: environment, %13: object, [%VS1.identity]: object
-// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %1: environment, %VS1: any, %"identity 1#"(): functionCode
-// CHECK-NEXT:        StoreFrameInst %1: environment, %15: object, [%VS1.identity#1]: object
-// CHECK-NEXT:        StoreFrameInst %1: environment, %12: object, [%VS1.?Box.prototype]: object
-// CHECK-NEXT:        StorePropertyStrictInst %12: object, %10: object, "prototype": string
-// CHECK-NEXT:  %19 = LoadFrameInst (:any) %1: environment, [%VS1.Box]: any
-// CHECK-NEXT:  %20 = CheckedTypeCastInst (:object) %19: any, type(object)
-// CHECK-NEXT:  %21 = LoadFrameInst (:object) %1: environment, [%VS1.?Box.prototype]: object
-// CHECK-NEXT:  %22 = UnionNarrowTrustedInst (:object) %21: object
-// CHECK-NEXT:  %23 = AllocTypedObjectInst (:object) %22: object, "value": string, 0: number
-// CHECK-NEXT:  %24 = CallInst (:any) %20: object, %Box(): functionCode, true: boolean, empty: any, %20: object, %23: object
-// CHECK-NEXT:        StoreFrameInst %1: environment, %23: object, [%VS1.box]: any
-// CHECK-NEXT:  %26 = LoadFrameInst (:any) %1: environment, [%VS1.box]: any
-// CHECK-NEXT:  %27 = CheckedTypeCastInst (:object) %26: any, type(object)
-// CHECK-NEXT:  %28 = LoadFrameInst (:object) %1: environment, [%VS1.identity]: object
-// CHECK-NEXT:  %29 = CallInst [njsf] (:number) %28: object, %identity(): functionCode, true: boolean, empty: any, undefined: undefined, %27: object, 42: number
-// CHECK-NEXT:        StoreFrameInst %1: environment, %29: number, [%VS1.a]: any
-// CHECK-NEXT:  %31 = LoadFrameInst (:any) %1: environment, [%VS1.box]: any
-// CHECK-NEXT:  %32 = CheckedTypeCastInst (:object) %31: any, type(object)
-// CHECK-NEXT:  %33 = LoadFrameInst (:object) %1: environment, [%VS1.identity#1]: object
-// CHECK-NEXT:  %34 = CallInst [njsf] (:string) %33: object, %"identity 1#"(): functionCode, true: boolean, empty: any, undefined: undefined, %32: object, "hello": string
-// CHECK-NEXT:        StoreFrameInst %1: environment, %34: string, [%VS1.b]: any
-// CHECK-NEXT:  %36 = LoadFrameInst (:any) %1: environment, [%VS1.box]: any
-// CHECK-NEXT:  %37 = CheckedTypeCastInst (:object) %36: any, type(object)
-// CHECK-NEXT:  %38 = LoadFrameInst (:object) %1: environment, [%VS1.identity]: object
-// CHECK-NEXT:  %39 = CallInst [njsf] (:number) %38: object, %identity(): functionCode, true: boolean, empty: any, undefined: undefined, %37: object, 42: number
-// CHECK-NEXT:        StoreFrameInst %1: environment, %39: number, [%VS1.c]: any
-// CHECK-NEXT:  %41 = LoadFrameInst (:any) %1: environment, [%VS1.box]: any
-// CHECK-NEXT:  %42 = CheckedTypeCastInst (:object) %41: any, type(object)
-// CHECK-NEXT:  %43 = LoadFrameInst (:object) %1: environment, [%VS1.identity#1]: object
-// CHECK-NEXT:  %44 = CallInst [njsf] (:string) %43: object, %"identity 1#"(): functionCode, true: boolean, empty: any, undefined: undefined, %42: object, "hello": string
-// CHECK-NEXT:        StoreFrameInst %1: environment, %44: string, [%VS1.d]: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, undefined: undefined, [%VS1.c]: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, undefined: undefined, [%VS1.d]: any
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %1: environment, %VS1: any, %Box(): functionCode
+// CHECK-NEXT:        StoreFrameInst %1: environment, %12: object, [%VS1.Box]: any
+// CHECK-NEXT:  %14 = AllocTypedNonEnumObjectInst (:object) null: null
+// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %1: environment, %VS1: any, %identity(): functionCode
+// CHECK-NEXT:        StoreFrameInst %1: environment, %15: object, [%VS1.identity]: empty|object
+// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %1: environment, %VS1: any, %"identity 1#"(): functionCode
+// CHECK-NEXT:        StoreFrameInst %1: environment, %17: object, [%VS1.identity#1]: empty|object
+// CHECK-NEXT:        StoreFrameInst %1: environment, %14: object, [%VS1.?Box.prototype]: object
+// CHECK-NEXT:        StorePropertyStrictInst %14: object, %12: object, "prototype": string
+// CHECK-NEXT:  %21 = LoadFrameInst (:any) %1: environment, [%VS1.Box]: any
+// CHECK-NEXT:  %22 = CheckedTypeCastInst (:object) %21: any, type(object)
+// CHECK-NEXT:  %23 = LoadFrameInst (:object) %1: environment, [%VS1.?Box.prototype]: object
+// CHECK-NEXT:  %24 = UnionNarrowTrustedInst (:object) %23: object
+// CHECK-NEXT:  %25 = AllocTypedObjectInst (:object) %24: object, "value": string, 0: number
+// CHECK-NEXT:  %26 = CallInst (:any) %22: object, %Box(): functionCode, true: boolean, empty: any, %22: object, %25: object
+// CHECK-NEXT:        StoreFrameInst %1: environment, %25: object, [%VS1.box]: any
+// CHECK-NEXT:  %28 = LoadFrameInst (:any) %1: environment, [%VS1.box]: any
+// CHECK-NEXT:  %29 = CheckedTypeCastInst (:object) %28: any, type(object)
+// CHECK-NEXT:  %30 = LoadFrameInst (:empty|object) %1: environment, [%VS1.identity]: empty|object
+// CHECK-NEXT:  %31 = ThrowIfInst (:object) %30: empty|object, type(empty)
+// CHECK-NEXT:  %32 = CallInst [njsf] (:number) %31: object, %identity(): functionCode, true: boolean, empty: any, undefined: undefined, %29: object, 42: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %32: number, [%VS1.a]: any
+// CHECK-NEXT:  %34 = LoadFrameInst (:any) %1: environment, [%VS1.box]: any
+// CHECK-NEXT:  %35 = CheckedTypeCastInst (:object) %34: any, type(object)
+// CHECK-NEXT:  %36 = LoadFrameInst (:empty|object) %1: environment, [%VS1.identity#1]: empty|object
+// CHECK-NEXT:  %37 = ThrowIfInst (:object) %36: empty|object, type(empty)
+// CHECK-NEXT:  %38 = CallInst [njsf] (:string) %37: object, %"identity 1#"(): functionCode, true: boolean, empty: any, undefined: undefined, %35: object, "hello": string
+// CHECK-NEXT:        StoreFrameInst %1: environment, %38: string, [%VS1.b]: any
+// CHECK-NEXT:  %40 = LoadFrameInst (:any) %1: environment, [%VS1.box]: any
+// CHECK-NEXT:  %41 = CheckedTypeCastInst (:object) %40: any, type(object)
+// CHECK-NEXT:  %42 = LoadFrameInst (:empty|object) %1: environment, [%VS1.identity]: empty|object
+// CHECK-NEXT:  %43 = ThrowIfInst (:object) %42: empty|object, type(empty)
+// CHECK-NEXT:  %44 = CallInst [njsf] (:number) %43: object, %identity(): functionCode, true: boolean, empty: any, undefined: undefined, %41: object, 42: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %44: number, [%VS1.c]: any
+// CHECK-NEXT:  %46 = LoadFrameInst (:any) %1: environment, [%VS1.box]: any
+// CHECK-NEXT:  %47 = CheckedTypeCastInst (:object) %46: any, type(object)
+// CHECK-NEXT:  %48 = LoadFrameInst (:empty|object) %1: environment, [%VS1.identity#1]: empty|object
+// CHECK-NEXT:  %49 = ThrowIfInst (:object) %48: empty|object, type(empty)
+// CHECK-NEXT:  %50 = CallInst [njsf] (:string) %49: object, %"identity 1#"(): functionCode, true: boolean, empty: any, undefined: undefined, %47: object, "hello": string
+// CHECK-NEXT:        StoreFrameInst %1: environment, %50: string, [%VS1.d]: any
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
