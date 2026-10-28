@@ -87,8 +87,8 @@ emitReturnIterResultObject(IRBuilder &builder, Value *val, bool done) {
 class LowerToStateMachine {
   /// The module.
   Module *M_;
-  /// Outer generator function.
-  GeneratorFunction *outer_;
+  /// Outer function: a GeneratorFunction or an AsyncFunction.
+  Function *outer_;
   /// Inner generator function.
   NormalFunction *inner_;
   /// The instruction that creates the inner generator function.
@@ -113,7 +113,7 @@ class LowerToStateMachine {
  public:
   explicit LowerToStateMachine(
       Module *M,
-      GeneratorFunction *outer,
+      Function *outer,
       CreateGeneratorInst *CGI)
       : M_(M),
         outer_(outer),
@@ -1043,11 +1043,11 @@ void LowerToStateMachine::moveInnerPhisToOuter(DominanceInfo &D) {
 }
 } // namespace
 
-/// \return the corresponding NormalFunction for the given \p outer
-/// generator function, or nullptr if there is none. In the case of a generator
+/// \return the CreateGeneratorInst in the given \p outer generator or async
+/// function, or nullptr if there is none. In the case of a generator
 /// function which is unreachable, the inner function may have been deleted
 /// because it will never be created.
-static CreateGeneratorInst *findCreateGenerator(GeneratorFunction *outer) {
+static CreateGeneratorInst *findCreateGenerator(Function *outer) {
   for (BasicBlock &BB : *outer) {
     for (Instruction &I : BB) {
       if (auto *CGI = llvh::dyn_cast<CreateGeneratorInst>(&I)) {
@@ -1059,8 +1059,9 @@ static CreateGeneratorInst *findCreateGenerator(GeneratorFunction *outer) {
 }
 
 Pass *createLowerGeneratorFunction() {
-  /// Process all GeneratorFunction and GeneratorInnerFunctions. Turn them into
-  /// regular function IR, removing all generator-specific IR.
+  /// Process all GeneratorFunctions, AsyncFunctions and
+  /// GeneratorInnerFunctions. Turn them into regular function IR, removing all
+  /// generator-specific IR.
   class LowerGeneratorFunction : public ModulePass {
    public:
     explicit LowerGeneratorFunction() : ModulePass("LowerGeneratorFunction") {}
@@ -1072,11 +1073,11 @@ Pass *createLowerGeneratorFunction() {
         return false;
       bool changed = false;
       for (auto &F : *M) {
-        if (auto *GF = llvh::dyn_cast<GeneratorFunction>(&F)) {
-          if (auto *inner = findCreateGenerator(GF)) {
-            LowerToStateMachine(M, GF, inner).convert();
-            changed = true;
-          }
+        if (!llvh::isa<GeneratorFunction>(F) && !llvh::isa<AsyncFunction>(F))
+          continue;
+        if (auto *inner = findCreateGenerator(&F)) {
+          LowerToStateMachine(M, &F, inner).convert();
+          changed = true;
         }
       }
       M->setGeneratorsLowered(true);

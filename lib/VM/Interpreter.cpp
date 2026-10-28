@@ -134,6 +134,16 @@ CallResult<PseudoHandle<JSGeneratorObject>> Interpreter::createGenerator_RJS(
   auto generatorFunction = Handle<JSFunction>::vmcast(
       runtime.getCurrentFrame().getCalleeClosureHandleUnsafe());
 
+  // The generator created by an async function is internal to it, and the
+  // async function's "prototype" property, if any, belongs to user code.
+  if (generatorFunction->getCodeBlock()->getHeaderFlags().getKind() ==
+      FuncKind::Async) {
+    return JSGeneratorObject::create(
+        runtime,
+        innerFunc,
+        Handle<JSObject>::vmcast(&runtime.generatorPrototype));
+  }
+
   auto prototypeProp = JSObject::getNamed_RJS(
       generatorFunction,
       runtime,

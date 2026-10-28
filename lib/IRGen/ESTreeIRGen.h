@@ -654,15 +654,6 @@ class ESTreeIRGen {
   /// Map from a class AST node to its internal variables.
   llvh::DenseMap<ESTree::ClassLikeNode *, LegacyClassVars> legacyClassVars_{};
 
-  /// Hidden variables holding async functions' inner generator closures.
-  /// These need to be cached because the same definition site can be compiled
-  /// multiple times into the same function (e.g. a finally body, which is
-  /// emitted once per control-flow exit path). The async outer function is
-  /// compiled only once and loads a single slot, so every copy of the
-  /// definition site must initialize that same variable.
-  llvh::DenseMap<ESTree::FunctionLikeNode *, Variable *>
-      asyncInnerClosureVars_{};
-
   /// A queue of "entities" that have been forward declared and mapped in
   /// \c compiledEntities_, but need to be actually compiled. This makes the
   /// compiler non-recursive.
@@ -1479,12 +1470,30 @@ class ESTreeIRGen {
       Variable *homeObject = nullptr,
       ESTree::Node *parentNode = nullptr);
 
+  /// Create the inner function of a generator or an async function, and emit
+  /// a CreateGeneratorInst for it in the current (outer) function.
+  /// \param innerName the name of the inner function.
+  /// \param functionNode the ESTree function node of the original function.
+  /// \param parentScope the VariableScope of the outer function's parent,
+  ///   which becomes the parent of the inner function.
+  /// \param capturedState forwarded to the body of an async arrow; for any
+  ///   other function only its homeObject is used.
+  /// \return the CreateGeneratorInst.
+  CreateGeneratorInst *emitCreateGenerator(
+      Identifier innerName,
+      ESTree::FunctionLikeNode *functionNode,
+      VariableScope *parentScope,
+      const CapturedState &capturedState);
+
   /// Generate the IR for an async function: it desugars async function to a
-  /// generator function wrapped in a call to the JS builtin `spawnAsync` and
-  /// return the result. To visualize it,
+  /// generator object passed to the JS builtin `spawnAsync`, and returns the
+  /// result. To visualize it,
   ///   async function<name>(<args>)<body>
   /// is effectively lowered to
-  ///   function<name>(){return spawnAsync(function*()<body>, this, arguments)}
+  ///   function<name>(){return spawnAsync(<generator object for
+  ///     function*(<args>)<body>, with this function's this and arguments>)}
+  /// The async function is the outer function of the generator: it runs
+  /// CreateGenerator on the inner function directly.
   /// \param originalName is the original non-unique name specified by the user
   ///   or inferred according to the rules of ES6.
   /// \param functionNode is the ESTree function node (declaration, expression,
@@ -1492,46 +1501,13 @@ class ESTreeIRGen {
   /// \param capturedState the relevant captured state.
   /// \param parentNode can optionally be set to the parent AST node of the
   ///  function node.
-  /// \param existingInnerClosureVar if non-null, the hidden generator-closure
-  ///  variable created at the definition site for lazy async compilation. Its
-  ///  slot is lazily populated on the first call. When null, the variable is
-  ///  created here instead.
   /// \return the async Function.
   Function *genAsyncFunction(
       Identifier originalName,
       ESTree::FunctionLikeNode *functionNode,
       VariableScope *parentScope,
       const CapturedState &capturedState,
-      ESTree::Node *parentNode = nullptr,
-      Variable *existingInnerClosureVar = nullptr);
-
-  /// Emit the definition-time initialization of the synthetic generator closure
-  /// slot for an async function.
-  /// In eager mode: the closure is created and stored in the Variable.
-  /// In lazy mode: the variable is created but undefined is stored.
-  /// The Variable itself is created only on the first call for a given
-  /// \p functionNode and cached in \c asyncInnerClosureVars_, but the
-  /// initialization is emitted on every call.
-  /// \return the Variable storing the closure.
-  Variable *initAsyncFunctionInnerClosureVar(
-      Identifier originalName,
-      ESTree::FunctionLikeNode *functionNode,
-      VariableScope *parentVarScope,
-      const CapturedState &capturedState,
-      ESTree::Node *parentNode);
-
-  /// Create the inner generator closure for an async function and store it into
-  /// \p innerClosureVar, in the resolved scope of the variable's parent.
-  /// Shared by the eager definition-site store and the lazy first-call
-  /// initialization.
-  /// \return the created closure.
-  Value *emitCreateAsyncFunctionInnerClosure(
-      Identifier originalName,
-      ESTree::FunctionLikeNode *functionNode,
-      VariableScope *parentVarScope,
-      const CapturedState &capturedState,
-      ESTree::Node *parentNode,
-      Variable *innerClosureVar);
+      ESTree::Node *parentNode = nullptr);
 
   /// In the beginning of an ES5 function, initialize the special captured
   /// variables needed by arrow functions, constructors and methods.
@@ -1655,8 +1631,7 @@ class ESTreeIRGen {
       ESTree::BlockStatementNode *bodyBlock,
       VariableScope *parentVarScope,
       ExtraKey extraKey,
-      const CapturedState &capturedState,
-      Variable *asyncFunctionInnerClosureVar = nullptr);
+      const CapturedState &capturedState);
 
   /// Invoked after IR for a function has been emitted to perform any needed
   /// adjustments. Specifically, it updates all catch targets.

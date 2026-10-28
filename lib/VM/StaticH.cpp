@@ -643,9 +643,20 @@ extern "C" SHLegacyValue _sh_ljs_create_generator_object(
     auto generatorFunction = runtime.makeHandle(
         vmcast<NativeJSFunction>(
             runtime.getCurrentFrame().getCalleeClosureUnsafe()));
+    uint8_t kind = generatorFunction->getFunctionInfo()->kind;
     assert(
-        generatorFunction->getFunctionInfo()->kind == FuncKind::Generator &&
-        "should be called from a generator function");
+        (kind == FuncKind::Generator || kind == FuncKind::Async) &&
+        "should be called from a generator or async function");
+
+    // The generator created by an async function is internal to it, and the
+    // async function's "prototype" property, if any, belongs to user code.
+    if (kind == FuncKind::Async) {
+      return JSGeneratorObject::create(
+                 runtime,
+                 innerFunc,
+                 Handle<JSObject>::vmcast(&runtime.generatorPrototype))
+          ->getHermesValue();
+    }
 
     auto prototypeProp = JSObject::getNamed_RJS(
         generatorFunction,

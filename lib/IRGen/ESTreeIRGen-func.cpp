@@ -251,15 +251,12 @@ NormalFunction *ESTreeIRGen::genCapturingFunction(
         capturedState);
     return newFunc;
   }
-  const bool isGeneratorInnerFunction =
-      functionKind == Function::DefinitionKind::GeneratorInnerArrow;
   auto compileFunc = [this,
                       newFunc,
                       functionNode,
                       legacyClsCtx = curFunction()->legacyClassContext,
                       capturedState,
-                      parentScope,
-                      isGeneratorInnerFunction] {
+                      parentScope] {
     FunctionContext newFunctionContext{
         this, newFunc, functionNode->getSemInfo()};
     newFunctionContext.legacyClassContext = legacyClsCtx;
@@ -270,44 +267,15 @@ NormalFunction *ESTreeIRGen::genCapturingFunction(
     // Propagate captured "this", "new.target" and "arguments" from parents.
     curFunction()->capturedState = capturedState;
 
-    if (isGeneratorInnerFunction && !hasSimpleParams(functionNode)) {
-      // This inner generator with non simple params will be stepped once by the
-      // outer generator to initialize params, before being then available to
-      // user code. Note that since we are in a more locked down use case (an
-      // async arrow function, compared to a regular generator function), we
-      // know that the generator can only be invoked with .next(), not
-      // .return(). Generator arrow functions are not in the language.
-      auto *prologueBB = Builder.createBasicBlock(newFunc);
-      auto *entryPointBB = Builder.createBasicBlock(newFunc);
-      // Initialize parameters.
-      Builder.setInsertionBlock(prologueBB);
-      emitFunctionPrologue(
-          functionNode,
-          prologueBB,
-          InitES5CaptureState::No,
-          DoEmitDeclarations::Yes,
-          parentScope);
-      // Then on the next stepping of the generator, branch to the actual
-      // function body code.
-      Builder.createSaveAndYieldInst(
-          Builder.getLiteralUndefined(),
-          Builder.getLiteralBool(false),
-          entryPointBB);
-      // Actual entry point of function from the caller's perspective.
-      Builder.setInsertionBlock(entryPointBB);
-      genResumeGenerator(
-          GenFinally::No,
-          Builder.createAllocStackInst(
-              genAnonymousLabelName("isReturn_entry"), Type::createBoolean()),
-          Builder.createBasicBlock(newFunc));
-    } else {
-      emitFunctionPrologue(
-          functionNode,
-          Builder.createBasicBlock(newFunc),
-          InitES5CaptureState::No,
-          DoEmitDeclarations::Yes,
-          parentScope);
-    }
+    // A GeneratorInnerArrow is always the body of an async arrow, which
+    // spawnAsync starts in a single step together with its parameters, so
+    // non-simple params need no separate initialization step.
+    emitFunctionPrologue(
+        functionNode,
+        Builder.createBasicBlock(newFunc),
+        InitES5CaptureState::No,
+        DoEmitDeclarations::Yes,
+        parentScope);
 
     auto *body = ESTree::getBlockStatement(functionNode);
     assert(body && "empty function body");
@@ -414,10 +382,12 @@ NormalFunction *ESTreeIRGen::genBasicFunction(
           genAnonymousLabelName("isReturn_prologue"), Type::createBoolean());
       genResumeGenerator(GenFinally::No, prologueResumeIsReturn, prologueBB);
 
-      if (hasSimpleParams(functionNode)) {
+      if (hasSimpleParams(functionNode) || ESTree::isAsync(functionNode)) {
         // If there are simple params, then we don't need an extra
         // yield/resume. They can simply be initialized on the first call to
-        // `.next`.
+        // `.next`. The same holds for the body of an async function, because
+        // spawnAsync starts it in a single step that reports errors from
+        // parameter initialization and from the body alike.
         Builder.setInsertionBlock(prologueBB);
         emitFunctionPrologue(
             functionNode,
@@ -551,91 +521,52 @@ Function *ESTreeIRGen::genGeneratorFunction(
     return outerFn;
   }
 
-  auto compileFunc = [this,
-                      outerFn,
-                      functionNode,
-                      originalName,
-                      capturedState = curFunction()->capturedState,
-                      parentScope,
-                      homeObject]() {
-    FunctionContext outerFnContext{this, outerFn, functionNode->getSemInfo()};
-    Function::ScopedLexicalScopeChange lexScopeChange(
-        curFunction()->function,
-        curFunction()->getSemInfo()->getFunctionBodyScope());
+  auto compileFunc =
+      [this, outerFn, functionNode, originalName, parentScope, homeObject]() {
+        FunctionContext outerFnContext{
+            this, outerFn, functionNode->getSemInfo()};
+        Function::ScopedLexicalScopeChange lexScopeChange(
+            curFunction()->function,
+            curFunction()->getSemInfo()->getFunctionBodyScope());
 
-    // We pass InitES5CaptureState::No to emitFunctionPrologue because generator
-    // functions do not create a scope and so we shouldn't be trying to capture
-    // state like 'this' into its nonexistent scope. If there is an arrow
-    // function inside the inner generator function which needs access to
-    // captured state, then a later lowering pass is responsible for lifting out
-    // instructions like CreateArguments. That lowering pass also will create
-    // the required scopes.
-    emitFunctionPrologue(
-        functionNode,
-        Builder.createBasicBlock(outerFn),
-        InitES5CaptureState::No,
-        DoEmitDeclarations::No,
-        parentScope);
+        // We pass InitES5CaptureState::No to emitFunctionPrologue because
+        // generator functions do not create a scope and so we shouldn't be
+        // trying to capture state like 'this' into its nonexistent scope. If
+        // there is an arrow function inside the inner generator function which
+        // needs access to captured state, then a later lowering pass is
+        // responsible for lifting out instructions like CreateArguments. That
+        // lowering pass also will create the required scopes.
+        emitFunctionPrologue(
+            functionNode,
+            Builder.createBasicBlock(outerFn),
+            InitES5CaptureState::No,
+            DoEmitDeclarations::No,
+            parentScope);
 
-    bool isAsyncArrow =
-        llvh::isa<ESTree::ArrowFunctionExpressionNode>(functionNode);
-    if (isAsyncArrow) {
-      assert(
-          ESTree::isAsync(functionNode) &&
-          "arrow function nodes should only be given to genGeneratorFunction when they are async arrows.");
-    }
+        assert(
+            !llvh::isa<ESTree::ArrowFunctionExpressionNode>(functionNode) &&
+            "generator arrow functions are not in the language");
 
-    // Build the inner function. This must be done in the parentScope since
-    // generator functions don't create a scope.
-    Identifier innerName =
-        originalName.isValid() ? originalName : genAnonymousLabelName("");
-    NormalFunction *innerFn;
-    if (isAsyncArrow) {
-      // If we are compliing this function as part of an async arrow function,
-      // then we want to forward the captured state of the parent.
-      curFunction()->capturedState = capturedState;
-      // Create the inner function but make sure it captures the
-      // forwarded state we just set.
-      innerFn = genCapturingFunction(
-          innerName,
-          functionNode,
-          parentScope,
-          capturedState,
-          Function::DefinitionKind::GeneratorInnerArrow);
-    } else {
-      // Here we pass the homeObject because we want the actual user code to be
-      // able to use the super that the outer generator had access to.
-      innerFn = genBasicFunction(
-          innerName,
-          functionNode,
-          parentScope,
-          /* superClassNode */ nullptr,
-          Function::DefinitionKind::GeneratorInner,
-          homeObject);
-    }
+        // Here we pass the homeObject because we want the actual user code to
+        // be able to use the super that the outer generator had access to.
+        CapturedState innerState{};
+        innerState.homeObject = homeObject;
+        auto *gen = emitCreateGenerator(
+            originalName.isValid() ? originalName : genAnonymousLabelName(""),
+            functionNode,
+            parentScope,
+            innerState);
 
-    // If the original AST node was async, this inner generator is driven by
-    // spawnAsync (which handles raw yields). Otherwise, if it's an async
-    // generator, the driver is AsyncGenerator which needs OverloadYield.
-    innerFn->setIsFromAsyncFunction(ESTree::isAsync(functionNode));
+        if (!hasSimpleParams(functionNode)) {
+          // If there are non-simple params, step the inner function once to
+          // initialize them.
+          Value *next = Builder.createLoadPropertyInst(gen, "next");
+          Builder.createCallInst(
+              next, /* newTarget */ Builder.getLiteralUndefined(), gen, {});
+        }
 
-    // Generator functions do not create their own scope, so use the parent's
-    // scope.
-    GetParentScopeInst *parentScopeInst = Builder.createGetParentScopeInst(
-        parentScope, curFunction()->function->getParentScopeParam());
-    // Create a generator function, which will store the arguments.
-    auto *gen = Builder.createCreateGeneratorInst(parentScopeInst, innerFn);
-
-    if (!hasSimpleParams(functionNode)) {
-      // If there are non-simple params, step the inner function once to
-      // initialize them.
-      Value *next = Builder.createLoadPropertyInst(gen, "next");
-      Builder.createCallInst(
-          next, /* newTarget */ Builder.getLiteralUndefined(), gen, {});
-    }
-
-    emitFunctionEpilogue(gen);
-  };
+        emitFunctionEpilogue(gen);
+      };
 
   enqueueCompilation(
       functionNode, ExtraKey::GeneratorOuter, outerFn, compileFunc);
@@ -643,25 +574,53 @@ Function *ESTreeIRGen::genGeneratorFunction(
   return outerFn;
 }
 
+CreateGeneratorInst *ESTreeIRGen::emitCreateGenerator(
+    Identifier innerName,
+    ESTree::FunctionLikeNode *functionNode,
+    VariableScope *parentScope,
+    const CapturedState &capturedState) {
+  NormalFunction *innerFn;
+  if (llvh::isa<ESTree::ArrowFunctionExpressionNode>(functionNode)) {
+    assert(
+        ESTree::isAsync(functionNode) &&
+        "only async arrows are compiled to generators");
+    // The body of an async arrow forwards the captured state of the parent.
+    innerFn = genCapturingFunction(
+        innerName,
+        functionNode,
+        parentScope,
+        capturedState,
+        Function::DefinitionKind::GeneratorInnerArrow);
+  } else {
+    innerFn = genBasicFunction(
+        innerName,
+        functionNode,
+        parentScope,
+        /* superClassNode */ nullptr,
+        Function::DefinitionKind::GeneratorInner,
+        capturedState.homeObject);
+  }
+
+  // If the original AST node was async, this inner generator is driven by
+  // spawnAsync (which handles raw yields). Otherwise, if it's an async
+  // generator, the driver is AsyncGenerator which needs OverloadYield.
+  innerFn->setIsFromAsyncFunction(ESTree::isAsync(functionNode));
+
+  // The outer function does not create its own scope, so the inner function
+  // is a child of the parent's scope.
+  GetParentScopeInst *parentScopeInst = Builder.createGetParentScopeInst(
+      parentScope, curFunction()->function->getParentScopeParam());
+  // Create a generator object, which will store the arguments.
+  return Builder.createCreateGeneratorInst(parentScopeInst, innerFn);
+}
+
 Function *ESTreeIRGen::genAsyncFunction(
     Identifier originalName,
     ESTree::FunctionLikeNode *functionNode,
     VariableScope *parentScope,
     const CapturedState &capturedState,
-    ESTree::Node *parentNode,
-    Variable *existingInnerClosureVar) {
+    ESTree::Node *parentNode) {
   assert(functionNode && "Function AST cannot be null");
-
-  // NOTE: must precede the compiled-entity check below.
-  // IRGen compiles the same function more than once.
-  // The async outer function is compiled only once and unconditionally loads
-  // the hidden inner-closure slot, so every occurrence of the definition site
-  // must emit its own store into that (shared) slot.
-  const bool initializeClosureOnFirstCall = existingInnerClosureVar != nullptr;
-  Variable *asyncFunctionInnerClosureVar = initializeClosureOnFirstCall
-      ? existingInnerClosureVar
-      : initAsyncFunctionInnerClosureVar(
-            originalName, functionNode, parentScope, capturedState, parentNode);
 
   if (auto *compiled = findCompiledEntity(functionNode, ExtraKey::AsyncOuter))
     return llvh::cast<Function>(compiled);
@@ -680,8 +639,6 @@ Function *ESTreeIRGen::genAsyncFunction(
       getFunctionRange(functionNode, parentNode),
       /* insertBefore */ nullptr);
 
-  bool isAsyncArrow =
-      llvh::isa<ESTree::ArrowFunctionExpressionNode>(functionNode);
   auto *body = ESTree::getBlockStatement(functionNode);
   if (body->isLazyFunctionBody) {
     setupLazyFunction(
@@ -691,8 +648,7 @@ Function *ESTreeIRGen::genAsyncFunction(
         body,
         parentScope,
         ExtraKey::AsyncOuter,
-        capturedState,
-        asyncFunctionInnerClosureVar);
+        capturedState);
     return asyncFn;
   }
 
@@ -701,68 +657,28 @@ Function *ESTreeIRGen::genAsyncFunction(
                       functionNode,
                       originalName,
                       parentScope,
-                      capturedState,
-                      parentNode,
-                      isAsyncArrow,
-                      asyncFunctionInnerClosureVar,
-                      initializeClosureOnFirstCall]() {
+                      capturedState]() {
     FunctionContext asyncFnContext{this, asyncFn, functionNode->getSemInfo()};
     Function::ScopedLexicalScopeChange lexScopeChange(
         curFunction()->function,
         curFunction()->getSemInfo()->getFunctionBodyScope());
 
-    InitES5CaptureState shouldCapture = InitES5CaptureState::Yes;
-    if (isAsyncArrow) {
-      // Propagate captured state.
-      curFunction()->capturedState = capturedState;
-      // Since we just propagated the captured state, we do not want to try to
-      // capture the current state of the function.
-      shouldCapture = InitES5CaptureState::No;
-    }
-
-    // The outer async function need not emit code for parameters.
-    // It would simply delegate `arguments` object down to inner generator.
-    // This avoid emitting code e.g. destructuring parameters twice.
+    // Like the outer function of a generator, the async function creates no
+    // scope and captures no state: the whole body, including the parameters,
+    // is in the inner generator, which receives this function's `this` and
+    // arguments through CreateGenerator.
     emitFunctionPrologue(
         functionNode,
         Builder.createBasicBlock(asyncFn),
-        shouldCapture,
+        InitES5CaptureState::No,
         DoEmitDeclarations::No,
         parentScope);
 
-    Value *genClosure =
-        emitLoad(asyncFunctionInnerClosureVar, /* inhibitThrow */ false);
-    if (initializeClosureOnFirstCall) {
-      // Lazy async: the closure slot holds undefined until the first call.
-      // Create the inner generator closure on first call and cache it.
-      auto *loadBlock = Builder.getInsertionBlock();
-      auto *createClosureBlock = Builder.createBasicBlock(asyncFn);
-      auto *continueBlock = Builder.createBasicBlock(asyncFn);
-      Builder.createCondBranchInst(
-          Builder.createBinaryOperatorInst(
-              genClosure,
-              Builder.getLiteralUndefined(),
-              ValueKind::BinaryStrictlyEqualInstKind),
-          createClosureBlock,
-          continueBlock);
-
-      Builder.setInsertionBlock(createClosureBlock);
-      auto *createdClosure = emitCreateAsyncFunctionInnerClosure(
-          originalName,
-          functionNode,
-          parentScope,
-          capturedState,
-          parentNode,
-          asyncFunctionInnerClosureVar);
-      auto *createdClosureBlock = Builder.getInsertionBlock();
-      Builder.createBranchInst(continueBlock);
-
-      Builder.setInsertionBlock(continueBlock);
-      genClosure = Builder.createPhiInst(
-          {genClosure, createdClosure}, {loadBlock, createdClosureBlock});
-    }
-    auto *thisArg = curFunction()->jsParams[0];
-    auto *argumentsList = curFunction()->createArgumentsInst;
+    auto *gen = emitCreateGenerator(
+        genAnonymousLabelName(originalName.isValid() ? originalName.str() : ""),
+        functionNode,
+        parentScope,
+        capturedState);
 
     auto *spawnAsyncClosure = Builder.createGetBuiltinClosureInst(
         BuiltinMethod::HermesBuiltin_spawnAsync);
@@ -771,7 +687,7 @@ Function *ESTreeIRGen::genAsyncFunction(
         spawnAsyncClosure,
         /* newTarget */ Builder.getLiteralUndefined(),
         /* thisValue */ Builder.getLiteralUndefined(),
-        {genClosure, thisArg, argumentsList});
+        {gen});
 
     emitFunctionEpilogue(res);
   };
@@ -779,83 +695,6 @@ Function *ESTreeIRGen::genAsyncFunction(
   enqueueCompilation(functionNode, ExtraKey::AsyncOuter, asyncFn, compileFunc);
 
   return asyncFn;
-}
-
-Variable *ESTreeIRGen::initAsyncFunctionInnerClosureVar(
-    Identifier originalName,
-    ESTree::FunctionLikeNode *functionNode,
-    VariableScope *parentVarScope,
-    const CapturedState &capturedState,
-    ESTree::Node *parentNode) {
-  ESTree::BlockStatementNode *body = ESTree::getBlockStatement(functionNode);
-  bool isLazy = body->isLazyFunctionBody;
-
-  // Lazy async stores undefined until the inner closure can be created on the
-  // first call.
-  //
-  // NOTE: The alternative here would be to create and store the closure so
-  // that we don't have to do a check at runtime, just like we do in eager
-  // mode. However, lazy compilation would need a mechanism to replace
-  // multiple functions instead of just the one that was called to trigger
-  // lazy compilation. That's possible, but it's a more invasive change that
-  // introduces far ranging complexity in order to affect a minor optimization
-  // in lazy compilation mode.
-  Type innerClosureType = isLazy
-      ? getTypeContext().unionTy(Type::createObject(), Type::createUndefined())
-      : Type::createObject();
-  // The variable is created once per definition site, but the initialization
-  // below is emitted at every occurrence of that site, since a definition site
-  // can be compiled more than once (e.g. inside a finally block).
-  Variable *&innerClosureVar = asyncInnerClosureVars_[functionNode];
-  if (!innerClosureVar) {
-    innerClosureVar = Builder.createVariable(
-        parentVarScope,
-        genAnonymousLabelName(
-            llvh::Twine(originalName.isValid() ? originalName.str() : "") +
-            "_innerClosure"),
-        innerClosureType,
-        /* hidden */ true);
-  }
-  assert(
-      innerClosureVar->getParent() == parentVarScope &&
-      "async inner closure variable reused from a different scope");
-
-  if (isLazy) {
-    // The generator closure is created lazily on the first call, in
-    // genAsyncFunction; store undefined as the sentinel here.
-    emitStore(
-        Builder.getLiteralUndefined(), innerClosureVar, /* declInit */ true);
-  } else {
-    emitCreateAsyncFunctionInnerClosure(
-        originalName,
-        functionNode,
-        parentVarScope,
-        capturedState,
-        parentNode,
-        innerClosureVar);
-  }
-
-  return innerClosureVar;
-}
-
-Value *ESTreeIRGen::emitCreateAsyncFunctionInnerClosure(
-    Identifier originalName,
-    ESTree::FunctionLikeNode *functionNode,
-    VariableScope *parentVarScope,
-    const CapturedState &capturedState,
-    ESTree::Node *parentNode,
-    Variable *innerClosureVar) {
-  auto *gen = genGeneratorFunction(
-      genAnonymousLabelName(originalName.isValid() ? originalName.str() : ""),
-      functionNode,
-      parentVarScope,
-      capturedState.homeObject,
-      parentNode);
-  auto *scope = llvh::cast<BaseScopeInst>(
-      emitResolveScopeInstIfNeeded(innerClosureVar->getParent()));
-  auto *closure = Builder.createCreateFunctionInst(scope, gen);
-  Builder.createStoreFrameInst(scope, closure, innerClosureVar);
-  return closure;
 }
 
 void ESTreeIRGen::initCaptureStateInES5FunctionHelper() {
@@ -972,9 +811,10 @@ void ESTreeIRGen::emitFunctionPrologue(
   } else {
     baseScope = Builder.getEmptySentinel();
   }
-  // GeneratorFunctions should not have a scope created. It will be created
-  // later during a lowering pass.
-  if (!llvh::isa<GeneratorFunction>(curFunction()->function)) {
+  // GeneratorFunctions and AsyncFunctions should not have a scope created. It
+  // will be created later during a lowering pass.
+  if (!llvh::isa<GeneratorFunction>(curFunction()->function) &&
+      !llvh::isa<AsyncFunction>(curFunction()->function)) {
     makeNewScope(Builder.createVariableScope(parentScope), baseScope);
   }
 
@@ -1576,8 +1416,7 @@ void ESTreeIRGen::setupLazyFunction(
     ESTree::BlockStatementNode *bodyBlock,
     VariableScope *parentVarScope,
     ExtraKey extraKey,
-    const CapturedState &capturedState,
-    Variable *asyncFunctionInnerClosureVar) {
+    const CapturedState &capturedState) {
   // Avoid modifying Builder state because this isn't enqueued.
   IRBuilder::SaveRestore saveBuilder{Builder};
 
@@ -1613,7 +1452,6 @@ void ESTreeIRGen::setupLazyFunction(
       capturedState.homeObject,
       constructor,
       initFuncVar,
-      asyncFunctionInnerClosureVar,
       parentVarScope);
   Builder.createUnreachableInst();
 
@@ -1667,10 +1505,10 @@ void ESTreeIRGen::onCompiledFunction(hermes::Function *F) {
   // Postprocessing for debugging: make the EvalCompilationData
   // and add the function's VariableScope to the data so we can compile REPL
   // commands from the debugger.
-  // Skip outer generator functions. It's impossible to be stopped inside of
-  // one, so we don't need to support `eval`ing inside of them.
+  // Skip outer generator and async functions. It's impossible to be stopped
+  // inside of one, so we don't need to support `eval`ing inside of them.
   if ((Mod->getContext().getDebugInfoSetting() == DebugInfoSetting::ALL) &&
-      !llvh::isa<GeneratorFunction>(F)) {
+      !llvh::isa<GeneratorFunction>(F) && !llvh::isa<AsyncFunction>(F)) {
     BasicBlock &entry = *F->begin();
 
     IRBuilder::ScopedLocationChange slc(Builder, F->getSourceRange().Start);

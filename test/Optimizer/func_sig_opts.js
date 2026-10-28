@@ -131,16 +131,11 @@ function test_async() {
 // CHECK-NEXT:       ReturnInst %1: object
 // CHECK-NEXT:function_end
 
-// CHECK:scope %VS1 [?anon_0_asyncFn_innerClosure: object]
-
 // CHECK:function test_async(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS1: any, empty: any
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) empty: any, empty: any, %?anon_1_asyncFn(): functionCode
-// CHECK-NEXT:       StoreFrameInst %0: environment, %1: object, [%VS1.?anon_0_asyncFn_innerClosure]: object
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS1: any, %asyncFn(): functionCode
-// CHECK-NEXT:  %4 = CallInst (:any) %3: object, %asyncFn(): functionCode, true: boolean, %0: environment, undefined: undefined, undefined: undefined, 1: number
-// CHECK-NEXT:       ReturnInst %4: any
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %asyncFn(): functionCode
+// CHECK-NEXT:  %1 = CallInst (:any) %0: object, %asyncFn(): functionCode, true: boolean, empty: any, undefined: undefined, undefined: undefined, 1: number
+// CHECK-NEXT:       ReturnInst %1: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(x: number, y: number): number [allCallsitesKnownInStrictMode]
@@ -197,42 +192,101 @@ function test_async() {
 // CHECK-NEXT:       ReturnInst %0: any
 // CHECK-NEXT:function_end
 
-// CHECK:scope %VS2 [x: number, generator_state: number]
+// CHECK:scope %VS1 [x: number, generator_state: number]
 
 // CHECK:function gen(x: number): object [allCallsitesKnownInStrictMode]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS1: any, empty: any
+// CHECK-NEXT:  %1 = LoadParamInst (:number) %x: number
+// CHECK-NEXT:       StoreFrameInst %0: environment, %1: number, [%VS1.x]: number
+// CHECK-NEXT:       StoreFrameInst %0: environment, 0: number, [%VS1.generator_state]: number
+// CHECK-NEXT:  %4 = CreateGeneratorInst (:object) %0: environment, %VS1: any, %"gen 1#"(): functionCode
+// CHECK-NEXT:       ReturnInst %4: object
+// CHECK-NEXT:function_end
+
+// CHECK:scope %VS2 [x: number, generator_state: number]
+
+// CHECK:function asyncFn(x: number): any [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS2: any, empty: any
 // CHECK-NEXT:  %1 = LoadParamInst (:number) %x: number
 // CHECK-NEXT:       StoreFrameInst %0: environment, %1: number, [%VS2.x]: number
 // CHECK-NEXT:       StoreFrameInst %0: environment, 0: number, [%VS2.generator_state]: number
-// CHECK-NEXT:  %4 = CreateGeneratorInst (:object) %0: environment, %VS2: any, %"gen 1#"(): functionCode
-// CHECK-NEXT:       ReturnInst %4: object
-// CHECK-NEXT:function_end
-
-// CHECK:scope %VS3 [x: any, generator_state: number]
-
-// CHECK:function ?anon_1_asyncFn(x: any): object
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS3: any, empty: any
-// CHECK-NEXT:  %1 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:       StoreFrameInst %0: environment, %1: any, [%VS3.x]: any
-// CHECK-NEXT:       StoreFrameInst %0: environment, 0: number, [%VS3.generator_state]: number
-// CHECK-NEXT:  %4 = CreateGeneratorInst (:object) %0: environment, %VS3: any, %"?anon_1_asyncFn 1#"(): functionCode
-// CHECK-NEXT:       ReturnInst %4: object
-// CHECK-NEXT:function_end
-
-// CHECK:function asyncFn(): any [allCallsitesKnownInStrictMode]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateArgumentsStrictInst (:object)
-// CHECK-NEXT:  %1 = LoadParamInst (:undefined) %<this>: undefined
-// CHECK-NEXT:  %2 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
-// CHECK-NEXT:  %3 = LoadFrameInst (:object) %2: environment, [%VS1.?anon_0_asyncFn_innerClosure]: object
-// CHECK-NEXT:  %4 = GetBuiltinClosureInst (:object) [HermesBuiltin.spawnAsync]: number
-// CHECK-NEXT:  %5 = CallInst (:any) %4: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %3: object, %1: undefined, %0: object
-// CHECK-NEXT:       ReturnInst %5: any
+// CHECK-NEXT:  %4 = CreateGeneratorInst (:object) %0: environment, %VS2: any, %?anon_0_asyncFn(): functionCode
+// CHECK-NEXT:  %5 = GetBuiltinClosureInst (:object) [HermesBuiltin.spawnAsync]: number
+// CHECK-NEXT:  %6 = CallInst (:any) %5: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: object
+// CHECK-NEXT:       ReturnInst %6: any
 // CHECK-NEXT:function_end
 
 // CHECK:generator inner "gen 1#"(action: number, value: any): any
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %value: any
+// CHECK-NEXT:  %1 = LoadParamInst (:number) %action: number
+// CHECK-NEXT:  %2 = AllocStackInst (:number) $generator_state: any
+// CHECK-NEXT:  %3 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
+// CHECK-NEXT:  %4 = LoadFrameInst (:number) %3: environment, [%VS1.generator_state]: number
+// CHECK-NEXT:       StoreStackInst %4: number, %2: number
+// CHECK-NEXT:  %6 = FEqualInst (:boolean) %4: number, 2: number
+// CHECK-NEXT:       CondBranchInst %6: boolean, %BB7, %BB8
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %8 = LoadFrameInst (:number) %3: environment, [%VS1.x]: number
+// CHECK-NEXT:       StoreStackInst 3: number, %2: number
+// CHECK-NEXT:        StoreFrameInst %3: environment, 3: number, [%VS1.generator_state]: number
+// CHECK-NEXT:        TryEndInst %BB14, %BB15
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:        StoreStackInst 3: number, %2: number
+// CHECK-NEXT:        StoreFrameInst %3: environment, 3: number, [%VS1.generator_state]: number
+// CHECK-NEXT:        TryEndInst %BB14, %BB16
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:        StoreStackInst 3: number, %2: number
+// CHECK-NEXT:        StoreFrameInst %3: environment, 3: number, [%VS1.generator_state]: number
+// CHECK-NEXT:        ThrowInst %0: any, %BB14
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:  %18 = FEqualInst (:boolean) %1: number, 2: number
+// CHECK-NEXT:        CondBranchInst %18: boolean, %BB2, %BB1
+// CHECK-NEXT:%BB5:
+// CHECK-NEXT:        TryStartInst %BB14, %BB6
+// CHECK-NEXT:%BB6:
+// CHECK-NEXT:        StoreStackInst 2: number, %2: number
+// CHECK-NEXT:        StoreFrameInst %3: environment, 2: number, [%VS1.generator_state]: number
+// CHECK-NEXT:  %23 = FEqualInst (:boolean) %1: number, 1: number
+// CHECK-NEXT:        CondBranchInst %23: boolean, %BB3, %BB4
+// CHECK-NEXT:%BB7:
+// CHECK-NEXT:        StoreStackInst 3: number, %2: number
+// CHECK-NEXT:        StoreFrameInst %3: environment, 3: number, [%VS1.generator_state]: number
+// CHECK-NEXT:        ThrowTypeErrorInst "Generator functions may not be called on executing generators": string
+// CHECK-NEXT:%BB8:
+// CHECK-NEXT:  %28 = LoadStackInst (:number) %2: number
+// CHECK-NEXT:  %29 = FEqualInst (:boolean) %28: number, 3: number
+// CHECK-NEXT:        CondBranchInst %29: boolean, %BB9, %BB5
+// CHECK-NEXT:%BB9:
+// CHECK-NEXT:  %31 = FEqualInst (:boolean) %1: number, 1: number
+// CHECK-NEXT:        CondBranchInst %31: boolean, %BB10, %BB11
+// CHECK-NEXT:%BB10:
+// CHECK-NEXT:        ThrowInst %0: any
+// CHECK-NEXT:%BB11:
+// CHECK-NEXT:  %34 = FEqualInst (:boolean) %1: number, 2: number
+// CHECK-NEXT:        CondBranchInst %34: boolean, %BB12, %BB13
+// CHECK-NEXT:%BB12:
+// CHECK-NEXT:  %36 = AllocObjectLiteralInst (:object) empty: any, "value": string, %0: any, "done": string, true: boolean
+// CHECK-NEXT:        ReturnInst %36: object
+// CHECK-NEXT:%BB13:
+// CHECK-NEXT:  %38 = AllocObjectLiteralInst (:object) empty: any, "value": string, undefined: undefined, "done": string, true: boolean
+// CHECK-NEXT:        ReturnInst %38: object
+// CHECK-NEXT:%BB14:
+// CHECK-NEXT:  %40 = CatchInst (:any)
+// CHECK-NEXT:        StoreStackInst 3: number, %2: number
+// CHECK-NEXT:        StoreFrameInst %3: environment, 3: number, [%VS1.generator_state]: number
+// CHECK-NEXT:        ThrowInst %40: any
+// CHECK-NEXT:%BB15:
+// CHECK-NEXT:  %44 = AllocObjectLiteralInst (:object) empty: any, "value": string, %8: number, "done": string, true: boolean
+// CHECK-NEXT:        ReturnInst %44: object
+// CHECK-NEXT:%BB16:
+// CHECK-NEXT:  %46 = AllocObjectLiteralInst (:object) empty: any, "value": string, %0: any, "done": string, true: boolean
+// CHECK-NEXT:        ReturnInst %46: object
+// CHECK-NEXT:function_end
+
+// CHECK:generator inner ?anon_0_asyncFn(action: number, value: any): any
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %value: any
 // CHECK-NEXT:  %1 = LoadParamInst (:number) %action: number
@@ -294,74 +348,6 @@ function test_async() {
 // CHECK-NEXT:        ThrowInst %40: any
 // CHECK-NEXT:%BB15:
 // CHECK-NEXT:  %44 = AllocObjectLiteralInst (:object) empty: any, "value": string, %8: number, "done": string, true: boolean
-// CHECK-NEXT:        ReturnInst %44: object
-// CHECK-NEXT:%BB16:
-// CHECK-NEXT:  %46 = AllocObjectLiteralInst (:object) empty: any, "value": string, %0: any, "done": string, true: boolean
-// CHECK-NEXT:        ReturnInst %46: object
-// CHECK-NEXT:function_end
-
-// CHECK:generator inner "?anon_1_asyncFn 1#"(action: number, value: any): any
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %value: any
-// CHECK-NEXT:  %1 = LoadParamInst (:number) %action: number
-// CHECK-NEXT:  %2 = AllocStackInst (:number) $generator_state: any
-// CHECK-NEXT:  %3 = GetParentScopeInst (:environment) %VS3: any, %parentScope: environment
-// CHECK-NEXT:  %4 = LoadFrameInst (:number) %3: environment, [%VS3.generator_state]: number
-// CHECK-NEXT:       StoreStackInst %4: number, %2: number
-// CHECK-NEXT:  %6 = FEqualInst (:boolean) %4: number, 2: number
-// CHECK-NEXT:       CondBranchInst %6: boolean, %BB7, %BB8
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = LoadFrameInst (:any) %3: environment, [%VS3.x]: any
-// CHECK-NEXT:       StoreStackInst 3: number, %2: number
-// CHECK-NEXT:        StoreFrameInst %3: environment, 3: number, [%VS3.generator_state]: number
-// CHECK-NEXT:        TryEndInst %BB14, %BB15
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:        StoreStackInst 3: number, %2: number
-// CHECK-NEXT:        StoreFrameInst %3: environment, 3: number, [%VS3.generator_state]: number
-// CHECK-NEXT:        TryEndInst %BB14, %BB16
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:        StoreStackInst 3: number, %2: number
-// CHECK-NEXT:        StoreFrameInst %3: environment, 3: number, [%VS3.generator_state]: number
-// CHECK-NEXT:        ThrowInst %0: any, %BB14
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %18 = FEqualInst (:boolean) %1: number, 2: number
-// CHECK-NEXT:        CondBranchInst %18: boolean, %BB2, %BB1
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:        TryStartInst %BB14, %BB6
-// CHECK-NEXT:%BB6:
-// CHECK-NEXT:        StoreStackInst 2: number, %2: number
-// CHECK-NEXT:        StoreFrameInst %3: environment, 2: number, [%VS3.generator_state]: number
-// CHECK-NEXT:  %23 = FEqualInst (:boolean) %1: number, 1: number
-// CHECK-NEXT:        CondBranchInst %23: boolean, %BB3, %BB4
-// CHECK-NEXT:%BB7:
-// CHECK-NEXT:        StoreStackInst 3: number, %2: number
-// CHECK-NEXT:        StoreFrameInst %3: environment, 3: number, [%VS3.generator_state]: number
-// CHECK-NEXT:        ThrowTypeErrorInst "Generator functions may not be called on executing generators": string
-// CHECK-NEXT:%BB8:
-// CHECK-NEXT:  %28 = LoadStackInst (:number) %2: number
-// CHECK-NEXT:  %29 = FEqualInst (:boolean) %28: number, 3: number
-// CHECK-NEXT:        CondBranchInst %29: boolean, %BB9, %BB5
-// CHECK-NEXT:%BB9:
-// CHECK-NEXT:  %31 = FEqualInst (:boolean) %1: number, 1: number
-// CHECK-NEXT:        CondBranchInst %31: boolean, %BB10, %BB11
-// CHECK-NEXT:%BB10:
-// CHECK-NEXT:        ThrowInst %0: any
-// CHECK-NEXT:%BB11:
-// CHECK-NEXT:  %34 = FEqualInst (:boolean) %1: number, 2: number
-// CHECK-NEXT:        CondBranchInst %34: boolean, %BB12, %BB13
-// CHECK-NEXT:%BB12:
-// CHECK-NEXT:  %36 = AllocObjectLiteralInst (:object) empty: any, "value": string, %0: any, "done": string, true: boolean
-// CHECK-NEXT:        ReturnInst %36: object
-// CHECK-NEXT:%BB13:
-// CHECK-NEXT:  %38 = AllocObjectLiteralInst (:object) empty: any, "value": string, undefined: undefined, "done": string, true: boolean
-// CHECK-NEXT:        ReturnInst %38: object
-// CHECK-NEXT:%BB14:
-// CHECK-NEXT:  %40 = CatchInst (:any)
-// CHECK-NEXT:        StoreStackInst 3: number, %2: number
-// CHECK-NEXT:        StoreFrameInst %3: environment, 3: number, [%VS3.generator_state]: number
-// CHECK-NEXT:        ThrowInst %40: any
-// CHECK-NEXT:%BB15:
-// CHECK-NEXT:  %44 = AllocObjectLiteralInst (:object) empty: any, "value": string, %8: any, "done": string, true: boolean
 // CHECK-NEXT:        ReturnInst %44: object
 // CHECK-NEXT:%BB16:
 // CHECK-NEXT:  %46 = AllocObjectLiteralInst (:object) empty: any, "value": string, %0: any, "done": string, true: boolean

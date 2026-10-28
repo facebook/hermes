@@ -11,8 +11,7 @@
 
 // IRGen emits a finally body once per control-flow exit path. Each `try` below
 // contains a `return` so that the copy for the return path is emitted first;
-// the paths actually taken here are therefore the later copies, which used to
-// be missing the initialization of the async function's hidden inner closure.
+// the paths actually taken here are therefore the later copies.
 
 print("async function in finally");
 // CHECK-LABEL: async function in finally

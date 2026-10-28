@@ -18,6 +18,6 @@ x();
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:Break on 'debugger' statement in ?anon_4_x: {{.*}}vars-async-arrow.js[3]:14:3
-// CHECK-NEXT:this = function ?anon_4_x() { [bytecode] }
+// CHECK:Break on 'debugger' statement in ?anon_0_x: {{.*}}vars-async-arrow.js[3]:14:3
+// CHECK-NEXT:this = function ?anon_0_x() { [bytecode] }
 // CHECK-NEXT:Continuing execution

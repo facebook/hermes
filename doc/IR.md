@@ -139,6 +139,10 @@ an outer GeneratorFunction and an inner function.
 The outer function calls CreateGenerator on the inner function,
 and returns the resultant generator.
 
+An async function is the outer function of its own generator: it calls
+CreateGenerator on the inner function and passes the resultant generator to
+the `spawnAsync` builtin, which drives it.
+
 The inner function assumes that it can store and retrieve state from
 its own closure. As such, it contains instructions to start, save/yield,
 and resume generators.
@@ -146,7 +150,8 @@ and resume generators.
 CreateGenerator:
 An instruction to create a generator given a `Function`.
 First, it creates an inner GeneratorInnerFunction, then it wraps it in a Generator object.
-Used by the GeneratorFunction to create the generator which is returned upon calling it.
+Used by the GeneratorFunction to create the generator which is returned upon calling it,
+and by the AsyncFunction to create the generator it passes to `spawnAsync`.
 
 StartGenerator:
 Always the first instruction executed when an inner function is called.
