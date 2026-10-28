@@ -2106,6 +2106,35 @@ class InstrGen {
         << (uint32_t)inst.getBuiltinIndex() << ");\n";
   }
   void generateCallBuiltinInst(CallBuiltinInst &inst) {
+    // These builtins only exist to be called from typed code, so call their
+    // implementations directly instead of going through the builtin table.
+    const char *directCall = nullptr;
+    switch (inst.getBuiltinIndex()) {
+      case BuiltinMethod::HermesBuiltin_objectKeys:
+        directCall = "_sh_object_keys";
+        break;
+      case BuiltinMethod::HermesBuiltin_objectValues:
+        directCall = "_sh_object_values";
+        break;
+      case BuiltinMethod::HermesBuiltin_objectEntries:
+        directCall = "_sh_object_entries";
+        break;
+      default:
+        break;
+    }
+    if (directCall) {
+      assert(
+          inst.getNumArguments() == 3 &&
+          "object props builtins take 'this' plus the object and prototype");
+      os_.indent(2);
+      generateRegister(inst);
+      os_ << " = " << directCall << "(shr, ";
+      generateValue(*inst.getArgument(1));
+      os_ << ", ";
+      generateValue(*inst.getArgument(2));
+      os_ << ");\n";
+      return;
+    }
     if (inst.getBuiltinIndex() == BuiltinMethod::Math_sqrt) {
       if (inst.getNumArguments() == 2 &&
           inst.getArgument(1)->getType().isNumberType()) {

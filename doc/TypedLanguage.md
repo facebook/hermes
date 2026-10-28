@@ -71,6 +71,10 @@ When instantiating a tuple, it is typically necessary to specify the type to avo
 var x: [number, string] = [1, "abc"];
 ```
 
+Tuples are plain objects with properties `"0"`, `"1"`, ..., not arrays, so
+untyped code that expects an iterable (e.g. `new Map(Object.entries(o))`)
+does not accept them.
+
 ### Objects
 
 All object types in the typed language are _exact_ objects.

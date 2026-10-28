@@ -173,6 +173,10 @@ PRIVATE_BUILTIN(functionPrototypeCall)
 PRIVATE_BUILTIN(fastArrayPop)
 PRIVATE_BUILTIN(fastArraySlice)
 
+PRIVATE_BUILTIN(objectKeys)
+PRIVATE_BUILTIN(objectValues)
+PRIVATE_BUILTIN(objectEntries)
+
 JS_BUILTIN(spawnAsync)
 MARK_FIRST_JS_BUILTIN(spawnAsync)
 JS_BUILTIN(makeAsyncIterator)

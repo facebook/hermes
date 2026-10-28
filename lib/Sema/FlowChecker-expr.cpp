@@ -3143,7 +3143,68 @@ class FlowChecker::ExprVisitor {
       return;
     }
 
+    if (builtin->_name == outer_.kw_.identObjectKeys) {
+      checkSHBuiltinObjectProps(call, "objectKeys");
+      return;
+    }
+
+    if (builtin->_name == outer_.kw_.identObjectValues) {
+      checkSHBuiltinObjectProps(call, "objectValues");
+      return;
+    }
+
+    if (builtin->_name == outer_.kw_.identObjectEntries) {
+      checkSHBuiltinObjectProps(call, "objectEntries");
+      return;
+    }
+
     outer_.sm_.error(call->getSourceRange(), "unknown SH builtin call");
+  }
+
+  /// $SHBuiltin.objectKeys(o): Array<string>,
+  /// $SHBuiltin.objectValues(o): Array<mixed>,
+  /// $SHBuiltin.objectEntries(o): Array<[string, mixed]>.
+  /// These cover only the *enumerable own* properties of \p o, as
+  /// Object.keys/values/entries do. Other ways of listing properties
+  /// (own non-enumerable, symbols, the prototype chain) do not share this
+  /// setup and need their own builtins.
+  void checkSHBuiltinObjectProps(
+      ESTree::CallExpressionNode *call,
+      llvh::StringRef name) {
+    visitESTreeChildren(*this, call, nullptr);
+    if (call->_arguments.size() != 1) {
+      outer_.sm_.error(
+          call->getSourceRange(),
+          llvh::Twine("ft: ") + name + " requires exactly one argument");
+      return;
+    }
+    // The implementation reads the object's own properties directly, so the
+    // argument must statically be an object.
+    ESTree::Node *objArg = &call->_arguments.front();
+    if (!llvh::isa<ExactObjectType>(outer_.getNodeTypeOrAny(objArg)->info)) {
+      outer_.sm_.error(
+          objArg->getSourceRange(),
+          llvh::Twine("ft: ") + name + " argument must be an object");
+      return;
+    }
+    Type *elemType;
+    if (name == "objectKeys") {
+      elemType = outer_.flowContext_.getString();
+    } else if (name == "objectValues") {
+      elemType = outer_.flowContext_.getMixed();
+    } else {
+      elemType = outer_.flowContext_.createType(outer_.flowContext_.createTuple(
+          {outer_.flowContext_.getString(), outer_.flowContext_.getMixed()}));
+    }
+    Type *resType =
+        outer_.getSpecializedArrayClassType(elemType, call->getSourceRange());
+    if (!resType) {
+      outer_.sm_.error(
+          call->getSourceRange(),
+          llvh::Twine("ft: ") + name + " cannot create the result array type");
+      return;
+    }
+    outer_.setNodeType(call, resType);
   }
 
   /// $SHBuiltin.fastArrayLength(arr: Array<T>): number.

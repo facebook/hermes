@@ -24,21 +24,45 @@ sink(main);
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) empty: any, empty: any, %Array(): functionCode
 // CHECK-NEXT:  %2 = AllocTypedNonEnumObjectInst (:object) null: null
-// CHECK-NEXT:       StoreFrameInst %0: environment, %2: object, [%VS0.?Array.prototype]: object
 // CHECK-NEXT:       StorePropertyStrictInst %2: object, %1: object, "prototype": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) empty: any, empty: any, %Symbol(): functionCode
-// CHECK-NEXT:  %6 = AllocTypedNonEnumObjectInst (:object) null: null
-// CHECK-NEXT:       StorePropertyStrictInst %6: object, %5: object, "prototype": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) empty: any, empty: any, %Object(): functionCode
-// CHECK-NEXT:  %9 = AllocTypedNonEnumObjectInst (:object) null: null
-// CHECK-NEXT:        StorePropertyStrictInst %9: object, %8: object, "prototype": string
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %VS0: any, %main(): functionCode
-// CHECK-NEXT:  %12 = TryLoadGlobalPropertyInst (:any) globalObject: object, "sink": string
-// CHECK-NEXT:  %13 = CallInst (:any) %12: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %11: object
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) empty: any, empty: any, %"Array 1#"(): functionCode
+// CHECK-NEXT:  %5 = AllocTypedNonEnumObjectInst (:object) null: null
+// CHECK-NEXT:       StorePropertyStrictInst %5: object, %4: object, "prototype": string
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) empty: any, empty: any, %"Array 2#"(): functionCode
+// CHECK-NEXT:  %8 = AllocTypedNonEnumObjectInst (:object) null: null
+// CHECK-NEXT:       StorePropertyStrictInst %8: object, %7: object, "prototype": string
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) empty: any, empty: any, %"Array 3#"(): functionCode
+// CHECK-NEXT:  %11 = AllocTypedNonEnumObjectInst (:object) null: null
+// CHECK-NEXT:        StoreFrameInst %0: environment, %11: object, [%VS0.?Array.prototype]: object
+// CHECK-NEXT:        StorePropertyStrictInst %11: object, %10: object, "prototype": string
+// CHECK-NEXT:  %14 = CreateFunctionInst (:object) empty: any, empty: any, %Symbol(): functionCode
+// CHECK-NEXT:  %15 = AllocTypedNonEnumObjectInst (:object) null: null
+// CHECK-NEXT:        StorePropertyStrictInst %15: object, %14: object, "prototype": string
+// CHECK-NEXT:  %17 = CreateFunctionInst (:object) empty: any, empty: any, %Object(): functionCode
+// CHECK-NEXT:  %18 = AllocTypedNonEnumObjectInst (:object) null: null
+// CHECK-NEXT:        StorePropertyStrictInst %18: object, %17: object, "prototype": string
+// CHECK-NEXT:  %20 = CreateFunctionInst (:object) %0: environment, %VS0: any, %main(): functionCode
+// CHECK-NEXT:  %21 = TryLoadGlobalPropertyInst (:any) globalObject: object, "sink": string
+// CHECK-NEXT:  %22 = CallInst (:any) %21: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %20: object
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function Array(): undefined
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function "Array 1#"(): undefined
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function "Array 2#"(): undefined
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function "Array 3#"(): undefined
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

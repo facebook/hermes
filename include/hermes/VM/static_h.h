@@ -1401,6 +1401,18 @@ SHERMES_EXPORT SHLegacyValue _sh_new_fastarray_with_proto(
     SHLegacyValue *prototype,
     uint32_t capacity);
 
+/// Typed Object.keys/values/entries. \return a new fast array with the given
+/// \p prototype containing the enumerable own string-keyed property names of
+/// \p obj, their values, or [key, value] tuple objects.
+/// @{
+SHERMES_EXPORT SHLegacyValue
+_sh_object_keys(SHRuntime *shr, SHLegacyValue obj, SHLegacyValue prototype);
+SHERMES_EXPORT SHLegacyValue
+_sh_object_values(SHRuntime *shr, SHLegacyValue obj, SHLegacyValue prototype);
+SHERMES_EXPORT SHLegacyValue
+_sh_object_entries(SHRuntime *shr, SHLegacyValue obj, SHLegacyValue prototype);
+/// @}
+
 /// \p base[in/out] is the object to be iterated.
 /// \p index[out] is the next index in the list.
 /// \p size[out] is the size of the list.

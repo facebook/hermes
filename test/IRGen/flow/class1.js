@@ -32,23 +32,47 @@ return [dotProduct, Vec2D];
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %Array(): functionCode
 // CHECK-NEXT:  %1 = AllocTypedNonEnumObjectInst (:object) null: null
 // CHECK-NEXT:       StorePropertyStrictInst %1: object, %0: object, "prototype": string
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) empty: any, empty: any, %Symbol(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) empty: any, empty: any, %"Array 1#"(): functionCode
 // CHECK-NEXT:  %4 = AllocTypedNonEnumObjectInst (:object) null: null
 // CHECK-NEXT:       StorePropertyStrictInst %4: object, %3: object, "prototype": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) empty: any, empty: any, %Object(): functionCode
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) empty: any, empty: any, %"Array 2#"(): functionCode
 // CHECK-NEXT:  %7 = AllocTypedNonEnumObjectInst (:object) null: null
 // CHECK-NEXT:       StorePropertyStrictInst %7: object, %6: object, "prototype": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) empty: any, empty: any, %dotProduct(): functionCode
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) empty: any, empty: any, %Vec2D(): functionCode
-// CHECK-NEXT:  %11 = AllocTypedNonEnumObjectInst (:object) null: null
-// CHECK-NEXT:        StorePropertyStrictInst %11: object, %10: object, "prototype": string
-// CHECK-NEXT:  %13 = AllocFastArrayInst (:object) 2: number, %1: object
-// CHECK-NEXT:        FastArrayPushInst %9: object, %13: object
-// CHECK-NEXT:        FastArrayPushInst %10: object, %13: object
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) empty: any, empty: any, %"Array 3#"(): functionCode
+// CHECK-NEXT:  %10 = AllocTypedNonEnumObjectInst (:object) null: null
+// CHECK-NEXT:        StorePropertyStrictInst %10: object, %9: object, "prototype": string
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) empty: any, empty: any, %Symbol(): functionCode
+// CHECK-NEXT:  %13 = AllocTypedNonEnumObjectInst (:object) null: null
+// CHECK-NEXT:        StorePropertyStrictInst %13: object, %12: object, "prototype": string
+// CHECK-NEXT:  %15 = CreateFunctionInst (:object) empty: any, empty: any, %Object(): functionCode
+// CHECK-NEXT:  %16 = AllocTypedNonEnumObjectInst (:object) null: null
+// CHECK-NEXT:        StorePropertyStrictInst %16: object, %15: object, "prototype": string
+// CHECK-NEXT:  %18 = CreateFunctionInst (:object) empty: any, empty: any, %dotProduct(): functionCode
+// CHECK-NEXT:  %19 = CreateFunctionInst (:object) empty: any, empty: any, %Vec2D(): functionCode
+// CHECK-NEXT:  %20 = AllocTypedNonEnumObjectInst (:object) null: null
+// CHECK-NEXT:        StorePropertyStrictInst %20: object, %19: object, "prototype": string
+// CHECK-NEXT:  %22 = AllocFastArrayInst (:object) 2: number, %10: object
+// CHECK-NEXT:        FastArrayPushInst %18: object, %22: object
+// CHECK-NEXT:        FastArrayPushInst %19: object, %22: object
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function Array(): undefined
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function "Array 1#"(): undefined
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function "Array 2#"(): undefined
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function "Array 3#"(): undefined
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

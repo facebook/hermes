@@ -35,21 +35,48 @@ new Foo();
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LIRLoadConstInst (:null) null: null
 // CHECK-NEXT:  %1 = LIRAllocTypedNonEnumObjectFromBufferInst (:object) %0: null
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) empty: any, empty: any, %Symbol(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) empty: any, empty: any, %Array(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %1: object, %2: object, "prototype": string
 // CHECK-NEXT:  %4 = LIRAllocTypedNonEnumObjectFromBufferInst (:object) %0: null
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) empty: any, empty: any, %Object(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) empty: any, empty: any, %"Array 1#"(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %4: object, %5: object, "prototype": string
-// CHECK-NEXT:  %7 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHECK-NEXT:  %8 = LIRAllocTypedNonEnumObjectFromBufferInst (:object) %0: null
-// CHECK-NEXT:       StoreFrameInst %7: environment, %8: object, [%VS0.?O.prototype]: object
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) empty: any, empty: any, %O(): functionCode
-// CHECK-NEXT:        StorePropertyStrictInst %8: object, %10: object, "prototype": string
-// CHECK-NEXT:  %12 = LIRAllocTypedNonEnumObjectFromBufferInst (:object) %0: null
-// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %7: environment, %VS0: any, %Foo(): functionCode
-// CHECK-NEXT:        StorePropertyStrictInst %12: object, %13: object, "prototype": string
-// CHECK-NEXT:  %15 = LIRLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:        ReturnInst %15: undefined
+// CHECK-NEXT:  %7 = LIRAllocTypedNonEnumObjectFromBufferInst (:object) %0: null
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) empty: any, empty: any, %"Array 2#"(): functionCode
+// CHECK-NEXT:       StorePropertyStrictInst %7: object, %8: object, "prototype": string
+// CHECK-NEXT:  %10 = LIRAllocTypedNonEnumObjectFromBufferInst (:object) %0: null
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) empty: any, empty: any, %Symbol(): functionCode
+// CHECK-NEXT:        StorePropertyStrictInst %10: object, %11: object, "prototype": string
+// CHECK-NEXT:  %13 = LIRAllocTypedNonEnumObjectFromBufferInst (:object) %0: null
+// CHECK-NEXT:  %14 = CreateFunctionInst (:object) empty: any, empty: any, %Object(): functionCode
+// CHECK-NEXT:        StorePropertyStrictInst %13: object, %14: object, "prototype": string
+// CHECK-NEXT:  %16 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:  %17 = LIRAllocTypedNonEnumObjectFromBufferInst (:object) %0: null
+// CHECK-NEXT:        StoreFrameInst %16: environment, %17: object, [%VS0.?O.prototype]: object
+// CHECK-NEXT:  %19 = CreateFunctionInst (:object) empty: any, empty: any, %O(): functionCode
+// CHECK-NEXT:        StorePropertyStrictInst %17: object, %19: object, "prototype": string
+// CHECK-NEXT:  %21 = LIRAllocTypedNonEnumObjectFromBufferInst (:object) %0: null
+// CHECK-NEXT:  %22 = CreateFunctionInst (:object) %16: environment, %VS0: any, %Foo(): functionCode
+// CHECK-NEXT:        StorePropertyStrictInst %21: object, %22: object, "prototype": string
+// CHECK-NEXT:  %24 = LIRLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:        ReturnInst %24: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function Array(): undefined
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = LIRLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:       ReturnInst %0: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function "Array 1#"(): undefined
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = LIRLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:       ReturnInst %0: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function "Array 2#"(): undefined
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = LIRLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:       ReturnInst %0: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:base constructor Symbol(): any [typed,noReturn]

@@ -39,9 +39,9 @@ type G = (...rest: MyArr) => void;
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%function.2 = function(x: number, ...rest: %class.3): void
-// CHECK-NEXT:%class.3 = class(Array<string>)
+// CHECK:%class.1 = class(Array<string>)
+// CHECK-NEXT:%untyped_function.2 = untyped_function()
+// CHECK-NEXT:%function.3 = function(x: number, ...rest: %class.1): void
 // CHECK-NEXT:%class.4 = class(Array<number>)
 // CHECK-NEXT:%function.5 = function(...items: %class.4): void
 
@@ -49,27 +49,27 @@ type G = (...rest: MyArr) => void;
 // CHECK-NEXT:Func strict mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:        Decl %d.2 'foo' Var : %function.2
+// CHECK-NEXT:        Decl %d.2 'foo' Var : %function.3
 // CHECK-NEXT:        Decl %d.3 'bar' Var : %function.5
-// CHECK-NEXT:        Decl %d.4 'f' Let : %function.2
-// CHECK-NEXT:        Decl %d.5 'f2' Let : %function.2
+// CHECK-NEXT:        Decl %d.4 'f' Let : %function.3
+// CHECK-NEXT:        Decl %d.5 'f2' Let : %function.3
 // CHECK-NEXT:        Decl %d.6 'arguments' Var Arguments
 // CHECK-NEXT:        hoistedFunction foo
 // CHECK-NEXT:        hoistedFunction bar
 // CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.7 'x' Parameter : number
-// CHECK-NEXT:            Decl %d.8 'args' Parameter : %class.3
+// CHECK-NEXT:            Decl %d.8 'args' Parameter : %class.1
 // CHECK-NEXT:            Decl %d.9 'arguments' Var Arguments
 // CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.3
 // CHECK-NEXT:            Decl %d.10 'items' Parameter : %class.4
 // CHECK-NEXT:            Decl %d.11 'arguments' Var Arguments
 
-// CHECK:FunctionExpression : %untyped_function.1
+// CHECK:FunctionExpression : %untyped_function.2
 // CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:    BlockStatement
-// CHECK-NEXT:        FunctionDeclaration : %function.2
+// CHECK-NEXT:        FunctionDeclaration : %function.3
 // CHECK-NEXT:            Id 'foo' [D:E:%d.2 'foo']
 // CHECK-NEXT:            Id 'x' [D:E:%d.7 'x']
 // CHECK-NEXT:            RestElement
@@ -77,16 +77,16 @@ type G = (...rest: MyArr) => void;
 // CHECK-NEXT:            BlockStatement
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            CallExpression : void
-// CHECK-NEXT:                Id 'foo' [D:E:%d.2 'foo'] : %function.2
+// CHECK-NEXT:                Id 'foo' [D:E:%d.2 'foo'] : %function.3
 // CHECK-NEXT:                NumericLiteral : 1
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            CallExpression : void
-// CHECK-NEXT:                Id 'foo' [D:E:%d.2 'foo'] : %function.2
+// CHECK-NEXT:                Id 'foo' [D:E:%d.2 'foo'] : %function.3
 // CHECK-NEXT:                NumericLiteral : 1
 // CHECK-NEXT:                StringLiteral : "a"
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            CallExpression : void
-// CHECK-NEXT:                Id 'foo' [D:E:%d.2 'foo'] : %function.2
+// CHECK-NEXT:                Id 'foo' [D:E:%d.2 'foo'] : %function.3
 // CHECK-NEXT:                NumericLiteral : 1
 // CHECK-NEXT:                StringLiteral : "a"
 // CHECK-NEXT:                StringLiteral : "b"
@@ -120,7 +120,7 @@ type G = (...rest: MyArr) => void;
 // CHECK-NEXT:                            StringTypeAnnotation
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                Id 'foo' [D:E:%d.2 'foo'] : %function.2
+// CHECK-NEXT:                Id 'foo' [D:E:%d.2 'foo'] : %function.3
 // CHECK-NEXT:                Id 'f' [D:E:%d.4 'f']
 // CHECK-NEXT:        TypeAlias
 // CHECK-NEXT:            Id 'F2'
@@ -135,7 +135,7 @@ type G = (...rest: MyArr) => void;
 // CHECK-NEXT:                            StringTypeAnnotation
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                Id 'foo' [D:E:%d.2 'foo'] : %function.2
+// CHECK-NEXT:                Id 'foo' [D:E:%d.2 'foo'] : %function.3
 // CHECK-NEXT:                Id 'f2' [D:E:%d.5 'f2']
 // CHECK-NEXT:        TypeAlias
 // CHECK-NEXT:            Id 'MyArr'

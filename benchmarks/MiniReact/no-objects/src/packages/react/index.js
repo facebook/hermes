@@ -343,7 +343,7 @@ class Root {
           // JSON.stringify only for object props; quote strings directly.
           let valueStr: string;
           if (typeof propValue === 'string') {
-            valueStr = '"' + propValue + '"';
+            valueStr = '"' + CHECKED_CAST<string>(propValue) + '"';
           } else if (
             typeof propValue === 'number' ||
             typeof propValue === 'boolean'

@@ -1044,6 +1044,19 @@ class ESTreeIRGen {
   /// Import an external C function.
   Value *genSHBuiltinExternC(ESTree::CallExpressionNode *call);
 
+  /// $SHBuiltin.objectKeys/objectValues/objectEntries(o)
+  /// Emit a call to \p builtin, passing the object and the prototype of the
+  /// resulting Array<T>, which the builtin needs to create the FastArray.
+  /// \p name is the builtin name, used for error messages.
+  /// These cover only the *enumerable own* properties of the object, as
+  /// Object.keys/values/entries do. Other ways of listing properties (own
+  /// non-enumerable, symbols, the prototype chain) do not share this setup
+  /// and need their own builtins.
+  Value *genSHBuiltinObjectProps(
+      ESTree::CallExpressionNode *call,
+      BuiltinMethod::Enum builtin,
+      llvh::StringRef name);
+
   /// $SHBuiltin.moduleFactory(modId, factoryFunction)
   /// Process \p factoryFunction as a module initialization function,
   /// for the module with id \p modId.

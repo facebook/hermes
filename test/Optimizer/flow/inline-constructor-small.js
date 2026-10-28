@@ -27,18 +27,42 @@ print(p1.x, p2.x);
 
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %Symbol(): functionCode
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %Array(): functionCode
 // CHECK-NEXT:  %1 = AllocTypedNonEnumObjectInst (:object) null: null
 // CHECK-NEXT:       StorePropertyStrictInst %1: object, %0: object, "prototype": string
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) empty: any, empty: any, %Object(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) empty: any, empty: any, %"Array 1#"(): functionCode
 // CHECK-NEXT:  %4 = AllocTypedNonEnumObjectInst (:object) null: null
 // CHECK-NEXT:       StorePropertyStrictInst %4: object, %3: object, "prototype": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) empty: any, empty: any, %Point(): functionCode
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) empty: any, empty: any, %"Array 2#"(): functionCode
 // CHECK-NEXT:  %7 = AllocTypedNonEnumObjectInst (:object) null: null
 // CHECK-NEXT:       StorePropertyStrictInst %7: object, %6: object, "prototype": string
-// CHECK-NEXT:  %9 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %10 = CallInst (:any) %9: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 1: number, 3: number
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) empty: any, empty: any, %Symbol(): functionCode
+// CHECK-NEXT:  %10 = AllocTypedNonEnumObjectInst (:object) null: null
+// CHECK-NEXT:        StorePropertyStrictInst %10: object, %9: object, "prototype": string
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) empty: any, empty: any, %Object(): functionCode
+// CHECK-NEXT:  %13 = AllocTypedNonEnumObjectInst (:object) null: null
+// CHECK-NEXT:        StorePropertyStrictInst %13: object, %12: object, "prototype": string
+// CHECK-NEXT:  %15 = CreateFunctionInst (:object) empty: any, empty: any, %Point(): functionCode
+// CHECK-NEXT:  %16 = AllocTypedNonEnumObjectInst (:object) null: null
+// CHECK-NEXT:        StorePropertyStrictInst %16: object, %15: object, "prototype": string
+// CHECK-NEXT:  %18 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %19 = CallInst (:any) %18: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 1: number, 3: number
 // CHECK-NEXT:        ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function Array(): undefined
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function "Array 1#"(): undefined
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function "Array 2#"(): undefined
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:base constructor Symbol(): any [typed,noReturn]

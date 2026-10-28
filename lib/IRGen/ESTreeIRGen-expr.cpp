@@ -770,6 +770,24 @@ Value *ESTreeIRGen::genSHBuiltin(
     return Builder.createFastArrayLengthInst(array);
   }
 
+  // %SHBuiltin.objectKeys(o): Array<string>;
+  if (builtin->_name == kw_.identObjectKeys) {
+    return genSHBuiltinObjectProps(
+        call, BuiltinMethod::HermesBuiltin_objectKeys, "objectKeys");
+  }
+
+  // %SHBuiltin.objectValues(o): Array<mixed>;
+  if (builtin->_name == kw_.identObjectValues) {
+    return genSHBuiltinObjectProps(
+        call, BuiltinMethod::HermesBuiltin_objectValues, "objectValues");
+  }
+
+  // %SHBuiltin.objectEntries(o): Array<[string, mixed]>;
+  if (builtin->_name == kw_.identObjectEntries) {
+    return genSHBuiltinObjectProps(
+        call, BuiltinMethod::HermesBuiltin_objectEntries, "objectEntries");
+  }
+
   if (builtin->_name == kw_.identModuleFactory) {
     return genSHBuiltinModuleFactory(call);
   }
@@ -815,6 +833,26 @@ Value *ESTreeIRGen::genSHBuiltinCall(ESTree::CallExpressionNode *call) {
 
   return Builder.createCallInst(
       callee, /* newTarget */ Builder.getLiteralUndefined(), thisValue, args);
+}
+
+Value *ESTreeIRGen::genSHBuiltinObjectProps(
+    ESTree::CallExpressionNode *call,
+    BuiltinMethod::Enum builtin,
+    llvh::StringRef name) {
+  if (call->_arguments.size() != 1) {
+    Mod->getContext().getSourceErrorManager().error(
+        call->getSourceRange(), name + " requires exactly one argument");
+    return Builder.getLiteralUndefined();
+  }
+  Value *obj = genExpression(&call->_arguments.front());
+  // The FlowChecker set the result to Array<T>; the builtin needs its
+  // prototype to create the FastArray with the correct shape.
+  flow::Type *arrayType = flowContext_.getNodeTypeOrAny(call);
+  Value *prototype =
+      emitLoadTypedHomeObject(llvh::cast<flow::ClassType>(arrayType->info));
+  Value *res = genBuiltinCall(builtin, {obj, prototype});
+  res->setType(Type::createObject());
+  return res;
 }
 
 Value *ESTreeIRGen::genTypedFunctionPrototypeCall(

@@ -106,6 +106,10 @@ RUNTIME_HV_FIELD(jsErrorStackAccessor, PropertyAccessor)
 RUNTIME_HV_FIELD(callSitePrototype, JSObject)
 RUNTIME_HV_FIELD(functionPrototypeSymbolHasInstance, NativeFunction)
 
+/// Class of the [key, value] tuple objects returned by typed Object.entries.
+/// Created lazily, so it may be null.
+RUNTIME_HV_FIELD(tupleEntryClass, HiddenClass)
+
 // TODO: for Serialization/Deserialization  after global object initialization
 // we record specialCodeBlockDomain_ and create runtimemodule later need to
 // revisit this in stage 2

@@ -16,6 +16,7 @@
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSCallableProxy.h"
 #include "hermes/VM/JSGeneratorObject.h"
+#include "hermes/VM/JSLib.h"
 #include "hermes/VM/JSObject-inline.h"
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/JSRegExp.h"
@@ -2639,6 +2640,49 @@ extern "C" void _sh_fastarray_append(
 
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
     _sh_throw_current(shr);
+}
+
+static SHLegacyValue objectPropsFastArray(
+    SHRuntime *shr,
+    SHLegacyValue obj,
+    SHLegacyValue prototype,
+    CallResult<HermesValue> (
+        *impl)(Runtime &, Handle<JSObject>, Handle<JSObject>)) {
+  Runtime &runtime = getRuntime(shr);
+  // The Locals must be destroyed before throwing, since _sh_throw_current
+  // doesn't return.
+  auto res = [&runtime, obj, prototype, impl]() -> CallResult<HermesValue> {
+    struct : public Locals {
+      PinnedValue<JSObject> obj;
+      PinnedValue<JSObject> prototype;
+    } lv;
+    LocalsRAII lraii(runtime, &lv);
+    lv.obj.castAndSetHermesValue<JSObject>(HermesValue::fromRaw(obj.raw));
+    lv.prototype.castAndSetHermesValue<JSObject>(
+        HermesValue::fromRaw(prototype.raw));
+    return impl(runtime, lv.obj, lv.prototype);
+  }();
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return *res;
+}
+
+LLVM_ATTRIBUTE_NOINLINE
+extern "C" SHLegacyValue
+_sh_object_keys(SHRuntime *shr, SHLegacyValue obj, SHLegacyValue prototype) {
+  return objectPropsFastArray(shr, obj, prototype, objectKeysFastArray);
+}
+
+LLVM_ATTRIBUTE_NOINLINE
+extern "C" SHLegacyValue
+_sh_object_values(SHRuntime *shr, SHLegacyValue obj, SHLegacyValue prototype) {
+  return objectPropsFastArray(shr, obj, prototype, objectValuesFastArray);
+}
+
+LLVM_ATTRIBUTE_NOINLINE
+extern "C" SHLegacyValue
+_sh_object_entries(SHRuntime *shr, SHLegacyValue obj, SHLegacyValue prototype) {
+  return objectPropsFastArray(shr, obj, prototype, objectEntriesFastArray);
 }
 
 LLVM_ATTRIBUTE_NOINLINE

@@ -825,6 +825,10 @@ class TypeInferenceImpl {
       case BuiltinMethod::Math_tanh:
       case BuiltinMethod::Math_trunc:
         return Type::createNumber();
+      case BuiltinMethod::HermesBuiltin_objectKeys:
+      case BuiltinMethod::HermesBuiltin_objectValues:
+      case BuiltinMethod::HermesBuiltin_objectEntries:
+        return Type::createObject();
       default:
         return Type::createAnyType();
     }

@@ -1146,6 +1146,34 @@ CallResult<HermesValue> hermesBuiltinFastArraySlice(void *, Runtime &runtime) {
   return lv.result.getHermesValue();
 }
 
+/// Typed Object.keys/values/entries: args are the object and the prototype of
+/// the resulting Array<T>, supplied by IRGen.
+/// @{
+CallResult<HermesValue> hermesBuiltinObjectKeys(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  return objectKeysFastArray(
+      runtime,
+      Handle<JSObject>::vmcast(args.getArgHandle(0)),
+      Handle<JSObject>::vmcast(args.getArgHandle(1)));
+}
+
+CallResult<HermesValue> hermesBuiltinObjectValues(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  return objectValuesFastArray(
+      runtime,
+      Handle<JSObject>::vmcast(args.getArgHandle(0)),
+      Handle<JSObject>::vmcast(args.getArgHandle(1)));
+}
+
+CallResult<HermesValue> hermesBuiltinObjectEntries(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  return objectEntriesFastArray(
+      runtime,
+      Handle<JSObject>::vmcast(args.getArgHandle(0)),
+      Handle<JSObject>::vmcast(args.getArgHandle(1)));
+}
+/// @}
+
 void createHermesBuiltins(Runtime &runtime) {
   struct : public Locals {
     PinnedValue<NativeFunction> method;
@@ -1256,6 +1284,19 @@ void createHermesBuiltins(Runtime &runtime) {
       B::HermesBuiltin_fastArraySlice,
       P::fastArraySlice,
       hermesBuiltinFastArraySlice,
+      2);
+
+  defineInternMethod(
+      B::HermesBuiltin_objectKeys, P::objectKeys, hermesBuiltinObjectKeys, 2);
+  defineInternMethod(
+      B::HermesBuiltin_objectValues,
+      P::objectValues,
+      hermesBuiltinObjectValues,
+      2);
+  defineInternMethod(
+      B::HermesBuiltin_objectEntries,
+      P::objectEntries,
+      hermesBuiltinObjectEntries,
       2);
 
   // Define the 'requireFast' function, which takes a number argument.

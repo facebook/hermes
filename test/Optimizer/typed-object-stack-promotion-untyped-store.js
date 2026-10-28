@@ -23,19 +23,43 @@ writeTomyName(testObject, "Wolf Man");
 
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %Symbol(): functionCode
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %Array(): functionCode
 // CHECK-NEXT:  %1 = AllocTypedNonEnumObjectInst (:object) null: null
 // CHECK-NEXT:       StorePropertyStrictInst %1: object, %0: object, "prototype": string
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) empty: any, empty: any, %Object(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) empty: any, empty: any, %"Array 1#"(): functionCode
 // CHECK-NEXT:  %4 = AllocTypedNonEnumObjectInst (:object) null: null
 // CHECK-NEXT:       StorePropertyStrictInst %4: object, %3: object, "prototype": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) empty: any, empty: any, %TestClass(): functionCode
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) empty: any, empty: any, %"Array 2#"(): functionCode
 // CHECK-NEXT:  %7 = AllocTypedNonEnumObjectInst (:object) null: null
 // CHECK-NEXT:       StorePropertyStrictInst %7: object, %6: object, "prototype": string
-// CHECK-NEXT:  %9 = AllocTypedObjectInst (:object) %7: object, "myName": string, "": string
-// CHECK-NEXT:        PrStoreInst "Dracula ": string, %9: object, 0: number, "myName": string, false: boolean
-// CHECK-NEXT:        StorePropertyStrictInst "Wolf Man": string, %9: object, "myName": string
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) empty: any, empty: any, %Symbol(): functionCode
+// CHECK-NEXT:  %10 = AllocTypedNonEnumObjectInst (:object) null: null
+// CHECK-NEXT:        StorePropertyStrictInst %10: object, %9: object, "prototype": string
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) empty: any, empty: any, %Object(): functionCode
+// CHECK-NEXT:  %13 = AllocTypedNonEnumObjectInst (:object) null: null
+// CHECK-NEXT:        StorePropertyStrictInst %13: object, %12: object, "prototype": string
+// CHECK-NEXT:  %15 = CreateFunctionInst (:object) empty: any, empty: any, %TestClass(): functionCode
+// CHECK-NEXT:  %16 = AllocTypedNonEnumObjectInst (:object) null: null
+// CHECK-NEXT:        StorePropertyStrictInst %16: object, %15: object, "prototype": string
+// CHECK-NEXT:  %18 = AllocTypedObjectInst (:object) %16: object, "myName": string, "": string
+// CHECK-NEXT:        PrStoreInst "Dracula ": string, %18: object, 0: number, "myName": string, false: boolean
+// CHECK-NEXT:        StorePropertyStrictInst "Wolf Man": string, %18: object, "myName": string
 // CHECK-NEXT:        ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function Array(): undefined
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function "Array 1#"(): undefined
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function "Array 2#"(): undefined
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:base constructor Symbol(): any [typed,noReturn]

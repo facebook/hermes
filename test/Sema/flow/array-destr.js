@@ -43,30 +43,30 @@ let [[na, nb]]: Array<Array<number>> = nested;
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%class.2 = class(Array<number>)
-// CHECK-NEXT:%class.3 = class(Array<%class.2>)
-// CHECK-NEXT:%class.4 = class(Array<string>)
-// CHECK-NEXT:%function.5 = function(%class.4): void
+// CHECK:%class.1 = class(Array<string>)
+// CHECK-NEXT:%untyped_function.2 = untyped_function()
+// CHECK-NEXT:%class.3 = class(Array<number>)
+// CHECK-NEXT:%class.4 = class(Array<%class.3>)
+// CHECK-NEXT:%function.5 = function(%class.1): void
 
 // CHECK:SemContext
 // CHECK-NEXT:Func strict mayReachImplicitReturn
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:        Decl %d.2 'arr' Let : %class.2
+// CHECK-NEXT:        Decl %d.2 'arr' Let : %class.3
 // CHECK-NEXT:        Decl %d.3 'a' Let : number
 // CHECK-NEXT:        Decl %d.4 'b' Let : number
 // CHECK-NEXT:        Decl %d.5 'c' Let : number
 // CHECK-NEXT:        Decl %d.6 'd' Let : number
-// CHECK-NEXT:        Decl %d.7 'rest' Let : %class.2
-// CHECK-NEXT:        Decl %d.8 'all' Let : %class.2
+// CHECK-NEXT:        Decl %d.7 'rest' Let : %class.3
+// CHECK-NEXT:        Decl %d.8 'all' Let : %class.3
 // CHECK-NEXT:        Decl %d.9 'e' Let : number
-// CHECK-NEXT:        Decl %d.10 'erest' Let : %class.2
+// CHECK-NEXT:        Decl %d.10 'erest' Let : %class.3
 // CHECK-NEXT:        Decl %d.11 'f' Var : %function.5
 // CHECK-NEXT:        Decl %d.12 'x' Let : number
-// CHECK-NEXT:        Decl %d.13 'r' Let : %class.2
+// CHECK-NEXT:        Decl %d.13 'r' Let : %class.3
 // CHECK-NEXT:        Decl %d.14 'y' Let : number
-// CHECK-NEXT:        Decl %d.15 'nested' Let : %class.3
+// CHECK-NEXT:        Decl %d.15 'nested' Let : %class.4
 // CHECK-NEXT:        Decl %d.16 'na' Let : number
 // CHECK-NEXT:        Decl %d.17 'nb' Let : number
 // CHECK-NEXT:        Decl %d.18 'arguments' Var Arguments
@@ -74,17 +74,17 @@ let [[na, nb]]: Array<Array<number>> = nested;
 // CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.19 'h' Parameter : string
-// CHECK-NEXT:            Decl %d.20 't' Parameter : %class.4
+// CHECK-NEXT:            Decl %d.20 't' Parameter : %class.1
 // CHECK-NEXT:            Decl %d.21 'arguments' Var Arguments
 
-// CHECK:FunctionExpression : %untyped_function.1
+// CHECK:FunctionExpression : %untyped_function.2
 // CHECK-NEXT:    Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:    BlockStatement
 // CHECK-NEXT:        ExpressionStatement
 // CHECK-NEXT:            StringLiteral : "use strict"
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                ArrayExpression : %class.2
+// CHECK-NEXT:                ArrayExpression : %class.3
 // CHECK-NEXT:                    NumericLiteral : 1
 // CHECK-NEXT:                    NumericLiteral : 2
 // CHECK-NEXT:                    NumericLiteral : 3
@@ -92,37 +92,37 @@ let [[na, nb]]: Array<Array<number>> = nested;
 // CHECK-NEXT:                Id 'arr' [D:E:%d.2 'arr']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                Id 'arr' [D:E:%d.2 'arr'] : %class.2
-// CHECK-NEXT:                ArrayPattern : %class.2
+// CHECK-NEXT:                Id 'arr' [D:E:%d.2 'arr'] : %class.3
+// CHECK-NEXT:                ArrayPattern : %class.3
 // CHECK-NEXT:                    Id 'a' [D:E:%d.3 'a'] : number
 // CHECK-NEXT:                    Id 'b' [D:E:%d.4 'b'] : number
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                Id 'arr' [D:E:%d.2 'arr'] : %class.2
-// CHECK-NEXT:                ArrayPattern : %class.2
+// CHECK-NEXT:                Id 'arr' [D:E:%d.2 'arr'] : %class.3
+// CHECK-NEXT:                ArrayPattern : %class.3
 // CHECK-NEXT:                    Id 'c' [D:E:%d.5 'c'] : number
 // CHECK-NEXT:                    Id 'd' [D:E:%d.6 'd'] : number
 // CHECK-NEXT:                    RestElement
-// CHECK-NEXT:                        Id 'rest' [D:E:%d.7 'rest'] : %class.2
+// CHECK-NEXT:                        Id 'rest' [D:E:%d.7 'rest'] : %class.3
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                Id 'arr' [D:E:%d.2 'arr'] : %class.2
-// CHECK-NEXT:                ArrayPattern : %class.2
+// CHECK-NEXT:                Id 'arr' [D:E:%d.2 'arr'] : %class.3
+// CHECK-NEXT:                ArrayPattern : %class.3
 // CHECK-NEXT:                    RestElement
-// CHECK-NEXT:                        Id 'all' [D:E:%d.8 'all'] : %class.2
+// CHECK-NEXT:                        Id 'all' [D:E:%d.8 'all'] : %class.3
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                Id 'arr' [D:E:%d.2 'arr'] : %class.2
-// CHECK-NEXT:                ArrayPattern : %class.2
+// CHECK-NEXT:                Id 'arr' [D:E:%d.2 'arr'] : %class.3
+// CHECK-NEXT:                ArrayPattern : %class.3
 // CHECK-NEXT:                    Id 'e' [D:E:%d.9 'e'] : number
 // CHECK-NEXT:                    RestElement
-// CHECK-NEXT:                        Id 'erest' [D:E:%d.10 'erest'] : %class.2
+// CHECK-NEXT:                        Id 'erest' [D:E:%d.10 'erest'] : %class.3
 // CHECK-NEXT:        FunctionDeclaration : %function.5
 // CHECK-NEXT:            Id 'f' [D:E:%d.11 'f']
-// CHECK-NEXT:            ArrayPattern : %class.4
+// CHECK-NEXT:            ArrayPattern : %class.1
 // CHECK-NEXT:                Id 'h' [D:E:%d.19 'h'] : string
 // CHECK-NEXT:                RestElement
-// CHECK-NEXT:                    Id 't' [D:E:%d.20 't'] : %class.4
+// CHECK-NEXT:                    Id 't' [D:E:%d.20 't'] : %class.1
 // CHECK-NEXT:            BlockStatement
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
@@ -130,42 +130,42 @@ let [[na, nb]]: Array<Array<number>> = nested;
 // CHECK-NEXT:                Id 'x' [D:E:%d.12 'x']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                ArrayExpression : %class.2
+// CHECK-NEXT:                ArrayExpression : %class.3
 // CHECK-NEXT:                Id 'r' [D:E:%d.13 'r']
 // CHECK-NEXT:        ExpressionStatement
-// CHECK-NEXT:            AssignmentExpression : %class.2
-// CHECK-NEXT:                ArrayPattern : %class.2
+// CHECK-NEXT:            AssignmentExpression : %class.3
+// CHECK-NEXT:                ArrayPattern : %class.3
 // CHECK-NEXT:                    Id 'x' [D:E:%d.12 'x'] : number
 // CHECK-NEXT:                    RestElement
-// CHECK-NEXT:                        Id 'r' [D:E:%d.13 'r'] : %class.2
-// CHECK-NEXT:                Id 'arr' [D:E:%d.2 'arr'] : %class.2
+// CHECK-NEXT:                        Id 'r' [D:E:%d.13 'r'] : %class.3
+// CHECK-NEXT:                Id 'arr' [D:E:%d.2 'arr'] : %class.3
 // CHECK-NEXT:        ExpressionStatement
-// CHECK-NEXT:            AssignmentExpression : %class.2
-// CHECK-NEXT:                ArrayPattern : %class.2
+// CHECK-NEXT:            AssignmentExpression : %class.3
+// CHECK-NEXT:                ArrayPattern : %class.3
 // CHECK-NEXT:                    RestElement
-// CHECK-NEXT:                        Id 'r' [D:E:%d.13 'r'] : %class.2
-// CHECK-NEXT:                Id 'arr' [D:E:%d.2 'arr'] : %class.2
+// CHECK-NEXT:                        Id 'r' [D:E:%d.13 'r'] : %class.3
+// CHECK-NEXT:                Id 'arr' [D:E:%d.2 'arr'] : %class.3
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
 // CHECK-NEXT:                NumericLiteral : 0
 // CHECK-NEXT:                Id 'y' [D:E:%d.14 'y']
 // CHECK-NEXT:        ExpressionStatement
-// CHECK-NEXT:            AssignmentExpression : %class.2
-// CHECK-NEXT:                ArrayPattern : %class.2
+// CHECK-NEXT:            AssignmentExpression : %class.3
+// CHECK-NEXT:                ArrayPattern : %class.3
 // CHECK-NEXT:                    Id 'x' [D:E:%d.12 'x'] : number
 // CHECK-NEXT:                    Id 'y' [D:E:%d.14 'y'] : number
-// CHECK-NEXT:                Id 'arr' [D:E:%d.2 'arr'] : %class.2
+// CHECK-NEXT:                Id 'arr' [D:E:%d.2 'arr'] : %class.3
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                ArrayExpression : %class.3
-// CHECK-NEXT:                    ArrayExpression : %class.2
+// CHECK-NEXT:                ArrayExpression : %class.4
+// CHECK-NEXT:                    ArrayExpression : %class.3
 // CHECK-NEXT:                        NumericLiteral : 1
 // CHECK-NEXT:                        NumericLiteral : 2
 // CHECK-NEXT:                Id 'nested' [D:E:%d.15 'nested']
 // CHECK-NEXT:        VariableDeclaration
 // CHECK-NEXT:            VariableDeclarator
-// CHECK-NEXT:                Id 'nested' [D:E:%d.15 'nested'] : %class.3
-// CHECK-NEXT:                ArrayPattern : %class.3
-// CHECK-NEXT:                    ArrayPattern : %class.2
+// CHECK-NEXT:                Id 'nested' [D:E:%d.15 'nested'] : %class.4
+// CHECK-NEXT:                ArrayPattern : %class.4
+// CHECK-NEXT:                    ArrayPattern : %class.3
 // CHECK-NEXT:                        Id 'na' [D:E:%d.16 'na'] : number
 // CHECK-NEXT:                        Id 'nb' [D:E:%d.17 'nb'] : number

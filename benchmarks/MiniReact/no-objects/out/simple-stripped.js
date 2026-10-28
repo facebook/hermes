@@ -286,7 +286,7 @@
               // JSON.stringify only for object props; quote strings directly.
               let valueStr;
               if (typeof propValue === 'string') {
-                valueStr = '"' + propValue + '"';
+                valueStr = '"' + M$sh_CHECKED_CAST$default(propValue) + '"';
               } else if (typeof propValue === 'number' || typeof propValue === 'boolean') {
                 valueStr = String(propValue);
               } else {

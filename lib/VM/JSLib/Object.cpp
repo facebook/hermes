@@ -13,7 +13,9 @@
 #include "JSLibInternal.h"
 
 #include "hermes/VM/ArrayStorage.h"
+#include "hermes/VM/FastArray.h"
 #include "hermes/VM/HermesValueTraits.h"
+#include "hermes/VM/JSLib.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/PrimitiveBox.h"
 #include "hermes/VM/PropertyAccessor.h"
@@ -1014,6 +1016,326 @@ CallResult<HermesValue> enumerableOwnProperties_RJS(
   }
 
   return lv.properties.getHermesValue();
+}
+
+namespace {
+
+/// Slots of the "0" and "1" properties of an entry tuple. Tuple element access
+/// reads these slots directly, so they must match what IRGen assigns to tuple
+/// literals: the first two named slots of an ordinary object.
+constexpr SlotIndex kEntryTupleKeySlot = JSObject::numOverlapSlots<JSObject>();
+constexpr SlotIndex kEntryTupleValueSlot = kEntryTupleKeySlot + 1;
+
+/// Populate runtime.tupleEntryClass, the hidden class shared by every tuple
+/// returned by Object.entries, if it hasn't been created yet.
+/// \param clazz scratch handle used while building the class.
+static ExecutionStatus ensureTupleEntryClass(
+    Runtime &runtime,
+    MutableHandle<HiddenClass> clazz) {
+  // The class records Object.prototype as its parent, which every entry tuple
+  // uses.
+  if (LLVM_LIKELY(runtime.tupleEntryClass.get()))
+    return ExecutionStatus::RETURNED;
+
+  clazz = *runtime.getHiddenClassForPrototype(
+      runtime.objectPrototype.get(), runtime.classJSObject);
+  for (auto name : {Predefined::zero, Predefined::one}) {
+    auto added = HiddenClass::addProperty(
+        clazz,
+        runtime,
+        Predefined::getSymbolID(name),
+        PropertyFlags::defaultNewNamedPropertyFlags());
+    if (LLVM_UNLIKELY(added == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    assert(
+        added->second ==
+            (name == Predefined::zero ? kEntryTupleKeySlot
+                                      : kEntryTupleValueSlot) &&
+        "entry tuple property landed in an unexpected slot");
+    clazz = *added->first;
+  }
+  runtime.tupleEntryClass = *clazz;
+  return ExecutionStatus::RETURNED;
+}
+
+/// Create the [key, value] tuple object returned by Object.entries in typed
+/// code. It must have the shape IRGen gives tuple literals: own properties
+/// "0" and "1", in that order, on an ordinary object.
+/// ensureTupleEntryClass() must have been called first.
+/// \param tuple scratch handle keeping the new object alive; also the result.
+static void createEntryTuple(
+    Runtime &runtime,
+    Handle<StringPrimitive> key,
+    Handle<> value,
+    MutableHandle<JSObject> tuple) {
+  tuple = JSObject::create(
+              runtime,
+              Handle<JSObject>::vmcast(&runtime.objectPrototype),
+              Handle<HiddenClass>::vmcast(&runtime.tupleEntryClass))
+              .get();
+  // Encode the value first, since that may allocate, which would invalidate
+  // the pointer in an already encoded key.
+  auto valueShv = SmallHermesValue::encodeHermesValue(*value, runtime);
+  JSObject::setNamedSlotValueUnsafe(
+      *tuple, runtime, kEntryTupleValueSlot, valueShv);
+  JSObject::setNamedSlotValueUnsafe(
+      *tuple,
+      runtime,
+      kEntryTupleKeySlot,
+      SmallHermesValue::encodeStringValue(*key, runtime));
+}
+
+/// Enumerate the dense indexed properties of a FastArray.
+CallResult<HermesValue> fastArrayPropsFastArray(
+    Runtime &runtime,
+    Handle<FastArray> obj,
+    Handle<JSObject> prototype,
+    EnumerableOwnPropertiesKind kind) {
+  struct : public Locals {
+    PinnedValue<HiddenClass> tupleClass;
+    PinnedValue<JSObject> tuple;
+    PinnedValue<FastArray> result;
+    PinnedValue<StringPrimitive> key;
+    PinnedValue<> value;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  GCScopeMarkerRAII marker{runtime};
+
+  if (kind == EnumerableOwnPropertiesKind::KeyValue &&
+      LLVM_UNLIKELY(
+          ensureTupleEntryClass(runtime, lv.tupleClass) ==
+          ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+
+  const uint32_t length = obj->getLengthAsUint32(runtime);
+  auto arrRes = FastArray::create(runtime, prototype, length);
+  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+  lv.result.castAndSetHermesValue<FastArray>(*arrRes);
+
+  for (uint32_t index = 0; index < length; ++index) {
+    if (kind != EnumerableOwnPropertiesKind::Value) {
+      auto keyRes = numberToStringPrimitive(runtime, index);
+      if (LLVM_UNLIKELY(keyRes == ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+      lv.key = std::move(*keyRes);
+    }
+
+    switch (kind) {
+      case EnumerableOwnPropertiesKind::Key:
+        lv.value = lv.key.getHermesValue();
+        break;
+      case EnumerableOwnPropertiesKind::Value:
+        lv.value = obj->unsafeAt(runtime, index).unboxToHV(runtime);
+        break;
+      case EnumerableOwnPropertiesKind::KeyValue:
+        lv.value = obj->unsafeAt(runtime, index).unboxToHV(runtime);
+        createEntryTuple(runtime, lv.key, lv.value, lv.tuple);
+        lv.value = lv.tuple.getHermesValue();
+        break;
+    }
+    if (LLVM_UNLIKELY(
+            FastArray::push(lv.result, runtime, lv.value) ==
+            ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+  }
+
+  return lv.result.getHermesValue();
+}
+
+/// Enumerate an object the slot scan can't handle (proxies, host objects,
+/// accessors, indexed storage) through the generic EnumerableOwnProperties, and
+/// copy the result into a FastArray. Entries become entry tuples.
+CallResult<HermesValue> genericPropsFastArray(
+    Runtime &runtime,
+    Handle<JSObject> obj,
+    Handle<JSObject> prototype,
+    EnumerableOwnPropertiesKind kind) {
+  struct : public Locals {
+    PinnedValue<JSArray> props;
+    PinnedValue<JSArray> entry;
+    PinnedValue<HiddenClass> tupleClass;
+    PinnedValue<JSObject> tuple;
+    PinnedValue<FastArray> result;
+    PinnedValue<StringPrimitive> key;
+    PinnedValue<> value;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  GCScopeMarkerRAII marker{runtime};
+
+  if (kind == EnumerableOwnPropertiesKind::KeyValue &&
+      LLVM_UNLIKELY(
+          ensureTupleEntryClass(runtime, lv.tupleClass) ==
+          ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+
+  auto propsRes = enumerableOwnProperties_RJS(runtime, obj, kind);
+  if (LLVM_UNLIKELY(propsRes == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+  lv.props.castAndSetHermesValue<JSArray>(*propsRes);
+
+  const uint32_t length = JSArray::getLength(*lv.props, runtime);
+  auto arrRes = FastArray::create(runtime, prototype, length);
+  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+  lv.result.castAndSetHermesValue<FastArray>(*arrRes);
+
+  for (uint32_t index = 0; index < length; ++index) {
+    lv.value = lv.props->at(runtime, index).unboxToHV(runtime);
+    if (kind == EnumerableOwnPropertiesKind::KeyValue) {
+      lv.entry.castAndSetHermesValue<JSArray>(lv.value.getHermesValue());
+      lv.key.castAndSetHermesValue<StringPrimitive>(
+          lv.entry->at(runtime, 0).unboxToHV(runtime));
+      lv.value = lv.entry->at(runtime, 1).unboxToHV(runtime);
+      createEntryTuple(runtime, lv.key, lv.value, lv.tuple);
+      lv.value = lv.tuple.getHermesValue();
+    }
+    if (LLVM_UNLIKELY(
+            FastArray::push(lv.result, runtime, lv.value) ==
+            ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+  }
+
+  return lv.result.getHermesValue();
+}
+
+/// Shared implementation of object{Keys,Values,Entries}FastArray.
+CallResult<HermesValue> objectPropsFastArray(
+    Runtime &runtime,
+    Handle<JSObject> obj,
+    Handle<JSObject> prototype,
+    EnumerableOwnPropertiesKind kind) {
+  if (LLVM_UNLIKELY(vmisa<FastArray>(*obj))) {
+    return fastArrayPropsFastArray(
+        runtime, Handle<FastArray>::vmcast(obj), prototype, kind);
+  }
+
+  // Typed objects never need the generic path, but an `any` argument passed
+  // through the implicit checked cast can be any object.
+  auto indexedRange = JSObject::getOwnIndexedRange(*obj, runtime);
+  if (LLVM_UNLIKELY(
+          obj->isProxyObject(runtime) || obj->isHostObject(runtime) ||
+          obj->isLazy(runtime) ||
+          obj->getClass(runtime)->getMayHaveAccessor() ||
+          indexedRange.first != indexedRange.second)) {
+    return genericPropsFastArray(runtime, obj, prototype, kind);
+  }
+
+  struct : public Locals {
+    PinnedValue<HiddenClass> clazz;
+    PinnedValue<HiddenClass> tupleClass;
+    PinnedValue<JSObject> tuple;
+    PinnedValue<FastArray> result;
+    PinnedValue<StringPrimitive> key;
+    PinnedValue<> value;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  // The property scan and the FastArray internals allocate handles; without a
+  // marker they accumulate in the caller's GCScope, which on the SH path lives
+  // for the whole enclosing function.
+  GCScopeMarkerRAII marker{runtime};
+
+  class PropEntry {
+   public:
+    /// The array index for index-like names, UINT32_MAX otherwise.
+    uint32_t index;
+    SymbolID name;
+    NamedPropertyDescriptor desc;
+
+    PropEntry(uint32_t index, SymbolID name, NamedPropertyDescriptor desc)
+        : index(index), name(name), desc(desc) {}
+  };
+  llvh::SmallVector<PropEntry, 8> props{};
+  bool anyArrayIndex = false;
+
+  lv.clazz = obj->getClass(runtime);
+  // forEachPropertyWhile flushes the handles getStringView creates.
+  HiddenClass::forEachPropertyWhile(
+      lv.clazz,
+      runtime,
+      [&props, &anyArrayIndex](
+          Runtime &runtime, SymbolID id, NamedPropertyDescriptor desc) {
+        if (desc.flags.privateName || !desc.flags.enumerable ||
+            !isPropertyNamePrimitive(id))
+          return true;
+        auto arrayIndex = toArrayIndex(
+            runtime.getIdentifierTable().getStringView(runtime, id));
+        anyArrayIndex |= arrayIndex.hasValue();
+        props.emplace_back(arrayIndex ? *arrayIndex : UINT32_MAX, id, desc);
+        return true;
+      });
+
+  // Index-like names come first in ascending order; the rest keep insertion
+  // order. UINT32_MAX is not a valid array index, so it sorts them last, which
+  // means the sort is a no-op unless an index-like name was found.
+  if (anyArrayIndex) {
+    std::stable_sort(
+        props.begin(), props.end(), [](const PropEntry &a, const PropEntry &b) {
+          return a.index < b.index;
+        });
+  }
+
+  if (kind == EnumerableOwnPropertiesKind::KeyValue &&
+      LLVM_UNLIKELY(
+          ensureTupleEntryClass(runtime, lv.tupleClass) ==
+          ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+
+  auto arrRes = FastArray::create(runtime, prototype, props.size());
+  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+  lv.result.castAndSetHermesValue<FastArray>(*arrRes);
+
+  for (const PropEntry &prop : props) {
+    lv.key = runtime.getStringPrimFromSymbolID(prop.name);
+    switch (kind) {
+      case EnumerableOwnPropertiesKind::Key:
+        lv.value = lv.key.getHermesValue();
+        break;
+      case EnumerableOwnPropertiesKind::Value:
+        lv.value = JSObject::getNamedSlotValueUnsafe(*obj, runtime, prop.desc)
+                       .unboxToHV(runtime);
+        break;
+      case EnumerableOwnPropertiesKind::KeyValue:
+        lv.value = JSObject::getNamedSlotValueUnsafe(*obj, runtime, prop.desc)
+                       .unboxToHV(runtime);
+        createEntryTuple(runtime, lv.key, lv.value, lv.tuple);
+        lv.value = lv.tuple.getHermesValue();
+        break;
+    }
+    if (LLVM_UNLIKELY(
+            FastArray::push(lv.result, runtime, lv.value) ==
+            ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+  }
+
+  return lv.result.getHermesValue();
+}
+
+} // namespace
+
+CallResult<HermesValue> objectKeysFastArray(
+    Runtime &runtime,
+    Handle<JSObject> obj,
+    Handle<JSObject> prototype) {
+  return objectPropsFastArray(
+      runtime, obj, prototype, EnumerableOwnPropertiesKind::Key);
+}
+
+CallResult<HermesValue> objectValuesFastArray(
+    Runtime &runtime,
+    Handle<JSObject> obj,
+    Handle<JSObject> prototype) {
+  return objectPropsFastArray(
+      runtime, obj, prototype, EnumerableOwnPropertiesKind::Value);
+}
+
+CallResult<HermesValue> objectEntriesFastArray(
+    Runtime &runtime,
+    Handle<JSObject> obj,
+    Handle<JSObject> prototype) {
+  return objectPropsFastArray(
+      runtime, obj, prototype, EnumerableOwnPropertiesKind::KeyValue);
 }
 
 CallResult<HermesValue> objectKeys(void *, Runtime &runtime) {
