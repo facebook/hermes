@@ -1074,6 +1074,15 @@ class ESTreeIRGen {
       Value *propValue,
       Value *thisValue);
 
+  /// Load the typed class field \p field out of \p object, IDZ-checking it
+  /// when its type has no representable literal default and it is therefore
+  /// stored uninitialized.
+  /// \param propName the field name, as a string or private name literal.
+  Value *emitTypedFieldLoad(
+      Value *object,
+      const flow::ClassType::Field &field,
+      Literal *propName);
+
   /// emitMemberStore for the specific case where the member is a typed class
   /// field.
   /// \param classType the class containing the field
@@ -1117,6 +1126,29 @@ class ESTreeIRGen {
   MemberExpressionResult emitTypedSuperLoad(
       ESTree::SuperNode *superNode,
       ESTree::IdentifierNode *property);
+
+  /// The Decls holding the accessor closures of a static accessor. Both null
+  /// if the property isn't a static accessor.
+  struct StaticAccessor {
+    /// Null if the accessor has no getter.
+    sema::Decl *getterDecl = nullptr;
+    /// Null if the accessor has no setter.
+    sema::Decl *setterDecl = nullptr;
+  };
+
+  /// Look up an accessor for \p mem on the statics of the class wrapped by
+  /// \p consType. Static accessors don't have their Decl propagated to the
+  /// access site, so they must be found on the static type instead.
+  StaticAccessor findStaticAccessor(
+      ESTree::MemberExpressionNode *mem,
+      flow::ClassConstructorType *consType);
+
+  /// Load the value of the class member backed by \p decl's Variable.
+  Value *emitLoadClassMemberVar(sema::Decl *decl);
+
+  /// \return the home object of \p classInfo, loaded from the Variable that
+  ///   genClassDeclaration stored it in.
+  Value *emitLoadTypedHomeObject(flow::ClassType *classInfo);
 
   /// \return an instruction that is the currently visible scope described by
   /// \p targetVarScope, emitting a ResolveScopeInst if necessary.
