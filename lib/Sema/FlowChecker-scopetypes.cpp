@@ -39,7 +39,10 @@
 
 #include "llvh/ADT/MapVector.h"
 #include "llvh/ADT/ScopeExit.h"
+#include "llvh/ADT/SmallPtrSet.h"
 #include "llvh/Support/SaveAndRestore.h"
+
+#include <deque>
 
 #if HERMES_PARSE_FLOW
 #define DEBUG_TYPE "FlowChecker"
@@ -237,12 +240,32 @@ class FlowChecker::DeclareScopeTypes {
   /// maps from the Type representing 'A' to the type representing 'B'.
   /// Used for populating the LHS after resolving the RHS with
   /// resolveTypeAnnotation.
-  llvh::SmallDenseMap<Type *, Type *> typeAliasResolutions{};
+  /// MapVector makes cycle diagnostics deterministic.
+  llvh::MapVector<Type *, Type *> typeAliasResolutions{};
   /// Keep track of the generic instantiations created during type alias
   /// resolution, because they need to know the TypeInfo for the type aliases
   /// to decide whether to make a new specialization.
   llvh::MapVector<Type *, FlowChecker::GenericTypeInstantiation>
       forwardGenericInstantiations{};
+  /// Maximum nesting of uncached generic type alias expansions.
+  static constexpr unsigned kMaxAliasExpansionDepth = 100;
+  /// Current nesting of uncached generic type alias expansions.
+  unsigned aliasExpansionDepth = 0;
+  /// Set once kMaxAliasExpansionDepth is exceeded. Later uncached expansions
+  /// fail immediately, since sibling expansions would otherwise each run to
+  /// the limit and take exponential time.
+  bool aliasExpansionLimitHit = false;
+  /// Expansions of generic type aliases whose type arguments were not yet
+  /// resolved, keyed by the alias and the argument Types. These can't use the
+  /// specialization cache, which is keyed by TypeInfo, but substituting the
+  /// same Types always produces the same result.
+  llvh::DenseMap<
+      std::pair<ESTree::TypeAliasNode *, llvh::ArrayRef<Type *>>,
+      Type *>
+      unresolvedAliasExpansions{};
+  /// Storage for the argument arrays referenced by unresolvedAliasExpansions.
+  /// std::deque keeps them from moving.
+  std::deque<llvh::SmallVector<Type *, 2>> unresolvedAliasExpansionArgs{};
   /// Keep track of all forward declarations of classes, so they can be
   /// completed.
   llvh::SmallVector<Type *, 4> forwardClassDecls{};
@@ -497,16 +520,8 @@ class FlowChecker::DeclareScopeTypes {
         forwardUnions.insert(localType);
       }
 
-      // If it's a generic, we'll have to resolve it as well.
-      // Forward declared generics will have their true types instantiated
-      // later.
-      if (llvh::isa<GenericType>(localType->info)) {
-        auto it =
-            forwardGenericInstantiations.find(typeAliasResolutions[localType]);
-        assert(it != forwardGenericInstantiations.end());
-        GenericTypeInstantiation copy = it->second;
-        forwardGenericInstantiations.insert({localType, copy});
-      }
+      // A generic alias is completed through its target instantiation, see
+      // completeForwardType.
     }
 
     return outer.sm_.getErrorCount() == errorsBefore;
@@ -745,7 +760,15 @@ class FlowChecker::DeclareScopeTypes {
         break;
       }
 
-      // Continue down the alias chain.
+      // Continue through generic aliases, whose placeholder TypeInfo is not
+      // their resolved type.
+      if (!nextType->info ||
+          (llvh::isa<GenericType>(nextType->info) &&
+           typeAliasResolutions.count(nextType))) {
+        curType = nextType;
+        continue;
+      }
+
       resolvedInfo = nextType->info;
       curType = nextType;
     }
@@ -788,12 +811,18 @@ class FlowChecker::DeclareScopeTypes {
         completeForwardType(type, visited);
       }
     }
+    // Earlier aliases may still contain a generic placeholder copied from an
+    // alias later in the chain. Propagate the completed type now; this also
+    // reports alias-only cycles that never reached a concrete type.
+    for (auto &resolution : typeAliasResolutions)
+      populateTypeAlias(resolution.first);
     syncForwardGenericClassAliasCopies();
 
     // It's possible that unions and generic class specialization keys can be
     // further simplified now that we've instantiated all generics, so use a
     // post-processing step for that.
     fixupUnionsAndGenericTables();
+    checkSelfContainingUnions();
 
     // Parse all forward-declared class types.
     for (Type *type : forwardClassDecls) {
@@ -830,25 +859,21 @@ class FlowChecker::DeclareScopeTypes {
         it->second.typeDecl->genericClassDecl;
   }
 
-  /// \return the forward generic class source for \p type when \p type is an
-  /// alias copy of one, otherwise nullptr.
+  /// \return the forward generic class source for \p type when its alias chain
+  /// resolves to one, otherwise nullptr.
   Type *getForwardGenericClassAliasSource(Type *type) const {
-    auto aliasIt = typeAliasResolutions.find(type);
-    if (aliasIt == typeAliasResolutions.end())
-      return nullptr;
+    llvh::SmallDenseSet<Type *, 4> visited;
+    Type *source = type;
+    while (visited.insert(source).second) {
+      auto aliasIt = typeAliasResolutions.find(source);
+      if (aliasIt == typeAliasResolutions.end())
+        return nullptr;
 
-    Type *source = aliasIt->second;
-    return source != type && isForwardGenericClass(source) ? source : nullptr;
-  }
-
-  /// \return whether this type can contribute to an unresolvable type cycle
-  /// (which would produce an error).
-  bool isUnresolvedCycleType(Type *type) const {
-    if (llvh::isa<UnionType>(type->info))
-      return true;
-    if (llvh::isa<GenericType>(type->info))
-      return !isForwardGenericClass(type);
-    return false;
+      source = aliasIt->second;
+      if (isForwardGenericClass(source))
+        return source;
+    }
+    return nullptr;
   }
 
   void syncForwardGenericClassAlias(Type *type, Type *source) {
@@ -908,9 +933,9 @@ class FlowChecker::DeclareScopeTypes {
       // which we must if it's just a cycle of unions/aliases/generics
       // which don't have a real type to eventually complete to.
       for (auto *t : llvh::reverse(visited)) {
-        // Generic classes are nominal wrappers, so they break cycles just like
-        // tuples or object types. Generic aliases remain structural.
-        if (!isUnresolvedCycleType(t)) {
+        // A generic alias is inconclusive until expansion. If it resolves to a
+        // union, checkResolvedGenericAliasCycle rechecks its arms.
+        if (!llvh::isa<UnionType>(t->info)) {
           break;
         }
         if (t == type) {
@@ -947,6 +972,17 @@ class FlowChecker::DeclareScopeTypes {
       LLVM_DEBUG(
           llvh::dbgs() << "Returning to depth " << visited.size() << '\n');
     });
+
+    // An alias of an unresolved generic completes through its target. It is
+    // never a separate instantiation, so cycles through it reach the target.
+    auto aliasIt = typeAliasResolutions.find(type);
+    if (aliasIt != typeAliasResolutions.end() &&
+        llvh::isa<GenericType>(type->info)) {
+      completeForwardType(aliasIt->second, visited);
+      populateTypeAlias(type);
+      checkResolvedGenericAliasCycle(type, visited);
+      return;
+    }
 
     // First try and complete any generics so we can proceed.
     if (llvh::isa<GenericType>(type->info) ||
@@ -1049,14 +1085,66 @@ class FlowChecker::DeclareScopeTypes {
                      << " looping\n");
 
     // Only one type? Just use it, otherwise we still need a union.
-    if (nonLoopingTypes.size() == 1 && loopingTypes.empty()) {
-      type->info = nonLoopingTypes.front()->info;
-    } else if (nonLoopingTypes.empty() && loopingTypes.size() == 1) {
-      type->info = loopingTypes.front()->info;
+    Type *singleType = nullptr;
+    if (nonLoopingTypes.size() == 1 && loopingTypes.empty())
+      singleType = nonLoopingTypes.front();
+    else if (nonLoopingTypes.empty() && loopingTypes.size() == 1)
+      singleType = loopingTypes.front();
+
+    if (singleType) {
+      // The arm may still be unresolved or a temporary class, so alias it to
+      // pick up the final info.
+      typeAliasResolutions[type] = singleType;
+      type->info = singleType->info;
     } else {
       unionType->setCanonicalTypes(
           std::move(nonLoopingTypes), std::move(loopingTypes));
     }
+  }
+
+  /// Report unions that reach themselves through union arms alone, e.g.
+  /// U = number | U. The DFS cycle check depends on traversal order and can
+  /// miss these when a generic alias expansion is cached.
+  void checkSelfContainingUnions() {
+    for (Type *type : forwardUnions) {
+      auto *unionType = llvh::dyn_cast<UnionType>(type->info);
+      if (!unionType)
+        continue;
+
+      llvh::SmallPtrSet<UnionType *, 4> visited{};
+      llvh::SmallVector<UnionType *, 4> worklist{unionType};
+      bool selfContaining = false;
+      while (!worklist.empty() && !selfContaining) {
+        for (Type *arm : worklist.pop_back_val()->getTypes()) {
+          auto *armUnion = llvh::dyn_cast<UnionType>(arm->info);
+          if (armUnion == unionType) {
+            selfContaining = true;
+            break;
+          }
+          if (armUnion && visited.insert(armUnion).second)
+            worklist.push_back(armUnion);
+        }
+      }
+
+      if (selfContaining) {
+        outer.sm_.error(
+            type->node->getSourceRange(),
+            "ft: type contains a circular reference to itself");
+        type->info = outer.flowContext_.getAnyInfo();
+      }
+    }
+  }
+
+  /// Check for a cycle hidden by an expanded generic alias in a union.
+  void checkResolvedGenericAliasCycle(
+      Type *type,
+      llvh::SetVector<Type *> &visited) {
+    auto *unionType = llvh::dyn_cast<UnionType>(type->info);
+    if (!unionType)
+      return;
+
+    for (Type *arm : unionType->getTypes())
+      completeForwardType(arm, visited);
   }
 
   /// DFS step for forward-declared generic.
@@ -1091,18 +1179,18 @@ class FlowChecker::DeclareScopeTypes {
           typeDecl->genericClassDecl->name, generic.typeArgTypes);
     }
 
+    // Whether all type arguments have a concrete TypeInfo.
+    bool argsResolved = true;
     for (Type *arg : generic.typeArgTypes) {
       completeForwardType(arg, visited);
 
-      // If a type argument can't be properly resolved, we're done. Generic
-      // classes do break cycles (see above), but their arguments still need
-      // concrete TypeInfo for specialization and deduplication.
+      // An argument may still be resolving further up the DFS.
       if (llvh::isa<GenericType>(arg->info)) {
-        outer.sm_.error(
-            type->node->getSourceRange(),
-            "ft: type contains a circular reference to itself");
-        type->info = outer.flowContext_.getAnyInfo();
-        return;
+        // A generic class needs concrete arguments, so the worklist retries it.
+        if (isGenericClass)
+          return;
+        // A generic alias only needs them to memoize the expansion.
+        argsResolved = false;
       }
     }
 
@@ -1124,17 +1212,44 @@ class FlowChecker::DeclareScopeTypes {
         typeArgs.push_back(arg->info);
       }
       LLVM_DEBUG(llvh::dbgs() << ">\n");
-      GenericInfo<Type>::TypeArgsRef typeArgsRef = typeArgs;
 
-      if (Type *resolved = genericInfo.getSpecialization(typeArgs)) {
+      Type *cached = nullptr;
+      if (argsResolved) {
+        cached = genericInfo.getSpecialization(typeArgs);
+      } else {
+        auto it = unresolvedAliasExpansions.find(
+            std::make_pair(
+                aliasNode, llvh::ArrayRef<Type *>(generic.typeArgTypes)));
+        if (it != unresolvedAliasExpansions.end())
+          cached = it->second;
+      }
+      if (Type *resolved = cached) {
         LLVM_DEBUG(
             llvh::errs() << "Found specialization for " << type << ": "
                          << resolved << " " << resolved->info->getKindName()
                          << "\n");
         typeAliasResolutions[type] = resolved;
         populateTypeAlias(type);
+        checkResolvedGenericAliasCycle(type, visited);
         return;
       }
+
+      // Expansions that keep producing new type arguments never hit the
+      // specialization cache, e.g. type A<T> = [A<[T]>].
+      if (aliasExpansionLimitHit ||
+          aliasExpansionDepth >= kMaxAliasExpansionDepth) {
+        if (!aliasExpansionLimitHit) {
+          outer.sm_.error(
+              generic.annotation->getSourceRange(),
+              "ft: too deeply nested generic type alias expansion");
+          aliasExpansionLimitHit = true;
+        }
+        type->info = outer.flowContext_.getAnyInfo();
+        return;
+      }
+      ++aliasExpansionDepth;
+      auto restoreDepth =
+          llvh::make_scope_exit([this]() { --aliasExpansionDepth; });
 
       // This is not a generic class, it's a generic type alias.
       // Specialize it with the provided arguments by resolving the type.
@@ -1188,8 +1303,17 @@ class FlowChecker::DeclareScopeTypes {
         }
       }
 
-      typeArgsRef =
-          genericInfo.addSpecialization(outer, std::move(typeArgs), resolved);
+      if (argsResolved) {
+        (void)genericInfo.addSpecialization(
+            outer, std::move(typeArgs), resolved);
+      } else {
+        unresolvedAliasExpansionArgs.push_back(generic.typeArgTypes);
+        unresolvedAliasExpansions.try_emplace(
+            std::make_pair(
+                aliasNode,
+                llvh::ArrayRef<Type *>(unresolvedAliasExpansionArgs.back())),
+            resolved);
+      }
 
       // "resolved" may still be a forward GenericType (mid alias chain).
       typeAliasResolutions[type] = resolved;
@@ -1206,6 +1330,7 @@ class FlowChecker::DeclareScopeTypes {
       // completeForwardType set its final info, so re-run to propagate it up.
       if (llvh::isa<GenericType>(type->info))
         populateTypeAlias(type);
+      checkResolvedGenericAliasCycle(type, visited);
       return;
     }
 
