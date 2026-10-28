@@ -1205,6 +1205,21 @@ class FlowChecker::ExprVisitor {
           {.canFlow = true, .needCheckedCast = true});
     }
 
+    // Private names only resolve against a single class, so every other
+    // receiver is rejected here rather than in each visitMember* helper.
+    // IRGen needs the class to find the private name's storage, so `any` is
+    // rejected too.
+    if (llvh::isa<ESTree::PrivateNameNode>(node->_property) &&
+        !llvh::isa<ClassType>(objType->info) &&
+        !llvh::isa<ClassConstructorType>(objType->info)) {
+      outer_.sm_.error(
+          node->_property->getSourceRange(),
+          "ft: private name access only allowed on class instances, found " +
+              objType->messageString());
+      outer_.setNodeType(node, resType);
+      return;
+    }
+
     if (auto *classType = llvh::dyn_cast<ClassType>(objType->info)) {
       resType = visitMemberClass(node, parent, objType, classType, isWrite);
     } else if (
@@ -1257,6 +1272,12 @@ class FlowChecker::ExprVisitor {
     visitESTreeNode(*this, node->_object, node, nullptr);
     if (node->_computed)
       visitESTreeNode(*this, node->_property, node, nullptr);
+    // Untyped optional access has no class to resolve a private name against.
+    if (llvh::isa<ESTree::PrivateNameNode>(node->_property))
+      outer_.sm_.error(
+          node->_property->getSourceRange(),
+          "ft: private name access not supported in optional member "
+          "expressions");
   }
 
   void visitExplicitCast(
@@ -2424,8 +2445,9 @@ class FlowChecker::ExprVisitor {
     if (auto *mem = llvh::dyn_cast<ESTree::MemberExpressionNode>(node->_left)) {
       if (!mem->_computed) {
         auto *objType = outer_.getNodeTypeOrAny(mem->_object);
-        if (outer_.flowContext_.isArrayClassType(objType)) {
-          auto *id = llvh::cast<ESTree::IdentifierNode>(mem->_property);
+        // Private names on arrays were already rejected as undefined.
+        auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(mem->_property);
+        if (id && outer_.flowContext_.isArrayClassType(objType)) {
           outer_.sm_.error(
               node->getSourceRange(),
               "ft: cannot assign to property '" + id->_name->str() +
