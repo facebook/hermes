@@ -171,6 +171,26 @@ A.prototype.foo = f; // ERROR
 
 A method read through `.prototype` is selected statically, not dispatched on the receiver.
 
+Static members are stored in variables and resolved at compile time, including through `this` (the class) and `super` (the superclass) inside static members. To keep that consistent with JS:
+* A subclass cannot redeclare an inherited static field or method.
+* A static field can only be written through the name of the class that declares it, not through `this`, `super` or a subclass name, because JS would create a separate property on the receiver.
+* A class declaration's name cannot be reassigned, so it always refers to exactly that class.
+* A private static can only be accessed through the name of the class that declares it, because JS would throw for a subclass receiver.
+* Static members cannot reference the class type parameters.
+* Inside a generic class, a member access on the class name (`G.x`, `G.#x`) refers to the current specialization, which has its own static storage.
+* `new this()` in a static method constructs the declaring class.
+```
+class A {
+  static x: number = 1;
+  static set(): void { A.x = 2; } // OK
+  static bad(): void { this.x = 2; } // ERROR
+}
+class B extends A {
+  static x: number = 3; // ERROR
+}
+B.x = 4; // ERROR
+```
+
 ### Optional Types
 
 The `?` indicates that a type may also be either `null` or `void`:

@@ -50,9 +50,9 @@ class Outer {
 new Outer();
 // CHECK-NEXT: undefined undefined
 
-// A static method's receiver is the class too, so its static members --
-// including private ones and other static methods -- are reachable through
-// 'this'.
+// A static method's receiver is the class too, so its public static members
+// are reachable through 'this'. Private ones go through the class name; see
+// class-static-receiver-error.js.
 class M {
   static w: number = 7;
   static #s: number = 3;
@@ -60,14 +60,14 @@ class M {
     return 1;
   }
   static all(): string {
-    return `${this.w},${this.#s},${this.one()}`;
+    return `${this.w},${M.#s},${this.one()}`;
   }
   // Arrows in a static method body inherit that receiver.
   static viaArrow(): number {
-    const f = (): number => this.w + this.#s;
+    const f = (): number => this.w + M.#s;
     return f();
   }
-  // Writes through the class name are visible through 'this'.
+  // Writes must go through the class name; see class-static-receiver-error.js.
   static bump(): number {
     M.w++;
     return this.w;
@@ -82,9 +82,10 @@ print(M.bump(), M.w);
 // 'this' is the receiver of the call, so an inherited static method invoked on
 // the subclass sees the subclass, matching ordinary JS static dispatch.
 // Member resolution through 'this' is static, though: statics live in
-// variables and are picked at compile time. 'new this()' would construct the
-// declaring class rather than the receiver, so it is rejected; see
-// class-static-receiver-error.js.
+// variables and are picked at compile time. Subclasses can't redeclare statics
+// or write them through anything but the declaring class name, and
+// 'new this()' is rejected (see class-static-receiver-error.js), so that
+// isn't observable.
 class Base {
   static who(): any {
     return this;

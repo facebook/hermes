@@ -81,8 +81,3 @@ class StaticGetSet {
 StaticGetSet.x = 7;
 print(StaticGetSet.x);
 // CHECK-NEXT: 7
-
-class StaticBase { static foo(): number { return 1; } }
-class StaticDerived extends StaticBase { static foo(): number { return 2; } }
-print(StaticBase.foo(), StaticDerived.foo());
-// CHECK-NEXT: 1 2

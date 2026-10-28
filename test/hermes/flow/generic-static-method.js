@@ -77,8 +77,8 @@ print(Derived.viaThis<number>(1));
 
 // Statics on a *generic* class. Each specialization is compiled from a cloned
 // AST, so it gets its own copy of the static storage, initialized separately.
-// The statics are only reachable through 'this' inside the class or through a
-// subclass of a specialization, since the generic class name is not a value.
+// Inside the class, a member access on the class name refers to the current
+// specialization.
 let nextBoxId: number = 0;
 function newBoxId(): number {
   return ++nextBoxId;
@@ -116,3 +116,44 @@ print(
   new Derived().instanceGeneric<number>(1),
 );
 // CHECK-NEXT: Base#m Base#m
+
+// Statics, including private ones, can be read and written through the class
+// name inside a generic class, from static and instance methods, arrows and
+// generic methods. Each specialization has its own storage.
+class Counter<T> {
+  static n: number = 1;
+  static #p: number = 10;
+  v: T;
+  constructor(v: T) {
+    this.v = v;
+  }
+  static bump(): number {
+    Counter.n++;
+    Counter.#p += 5;
+    return Counter.n + Counter.#p;
+  }
+  inst(): number {
+    return Counter.n + Counter.#p;
+  }
+  @Hermes.final
+  static gen<U>(u: U): number {
+    return Counter.#p;
+  }
+  static arrow(): number {
+    const f = (): number => Counter.#p;
+    return f();
+  }
+}
+class NumCounter extends Counter<number> {}
+class StrCounter extends Counter<string> {}
+
+print(NumCounter.bump(), NumCounter.bump(), StrCounter.bump());
+// CHECK-NEXT: 17 23 17
+print(new Counter<number>(1).inst(), new Counter<string>('a').inst());
+// CHECK-NEXT: 23 17
+print(
+  NumCounter.gen<boolean>(true),
+  StrCounter.gen<boolean>(true),
+  NumCounter.arrow(),
+);
+// CHECK-NEXT: 20 15 20

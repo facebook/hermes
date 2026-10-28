@@ -20,7 +20,7 @@ class A {
 
 class B extends A {
   static z: string = 'hello';
-  static foo(): number {
+  static baz(): number {
     return 3;
   }
 }
@@ -55,13 +55,13 @@ class C extends A {}
 // CHECK-NEXT:})
 // CHECK-NEXT:%class.12 = class( {
 // CHECK-NEXT:  y: number
-// CHECK-NEXT:  foo [overridden]: %function.5
+// CHECK-NEXT:  foo [final]: %function.5
 // CHECK-NEXT:})
 // CHECK-NEXT:%class.13 = class( extends %class.11 {
 // CHECK-NEXT:})
 // CHECK-NEXT:%class.14 = class( extends %class.12 {
 // CHECK-NEXT:  z: string
-// CHECK-NEXT:  foo [final]: %function.7
+// CHECK-NEXT:  baz [final]: %function.7
 // CHECK-NEXT:})
 // CHECK-NEXT:%class.15 = class( extends %class.11 {
 // CHECK-NEXT:})
@@ -81,7 +81,7 @@ class C extends A {}
 // CHECK-NEXT:            Decl %d.7 'foo' Const
 // CHECK-NEXT:        Scope %s.3
 // CHECK-NEXT:            Decl %d.8 'z' Const
-// CHECK-NEXT:            Decl %d.9 'foo' Const
+// CHECK-NEXT:            Decl %d.9 'baz' Const
 // CHECK-NEXT:        Scope %s.4
 // CHECK-NEXT:    Func strict mayReachImplicitReturn
 // CHECK-NEXT:        Scope %s.5
@@ -140,7 +140,7 @@ class C extends A {}
 // CHECK-NEXT:                    Id 'z' [D:E:%d.8 'z']
 // CHECK-NEXT:                    StringLiteral : "hello"
 // CHECK-NEXT:                MethodDefinition : %function.7
-// CHECK-NEXT:                    Id 'foo' [D:E:%d.9 'foo']
+// CHECK-NEXT:                    Id 'baz' [D:E:%d.9 'baz']
 // CHECK-NEXT:                    FunctionExpression : %function.7
 // CHECK-NEXT:                        BlockStatement
 // CHECK-NEXT:                            ReturnStatement

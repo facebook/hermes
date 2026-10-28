@@ -360,6 +360,19 @@ class FlowChecker::ExprVisitor {
       return;
     }
 
+    // Inside a specialization of a generic class, a member access on the
+    // class's own name refers to that specialization, so its statics can be
+    // reached by name.
+    if (decl->generic) {
+      if (auto *mem = llvh::dyn_cast<ESTree::MemberExpressionNode>(parent);
+          mem && mem->_object == node) {
+        if (sema::Decl *specDecl = findEnclosingSpecializationDecl(decl)) {
+          outer_.semContext_.setExpressionDecl(node, specDecl);
+          decl = specDecl;
+        }
+      }
+    }
+
     if (decl->generic) {
       bool isValid = false;
       if (auto *call = llvh::dyn_cast<ESTree::CallExpressionLikeNode>(parent)) {
@@ -556,6 +569,47 @@ class FlowChecker::ExprVisitor {
     return type;
   }
 
+  /// \return the Decl of the specialization of the generic class
+  ///   \p genericDecl whose body is being checked, or nullptr if there is
+  ///   none.
+  sema::Decl *findEnclosingSpecializationDecl(sema::Decl *genericDecl) {
+    auto &generic = outer_.getGenericInfoMustExist(genericDecl);
+    for (ClassContext *ctx = outer_.curClassContext_; ctx;
+         ctx = ctx->getPrevContext()) {
+      for (const auto &entry : generic.specializations) {
+        auto *classDecl =
+            llvh::dyn_cast<ESTree::ClassDeclarationNode>(entry.second);
+        if (!classDecl)
+          continue;
+        sema::Decl *specDecl =
+            outer_.getDecl(llvh::cast<ESTree::IdentifierNode>(classDecl->_id));
+        auto *consType = llvh::dyn_cast_or_null<ClassConstructorType>(
+            outer_.flowContext_.findDeclType(specDecl)
+                ? outer_.flowContext_.findDeclType(specDecl)->info
+                : nullptr);
+        if (consType && consType->getClassTypeInfo() == ctx->getClassTypeInfo())
+          return specDecl;
+      }
+    }
+    return nullptr;
+  }
+
+  /// \return true if \p object names a class declaration whose statics are
+  ///   \p staticInfo, so the receiver is exactly that class and not a
+  ///   subclass.
+  bool isDeclaringClassName(ESTree::Node *object, ClassType *staticInfo) {
+    auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(object);
+    if (!id)
+      return false;
+    sema::Decl *decl = outer_.getDecl(id);
+    if (!decl || decl->kind != sema::Decl::Kind::Class)
+      return false;
+    auto *consType =
+        llvh::dyn_cast<ClassConstructorType>(outer_.getNodeTypeOrAny(id)->info);
+    return consType &&
+        consType->getClassTypeInfo()->getStaticObjectTypeInfo() == staticInfo;
+  }
+
   /// \return true if \p node is the callee of \p parent, i.e. it is being
   ///   called directly rather than referenced as a value.
   static bool isDirectCallTarget(
@@ -663,6 +717,18 @@ class FlowChecker::ExprVisitor {
       return outer_.flowContext_.getAny();
     }
 
+    // ES checks that the receiver itself has a private static, so a subclass
+    // receiver throws. Statics are resolved at compile time without that
+    // check, so only allow access through the declaring class name.
+    if (isPrivate &&
+        !isDeclaringClassName(node->_object, optStaticField->classType)) {
+      outer_.sm_.error(
+          node->_property->getSourceRange(),
+          llvh::Twine("ft: private static ") + name.str() +
+              " can only be accessed through the name of its declaring class");
+      return outer_.flowContext_.getAny();
+    }
+
     if (field->isAccessor()) {
       // Static accessor: result type is the field type.
       // Do NOT propagate Decl — IRGen handles the call.
@@ -671,15 +737,19 @@ class FlowChecker::ExprVisitor {
       return field->type;
     }
 
-    // In ES a write through 'super' creates an own property on the receiver,
-    // leaving the superclass's property alone. Statics live in Variables here,
-    // so the write would silently hit the superclass's storage instead.
-    if (llvh::isa<ESTree::SuperNode>(node->_object) &&
-        classifyMemberAccess(node, parent, isWrite).write) {
+    // In ES a write to an inherited static data property creates an own
+    // property on the receiver, leaving the declaring class's property alone.
+    // Statics live in Variables here, so such a write would silently hit the
+    // declaring class's storage instead. Only allow writes through the name
+    // of the declaring class itself, where the receiver is known exactly;
+    // 'this', 'super' and subclass names may all be a different class.
+    if (!field->isMethod() && !isDeleteOperand(node, parent) &&
+        classifyMemberAccess(node, parent, isWrite).write &&
+        !isDeclaringClassName(node->_object, optStaticField->classType)) {
       outer_.sm_.error(
           node->_property->getSourceRange(),
-          llvh::Twine("ft: cannot write to static property ") + name.str() +
-              " through 'super'");
+          llvh::Twine("ft: static property ") + name.str() +
+              " can only be written through the name of its declaring class");
       return outer_.flowContext_.getAny();
     }
 

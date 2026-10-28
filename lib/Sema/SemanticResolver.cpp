@@ -2757,6 +2757,12 @@ bool SemanticResolver::isLValue(ESTree::Node *node) {
         return false;
     }
 
+    // Typed code resolves statics through the class binding, which must
+    // therefore always name exactly its class: rebinding it to a subclass
+    // would let writes through it hit the original class's storage.
+    if (typed_ && decl->kind == Decl::Kind::Class)
+      return false;
+
     // In strict mode, assigning to the identifier "eval" or "arguments"
     // is invalid, regardless of what they are bound to in surrounding scopes.
     // This is invalid:

@@ -1001,6 +1001,20 @@ class FlowChecker::ParseClassType {
                   "ft: cannot override field " + name.str() + " with a method");
               return outer_.flowContext_.getAny();
             }
+            // Statics are resolved at compile time, including through 'this'
+            // and subclass names, so a shadowing static would only be reached
+            // through its own class name, unlike ES dispatch on the receiver.
+            if (superIt) {
+              outer_.sm_.error(
+                  id->getSourceRange(),
+                  "ft: cannot override static method " + name.str());
+              if (ESTree::IdentifierNode *prev =
+                      superIt->getField()->staticKeyNode)
+                outer_.sm_.note(
+                    prev->getSourceRange(),
+                    "ft: previous declaration of " + name.str());
+              return outer_.flowContext_.getAny();
+            }
           }
         } else {
           superIt =

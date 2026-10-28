@@ -28,7 +28,7 @@ class A {
 
 class B extends A {
   static z: string = "hello";
-  static foo(): number { return 99; }
+  static baz(): number { return 99; }
 
   constructor(x: number) {
     super(x);
@@ -48,7 +48,10 @@ print("static methods");
 // CHECK-LABEL: static methods
 print(A.foo());
 // CHECK-NEXT: 42
+// Inherited from A.
 print(B.foo());
+// CHECK-NEXT: 42
+print(B.baz());
 // CHECK-NEXT: 99
 
 // Test private static fields.
@@ -140,11 +143,11 @@ print(W.val);
 
 // Static fields are default-initialized before any initializer runs, so a
 // reference to a field declared later reads the default, matching the way
-// instance fields behave. The same holds through 'this' and private names.
+// instance fields behave. The same holds for private names.
 class FR {
   static a: number = FR.b;
   static s: string = FR.t;
-  static #x: number = this.#y;
+  static #x: number = FR.#y;
   static b: number = 1;
   static t: string = 'hi';
   static #y: number = 2;
@@ -231,3 +234,29 @@ print(new Box<number>(3).value, new Box<string>('s').value);
 // CHECK-NEXT: 3 s
 print(boxInitCount);
 // CHECK-NEXT: 2
+
+// Private statics are reachable through the class name from instance methods,
+// arrows and nested classes.
+class PS {
+  static #m(): number {
+    return 1;
+  }
+  static #f: number = 5;
+  viaInstance(): number {
+    return PS.#m() + PS.#f;
+  }
+  viaArrow(): number {
+    const g = (): number => PS.#f;
+    return g();
+  }
+  static viaNested(): number {
+    class Inner {
+      read(): number {
+        return PS.#m();
+      }
+    }
+    return new Inner().read();
+  }
+}
+print(new PS().viaInstance(), new PS().viaArrow(), PS.viaNested());
+// CHECK-NEXT: 6 5 1
