@@ -1077,12 +1077,14 @@ class ESTreeIRGen {
   /// emitMemberStore for the specific case where the member is a typed class
   /// field.
   /// \param classType the class containing the field
-  /// \param prop the name of the field, assumed to be an IdentifierNode.
+  /// \param name the field name, without the leading '#' for private fields
+  /// \param isPrivate whether the field is a private name
   /// \param object to store into
   /// \param value to store.
   void emitTypedFieldStore(
       flow::ClassType *classType,
-      ESTree::Node *prop,
+      Identifier name,
+      bool isPrivate,
       Value *object,
       Value *value);
 

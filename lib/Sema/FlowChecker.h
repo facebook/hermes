@@ -464,6 +464,7 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   void visit(ESTree::BlockStatementNode *node);
   void visit(ESTree::VariableDeclarationNode *node);
   void visit(ESTree::ClassPropertyNode *node);
+  void visit(ESTree::ClassPrivatePropertyNode *node);
 
   void visit(ESTree::CatchClauseNode *node);
 
@@ -616,6 +617,11 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
       ESTree::ObjectPatternNode *obj,
       ExactObjectType *objType,
       OnChildCB onChild);
+
+  /// Typecheck the initializer of a public or private class property \p node.
+  /// \param value a reference to the property's initializer, which is replaced
+  ///   with an implicit checked cast when one is needed.
+  void visitClassProperty(ESTree::Node *node, ESTree::Node *&value);
 
   /// Return the type associated with a sema::Decl. The association must
   /// exist.

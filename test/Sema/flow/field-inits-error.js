@@ -9,6 +9,8 @@
 
 class A {
   x: string = 1;
+  #y: number = 's';
+  static #z: number = 's';
 }
 
 // Auto-generated content below. Please do not modify manually.
@@ -16,4 +18,10 @@ class A {
 // CHECK:{{.*}}field-inits-error.js:11:3: error: ft: incompatible initialization type
 // CHECK-NEXT:  x: string = 1;
 // CHECK-NEXT:  ^~~~~~~~~~~~~~
-// CHECK-NEXT:Emitted 1 errors. exiting.
+// CHECK-NEXT:{{.*}}field-inits-error.js:12:3: error: ft: incompatible initialization type
+// CHECK-NEXT:  #y: number = 's';
+// CHECK-NEXT:  ^~~~~~~~~~~~~~~~~
+// CHECK-NEXT:{{.*}}field-inits-error.js:13:10: error: ft: incompatible initialization type
+// CHECK-NEXT:  static #z: number = 's';
+// CHECK-NEXT:         ^~~~~~~~~~~~~~~~~
+// CHECK-NEXT:Emitted 3 errors. exiting.

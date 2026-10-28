@@ -89,3 +89,34 @@ class Outer {
 
 print(new Outer(10).foo());
 // CHECK-NEXT: 21
+
+function anyNum(): any {
+  return 42;
+}
+
+class D {
+  #a: number = 1;
+  b: number = 2;
+  // Initializers run in source order, so #a and b are already set.
+  #c: number = this.#a + this.b;
+  #d: number = anyNum();
+  // Arrows in field initializers capture `this`.
+  #f: any = () => this.#a + 7;
+  get(): string {
+    return `${this.#a},${this.b},${this.#c},${this.#d},${(this.#f)()}`;
+  }
+}
+
+print(new D().get());
+// CHECK-NEXT: 1,2,3,42,8
+
+class E extends D {
+  // Shadows D's #a.
+  #a: string = 'e';
+  getE(): string {
+    return this.#a + '|' + this.get();
+  }
+}
+
+print(new E().getE());
+// CHECK-NEXT: e|1,2,3,42,8

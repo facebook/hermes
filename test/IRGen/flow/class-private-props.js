@@ -8,7 +8,7 @@
 // RUN: %shermes -fno-std-globals -O0 -Werror -typed -dump-ir %s | %FileCheckOrRegen %s --match-full-lines
 
 class C {
-  #x: number;
+  #x: number = 1;
   y: number;
   constructor(x, y) {
     this.#x = x;
@@ -86,8 +86,10 @@ new C(1, 2);
 
 // CHECK:function <instance_members_initializer:C>(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
+// CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
+// CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
+// CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS3: any, %1: environment
+// CHECK-NEXT:       PrStoreInst 1: number, %0: object, 0: number, private "#x": any, true: boolean
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

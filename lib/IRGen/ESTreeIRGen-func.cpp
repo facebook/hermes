@@ -1410,27 +1410,50 @@ Function *ESTreeIRGen::genFieldInitFunction() {
     auto *prologueBB = Builder.createBasicBlock(initFunc);
     Builder.setInsertionBlock(prologueBB);
 
+    // Field initializers may contain arrow functions, which need the captured
+    // state to resolve 'this'.
     emitFunctionPrologue(
         nullptr,
         prologueBB,
-        InitES5CaptureState::No,
+        InitES5CaptureState::Yes,
         DoEmitDeclarations::No,
         parentScope);
 
     auto *classBody =
         llvh::cast<ESTree::ClassBodyNode>(typedClassContext.node->_body);
     for (ESTree::Node &it : classBody->_body) {
+      ESTree::Node *key;
+      ESTree::Node *init;
+      bool isStatic;
+      bool isPrivate;
       if (auto *prop = llvh::dyn_cast<ESTree::ClassPropertyNode>(&it)) {
-        // Skip static fields.
-        // They are initialized in genClassDeclaration.
-        if (prop->_static)
-          continue;
-        if (prop->_value) {
-          Value *value = genExpression(prop->_value);
-          emitTypedFieldStore(
-              typedClassContext.type, prop->_key, genThisExpression(), value);
-        }
+        key = prop->_key;
+        init = prop->_value;
+        isStatic = prop->_static;
+        isPrivate = false;
+      } else if (
+          auto *prop = llvh::dyn_cast<ESTree::ClassPrivatePropertyNode>(&it)) {
+        key = prop->_key;
+        init = prop->_value;
+        isStatic = prop->_static;
+        // The key is a bare IdentifierNode, so privateness must be stated
+        // explicitly.
+        isPrivate = true;
+      } else {
+        continue;
       }
+
+      // Skip static fields. They are initialized in genClassDeclaration.
+      if (isStatic || !init)
+        continue;
+
+      Value *value = genExpression(init);
+      emitTypedFieldStore(
+          typedClassContext.type,
+          getNameFieldFromID(key),
+          isPrivate,
+          genThisExpression(),
+          value);
     }
 
     emitFunctionEpilogue(Builder.getLiteralUndefined());

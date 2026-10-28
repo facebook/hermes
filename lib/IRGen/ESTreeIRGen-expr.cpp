@@ -1614,18 +1614,18 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitTypedSuperLoad(
 
 void ESTreeIRGen::emitTypedFieldStore(
     flow::ClassType *classType,
-    ESTree::Node *prop,
+    Identifier name,
+    bool isPrivate,
     Value *object,
     Value *value) {
   Literal *propName;
   OptValue<flow::ClassType::FieldLookupEntry> optFieldLookup;
-  if (auto *privateName = llvh::dyn_cast<ESTree::PrivateNameNode>(prop)) {
-    Identifier name = Mod->getContext().getPrivateNameIdentifier(
-        getNameFieldFromID(privateName->_id).getUnderlyingPointer());
-    optFieldLookup = classType->findPrivateField(name);
-    propName = Builder.getLiteralPrivateName(name);
+  if (isPrivate) {
+    Identifier privateName =
+        Mod->getContext().getPrivateNameIdentifier(name.getUnderlyingPointer());
+    optFieldLookup = classType->findPrivateField(privateName);
+    propName = Builder.getLiteralPrivateName(privateName);
   } else {
-    Identifier name = getNameFieldFromID(prop);
     optFieldLookup = classType->findPublicField(name);
     propName = Builder.getLiteralString(name);
   }
@@ -1732,7 +1732,12 @@ void ESTreeIRGen::emitMemberStore(
         emitTypedSetterCall(decl, baseValue, storedValue);
         return;
       }
-      emitTypedFieldStore(classType, mem->_property, baseValue, storedValue);
+      emitTypedFieldStore(
+          classType,
+          getNameFieldFromID(ESTree::getPropertyIdentifier(mem->_property)),
+          llvh::isa<ESTree::PrivateNameNode>(mem->_property),
+          baseValue,
+          storedValue);
       return;
     }
   }

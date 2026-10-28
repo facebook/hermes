@@ -1736,9 +1736,9 @@ void FlowChecker::visit(ESTree::VariableDeclarationNode *node) {
   }
 }
 
-void FlowChecker::visit(ESTree::ClassPropertyNode *node) {
-  if (node->_value) {
-    auto it = visitedInits_.find(node->_value);
+void FlowChecker::visitClassProperty(ESTree::Node *node, ESTree::Node *&value) {
+  if (value) {
+    auto it = visitedInits_.find(value);
     if (it != visitedInits_.end()) {
       // Already visited during inference.
       visitedInits_.erase(it);
@@ -1752,20 +1752,26 @@ void FlowChecker::visit(ESTree::ClassPropertyNode *node) {
           llvh::cast<TypedFunctionType>(fieldInitFuncType->info)
               ->getThisParam(),
           /* newTargetType */ flowContext_.getVoid()};
-      visitExpression(node->_value, node, nullptr);
+      visitExpression(value, node, nullptr);
     }
 
     Type *lt = getNodeTypeOrAny(node);
-    Type *rt = getNodeTypeOrAny(node->_value);
+    Type *rt = getNodeTypeOrAny(value);
     CanFlowResult cf = canAFlowIntoB(rt, lt);
     if (!cf.canFlow) {
       sm_.error(node->getSourceRange(), "ft: incompatible initialization type");
       return;
     }
-    if (cf.needCheckedCast && compile_) {
-      node->_value = implicitCheckedCast(node->_value, lt, cf);
-    }
+    value = implicitCheckedCast(value, lt, cf);
   }
+}
+
+void FlowChecker::visit(ESTree::ClassPropertyNode *node) {
+  visitClassProperty(node, node->_value);
+}
+
+void FlowChecker::visit(ESTree::ClassPrivatePropertyNode *node) {
+  visitClassProperty(node, node->_value);
 }
 
 void FlowChecker::visit(ESTree::CatchClauseNode *node) {
