@@ -255,7 +255,10 @@ void ESTreeIRGen::genVariableDeclarator(
     lref.emitStore(genExpression(declarator->_init, nameHint));
   } else if (kind == kw_.identLet) {
     // "let" declarations without an initializer must be set to undefined.
-    lref.emitStore(Builder.getLiteralUndefined());
+    // This is the placeholder so it isn't narrowed.
+    // NOTE: This narrow flag is a hack because the typed Variable isn't
+    // always properly typed in IR yet.
+    lref.emitStore(Builder.getLiteralUndefined(), /* narrow */ false);
   }
 }
 

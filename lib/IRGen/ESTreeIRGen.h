@@ -416,7 +416,13 @@ class LReference {
   }
 
   Value *emitLoad();
-  void emitStore(Value *value);
+
+  /// Store \p value into the reference.
+  /// \param narrow whether to narrow \p value to a variable target's declared
+  ///   Flow type. Member targets are always narrowed. Pass false only for
+  ///   values that aren't user-provided, like the `undefined` placeholder of
+  ///   TDZ, which lives outside the Flow-checked type.
+  void emitStore(Value *value, bool narrow = true);
 
   /// \return the AST node associated with this LReference.
   ESTree::Node *getNode() const {
@@ -925,11 +931,23 @@ class ESTreeIRGen {
   /// @name expressions
   /// @{
 
+  /// Optionally emit a checked cast if the IR value type does not match
+  /// \p flowType. \p loc supplies the location for the cast and any
+  /// diagnostic.
+  Value *
+  narrowToFlowType(Value *value, flow::Type *flowType, ESTree::Node *loc);
+
   /// Optionally emit a checked cast if the IR value type does not match the
   /// Flow type of the specified expression.
   /// This is called automatically by genExpression() but may need to be used
   /// manually in some rare cases.
   Value *enforceExprType(Value *value, ESTree::Node *expr);
+
+  /// Optionally emit a checked cast if the IR value type does not match the
+  /// Flow type of the variable \p id refers to. Used for stores that have no
+  /// RHS expression node of their own (destructuring, for-in/of), where
+  /// enforceExprType has nothing to narrow against.
+  Value *enforceDeclType(Value *value, ESTree::IdentifierNode *id);
 
   /// Generate IR for the expression \p Expr. Emit a checked cast if the Flow
   /// type of the expression doesn't match the compiled IR type.

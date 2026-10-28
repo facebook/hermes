@@ -15,30 +15,47 @@
 namespace hermes {
 namespace irgen {
 
-Value *ESTreeIRGen::enforceExprType(hermes::Value *value, ESTree::Node *expr) {
-  flow::Type *exprFlowType = flowContext_.findNodeType(expr);
-  if (!exprFlowType)
+Value *ESTreeIRGen::narrowToFlowType(
+    hermes::Value *value,
+    flow::Type *flowType,
+    ESTree::Node *loc) {
+  if (!flowType)
     return value;
 
-  Type exprIRType = flowTypeToIRType(exprFlowType);
+  Type targetIRType = flowTypeToIRType(flowType);
   Type valueType = value->getType();
   TypeContext &tc = getTypeContext();
   // NOTE: equal sets are subsets of each other, but we want to do the fast
   // check first. In theory, it should catsh 100% of the cases when IRGen is
   // fully typed.
-  if (exprIRType == valueType || tc.isSubsetOf(valueType, exprIRType))
+  if (targetIRType == valueType || tc.isSubsetOf(valueType, targetIRType))
     return value;
 
-  if (!tc.isSubsetOf(exprIRType, valueType)) {
+  if (!tc.isSubsetOf(targetIRType, valueType)) {
     Mod->getContext().getSourceErrorManager().error(
-        expr->getSourceRange(),
+        loc->getSourceRange(),
         "Internal error: Flow expr type is not a subset of value type");
     return value;
   }
 
-  Instruction *cast = Builder.createCheckedTypeCastInst(value, exprIRType);
-  cast->setLocation(expr->getDebugLoc());
+  Instruction *cast = Builder.createCheckedTypeCastInst(value, targetIRType);
+  cast->setLocation(loc->getDebugLoc());
   return cast;
+}
+
+Value *ESTreeIRGen::enforceExprType(hermes::Value *value, ESTree::Node *expr) {
+  return narrowToFlowType(value, flowContext_.findNodeType(expr), expr);
+}
+
+Value *ESTreeIRGen::enforceDeclType(
+    hermes::Value *value,
+    ESTree::IdentifierNode *id) {
+  if (id->isUnresolvable())
+    return value;
+  sema::Decl *decl = semCtx_.getExpressionDecl(id);
+  if (!decl)
+    return value;
+  return narrowToFlowType(value, flowContext_.findDeclType(decl), id);
 }
 
 Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
@@ -1695,6 +1712,10 @@ void ESTreeIRGen::emitMemberStore(
     Value *baseValue,
     Value *propValue,
     Value *thisValue) {
+  // Destructuring and for-in/of stores have no ImplicitCheckedCast,
+  // so the stored value is typed wider than it should be.
+  storedValue = enforceExprType(storedValue, mem);
+
   // Static fields/methods are stored in scope variables, not object properties.
   if (auto *decl = getTypedMemberExpressionDeclIfExists(mem)) {
     emitStore(storedValue, getDeclData(decl), false);

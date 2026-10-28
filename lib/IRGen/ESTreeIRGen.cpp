@@ -67,7 +67,7 @@ Value *LReference::emitLoad() {
   llvm_unreachable("invalid LReference kind");
 }
 
-void LReference::emitStore(Value *value) {
+void LReference::emitStore(Value *value, bool narrow) {
   switch (kind_) {
     case Kind::Empty:
       return;
@@ -79,6 +79,15 @@ void LReference::emitStore(Value *value) {
           property_,
           thisValue_);
     case Kind::VarOrGlobal:
+      // Destructuring and for-in/of stores have no ImplicitCheckedCast,
+      // so the stored value is typed wider than it should be.
+      // Narrow it against the variable's declared type here, like
+      // enforceExprType does for expressions.
+      // When we actually enforce Variables being the correct type (requires
+      // IRGen changes), we can remove the narrow flag.
+      if (auto *id = llvh::dyn_cast_or_null<ESTree::IdentifierNode>(ast_);
+          id && narrow)
+        value = irgen_->enforceDeclType(value, id);
       irgen_->emitStore(value, base_, declInit_);
       return;
     case Kind::Error:
@@ -566,7 +575,7 @@ LReference ESTreeIRGen::createLRef(ESTree::Node *node, bool declInit) {
         LReference::Kind::VarOrGlobal,
         this,
         declInit,
-        nullptr,
+        iden,
         var,
         nullptr,
         sourceLoc);
