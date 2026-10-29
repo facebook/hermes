@@ -895,20 +895,16 @@ static ExecutionStatus makeMatchIndicesIndexPairArray(
   return ExecutionStatus::RETURNED;
 }
 
-// ES6 21.2.5.2.2
-ExecutionStatus directRegExpExec(
+// Match and update observable state before deciding whether a JS result is
+// needed. In particular, test must retain captures and lastIndex writes.
+static CallResult<RegExpMatch> directRegExpMatch(
     Handle<JSRegExp> regexp,
     Runtime &runtime,
-    Handle<StringPrimitive> S,
-    MutableHandle<JSArray> resultOut) {
+    Handle<StringPrimitive> S) {
   struct : public Locals {
-    PinnedValue<JSArray> A;
     PinnedValue<> propHandle;
-    PinnedValue<StringPrimitive> strHandle;
-    PinnedValue<JSArray> indicesArray;
   } lv;
   LocalsRAII lraii(runtime, &lv);
-
   GCScope gcScope{runtime};
 
   // Let length be the number of code units in S.
@@ -931,13 +927,10 @@ ExecutionStatus directRegExpExec(
 
   // If flags contains "g", let global be true, else let global be false
   // If flags contains "y", let sticky be true, else let sticky be false.
-  // If flags contains "d", let hasIndices be true, else let hasIndices be
-  // false.
   // If flags contains "u", let fullUnicode be true, else let fullUnicode be
   // false.
   const bool global = flags.global;
   const bool sticky = flags.sticky;
-  const bool hasIndices = flags.hasIndices;
   const bool fullUnicode = flags.unicode;
 
   // If global is false and sticky is false, set lastIndex to 0.
@@ -980,8 +973,7 @@ ExecutionStatus directRegExpExec(
         return ExecutionStatus::EXCEPTION;
       }
     }
-    resultOut.clear();
-    return ExecutionStatus::RETURNED;
+    return std::move(match);
   }
 
   // We have a match!
@@ -1010,6 +1002,33 @@ ExecutionStatus directRegExpExec(
       return ExecutionStatus::EXCEPTION;
     }
   }
+
+  return std::move(match);
+}
+
+// ES6 21.2.5.2.2
+ExecutionStatus directRegExpExec(
+    Handle<JSRegExp> regexp,
+    Runtime &runtime,
+    Handle<StringPrimitive> S,
+    MutableHandle<JSArray> resultOut) {
+  struct : public Locals {
+    PinnedValue<JSArray> A;
+    PinnedValue<StringPrimitive> strHandle;
+    PinnedValue<JSArray> indicesArray;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  GCScope gcScope{runtime};
+
+  auto matchResult = directRegExpMatch(regexp, runtime, S);
+  if (LLVM_UNLIKELY(matchResult == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+  RegExpMatch &match = *matchResult;
+  if (match.empty()) {
+    resultOut.clear();
+    return ExecutionStatus::RETURNED;
+  }
+  const bool hasIndices = JSRegExp::getSyntaxFlags(regexp.get()).hasIndices;
 
   auto arrRes = JSArray::createAndAllocPropStorage(
       runtime,
@@ -1145,9 +1164,47 @@ advanceStringIndex(const StringPrimitive *S, uint64_t index, bool unicode) {
   return index + 1;
 }
 
-/// ES6.0 21.2.5.2.1 Runtime Semantics: RegExpExec ( R, S )
-CallResult<HermesValue>
-regExpExec(Runtime &runtime, Handle<JSObject> R, Handle<StringPrimitive> S) {
+enum class RegExpExecResult { MatchObject, Boolean };
+
+// Only an ordinary data property can establish this shortcut. Accessors and
+// proxy/host prototype chains must use Get and retain all of its side effects.
+static bool hasBuiltinRegExpExec(JSRegExp *regexp, Runtime &runtime) {
+  for (JSObject *object = regexp; object; object = object->getParent(runtime)) {
+    if (object->isProxyObject(runtime) || object->isHostObject(runtime))
+      return false;
+    NamedPropertyDescriptor desc;
+    auto found = JSObject::tryGetOwnNamedDescriptorFast(
+        object, runtime, Predefined::getSymbolID(Predefined::exec), desc);
+    // An absent property map is inconclusive. The heuristic no-allocation
+    // lookup cannot recover the slot of a flags-only hidden-class transition.
+    if (!found)
+      return false;
+    if (!*found)
+      continue;
+    if (desc.flags.accessor)
+      return false;
+    auto value = JSObject::getNamedSlotValueUnsafe(object, runtime, desc);
+    auto *native = dyn_vmcast<NativeFunction>(value.unboxToHV(runtime));
+    return native && native->getFunctionPtr() == regExpPrototypeExec &&
+        native->getContext() == nullptr;
+  }
+  return false;
+}
+
+/// RegExpExec with an internal boolean consumer that can omit result objects.
+static CallResult<HermesValue> regExpExecImpl(
+    Runtime &runtime,
+    Handle<JSObject> R,
+    Handle<StringPrimitive> S,
+    RegExpExecResult resultKind) {
+  auto regExpObj = Handle<JSRegExp>::dyn_vmcast(R);
+  if (resultKind == RegExpExecResult::Boolean && regExpObj &&
+      hasBuiltinRegExpExec(regExpObj.get(), runtime)) {
+    auto match = directRegExpMatch(regExpObj, runtime, S);
+    if (LLVM_UNLIKELY(match == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    return HermesValue::encodeBoolValue(!match->empty());
+  }
   struct : public Locals {
     PinnedValue<> exec;
   } lv;
@@ -1161,8 +1218,15 @@ regExpExec(Runtime &runtime, Handle<JSObject> R, Handle<StringPrimitive> S) {
     return ExecutionStatus::EXCEPTION;
   }
   lv.exec = std::move(propRes.getValue());
+  // Resolve exec exactly once, after input coercion. A getter may change the
+  // receiver or prototypes; only the callable actually returned is authoritative.
+  auto execCallable = Handle<Callable>::dyn_vmcast(Handle<>{lv.exec});
+  auto *nativeExec = dyn_vmcast<NativeFunction>(lv.exec.getHermesValue());
+  const bool builtinTest = resultKind == RegExpExecResult::Boolean && regExpObj &&
+      nativeExec && nativeExec->getFunctionPtr() == regExpPrototypeExec &&
+      nativeExec->getContext() == nullptr;
   // 5. If IsCallable(exec) is true, then
-  if (auto execCallable = Handle<Callable>::dyn_vmcast(Handle<>{lv.exec})) {
+  if (execCallable && !builtinTest) {
     // a. Let result be Call(exec, R, «S»).
     // b. ReturnIfAbrupt(result).
     auto callRes =
@@ -1176,28 +1240,39 @@ regExpExec(Runtime &runtime, Handle<JSObject> R, Handle<StringPrimitive> S) {
       return runtime.raiseTypeError(
           "The result of exec can only be object or null.");
     }
-    // d. Return result.
+    // d. Return result (or its presence for the internal test consumer).
+    if (resultKind == RegExpExecResult::Boolean)
+      return HermesValue::encodeBoolValue(!(*callRes)->isNull());
     return callRes.toCallResultHermesValue();
   }
   // 6. If R does not have a [[RegExpMatcher]] internal slot, throw a TypeError
   // exception.
   // In our implementation, having a [[RegExpMatcher]] internal slot is
   // equivalent to being a JSRegExp class instance.
-  auto regExpObj = Handle<JSRegExp>::dyn_vmcast(R);
   if (LLVM_UNLIKELY(!regExpObj)) {
     return runtime.raiseTypeError(
         "Failed to execute an invalid regular expression object.");
   }
   // 7. Return RegExpBuiltinExec(R, S).
+  if (resultKind == RegExpExecResult::Boolean) {
+    auto match = directRegExpMatch(regExpObj, runtime, S);
+    if (LLVM_UNLIKELY(match == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    return HermesValue::encodeBoolValue(!match->empty());
+  }
   return regExpBuiltinExec(runtime, regExpObj, S);
+}
+
+/// ES6.0 21.2.5.2.1 Runtime Semantics: RegExpExec ( R, S )
+CallResult<HermesValue>
+regExpExec(Runtime &runtime, Handle<JSObject> R, Handle<StringPrimitive> S) {
+  return regExpExecImpl(runtime, R, S, RegExpExecResult::MatchObject);
 }
 
 /// Implementation of RegExp.prototype.exec
 /// Returns an Array if a match is found, null if no match is found
-/// Helper function for regExpPrototypeExec that takes NativeArgs directly
-static CallResult<HermesValue> regExpPrototypeExecImpl(
-    Runtime &runtime,
-    NativeArgs args) {
+CallResult<HermesValue> regExpPrototypeExec(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   struct : public Locals {
     PinnedValue<StringPrimitive> S;
     PinnedValue<JSArray> result;
@@ -1227,22 +1302,22 @@ static CallResult<HermesValue> regExpPrototypeExecImpl(
   return lv.result.getHermesValue();
 }
 
-CallResult<HermesValue> regExpPrototypeExec(void *, Runtime &runtime) {
+/// Implementation of RegExp.prototype.test.
+CallResult<HermesValue> regExpPrototypeTest(void *, Runtime &runtime) {
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
-  return regExpPrototypeExecImpl(runtime, args);
-}
+  struct : public Locals {
+    PinnedValue<StringPrimitive> S;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
 
-/// Implementation of RegExp.prototype.test
-/// Returns true if a match is found, false otherwise
-/// TODO optimization: avoid constructing the submatch array. Instead simply
-/// check for a match.
-CallResult<HermesValue> regExpPrototypeTest(void *context, Runtime &runtime) {
-  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
-  CallResult<HermesValue> res = regExpPrototypeExecImpl(runtime, args);
-  if (res == ExecutionStatus::EXCEPTION)
+  auto receiver = args.dyncastThis<JSObject>();
+  if (!receiver)
+    return runtime.raiseTypeError("RegExp.prototype.test requires an object");
+  auto strRes = toString_RJS(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
-
-  return HermesValue::encodeBoolValue(!res.getValue().isNull());
+  lv.S = std::move(*strRes);
+  return regExpExecImpl(runtime, receiver, lv.S, RegExpExecResult::Boolean);
 }
 
 /// Return the ith capture group in the most recent successful RegExp search.
@@ -1984,6 +2059,46 @@ CallResult<HermesValue> regExpPrototypeSymbolSearch(void *, Runtime &runtime) {
       .toCallResultHermesValue();
 }
 
+// The caller has performed input/replacement coercion, global/unicode Gets and
+// the initial lastIndex write. With an ordinary builtin exec and internal g,
+// matching cannot call JS: lastIndex remains numeric and non-configurable.
+// Therefore its temporary result objects are unobservable, and an empty
+// replacement can copy unmatched spans directly while retaining legacy state.
+static CallResult<HermesValue> replaceRegExpWithEmptyString(
+    Runtime &runtime,
+    Handle<JSRegExp> regexp,
+    Handle<StringPrimitive> input,
+    bool fullUnicode) {
+  auto view = StringPrimitive::createStringView(runtime, input);
+  SmallU16String<32> output;
+  uint32_t nextSource = 0;
+  bool matched = false;
+  for (;;) {
+    GCScopeMarkerRAII marker{runtime};
+    auto result = directRegExpMatch(regexp, runtime, input);
+    if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    if (result->empty())
+      break;
+    const auto range = *result->front();
+    assert(range.location >= nextSource && "global matches must advance");
+    view.slice(nextSource, range.location - nextSource).appendUTF16String(output);
+    nextSource = range.location + range.length;
+    matched = true;
+    if (range.length == 0 &&
+        setLastIndex(
+            regexp,
+            runtime,
+            advanceStringIndex(input.get(), nextSource, fullUnicode)) ==
+            ExecutionStatus::EXCEPTION)
+      return ExecutionStatus::EXCEPTION;
+  }
+  if (!matched)
+    return input.getHermesValue();
+  view.slice(nextSource).appendUTF16String(output);
+  return StringPrimitive::createEfficient(runtime, output);
+}
+
 /// ES6.0 21.2.5.8
 CallResult<HermesValue> regExpPrototypeSymbolReplace(void *, Runtime &runtime) {
   struct : public Locals {
@@ -2067,6 +2182,13 @@ CallResult<HermesValue> regExpPrototypeSymbolReplace(void *, Runtime &runtime) {
       return ExecutionStatus::EXCEPTION;
     }
   }
+  auto regexp = Handle<JSRegExp>::dyn_vmcast(rx);
+  if (!replaceFn && lv.replaceValueStr->getStringLength() == 0 && global &&
+      regexp && JSRegExp::getSyntaxFlags(regexp.get()).global &&
+      hasBuiltinRegExpExec(regexp.get(), runtime)) {
+    return replaceRegExpWithEmptyString(runtime, regexp, lv.S, fullUnicode);
+  }
+
   // 11. Let results be a new empty List.
   auto arrRes = ArrayStorageSmall::create(runtime, 16 /* capacity */);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
