@@ -12,8 +12,17 @@
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/Runtime.h"
 
+#include "llvh/ADT/STLExtras.h"
+
 namespace hermes {
 namespace vm {
+
+/// Optional last argument of the functions below. After the whole value is
+/// (de)serialized, it is called for every JS object in it, including the
+/// transferred ones, with the object's serialization ID. An object gets the
+/// same ID in serialization and deserialization.
+using SerializedObjectCallback =
+    llvh::function_ref<ExecutionStatus(uint32_t id, Handle<JSObject> obj)>;
 
 /// Produced by serialized or serializedWithTransfer, this encapsulates all
 /// serialized data of JS Value and, if applicable, any transferred JS Values.
@@ -47,16 +56,6 @@ class SerializedValue {
   /// data block pointer, and the context responsible for cleaning up the data
   /// block.
   std::vector<std::pair<uint8_t *, std::shared_ptr<void>>> externalBuffers;
-
-  /// For JS objects carrying a shareable NativeState, store a strong reference
-  /// to the native data. Each serialized object record refers to an entry here
-  /// by index, and every deserialization attaches a NativeState sharing the
-  /// same entry. This keeps the native data alive for as long as this
-  /// SerializedValue, independently of the runtime it was serialized from.
-  /// Note that a NativeState that is not shareable, i.e. one created by
-  /// NativeState::create rather than NativeState::createShared, cannot be
-  /// copied into another runtime and is silently dropped.
-  std::vector<std::shared_ptr<void>> nativeStates;
 
   /// Describes the type of JS value for some serialized content. The special
   /// Reference type is used to point at a JS value serialized at some other
@@ -115,7 +114,10 @@ class SerializedValue {
 
 /// Serializes a HermesValue \p value. Follows StructuredSerializeInternal
 /// https://html.spec.whatwg.org/multipage/structured-data.html#structuredserializeinternal
-CallResult<SerializedValue> serialize_RJS(Runtime &runtime, Handle<> value);
+CallResult<SerializedValue> serialize_RJS(
+    Runtime &runtime,
+    Handle<> value,
+    SerializedObjectCallback onObject = {});
 
 /// Deserializes the SerializedValue \p serialized following the structure clone
 /// algorithm. The SerializedValue \p serialized must be created by
@@ -123,7 +125,8 @@ CallResult<SerializedValue> serialize_RJS(Runtime &runtime, Handle<> value);
 /// https://html.spec.whatwg.org/multipage/structured-data.html#structureddeserialize
 CallResult<HermesValue> deserialize(
     Runtime &runtime,
-    const SerializedValue &serialized);
+    const SerializedValue &serialized,
+    SerializedObjectCallback onObject = {});
 
 /// Serializes a HermesValue \p value. Given the length property of \p
 /// transferList, it will transfer everything at index [0, length - 1] out of
@@ -133,7 +136,8 @@ CallResult<HermesValue> deserialize(
 CallResult<SerializedValue> serializeWithTransfer_RJS(
     Runtime &runtime,
     Handle<> value,
-    Handle<JSArray> transferList);
+    Handle<JSArray> transferList,
+    SerializedObjectCallback onObject = {});
 
 /// Deserializes the SerializedValue \p serialized following the structure clone
 /// algorithm. The SerializedValue \p serialized must be created by
@@ -145,7 +149,8 @@ CallResult<SerializedValue> serializeWithTransfer_RJS(
 /// https://html.spec.whatwg.org/multipage/structured-data.html#structuredserializewithtransfer
 CallResult<PseudoHandle<JSArray>> deserializeWithTransfer(
     Runtime &runtime,
-    SerializedValue &serialized);
+    SerializedValue &serialized,
+    SerializedObjectCallback onObject = {});
 
 } // namespace vm
 } // namespace hermes
