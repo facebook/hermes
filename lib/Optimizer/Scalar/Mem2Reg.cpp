@@ -609,7 +609,7 @@ static void promoteAllocStackToSSA(
     if (llvh::isa<StoreStackInst>(U)) {
       // If the block is in the dom tree (dominated by the entry block).
       if (DomTreeNode *Node = DT.getNode(U->getParent()))
-        PQ.push(std::make_pair(Node, domTreeLevels[Node]));
+        PQ.emplace(Node, domTreeLevels[Node]);
     }
   }
 
@@ -663,7 +663,7 @@ static void promoteAllocStackToSSA(
         // The successor node is a new PHINode. If this is a new PHI node
         // then it may require additional definitions, so add it to the PQ.
         if (phiBlocks.insert(succ).second)
-          PQ.push(std::make_pair(succNode, succLevel));
+          PQ.emplace(succNode, succLevel);
       }
 
       // Add the children in the dom-tree to the worklist.
