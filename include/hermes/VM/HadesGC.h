@@ -1737,7 +1737,7 @@ std::pair<T1 *, T2 *> HadesGC::make2YoungGenUnsafeImpl(
   uint32_t totalSize = size1 + size2;
 
   assert(
-      ((uint64_t)size1 + (uint64_t)size2) <
+      ((uint64_t)size1 + (uint64_t)size2) <=
           (uint64_t)maxYoungGenAllocationSize() &&
       "must be able to allocate in young gen");
 

@@ -11,6 +11,7 @@
 #include "hermes/VM/FastArray.h"
 #include "hermes/VM/HiddenClass.h"
 #include "hermes/VM/JSDate.h"
+#include "hermes/VM/JSObject-inline.h"
 #include "hermes/VM/PropertyAccessor.h"
 
 using namespace hermes::hbc;
@@ -1024,5 +1025,40 @@ TEST_F(ObjectModelTest, ClassFlagsTransitionShared) {
     ASSERT_TRUE(*JSObject::putNamed_RJS(lv.sibling, runtime, *otherID, val));
   }
 }
+
+#if HERMESVM_GCKIND == _HERMESVM_GCVALUE_HADES
+using ObjectModelLargeHeapTest = LargeHeapRuntimeTestFixture;
+
+/// An object with maxYoungGenAllocationPropCount() property slots is allocated
+/// together with its property storage in a single young gen allocation.
+TEST_F(ObjectModelLargeHeapTest, CreateWithMaxYoungGenAllocationPropCount) {
+  struct : public Locals {
+    PinnedValue<JSObject> obj;
+    PinnedValue<> value;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  constexpr uint32_t propCount = JSObject::maxYoungGenAllocationPropCount();
+  // The object and its property storage exactly fill the maximum young gen
+  // allocation.
+  EXPECT_EQ(
+      cellSize<JSObject>() +
+          heapAlignSize(
+              PropStorage::allocationSize(
+                  propCount - JSObject::DIRECT_PROPERTY_SLOTS)),
+      GC::maxYoungGenAllocationSize());
+
+  lv.obj = JSObject::create(
+      runtime, runtime.objectPrototype, runtime.classJSObject, propCount);
+
+  // Add a property, then make sure it survives a collection.
+  auto lengthID = Predefined::getSymbolID(Predefined::length);
+  lv.value = 1.0_hd;
+  ASSERT_TRUE(*JSObject::putNamed_RJS(lv.obj, runtime, lengthID, lv.value));
+  runtime.collect("test");
+  EXPECT_CALLRESULT_DOUBLE(
+      1.0, JSObject::getNamed_RJS(lv.obj, runtime, lengthID));
+}
+#endif
 
 } // namespace

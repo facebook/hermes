@@ -197,4 +197,40 @@ TEST_F(ArrayTest, TestLength) {
   EXPECT_CALLRESULT_DOUBLE(
       5.0, JSObject::getNamed_RJS(lv.array, runtime, lengthID));
 }
+
+#if HERMESVM_GCKIND == _HERMESVM_GCVALUE_HADES
+using ArrayLargeHeapTest = LargeHeapRuntimeTestFixture;
+
+/// An array with capacity maxYoungGenAllocationCapacity() is allocated
+/// together with its storage in a single young gen allocation.
+TEST_F(ArrayLargeHeapTest, CreateWithMaxYoungGenAllocationCapacity) {
+  struct : Locals {
+    PinnedValue<JSArray> array;
+    PinnedValue<> value;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  constexpr uint32_t capacity = JSArray::maxYoungGenAllocationCapacity();
+  // The array and its storage exactly fill the maximum young gen allocation.
+  EXPECT_EQ(
+      heapAlignSize(cellSize<JSArray>()) +
+          heapAlignSize(JSArray::StorageType::allocationSize(capacity)),
+      GC::maxYoungGenAllocationSize());
+
+  auto arrayRes = JSArray::create(runtime, capacity, capacity);
+  ASSERT_FALSE(isException(arrayRes));
+  lv.array = std::move(*arrayRes);
+  EXPECT_EQ(capacity, JSArray::getLength(lv.array.get(), runtime));
+
+  // Write the last element, then make sure it survives a collection.
+  lv.value = 1.0_hd;
+  ASSERT_NE(
+      JSArray::setElementAt(lv.array, runtime, capacity - 1, lv.value),
+      ExecutionStatus::EXCEPTION);
+  runtime.collect("test");
+  EXPECT_EQ(capacity, JSArray::getLength(lv.array.get(), runtime));
+  EXPECT_EQ(1.0_hd, lv.array->at(runtime, capacity - 1).unboxToHV(runtime));
+}
+#endif
+
 } // namespace
