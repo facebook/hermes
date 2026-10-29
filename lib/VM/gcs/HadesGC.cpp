@@ -3554,8 +3554,8 @@ void HadesGC::checkWellFormed() {
   weakMapEntrySlots_.forEach([](WeakMapEntrySlot &slot) {
     if (slot.mappedValue.isEmpty()) {
       assert(
-          !slot.key ||
-          !slot.owner && "Reachable entry should have not have Empty value.");
+          (!slot.key || !slot.owner) &&
+          "Reachable entry should have not have Empty value.");
     }
   });
 

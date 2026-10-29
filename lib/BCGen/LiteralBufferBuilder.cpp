@@ -389,9 +389,9 @@ void Builder::reseedFromBaseBytecode() {
 
 void Builder::makeBufferStorages() {
   assert(
-      bcProvider_ ||
-      (valueStorage_.count() == 0 && keyStorage_.count() == 0) &&
-          "with no base bytecode, storages should be empty");
+      (bcProvider_ ||
+       (valueStorage_.count() == 0 && keyStorage_.count() == 0)) &&
+      "with no base bytecode, storages should be empty");
   valueStorage_.appendStorage(
       hbc::ConsecutiveStringStorage{
           values_.beginSet() + valueStorage_.count(),

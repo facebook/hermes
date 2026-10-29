@@ -1324,9 +1324,8 @@ CallResult<PseudoHandle<>> NativeConstructor::_callImpl(
   StackFramePtr newFrame{runtime.getStackPointer()};
   auto newTarget = newFrame.getNewTargetRef();
   assert(
-      newTarget.isUndefined() ||
-      vmisa<Callable>(newTarget) &&
-          "new.target for a NativeConstructor should either be undefined or a callable");
+      (newTarget.isUndefined() || vmisa<Callable>(newTarget)) &&
+      "new.target for a NativeConstructor should either be undefined or a callable");
   auto res = NativeFunction::_callImpl(selfHandle, runtime);
   if (LLVM_LIKELY(res != ExecutionStatus::EXCEPTION)) {
     assert(

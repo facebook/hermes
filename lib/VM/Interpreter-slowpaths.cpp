@@ -163,9 +163,8 @@ ExecutionStatus Interpreter::casePrivateIsIn(
       O2REG(PrivateIsIn).getSymbol(),
       desc);
   assert(
-      !res ||
-      desc.flags.privateName &&
-          "if a property exists here it should be a private property.");
+      (!res || desc.flags.privateName) &&
+      "if a property exists here it should be a private property.");
   auto *obj = vmcast<JSObject>(O3REG(PrivateIsIn));
   auto cacheIdx = ip->iPrivateIsIn.op4;
   // We want to be able to cache negative results here, as in cache the answer

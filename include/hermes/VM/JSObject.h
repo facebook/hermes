@@ -643,13 +643,12 @@ class JSObject : public GCCell {
       PointerBase &runtime,
       NamedPropertyDescriptor desc) {
     assert(
-        desc.flags.privateName ||
-        !self->isProxyObject(runtime) && !desc.flags.proxyObject &&
-            "getNamedSlotValueUnsafe called on a Proxy");
+        (desc.flags.privateName ||
+         (!self->isProxyObject(runtime) && !desc.flags.proxyObject)) &&
+        "getNamedSlotValueUnsafe called on a Proxy");
     assert(
-        desc.flags.privateName ||
-        !desc.flags.hostObject &&
-            "getNamedSlotValueUnsafe called on a HostObject");
+        (desc.flags.privateName || !desc.flags.hostObject) &&
+        "getNamedSlotValueUnsafe called on a HostObject");
     return getNamedSlotValueUnsafe(self, runtime, desc.slot);
   }
 

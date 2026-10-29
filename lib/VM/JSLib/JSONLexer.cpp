@@ -71,10 +71,10 @@ template <EncodingKind Kind>
 ExecutionStatus JSONLexer<Kind>::advance() {
   auto res = advanceHelper<StrAsValue>();
   assert(
-      res == ExecutionStatus::EXCEPTION ||
-      (token_.getKind() != JSONTokenKind::Whitespace &&
-       token_.getKind() != JSONTokenKind::Error) &&
-          "Error and Whitespace should never be set after a successful advance");
+      (res == ExecutionStatus::EXCEPTION ||
+       (token_.getKind() != JSONTokenKind::Whitespace &&
+        token_.getKind() != JSONTokenKind::Error)) &&
+      "Error and Whitespace should never be set after a successful advance");
   return res;
 }
 
@@ -82,10 +82,10 @@ template <EncodingKind Kind>
 ExecutionStatus JSONLexer<Kind>::advanceStrAsSymbol() {
   auto res = advanceHelper<StrAsSymbol>();
   assert(
-      res == ExecutionStatus::EXCEPTION ||
-      (token_.getKind() != JSONTokenKind::Whitespace &&
-       token_.getKind() != JSONTokenKind::Error) &&
-          "Error and Whitespace should never be set after a successful advance");
+      (res == ExecutionStatus::EXCEPTION ||
+       (token_.getKind() != JSONTokenKind::Whitespace &&
+        token_.getKind() != JSONTokenKind::Error)) &&
+      "Error and Whitespace should never be set after a successful advance");
   return res;
 }
 

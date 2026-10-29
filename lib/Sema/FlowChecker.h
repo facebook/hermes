@@ -1363,9 +1363,9 @@ class FlowChecker::FunctionContext {
         newTargetType(newTargetType),
         superType(superType) {
     assert(
-        !declCollectorNode ||
-        outer.declCollectorMap_.count(declCollectorNode) &&
-            "no declCollector for this node");
+        (!declCollectorNode ||
+         outer.declCollectorMap_.count(declCollectorNode)) &&
+        "no declCollector for this node");
     outer.curFunctionContext_ = this;
   }
 

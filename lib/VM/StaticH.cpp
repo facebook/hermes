@@ -2264,9 +2264,8 @@ extern "C" SHLegacyValue _sh_ljs_private_is_in_rjs(
             toPHV(privateName)->getSymbol(),
             desc);
         assert(
-            !res ||
-            desc.flags.privateName &&
-                "if a property exists here it should be a private property.");
+            (!res || desc.flags.privateName) &&
+            "if a property exists here it should be a private property.");
         // We want to be able to cache negative results here, as in cache the
         // answer that an object with a given HC does not contain a property.
         // However, in dictionary mode the HC wouldn't change even if the object
@@ -2788,7 +2787,7 @@ _sh_string_concat(SHRuntime *shr, uint32_t argCount, ...) {
       for (size_t i = 0; i < argCount; ++i) {
         auto argHandle = Handle<StringPrimitive>::vmcast(
             toPHV(va_arg(args, const SHLegacyValue *)));
-        assert(!isASCII || argHandle->isASCII() && "ASCII flag incorrect");
+        assert((!isASCII || argHandle->isASCII()) && "ASCII flag incorrect");
         builder.appendStringPrim(argHandle);
       }
       return builder.getStringPrimitive().getHermesValue();

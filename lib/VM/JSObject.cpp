@@ -3123,9 +3123,8 @@ ExecutionStatus JSObject::addOwnPropertyImpl(
     SHUnit *unit,
     WritePropertyCacheEntry *cacheEntry) {
   assert(
-      propertyFlags.privateName ||
-      !selfHandle->isProxyObject(runtime) &&
-          "Internal non-private properties cannot be added to Proxy objects");
+      (propertyFlags.privateName || !selfHandle->isProxyObject(runtime)) &&
+      "Internal non-private properties cannot be added to Proxy objects");
 
   struct : public Locals {
     PinnedValue<HiddenClass> startClazz;
@@ -3616,9 +3615,8 @@ CallResult<uint32_t> appendAllPropertyKeys(
         dupFound = dedupIdxNames.count(lv.prop->getNumber());
       } else {
         assert(
-            lv.prop->isString() ||
-            lv.prop->isSymbol() &&
-                "getOwnPropertyKeys only returns symbol, string, or number");
+            (lv.prop->isString() || lv.prop->isSymbol()) &&
+            "getOwnPropertyKeys only returns symbol, string, or number");
         dupFound = dedupNames.count(lv.propId.get().unsafeGetRaw());
 
         lv.tmpString = lv.prop->isString()

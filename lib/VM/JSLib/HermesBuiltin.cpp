@@ -786,9 +786,8 @@ CallResult<HermesValue> hermesBuiltinApplyArguments(void *, Runtime &runtime) {
   Handle<> newTarget = args.getArgHandle(2);
   bool isConstructCall = !newTarget->isUndefined();
   assert(
-      newTarget->isUndefined() ||
-      isConstructor(runtime, *newTarget) &&
-          "new.target can only be undefined or a constructor.");
+      (newTarget->isUndefined() || isConstructor(runtime, *newTarget)) &&
+      "new.target can only be undefined or a constructor.");
 
   Handle<> thisHandle = args.getArgHandle(1);
 

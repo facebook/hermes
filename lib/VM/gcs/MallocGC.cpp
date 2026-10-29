@@ -299,8 +299,8 @@ void MallocGC::checkWellFormed() {
   weakMapEntrySlots_.forEach([](WeakMapEntrySlot &slot) {
     if (slot.mappedValue.isEmpty()) {
       assert(
-          !slot.key ||
-          !slot.owner && "Reachable entry should not have Empty value.");
+          (!slot.key || !slot.owner) &&
+          "Reachable entry should not have Empty value.");
     }
   });
 }
