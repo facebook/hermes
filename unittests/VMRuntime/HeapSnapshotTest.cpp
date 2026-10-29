@@ -738,18 +738,26 @@ TEST(HeapSnapshotTest, SnapshotFromCallbackContextRunInMiddleYG) {
                   .build())
           .build());
   using LargeCell = EmptyCell<FixedSizeHeapSegment::maxSize() / 2>;
+  // The first YG collection resizes the YG to between 45% and 55% of the
+  // segment, depending on how long it took. Size cell4 so that cell4 and cell5
+  // fit in the YG at any of those sizes, and size cell1 so that the free space
+  // left in its OG segment fits exactly cell4.
+  constexpr size_t kCell4Size =
+      heapAlignSize(FixedSizeHeapSegment::maxSize() * 2 / 5);
+  using MediumCell = EmptyCell<kCell4Size>;
+  using OGCell = EmptyCell<FixedSizeHeapSegment::maxSize() - kCell4Size>;
   DummyRuntime &rt = *runtime;
   struct : Locals {
-    PinnedValue<LargeCell> cell1;
+    PinnedValue<OGCell> cell1;
     PinnedValue<LargeCell> cell2;
     PinnedValue<LargeCell> cell3;
-    PinnedValue<LargeCell> cell4;
+    PinnedValue<MediumCell> cell4;
     PinnedValue<DummyObject> cell5;
   } lv;
   DummyLocalsRAII lraii{rt, &lv};
 
   // Create a cell in OG and make it dead. It won't be freed until Sweep phase.
-  lv.cell1 = LargeCell::createLongLived(rt);
+  lv.cell1 = OGCell::createLongLived(rt);
   lv.cell1 = nullptr;
 
   // Create two cells to make YG full. Make them dead so that they won't be
@@ -759,10 +767,10 @@ TEST(HeapSnapshotTest, SnapshotFromCallbackContextRunInMiddleYG) {
   lv.cell2 = nullptr;
   lv.cell3 = nullptr;
   // Trigger a YG collection, which starts an OG collection.
-  lv.cell4 = LargeCell::create(rt);
+  lv.cell4 = MediumCell::create(rt);
 
-  // Add a small cell, so that it won't trigger YG collection due to HadesGC
-  // updating YG effectiveEnd.
+  // Add a small cell. It fits in the resized YG, so it won't trigger another
+  // YG collection.
   lv.cell5 = DummyObject::create(rt.getHeap(), rt);
   // Create another cell, this should trigger YG again, and wait for OG to
   // finish in the middle of YG. Both cell4 and cell5 need to be moved to OG,
