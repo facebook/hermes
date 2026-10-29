@@ -185,14 +185,15 @@ CallResult<HermesValue> iterableToArrayLike(Runtime &runtime, Handle<> items) {
   while (true) {
     GCScopeMarkerRAII marker{gcScope};
 
-    // Get next iterator result.
-    auto next = iteratorStep(runtime, iteratorRecord);
-    if (LLVM_UNLIKELY(next == ExecutionStatus::EXCEPTION)) {
+    // Get the next value. As in IteratorToList, errors from next(), done or
+    // value propagate without closing the iterator.
+    auto stepRes = iteratorStepValue(runtime, iteratorRecord, &lv.nextValue);
+    if (LLVM_UNLIKELY(stepRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
 
     // If done, return the array.
-    if (!next.getValue()) {
+    if (!*stepRes) {
       if (LLVM_UNLIKELY(
               JSArray::setLengthProperty(lv.A, runtime, k) ==
               ExecutionStatus::EXCEPTION)) {
@@ -200,14 +201,6 @@ CallResult<HermesValue> iterableToArrayLike(Runtime &runtime, Handle<> items) {
       }
       return lv.A.getHermesValue();
     }
-
-    // Get the value from the iterator result.
-    auto valueRes = JSObject::getNamed_RJS(
-        *next, runtime, Predefined::getSymbolID(Predefined::value));
-    if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
-      return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
-    }
-    lv.nextValue = std::move(*valueRes);
 
     // Check for overflow before appending.
     if (LLVM_UNLIKELY(k == UINT32_MAX)) {

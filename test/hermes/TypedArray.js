@@ -406,6 +406,42 @@ cons.forEach(function(TypedArray) {
   assert.equal(view[2], 6);
 });
 
+// Check that create(iterable) propagates the error thrown by the value getter
+// of an iterator result without calling the iterator's return method, as
+// IteratorStepValue specifies.
+function ValueError() {}
+function checkValueErrorDoesNotClose(create) {
+  var returnCalls = 0;
+  var iterable = {};
+  iterable[Symbol.iterator] = function() {
+    return {
+      next: function() {
+        return {
+          done: false,
+          get value() {
+            throw new ValueError();
+          },
+        };
+      },
+      return: function() {
+        ++returnCalls;
+        return {};
+      },
+    };
+  };
+  assert.throws(function() {
+    create(iterable);
+  }, ValueError);
+  assert.equal(returnCalls, 0);
+}
+
+// Check constructor from iterable whose value getter throws
+cons.forEach(function(TypedArray) {
+  checkValueErrorDoesNotClose(function(iterable) {
+    return new TypedArray(iterable);
+  });
+});
+
 // Empty constructor
 cons.forEach(function(TypedArray) {
   assert.equal(new TypedArray().length, 0);
@@ -753,6 +789,11 @@ cons.forEach(function(c, i) {
   assert.equal(ta[0], 2);
   assert.equal(ta[1], 4);
   assert.equal(ta[2], 6);
+
+  // Doesn't close the iterator when a value getter throws.
+  checkValueErrorDoesNotClose(function(iterable) {
+    return c.from(iterable);
+  });
 });
 
 (function testFromArrayIteratorFastPathSemantics() {
