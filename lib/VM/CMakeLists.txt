@@ -182,6 +182,7 @@ if (HERMESVM_ALLOW_JIT)
           JIT/x86-64/JitEmitter-property.cpp
           JIT/x86-64/JitEmitter-call.cpp
           JIT/x86-64/JitEmitter-env.cpp
+          JIT/x86-64/JitEmitter-array.cpp
           JIT/x86-64/JitEmitter-arith.cpp
           JIT/x86-64/JitEmitter-control.cpp
           JIT/x86-64/JitEmitter-stubs.cpp

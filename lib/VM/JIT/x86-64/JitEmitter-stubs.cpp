@@ -115,42 +115,6 @@ void Emitter::stringSwitchImm(
   unsupported("stringSwitchImm");
 }
 
-void Emitter::newArray(FR frRes, uint32_t size) {
-  unsupported("newArray");
-}
-
-void Emitter::newArrayWithBuffer(
-    FR frRes,
-    uint32_t numElements,
-    uint32_t numLiterals,
-    uint32_t bufferIndex) {
-  unsupported("newArrayWithBuffer");
-}
-
-void Emitter::newFastArray(FR frRes, FR frProto, uint32_t size) {
-  unsupported("newFastArray");
-}
-
-void Emitter::fastArrayLength(FR frRes, FR arr) {
-  unsupported("fastArrayLength");
-}
-
-void Emitter::fastArrayLoad(FR frRes, FR arr, FR idx) {
-  unsupported("fastArrayLoad");
-}
-
-void Emitter::fastArrayStore(FR arr, FR idx, FR val) {
-  unsupported("fastArrayStore");
-}
-
-void Emitter::fastArrayPush(FR arr, FR val) {
-  unsupported("fastArrayPush");
-}
-
-void Emitter::fastArrayAppend(FR arr, FR other) {
-  unsupported("fastArrayAppend");
-}
-
 void Emitter::getArgumentsPropByValLoose(FR frRes, FR frIndex, FR frLazyReg) {
   unsupported("getArgumentsPropByValLoose");
 }

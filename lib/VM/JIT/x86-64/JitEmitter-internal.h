@@ -646,6 +646,66 @@ inline void emit_double_is_int(
   a.vucomisd(dTemp, dInput);
 }
 
+/// For a register \p dInput, which contains a double, check whether it is a
+/// valid unsigned 32-bit integer.
+/// CPU flags are updated: the value is a uint32 only if both \c jne and \c jp
+/// fall through (see below).
+/// If successful, the low 32 bits of \p xTemp contain the converted index and
+/// its upper 32 bits are zero, so it is directly usable as a scaled index;
+/// \p dTemp is clobbered either way.
+/// \pre dTemp != dInput, because both are used in the comparison.
+///
+/// x86-64: arm64 does this with fcvtzu, a *saturating unsigned* conversion
+/// that x86 has no instruction for at all. It is emulated here with a signed
+/// 64-bit vcvttsd2si followed by a truncation of the result to its low 32
+/// bits, which are then converted back as an unsigned value (the zero-extended
+/// 32-bit mov leaves a 64-bit value in [0, 2^32), and vcvtsi2sd of that is
+/// exact). The two differ instruction for instruction, but they accept and
+/// reject exactly the same inputs, because in every case where fcvtzu's
+/// saturation and this truncation disagree about the intermediate integer,
+/// both intermediates fail the round-trip comparison:
+///  - d < 0 (e.g. -1.0): fcvtzu saturates to 0, whose 0.0 differs from d;
+///    here trunc gives a negative integer whose low 32 bits, read unsigned,
+///    are some value in [0, 2^32) -- a non-negative double, which likewise
+///    differs from the negative d. The single exception is -0.0, which both
+///    forms convert to 0 and both accept, since +0.0 == -0.0. That matches
+///    the interpreter, where -0 is the index 0.
+///  - d >= 2^32: fcvtzu saturates to UINT32_MAX, and (double)UINT32_MAX <
+///    2^32 <= d; here the low 32 bits are also some value below 2^32, so
+///    again strictly less than d. Both reject.
+///  - |d| >= 2^63 or d is an infinity: vcvttsd2si does not saturate, it
+///    produces the "integer indefinite" value INT64_MIN, whose low 32 bits
+///    are 0, and 0.0 differs from any such d. (This is why, unlike
+///    emit_double_is_int() above, no INT64_MIN special case is needed: that
+///    function's round trip can *legitimately* produce -2^63, this one's
+///    cannot produce anything outside [0, 2^32).)
+///  - d has a fractional part: both truncate it away and the round trip
+///    fails on the fraction, whatever the integer part was.
+///
+/// The one real divergence is NaN, and it is the same one emit_double_is_int()
+/// documents: arm64's fcmp reports unordered as NE, so a single b.eq covers
+/// it, while vucomisd reports unordered as ZF=PF=CF=1, i.e. as *equal*. A NaN
+/// index converts to INT64_MIN, whose low 32 bits are 0, so without the extra
+/// test a NaN would be accepted as the in-bounds index 0. The caller must
+/// therefore branch on both jne (ordered mismatch) and jp (unordered).
+inline void emit_double_is_uint32(
+    x86::Assembler &a,
+    const x86::Gp &xTemp,
+    const x86::Xmm &dTemp,
+    const x86::Xmm &dInput) {
+  assert(dTemp != dInput && "must use a different temp");
+  assert(xTemp.isGpq() && "the conversion must go through 64 bits");
+
+  // Convert the operand to a signed 64 bit integer.
+  a.vcvttsd2si(xTemp, dInput);
+  // Keep only the low 32 bits, zero-extended: this is the "unsigned 32-bit"
+  // half of arm64's fcvtzu.
+  a.mov(xTemp.r32(), xTemp.r32());
+  // Convert back to a double and see if they compare equal.
+  a.vcvtsi2sd(dTemp, dTemp, xTemp);
+  a.vucomisd(dTemp, dInput);
+}
+
 /// Convert the low 32 bits of \p xInt to a double in \p dRes, interpreting
 /// them as unsigned if \p isUnsigned and as signed otherwise.
 /// \p xInt is clobbered when \p isUnsigned.
