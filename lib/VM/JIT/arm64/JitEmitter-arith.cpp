@@ -164,7 +164,7 @@ void Emitter::toInt32(FR frRes, FR frInput, bool isSigned) {
         em.a.bind(sp.slowPathLab);
         em.a.mov(a64::x0, xRuntime);
         em.loadFrameAddr(a64::x1, frInput);
-        em.callThunkWithSavedIP(
+        em.callRuntimeWithSavedIP(
             isSigned ? (void *)_sh_ljs_to_int32_rjs
                      : (void *)_sh_ljs_to_uint32_rjs,
             isSigned ? "_sh_ljs_to_int32_rjs" : "_sh_ljs_to_uint32_rjs");
@@ -289,7 +289,7 @@ void Emitter::arithUnop(
         em.a.bind(sp.slowPathLab);
         em.a.mov(a64::x0, xRuntime);
         em.loadFrameAddr(a64::x1, frInput);
-        em.callThunkWithSavedIP(slowCall, slowCallName);
+        em.callRuntimeWithSavedIP(slowCall, slowCallName);
         em.movHWFromHW<false>(hwRes, HWReg::gpX(0));
         em.a.b(sp.contLab);
       });
@@ -578,7 +578,7 @@ void Emitter::arithBinOp(
         em.a.mov(a64::x0, xRuntime);
         em.loadFrameAddr(a64::x1, frLeft);
         em.loadFrameAddr(a64::x2, frRight);
-        em.callThunkWithSavedIP(slowCall, slowCallName);
+        em.callRuntimeWithSavedIP(slowCall, slowCallName);
         em.movHWFromHW<false>(hwRes, HWReg::gpX(0));
         em.a.b(sp.contLab);
       });
@@ -673,7 +673,7 @@ void Emitter::bitBinOp(
         em.a.mov(a64::x0, xRuntime);
         em.loadFrameAddr(a64::x1, frLeft);
         em.loadFrameAddr(a64::x2, frRight);
-        em.callThunkWithSavedIP((void *)slowCall, slowCallName);
+        em.callRuntimeWithSavedIP((void *)slowCall, slowCallName);
         em.movHWFromHW<false>(hwRes, HWReg::gpX(0));
         em.a.b(sp.contLab);
       });
@@ -840,7 +840,7 @@ void Emitter::strictEqualImpl(bool invert, FR frRes, FR frLeft, FR frRight) {
         // _sh_ljs_strict_equal takes its arguments by value.
         em._loadFrame(HWReg::gpX(0), frLeft);
         em._loadFrame(HWReg::gpX(1), frRight);
-        em.callThunkWithSavedIP(
+        em.callRuntimeWithSavedIP(
             (void *)_sh_ljs_strict_equal, "_sh_ljs_strict_equal");
 
         // Invert the slow path result if needed.
@@ -946,7 +946,7 @@ void Emitter::compareImpl(
           em.loadFrameAddr(a64::x1, frLeft);
           em.loadFrameAddr(a64::x2, frRight);
         }
-        em.callThunkWithSavedIP(slowCall, slowCallName);
+        em.callRuntimeWithSavedIP(slowCall, slowCallName);
 
         // Invert the slow path result if needed.
         if (invSlow)

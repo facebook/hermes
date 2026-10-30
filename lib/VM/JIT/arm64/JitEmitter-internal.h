@@ -742,12 +742,12 @@ inline bool isStpGpXImm(int i) {
 /// Save the current IP and emit a call to a runtime function. This should be
 /// used in most cases when invoking slow paths and handlers for complex
 /// functionality.
-#define EMIT_RUNTIME_CALL(em, type, func)           \
-  do {                                              \
-    using _FnT = type;                              \
-    _FnT _fn = func;                                \
-    (void)_fn;                                      \
-    (em).callThunkWithSavedIP((void *)func, #func); \
+#define EMIT_RUNTIME_CALL(em, type, func)             \
+  do {                                                \
+    using _FnT = type;                                \
+    _FnT _fn = func;                                  \
+    (void)_fn;                                        \
+    (em).callRuntimeWithSavedIP((void *)func, #func); \
   } while (0)
 
 /// Call a runtime function without saving the IP. This is intended for special
@@ -758,19 +758,7 @@ inline bool isStpGpXImm(int i) {
     using _FnT = type;                                     \
     _FnT _fn = func;                                       \
     (void)_fn;                                             \
-    (em).callThunk((void *)func, #func);                   \
-  } while (0)
-
-/// Make call without creating a thunk for it or saving the IP. This is useful
-/// for specific functionality where saving the IP is either unnecessary or
-/// incorrect, and where the call target is only going to be invoked at most
-/// once in the function.
-#define EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(em, type, func) \
-  do {                                                               \
-    using _FnT = type;                                               \
-    _FnT _fn = func;                                                 \
-    (void)_fn;                                                       \
-    (em).callWithoutThunk((void *)func, #func);                      \
+    (em).callRuntime((void *)func, #func);                 \
   } while (0)
 
 /// Load the lengthAndFlags of a HermesValue that contains a StringPrimitive
