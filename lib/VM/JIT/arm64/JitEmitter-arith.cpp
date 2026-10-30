@@ -533,6 +533,11 @@ void Emitter::arithBinOp(
   hwLeft = getOrAllocFRInVecD(frLeft, true);
   hwRight = getOrAllocFRInVecD(frRight, true);
 
+  if (forceNumber) {
+    emitTypeAssert(frLeft, hwLeft, TypePred::IsNumber);
+    emitTypeAssert(frRight, hwRight, TypePred::IsNumber);
+  }
+
   if (slow) {
     slowPathLab = newSlowPathLabel();
     contLab = newContLabel();

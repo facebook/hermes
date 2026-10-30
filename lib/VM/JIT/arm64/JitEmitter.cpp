@@ -575,6 +575,7 @@ void Emitter::leave(llvh::ArrayRef<const asmjit::Label *> exceptionHandlers) {
 
   emitCatchTable(exceptionHandlers);
   emitSlowPaths();
+  emitTypeAssertFailTail();
   emitROData();
 }
 
@@ -987,6 +988,93 @@ void Emitter::emitSlowPaths() {
     slowPaths_.pop_front();
   }
   emittingIP = nullptr;
+}
+
+void Emitter::emitTypeAssert(FR fr, HWReg hwVal, TypePred pred) {
+  if (LLVM_LIKELY(!emitTypeAsserts_))
+    return;
+  if (hwVal.isVecD()) {
+    a.fmov(xScratch, hwVal.a64VecD());
+    emitTypeAssertGpX(fr, xScratch, pred);
+  } else {
+    emitTypeAssertGpX(fr, hwVal.a64GpX(), pred);
+  }
+}
+
+void Emitter::emitTypeAssertGpX(FR fr, const a64::GpX &xVal, TypePred pred) {
+  assert(emitTypeAsserts_ && "caller must check emitTypeAsserts_");
+  if (!typeAssertSites_) {
+    typeAssertSites_ = &jitImpl_.typeAssertSites.emplace_back();
+    typeAssertFailLab_ = newPrefLabel("TYPEASSERT_FAIL", 0);
+  }
+
+  uint32_t idx = (uint32_t)typeAssertSites_->size();
+  typeAssertSites_->push_back(
+      TypeAssertSite{
+          codeBlock_,
+          codeBlock_->getOffsetOf(emittingIP),
+          (uint16_t)fr.index(),
+          pred});
+
+  comment("// type assert r%u is %s", fr.index(), typePredName(pred));
+  asmjit::Label failLab = newPrefLabel("TYPEASSERT_", idx);
+
+  // The helpers below tolerate xTemp == xVal; every such use is the last
+  // read of xVal in the sequence.
+  switch (pred) {
+    case TypePred::IsNumber:
+      emit_sh_ljs_is_double(a, xVal, xScratch2);
+      a.b_hs(failLab);
+      break;
+    case TypePred::IsBool:
+      emit_sh_ljs_is_bool(a, xScratch, xVal);
+      a.b_ne(failLab);
+      break;
+    case TypePred::NotPointer:
+      emit_sh_ljs_get_tag(a, xScratch, xVal);
+      emit_sh_ljs_tag_is_pointer(a, xScratch);
+      a.b_hs(failLab);
+      break;
+    case TypePred::BitComparable:
+      emit_sh_ljs_is_double(a, xVal, xScratch2);
+      a.b_lo(failLab);
+      emit_sh_ljs_get_tag(a, xScratch, xVal);
+      emit_sh_ljs_tag_is_pointer(a, xScratch);
+      a.b_hs(failLab);
+      break;
+    case TypePred::IsObject:
+      emit_sh_ljs_is_object(a, xScratch, xVal);
+      a.b_ne(failLab);
+      break;
+  }
+
+  slowPaths_.emplace_back(
+      failLab, emittingIP, [idx](Emitter &em, SlowPath &sp) {
+        em.comment("// Type assert failure %u", idx);
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(a64::w0, idx);
+        em.a.b(em.typeAssertFailLab_);
+      });
+}
+
+void Emitter::emitTypeAssertFailTail() {
+  if (!typeAssertSites_)
+    return;
+  comment("// Type assert failure tail");
+  a.bind(typeAssertFailLab_);
+  // w0 already holds the site index, set by the per-site stub.
+  a.ldr(
+      a64::x1,
+      a64::Mem(
+          roDataLabel_,
+          uint64Const((uint64_t)typeAssertSites_, "type assert site table")));
+  // Not EMIT_RUNTIME_CALL: that saves the current IP, and emitSlowPaths()
+  // has already cleared emittingIP by the time this runs. The handler does
+  // not need the IP anyway - the site record carries the bytecode offset.
+  EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(
+      *this,
+      void (*)(uint32_t, const std::vector<TypeAssertSite> *),
+      _jit_type_assert_failed);
 }
 
 void Emitter::emitROData() {

@@ -12,6 +12,8 @@
 #include "hermes/VM/sh_legacy_value.h"
 #include "hermes/VM/static_h.h"
 
+#include <vector>
+
 typedef struct SHRuntime SHRuntime;
 typedef struct SHRuntimeModule SHRuntimeModule;
 typedef struct SHCodeBlock SHCodeBlock;
@@ -194,5 +196,44 @@ void *_jit_string_switch_imm_table_lookup(
     RuntimeModule *runtimeModule,
     uint32_t tableIndex,
     SHLegacyValue *switchValue);
+
+/// A property of an FR's value that a fast path relies on. These are the
+/// predicates the emitters actually exploit, which is narrower and more
+/// useful than the declared FRType.
+enum class TypePred : uint8_t {
+  /// Unsigned-below (HVTag_First << kHV_NumDataBits).
+  IsNumber,
+  /// ETag == HVETag_Bool.
+  IsBool,
+  /// Tag unsigned-below the pointer range. This is the GC-safety predicate.
+  NotPointer,
+  /// NotPointer && !IsNumber: the raw bits are the value's identity under
+  /// strict equality, so `===` is a bit compare. Doubles are excluded
+  /// because NaN is not equal to itself while its bits are, and -0 and +0
+  /// are equal while their bits are not; pointers because strings compare
+  /// by content rather than address.
+  BitComparable,
+  /// Tag == HVTag_Object.
+  IsObject,
+};
+
+/// \return a human-readable name for \p pred, for diagnostics.
+const char *typePredName(TypePred pred);
+
+/// One emitted type check, recorded so the failure handler can name it.
+struct TypeAssertSite {
+  CodeBlock *codeBlock;
+  uint32_t bytecodeOfs;
+  uint16_t frIndex;
+  TypePred pred;
+};
+
+/// Report a failed JIT type assertion and abort. Called only from JIT'ed
+/// code, and never returns, so it needs no register or frame preservation.
+/// \p sites is the failing function's site table and is never null; \p
+/// siteIdx indexes it.
+[[noreturn]] void _jit_type_assert_failed(
+    uint32_t siteIdx,
+    const std::vector<TypeAssertSite> *sites);
 
 } // namespace hermes::vm

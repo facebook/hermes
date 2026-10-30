@@ -10,6 +10,7 @@
 #include "JitHandlers.h"
 
 #include "../../JSLib/JSLibInternal.h"
+#include "hermes/Support/ErrorHandling.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/Interpreter.h"
@@ -21,6 +22,8 @@
 #include "hermes/VM/StackFrame.h"
 #include "hermes/VM/StaticHUtils.h"
 #include "hermes/VM/StringPrimitiveValueDenseMapInfo-inline.h"
+
+#include "llvh/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "jit"
 
@@ -560,6 +563,36 @@ void *_jit_string_switch_imm_table_lookup(
     return nullptr;
   }
   return iter->second.jitCodeTarget;
+}
+
+const char *typePredName(TypePred pred) {
+  switch (pred) {
+    case TypePred::IsNumber:
+      return "number";
+    case TypePred::IsBool:
+      return "bool";
+    case TypePred::NotPointer:
+      return "non-pointer";
+    case TypePred::BitComparable:
+      return "non-pointer non-number";
+    case TypePred::IsObject:
+      return "object";
+  }
+  return "<invalid>";
+}
+
+void _jit_type_assert_failed(
+    uint32_t siteIdx,
+    const std::vector<TypeAssertSite> *sites) {
+  const TypeAssertSite &site = (*sites)[siteIdx];
+  std::string message;
+  llvh::raw_string_ostream os(message);
+  os << "JIT type assert failed: function " << site.codeBlock->getFunctionID()
+     << "(" << site.codeBlock->getNameString() << "), bytecode offset "
+     << site.bytecodeOfs << ", r" << site.frIndex << ", expected "
+     << typePredName(site.pred);
+  os.flush();
+  hermes_fatal(message);
 }
 
 } // namespace hermes::vm
