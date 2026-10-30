@@ -691,6 +691,10 @@ void Emitter::loadFrameAddr(a64::GpX dst, FR frameReg) {
 void Emitter::getBytecodeIP(const a64::GpX &xOut) {
   auto ofs = codeBlock_->getOffsetOf(emittingIP);
   loadBits64InGp(xOut, (uint64_t)codeBlock_->begin(), "Bytecode start");
+  // The first instruction of a function is at offset zero, which needs no
+  // add at all.
+  if (!ofs)
+    return;
   // The add instruction takes a 12 bit immediate optionally shifted by 12 bits.
   // So we do the add as up to two 12 bit steps. Note that this means that it
   // will currently fail on any function that is larger than 16MB.
