@@ -336,4 +336,95 @@ TEST_F(StringPrimTest, FastConcatTest) {
   EXPECT_TRUE(utf16Ref.size() == utfStr3.size());
   EXPECT_TRUE(std::equal(utfStr3.begin(), utfStr3.end(), utf16Ref.begin()));
 }
+
+/// Run \p code, which must evaluate to a string, and store it in \p out.
+static void evalToString(
+    Runtime &runtime,
+    const char *code,
+    PinnedValue<StringPrimitive> &out) {
+  hermes::hbc::CompileFlags flags;
+  auto res = runtime.run(code, "", flags);
+  ASSERT_NE(ExecutionStatus::EXCEPTION, res);
+  ASSERT_TRUE(res->isString());
+  out.castAndSetHermesValue<StringPrimitive>(*res);
+}
+
+TEST_F(StringPrimTest, BuiltinsKeepASCII) {
+  struct : public Locals {
+    PinnedValue<StringPrimitive> str;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  // Each builtin that assembles its result in a StringBuilder must produce an
+  // ASCII string when every piece of the result is ASCII, and a UTF16 string
+  // otherwise.
+  struct Case {
+    const char *code;
+    const char16_t *expected;
+    bool isASCII;
+  };
+  static const Case cases[] = {
+      {"'abc'.repeat(4)", u"abcabcabcabc", true},
+      {"'a\\u00e9'.repeat(3)", u"aéaéaé", false},
+      {"[1, 'a', null, 'b'].join('-')", u"1-a--b", true},
+      {"['a', '\\u00e9'].join()", u"a,é", false},
+      {"['a', 'b'].join('\\u00e9')", u"aéb", false},
+      // The separator is not used.
+      {"['a'].join('\\u00e9')", u"a", true},
+      // Elements that are converted by calling toString.
+      {"[{toString() { return 'x'; }}, 1, 'y'].join()", u"x,1,y", true},
+      {"[{toString() { return '\\u00e9'; }}, 1].join()", u"é,1", false},
+      {"[1, 'a'].toLocaleString()", u"1,a", true},
+      {"[1, {toLocaleString() { return '\\u00e9'; }}].toLocaleString()",
+       u"1,é",
+       false},
+      {"new Uint8Array([1, 2, 3]).join()", u"1,2,3", true},
+      {"new Uint8Array([1, 2]).join('\\u00e9')", u"1é2", false},
+      {"new Uint8Array([1, 2]).toLocaleString()", u"1,2", true},
+      {"'ab'.padStart(6, 'xy')", u"xyxyab", true},
+      {"'ab'.padEnd(4, '\\u00e9')", u"abéé", false},
+      {"'\\u00e9'.padStart(3)", u"  é", false},
+      {"'ABC'.toLowerCase()", u"abc", true},
+      {"'abc'.toUpperCase()", u"ABC", true},
+      {"String.fromCharCode(97, 98, 99)", u"abc", true},
+      {"String.fromCharCode(97, 233)", u"aé", false},
+      {"String(Symbol('ab'))", u"Symbol(ab)", true},
+      {"String(Symbol('\\u00e9'))", u"Symbol(é)", false},
+      {"String(new Error('m'))", u"Error: m", true},
+      {"String(new Error('\\u00e9'))", u"Error: é", false},
+      {"Object.prototype.toString.call({[Symbol.toStringTag]: 'T'})",
+       u"[object T]",
+       true},
+      {"Object.prototype.toString.call({[Symbol.toStringTag]: '\\u00e9'})",
+       u"[object é]",
+       false},
+      {"var k = 'ab';"
+       "Object.getOwnPropertyDescriptor({get [k]() {}}, k).get.name",
+       u"get ab",
+       true},
+      {"var k = '\\u00e9';"
+       "Object.getOwnPropertyDescriptor({get [k]() {}}, k).get.name",
+       u"get é",
+       false},
+  };
+  for (const Case &c : cases) {
+    SCOPED_TRACE(c.code);
+    evalToString(runtime, c.code, lv.str);
+    EXPECT_EQ(c.isASCII, lv.str->isASCII());
+    EXPECT_TRUE(
+        StringPrimitive::createStringView(runtime, lv.str)
+            .equals(createUTF16Ref(c.expected)));
+  }
+
+  // Exactly long enough to be allocated as an external string. It must also
+  // fit the test heap: external memory counts against the max heap size,
+  // which MallocGC enforces exactly.
+  const uint32_t externalLen = StringPrimitive::EXTERNAL_STRING_THRESHOLD;
+  const std::string longCode =
+      "'a'.repeat(" + std::to_string(externalLen) + ")";
+  evalToString(runtime, longCode.c_str(), lv.str);
+  EXPECT_TRUE(lv.str->isExternal());
+  EXPECT_TRUE(lv.str->isASCII());
+  EXPECT_EQ(externalLen, lv.str->getStringLength());
+}
 } // namespace

@@ -53,7 +53,7 @@ using Base64UtilTest = RuntimeTestFixture;
         base64DecodeOutputLength(original);                                 \
     EXPECT_TRUE(expectedLength.hasValue());                                 \
     CallResult<StringBuilder> builder = StringBuilder::createStringBuilder( \
-        runtime, hermes::SafeUInt32(*expectedLength));                      \
+        runtime, hermes::SafeUInt32(*expectedLength), false);               \
     EXPECT_NE(builder, ExecutionStatus::EXCEPTION);                         \
                                                                             \
     bool success = base64Decode(original, *builder);                        \
@@ -148,7 +148,7 @@ TEST_F(Base64UtilTest, DecodeInvalid) {
   // Just a long enough buffer. All calls in this function are expected to fail.
   hermes::SafeUInt32 outputLength{50};
   CallResult<StringBuilder> builder =
-      StringBuilder::createStringBuilder(runtime, outputLength);
+      StringBuilder::createStringBuilder(runtime, outputLength, false);
 
   std::array<char, 5> hasNegative = {'A', 'b', 'c', (char)-15, '\0'};
   EXPECT_FALSE(base64Decode(createASCIIRef(hasNegative.data()), *builder));

@@ -293,8 +293,8 @@ CallResult<Handle<StringPrimitive>> JSError::toString(
   SafeUInt32 length{nameStr->getStringLength()};
   length.add(2);
   length.add(msgStr->getStringLength());
-  CallResult<StringBuilder> builderRes =
-      StringBuilder::createStringBuilder(runtime, length);
+  CallResult<StringBuilder> builderRes = StringBuilder::createStringBuilder(
+      runtime, length, nameStr->isASCII() && msgStr->isASCII());
   if (LLVM_UNLIKELY(builderRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

@@ -2107,7 +2107,8 @@ CallResult<Handle<StringPrimitive>> symbolDescriptiveString(
   descLen.add(8);
 
   // 5. Return the string-concatenation of "Symbol(", desc, and ")".
-  auto builder = StringBuilder::createStringBuilder(runtime, descLen);
+  auto builder =
+      StringBuilder::createStringBuilder(runtime, descLen, desc->isASCII());
   if (LLVM_UNLIKELY(builder == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

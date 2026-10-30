@@ -66,9 +66,9 @@ s = strOfSize(1000000);
 s = strOfSize(1000000);
 s = null;
 
-// Larger than max heap fails.
+// Larger than max heap fails. The string is ASCII, one byte per character.
 try {
-    s = strOfSize(6000000);
+    s = strOfSize(12000000);
     print('no exception');
 } catch (x) {
     print(x)

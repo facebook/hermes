@@ -718,6 +718,8 @@ CallResult<HermesValue> arrayPrototypeToLocaleString(void *, Runtime &runtime) {
 
   // Final size of the result string. Initialize to account for the separators.
   SafeUInt32 size(len32 - 1);
+  // Whether every element string is ASCII; the separator is.
+  bool allASCII = true;
 
   // Array to store each of the strings of the elements.
   auto arrRes = JSArray::create(runtime, len32, len32);
@@ -786,6 +788,7 @@ CallResult<HermesValue> arrayPrototypeToLocaleString(void *, Runtime &runtime) {
         }
         lv.strElement = std::move(*strRes);
         uint32_t strLength = lv.strElement->getStringLength();
+        allASCII &= lv.strElement->isASCII();
         // Throw RangeError on overflow.
         size.add(strLength);
         if (LLVM_UNLIKELY(size.isOverflowed())) {
@@ -803,7 +806,7 @@ CallResult<HermesValue> arrayPrototypeToLocaleString(void *, Runtime &runtime) {
   }
 
   // Create and then populate the result string.
-  auto builder = StringBuilder::createStringBuilder(runtime, size);
+  auto builder = StringBuilder::createStringBuilder(runtime, size, allASCII);
   if (builder == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1137,6 +1140,8 @@ CallResult<HermesValue> arrayPrototypeJoin(void *, Runtime &runtime) {
 
   // Track the size of the resultant string.
   SafeUInt32 size;
+  // Whether the separator, if used, and every element string are ASCII.
+  bool allASCII = len < 2 || lv.sep->isASCII();
 
   // The first element not processed by the fast path.
   uint32_t fastPathEnd = 0;
@@ -1164,9 +1169,11 @@ CallResult<HermesValue> arrayPrototypeJoin(void *, Runtime &runtime) {
       NoAllocScope noAlloc{runtime};
       SmallHermesValue elem = storage->at(i); // Direct access
       uint32_t elemLen;
-      if (elem.isString())
-        elemLen = elem.getString(runtime)->getStringLength();
-      else if (elem.isNull() || elem.isUndefined() || elem.isEmpty())
+      if (elem.isString()) {
+        StringPrimitive *s = elem.getString(runtime);
+        elemLen = s->getStringLength();
+        allASCII &= s->isASCII();
+      } else if (elem.isNull() || elem.isUndefined() || elem.isEmpty())
         elemLen = 0;
       else
         break;
@@ -1253,6 +1260,7 @@ CallResult<HermesValue> arrayPrototypeJoin(void *, Runtime &runtime) {
 
         StringPrimitive *s = strRes.getValue().get();
         size.add(s->getStringLength());
+        allASCII &= s->isASCII();
 
         lv.strings->set(
             i,
@@ -1270,7 +1278,7 @@ CallResult<HermesValue> arrayPrototypeJoin(void *, Runtime &runtime) {
   }
 
   // Allocate the complete result.
-  auto builder = StringBuilder::createStringBuilder(runtime, size);
+  auto builder = StringBuilder::createStringBuilder(runtime, size, allASCII);
   if (builder == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }

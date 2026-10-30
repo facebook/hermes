@@ -77,8 +77,10 @@ CallResult<HermesValue> atob(void *, Runtime &runtime) {
   if (!expectedLength) {
     return runtime.raiseError("Not a valid base64 encoded string length");
   }
-  CallResult<StringBuilder> builder =
-      StringBuilder::createStringBuilder(runtime, SafeUInt32(*expectedLength));
+  // The decoded bytes may be anything up to 0xFF, and the output can be large,
+  // so start with UTF16 rather than risk the builder's unchecked upgrade.
+  CallResult<StringBuilder> builder = StringBuilder::createStringBuilder(
+      runtime, SafeUInt32(*expectedLength), false);
   if (LLVM_UNLIKELY(builder == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

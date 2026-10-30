@@ -34,8 +34,8 @@ TEST_F(StringBuilderTest, NormalASCIIBuildTest) {
 }
 
 TEST_F(StringBuilderTest, NormalUTF16BuildTest) {
-  auto builder =
-      StringBuilder::createStringBuilder(runtime, hermes::SafeUInt32{10});
+  auto builder = StringBuilder::createStringBuilder(
+      runtime, hermes::SafeUInt32{10}, false);
   ASSERT_NE(builder, ExecutionStatus::EXCEPTION);
   builder->appendASCIIRef(createASCIIRef("abc"));
   builder->appendUTF16Ref(createUTF16Ref(u"def"));

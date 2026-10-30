@@ -21,12 +21,13 @@ namespace vm {
 /// StringBuilder is a helper class that provides such feature.
 /// It ensures that the content never exceeds the length, and we can only
 /// obtain the string after we have filled in every character.
-/// It supports building both ASCII and UTF16 string. In cases where it does
-/// not matter and you are not sure, use default (UTF16). Only in places where
-/// it is obvious that this will be an ASCII string most of the time, we create
-/// an ASCII string builder. In the worst case when you start to append UTF16
-/// into an ASCII string, the builder will automatically take care of that
-/// and create a new UTF16 string internally.
+/// It supports building both ASCII and UTF16 string. The caller states which
+/// one to start with: ASCII when every appended piece is known to be ASCII,
+/// UTF16 when some piece is known not to be. When the content is not known in
+/// advance, starting with ASCII is still correct: appending UTF16 to an ASCII
+/// builder makes it create a UTF16 string internally and copy what it has.
+/// That copy ignores allocation failure, so a builder that may grow very large
+/// and probably needs UTF16 should start with UTF16.
 class StringBuilder {
   /// Handle to the StringPrimitive we are constructing.
   MutableHandle<StringPrimitive> strPrim_;
@@ -39,10 +40,10 @@ class StringBuilder {
   Runtime *runtime_;
 
  public:
-  static CallResult<StringBuilder> createStringBuilder(
-      Runtime &runtime,
-      SafeUInt32 length,
-      bool isASCII = false) {
+  /// Create a builder for a string of exactly \p length code units, stored as
+  /// ASCII if \p isASCII is true and as UTF16 otherwise.
+  static CallResult<StringBuilder>
+  createStringBuilder(Runtime &runtime, SafeUInt32 length, bool isASCII) {
     if (length.isOverflowed()) {
       return runtime.raiseRangeError("String length exceeds limit");
     }

@@ -435,10 +435,11 @@ CallResult<HermesValue> stringFromCharCode(void *, Runtime &runtime) {
     char16_t ch = res->getNumber();
     return runtime.getCharacterString(ch).getHermesValue();
   }
-  auto builder = StringBuilder::createStringBuilder(runtime, SafeUInt32{n});
-  if (builder == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
+  // Convert every argument first, so the result is allocated once with its
+  // encoding known.
+  llvh::SmallVector<char16_t, 32> codeUnits;
+  codeUnits.reserve(n);
+  bool allASCII = true;
   for (unsigned i = 0; i < n; ++i) {
     // Call a function that may throw, let the runtime record it.
     auto res = toUInt16(runtime, args.getArgHandle(i));
@@ -446,8 +447,16 @@ CallResult<HermesValue> stringFromCharCode(void *, Runtime &runtime) {
       return ExecutionStatus::EXCEPTION;
     }
     char16_t ch = res->getNumber();
-    builder->appendCharacter(ch);
+    allASCII &= ch < 128;
+    codeUnits.push_back(ch);
   }
+  auto builder =
+      StringBuilder::createStringBuilder(runtime, SafeUInt32{n}, allASCII);
+  if (builder == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  for (char16_t ch : codeUnits)
+    builder->appendCharacter(ch);
   return HermesValue::encodeStringValue(*builder->getStringPrimitive());
 }
 
@@ -990,7 +999,8 @@ static CallResult<HermesValue> convertCase(
       }
 
       SafeUInt32 len(S->getStringLength());
-      auto builder = StringBuilder::createStringBuilder(runtime, len);
+      // Every character is ASCII (mask <= 127), and so is its case mapping.
+      auto builder = StringBuilder::createStringBuilder(runtime, len, true);
       if (builder == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -1451,7 +1461,9 @@ CallResult<HermesValue> stringPrototypeRepeat(void *, Runtime &runtime) {
   // It's safe to multiply as the overflow check is done above.
   SafeUInt32 finalLen(strLen * n);
 
-  auto builderRes = StringBuilder::createStringBuilder(runtime, finalLen);
+  // The result is ASCII exactly when S is.
+  auto builderRes =
+      StringBuilder::createStringBuilder(runtime, finalLen, lv.S->isASCII());
   if (LLVM_UNLIKELY(builderRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2132,7 +2144,8 @@ CallResult<HermesValue> stringPrototypePad(void *ctx, Runtime &runtime) {
         runtime.getPredefinedString(Predefined::emptyString));
   }
 
-  auto builderRes = StringBuilder::createStringBuilder(runtime, size);
+  auto builderRes = StringBuilder::createStringBuilder(
+      runtime, size, lv.S->isASCII() && lv.filler->isASCII());
   if (LLVM_UNLIKELY(builderRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

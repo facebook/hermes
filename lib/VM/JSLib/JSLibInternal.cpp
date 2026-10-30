@@ -359,6 +359,8 @@ CallResult<HermesValue> createDynamicFunction(
     lv.selfParent = std::move(*thisParentRes);
   }
 
+  // Whether the params and body are all ASCII; the rest of the source is.
+  bool allASCII = true;
   if (argCount == 0) {
     // No arguments, just set body to be the empty string.
     lv.body = runtime.getPredefinedString(Predefined::emptyString);
@@ -377,6 +379,7 @@ CallResult<HermesValue> createDynamicFunction(
               ExecutionStatus::EXCEPTION))
         return ExecutionStatus::EXCEPTION;
       size.add(lv.param->getStringLength());
+      allASCII &= lv.param->isASCII();
     }
 
     // Last parameter is the body.
@@ -386,6 +389,7 @@ CallResult<HermesValue> createDynamicFunction(
     }
     lv.body = strRes->get();
     size.add(lv.body->getStringLength());
+    allASCII &= lv.body->isASCII();
 
     if (kind == DynamicFunctionKind::Normal && argCount == 1 &&
         isReturnThis(lv.body, runtime)) {
@@ -428,7 +432,7 @@ CallResult<HermesValue> createDynamicFunction(
 
   auto separator = createASCIIRef(",");
 
-  auto builder = StringBuilder::createStringBuilder(runtime, size);
+  auto builder = StringBuilder::createStringBuilder(runtime, size, allASCII);
   if (builder == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }

@@ -1048,7 +1048,8 @@ CallResult<HermesValue> hermesBuiltinSetFunctionName(void *, Runtime &runtime) {
   }
 
   len.add(lv.computedName->getStringLength());
-  auto builderRes = StringBuilder::createStringBuilder(runtime, len);
+  auto builderRes = StringBuilder::createStringBuilder(
+      runtime, len, lv.computedName->isASCII());
   if (LLVM_UNLIKELY(builderRes == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
   auto builder = *builderRes;

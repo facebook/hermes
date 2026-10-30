@@ -1648,8 +1648,8 @@ CallResult<HermesValue> directObjectPrototypeToString(
       lv.tag = PseudoHandle<StringPrimitive>::vmcast(std::move(*tagRes)).get();
       SafeUInt32 tagLen(lv.tag->getStringLength());
       tagLen.add(9);
-      CallResult<StringBuilder> builder =
-          StringBuilder::createStringBuilder(runtime, tagLen);
+      CallResult<StringBuilder> builder = StringBuilder::createStringBuilder(
+          runtime, tagLen, lv.tag->isASCII());
       if (LLVM_UNLIKELY(builder == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
