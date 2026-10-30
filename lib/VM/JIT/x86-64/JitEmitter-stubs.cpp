@@ -1,0 +1,789 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/// \file
+/// Task 2: the x86-64 backend has no real instruction substrate yet. Every
+/// per-opcode Emitter method below reports itself as unsupported, which
+/// aborts compilation of the current function (see Emitter::unsupported())
+/// so the interpreter runs it instead. Task 3 replaces these bodies with
+/// real code generation, one opcode family at a time, without changing any
+/// signature here.
+
+#include "hermes/VM/JIT/Config.h"
+#if HERMESVM_JIT_X86_64
+#include "JitEmitter.h"
+
+namespace hermes::vm::x86_64 {
+
+void Emitter::unreachable() {
+  unsupported("unreachable");
+}
+
+void Emitter::profilePoint(uint16_t point) {
+  unsupported("profilePoint");
+}
+
+void Emitter::directEval(FR frRes, FR frText, bool strictCaller) {
+  unsupported("directEval");
+}
+
+void Emitter::call(FR frRes, FR frCallee, uint32_t argc) {
+  unsupported("call");
+}
+
+void Emitter::callN(FR frRes, FR frCallee, llvh::ArrayRef<FR> args) {
+  unsupported("callN");
+}
+
+void Emitter::callBuiltin(FR frRes, uint32_t builtinIndex, uint32_t argc) {
+  unsupported("callBuiltin");
+}
+
+void Emitter::callWithNewTarget(
+    FR frRes,
+    FR frCallee,
+    FR frNewTarget,
+    uint32_t argc) {
+  unsupported("callWithNewTarget");
+}
+
+void Emitter::callWithNewTargetLong(
+    FR frRes,
+    FR frCallee,
+    FR frNewTarget,
+    FR frArgc) {
+  unsupported("callWithNewTargetLong");
+}
+
+void Emitter::callRequire(FR frRes, FR frRequireFunc, uint32_t modIndex) {
+  unsupported("callRequire");
+}
+
+void Emitter::getBuiltinClosure(FR frRes, uint32_t builtinIndex) {
+  unsupported("getBuiltinClosure");
+}
+
+void Emitter::catchInst(FR frRes) {
+  unsupported("catchInst");
+}
+
+void Emitter::ret(FR frValue) {
+  unsupported("ret");
+}
+
+void Emitter::mov(FR frRes, FR frInput, bool logComment) {
+  unsupported("mov");
+}
+
+void Emitter::loadParam(FR frRes, uint32_t paramIndex) {
+  unsupported("loadParam");
+}
+
+void Emitter::loadConstDouble(FR frRes, double val, const char *name) {
+  unsupported("loadConstDouble");
+}
+
+void Emitter::loadConstBits64(
+    FR frRes,
+    uint64_t val,
+    FRType type,
+    const char *name) {
+  unsupported("loadConstBits64");
+}
+
+void Emitter::loadConstString(
+    FR frRes,
+    RuntimeModule *runtimeModule,
+    uint32_t stringID) {
+  unsupported("loadConstString");
+}
+
+void Emitter::loadConstBigInt(
+    FR frRes,
+    RuntimeModule *runtimeModule,
+    uint32_t bigIntID) {
+  unsupported("loadConstBigInt");
+}
+
+void Emitter::toNumber(FR frRes, FR frInput) {
+  unsupported("toNumber");
+}
+
+void Emitter::toNumeric(FR frRes, FR frInput) {
+  unsupported("toNumeric");
+}
+
+void Emitter::toInt32(FR frRes, FR frInput, bool isSigned) {
+  unsupported("toInt32");
+}
+
+void Emitter::addEmptyString(FR frRes, FR frInput) {
+  unsupported("addEmptyString");
+}
+
+void Emitter::addS(FR frRes, FR frLeft, FR frRight) {
+  unsupported("addS");
+}
+
+void Emitter::mod(bool forceNumber, FR frRes, FR frLeft, FR frRight) {
+  unsupported("mod");
+}
+
+void Emitter::mul(FR rRes, FR rLeft, FR rRight) {
+  unsupported("mul");
+}
+
+void Emitter::add(FR rRes, FR rLeft, FR rRight) {
+  unsupported("add");
+}
+
+void Emitter::sub(FR rRes, FR rLeft, FR rRight) {
+  unsupported("sub");
+}
+
+void Emitter::div(FR rRes, FR rLeft, FR rRight) {
+  unsupported("div");
+}
+
+void Emitter::mulN(FR rRes, FR rLeft, FR rRight) {
+  unsupported("mulN");
+}
+
+void Emitter::addN(FR rRes, FR rLeft, FR rRight) {
+  unsupported("addN");
+}
+
+void Emitter::subN(FR rRes, FR rLeft, FR rRight) {
+  unsupported("subN");
+}
+
+void Emitter::divN(FR rRes, FR rLeft, FR rRight) {
+  unsupported("divN");
+}
+
+void Emitter::bitAnd(FR rRes, FR rLeft, FR rRight) {
+  unsupported("bitAnd");
+}
+
+void Emitter::bitOr(FR rRes, FR rLeft, FR rRight) {
+  unsupported("bitOr");
+}
+
+void Emitter::bitXor(FR rRes, FR rLeft, FR rRight) {
+  unsupported("bitXor");
+}
+
+void Emitter::lShift(FR rRes, FR rLeft, FR rRight) {
+  unsupported("lShift");
+}
+
+void Emitter::rShift(FR rRes, FR rLeft, FR rRight) {
+  unsupported("rShift");
+}
+
+void Emitter::urShift(FR rRes, FR rLeft, FR rRight) {
+  unsupported("urShift");
+}
+
+void Emitter::dec(FR rRes, FR rInput) {
+  unsupported("dec");
+}
+
+void Emitter::inc(FR rRes, FR rInput) {
+  unsupported("inc");
+}
+
+void Emitter::negate(FR rRes, FR rInput) {
+  unsupported("negate");
+}
+
+void Emitter::jmpTrueFalse(
+    bool onTrue,
+    const asmjit::Label &target,
+    FR frInput) {
+  unsupported("jmpTrueFalse");
+}
+
+void Emitter::jmpUndefined(const asmjit::Label &target, FR frInput) {
+  unsupported("jmpUndefined");
+}
+
+void Emitter::jmp(const asmjit::Label &target) {
+  unsupported("jmp");
+}
+
+void Emitter::jmpBuiltinIs(
+    bool invert,
+    const asmjit::Label &target,
+    uint8_t builtinIndex,
+    FR frInput) {
+  unsupported("jmpBuiltinIs");
+}
+
+void Emitter::booleanNot(FR frRes, FR frInput) {
+  unsupported("booleanNot");
+}
+
+void Emitter::bitNot(FR frRes, FR frInput) {
+  unsupported("bitNot");
+}
+
+void Emitter::typeOf(FR frRes, FR frInput) {
+  unsupported("typeOf");
+}
+
+void Emitter::getPNameList(FR frRes, FR frObj, FR frIdx, FR frSize) {
+  unsupported("getPNameList");
+}
+
+void Emitter::getNextPName(
+    FR frRes,
+    FR frProps,
+    FR frObj,
+    FR frIdx,
+    FR frSize) {
+  unsupported("getNextPName");
+}
+
+void Emitter::toPropertyKey(FR frRes, FR frVal) {
+  unsupported("toPropertyKey");
+}
+
+void Emitter::privateIsIn(
+    FR frRes,
+    FR frPrivateName,
+    FR frTarget,
+    uint8_t cacheIdx) {
+  unsupported("privateIsIn");
+}
+
+void Emitter::createPrivateName(FR frRes, SHSymbolID symID) {
+  unsupported("createPrivateName");
+}
+
+void Emitter::greater(FR rRes, FR rLeft, FR rRight) {
+  unsupported("greater");
+}
+
+void Emitter::greaterEqual(FR rRes, FR rLeft, FR rRight) {
+  unsupported("greaterEqual");
+}
+
+void Emitter::less(FR rRes, FR rLeft, FR rRight) {
+  unsupported("less");
+}
+
+void Emitter::lessEqual(FR rRes, FR rLeft, FR rRight) {
+  unsupported("lessEqual");
+}
+
+void Emitter::equal(FR rRes, FR rLeft, FR rRight) {
+  unsupported("equal");
+}
+
+void Emitter::notEqual(FR rRes, FR rLeft, FR rRight) {
+  unsupported("notEqual");
+}
+
+void Emitter::strictEqual(FR frRes, FR frLeft, FR frRight) {
+  unsupported("strictEqual");
+}
+
+void Emitter::strictNotEqual(FR frRes, FR frLeft, FR frRight) {
+  unsupported("strictNotEqual");
+}
+
+void Emitter::jGreater(
+    bool invert,
+    const asmjit::Label &target,
+    FR rLeft,
+    FR rRight) {
+  unsupported("jGreater");
+}
+
+void Emitter::jGreaterEqual(
+    bool invert,
+    const asmjit::Label &target,
+    FR rLeft,
+    FR rRight) {
+  unsupported("jGreaterEqual");
+}
+
+void Emitter::jLess(
+    bool invert,
+    const asmjit::Label &target,
+    FR rLeft,
+    FR rRight) {
+  unsupported("jLess");
+}
+
+void Emitter::jLessEqual(
+    bool invert,
+    const asmjit::Label &target,
+    FR rLeft,
+    FR rRight) {
+  unsupported("jLessEqual");
+}
+
+void Emitter::jLessN(
+    bool invert,
+    const asmjit::Label &target,
+    FR rLeft,
+    FR rRight) {
+  unsupported("jLessN");
+}
+
+void Emitter::jLessEqualN(
+    bool invert,
+    const asmjit::Label &target,
+    FR rLeft,
+    FR rRight) {
+  unsupported("jLessEqualN");
+}
+
+void Emitter::jEqual(
+    bool invert,
+    const asmjit::Label &target,
+    FR rLeft,
+    FR rRight) {
+  unsupported("jEqual");
+}
+
+void Emitter::jmpTypeOfIs(
+    const asmjit::Label &target,
+    FR frInput,
+    TypeOfIsTypes types) {
+  unsupported("jmpTypeOfIs");
+}
+
+void Emitter::typeOfIs(FR frRes, FR frInput, TypeOfIsTypes types) {
+  unsupported("typeOfIs");
+}
+
+void Emitter::jStrictEqual(
+    bool invert,
+    const asmjit::Label &target,
+    FR frLeft,
+    FR frRight) {
+  unsupported("jStrictEqual");
+}
+
+void Emitter::uintSwitchImm(
+    FR frInput,
+    const asmjit::Label &defaultLabel,
+    llvh::ArrayRef<const asmjit::Label *> labels,
+    uint32_t minVal,
+    uint32_t maxVal) {
+  unsupported("uintSwitchImm");
+}
+
+void Emitter::stringSwitchImm(
+    FR frInput,
+    RuntimeModule *runtimeModule,
+    uint32_t tableIndex,
+    const asmjit::Label &defaultLabel,
+    llvh::ArrayRef<StringSwitchCase> cases) {
+  unsupported("stringSwitchImm");
+}
+
+void Emitter::getByVal(FR frRes, FR frSource, FR frKey) {
+  unsupported("getByVal");
+}
+
+void Emitter::getByIndex(FR frRes, FR frSource, uint32_t key) {
+  unsupported("getByIndex");
+}
+
+void Emitter::putByValLoose(FR frTarget, FR frKey, FR frValue) {
+  unsupported("putByValLoose");
+}
+
+void Emitter::putByValStrict(FR frTarget, FR frKey, FR frValue) {
+  unsupported("putByValStrict");
+}
+
+void Emitter::putByValWithReceiver(
+    FR frTarget,
+    FR frKey,
+    FR frValue,
+    FR frReceiver,
+    bool isStrict) {
+  unsupported("putByValWithReceiver");
+}
+
+void Emitter::getById(
+    FR frRes,
+    SHSymbolID symID,
+    FR frSource,
+    uint8_t cacheIdx) {
+  unsupported("getById");
+}
+
+void Emitter::tryGetById(
+    FR frRes,
+    SHSymbolID symID,
+    FR frSource,
+    uint8_t cacheIdx) {
+  unsupported("tryGetById");
+}
+
+void Emitter::getByIdWithReceiver(
+    FR frRes,
+    SHSymbolID symID,
+    FR frSource,
+    FR frReceiver,
+    uint8_t cacheIdx) {
+  unsupported("getByIdWithReceiver");
+}
+
+void Emitter::getByValWithReceiver(
+    FR frRes,
+    FR frSource,
+    FR frKey,
+    FR frReceiver) {
+  unsupported("getByValWithReceiver");
+}
+
+void Emitter::putByIdLoose(
+    FR frTarget,
+    SHSymbolID symID,
+    FR frValue,
+    uint8_t cacheIdx) {
+  unsupported("putByIdLoose");
+}
+
+void Emitter::putByIdStrict(
+    FR frTarget,
+    SHSymbolID symID,
+    FR frValue,
+    uint8_t cacheIdx) {
+  unsupported("putByIdStrict");
+}
+
+void Emitter::tryPutByIdLoose(
+    FR frTarget,
+    SHSymbolID symID,
+    FR frValue,
+    uint8_t cacheIdx) {
+  unsupported("tryPutByIdLoose");
+}
+
+void Emitter::tryPutByIdStrict(
+    FR frTarget,
+    SHSymbolID symID,
+    FR frValue,
+    uint8_t cacheIdx) {
+  unsupported("tryPutByIdStrict");
+}
+
+void Emitter::defineOwnInDenseArray(FR frArray, FR frProp, uint32_t idx) {
+  unsupported("defineOwnInDenseArray");
+}
+
+void Emitter::defineOwnById(
+    FR frTarget,
+    SHSymbolID symID,
+    FR frValue,
+    uint8_t cacheIdx) {
+  unsupported("defineOwnById");
+}
+
+void Emitter::defineOwnByIndex(FR frTarget, FR frValue, uint32_t key) {
+  unsupported("defineOwnByIndex");
+}
+
+void Emitter::defineOwnByVal(
+    FR frTarget,
+    FR frValue,
+    FR frKey,
+    bool enumerable) {
+  unsupported("defineOwnByVal");
+}
+
+void Emitter::defineOwnGetterSetterByVal(
+    FR frTarget,
+    FR frKey,
+    FR frGetter,
+    FR frSetter,
+    bool enumerable) {
+  unsupported("defineOwnGetterSetterByVal");
+}
+
+void Emitter::getOwnBySlotIdx(FR frRes, FR frTarget, uint32_t slotIdx) {
+  unsupported("getOwnBySlotIdx");
+}
+
+void Emitter::putOwnBySlotIdx(FR frTarget, FR frValue, uint32_t slotIdx) {
+  unsupported("putOwnBySlotIdx");
+}
+
+void Emitter::delByVal(FR frRes, FR frTarget, FR frKey, bool strict) {
+  unsupported("delByVal");
+}
+
+void Emitter::addOwnPrivateBySym(FR frTarget, FR frKey, FR frValue) {
+  unsupported("addOwnPrivateBySym");
+}
+
+void Emitter::getOwnPrivateBySym(
+    FR frRes,
+    FR frTarget,
+    FR frKey,
+    uint8_t cacheIdx) {
+  unsupported("getOwnPrivateBySym");
+}
+
+void Emitter::putOwnPrivateBySym(
+    FR frTarget,
+    FR frKey,
+    FR frValue,
+    uint8_t cacheIdx) {
+  unsupported("putOwnPrivateBySym");
+}
+
+void Emitter::instanceOf(FR frRes, FR frLeft, FR frRight) {
+  unsupported("instanceOf");
+}
+
+void Emitter::isIn(FR frRes, FR frLeft, FR frRight) {
+  unsupported("isIn");
+}
+
+void Emitter::newObject(FR frRes) {
+  unsupported("newObject");
+}
+
+void Emitter::newObjectWithParent(
+    FR frRes,
+    FR frParent,
+    uint32_t shapeTableIndex) {
+  unsupported("newObjectWithParent");
+}
+
+void Emitter::newObjectWithBuffer(
+    FR frRes,
+    uint32_t shapeTableIndex,
+    uint32_t valBufferOffset) {
+  unsupported("newObjectWithBuffer");
+}
+
+void Emitter::newObjectWithBufferAndParent(
+    FR frRes,
+    FR frParent,
+    uint32_t shapeTableIndex,
+    uint32_t valBufferOffset) {
+  unsupported("newObjectWithBufferAndParent");
+}
+
+void Emitter::newTypedObjectWithBuffer(
+    FR frRes,
+    FR frParent,
+    uint32_t shapeTableIndex,
+    uint32_t valBufferOffset,
+    uint8_t nonEnumerable) {
+  unsupported("newTypedObjectWithBuffer");
+}
+
+void Emitter::newArray(FR frRes, uint32_t size) {
+  unsupported("newArray");
+}
+
+void Emitter::newArrayWithBuffer(
+    FR frRes,
+    uint32_t numElements,
+    uint32_t numLiterals,
+    uint32_t bufferIndex) {
+  unsupported("newArrayWithBuffer");
+}
+
+void Emitter::newFastArray(FR frRes, FR frProto, uint32_t size) {
+  unsupported("newFastArray");
+}
+
+void Emitter::fastArrayLength(FR frRes, FR arr) {
+  unsupported("fastArrayLength");
+}
+
+void Emitter::fastArrayLoad(FR frRes, FR arr, FR idx) {
+  unsupported("fastArrayLoad");
+}
+
+void Emitter::fastArrayStore(FR arr, FR idx, FR val) {
+  unsupported("fastArrayStore");
+}
+
+void Emitter::fastArrayPush(FR arr, FR val) {
+  unsupported("fastArrayPush");
+}
+
+void Emitter::fastArrayAppend(FR arr, FR other) {
+  unsupported("fastArrayAppend");
+}
+
+void Emitter::getGlobalObject(FR frRes) {
+  unsupported("getGlobalObject");
+}
+
+void Emitter::declareGlobalVar(SHSymbolID symID) {
+  unsupported("declareGlobalVar");
+}
+
+void Emitter::createTopLevelEnvironment(FR frRes, uint32_t size) {
+  unsupported("createTopLevelEnvironment");
+}
+
+void Emitter::createFunctionEnvironment(FR frRes, uint32_t size) {
+  unsupported("createFunctionEnvironment");
+}
+
+void Emitter::createEnvironment(FR frRes, FR frParent, uint32_t size) {
+  unsupported("createEnvironment");
+}
+
+void Emitter::getParentEnvironment(FR frRes, uint32_t level) {
+  unsupported("getParentEnvironment");
+}
+
+void Emitter::getEnvironment(FR frRes, FR frSource, uint32_t level) {
+  unsupported("getEnvironment");
+}
+
+void Emitter::getClosureEnvironment(FR frRes, FR frClosure) {
+  unsupported("getClosureEnvironment");
+}
+
+void Emitter::loadFromEnvironment(FR frRes, FR frEnv, uint32_t slot) {
+  unsupported("loadFromEnvironment");
+}
+
+void Emitter::storeToEnvironment(bool np, FR frEnv, uint32_t slot, FR frValue) {
+  unsupported("storeToEnvironment");
+}
+
+void Emitter::createClosure(
+    FR frRes,
+    FR frEnv,
+    RuntimeModule *runtimeModule,
+    uint32_t functionID) {
+  unsupported("createClosure");
+}
+
+void Emitter::createBaseClass(FR frRes, FR frPrototypeOut, FR frEnv) {
+  unsupported("createBaseClass");
+}
+
+void Emitter::createDerivedClass(
+    FR frRes,
+    FR frPrototypeOut,
+    FR frEnv,
+    FR frSuperClass) {
+  unsupported("createDerivedClass");
+}
+
+void Emitter::createGenerator(
+    FR frRes,
+    FR frEnv,
+    RuntimeModule *runtimeModule,
+    uint32_t functionID) {
+  unsupported("createGenerator");
+}
+
+void Emitter::getArgumentsPropByValLoose(FR frRes, FR frIndex, FR frLazyReg) {
+  unsupported("getArgumentsPropByValLoose");
+}
+
+void Emitter::getArgumentsPropByValStrict(FR frRes, FR frIndex, FR frLazyReg) {
+  unsupported("getArgumentsPropByValStrict");
+}
+
+void Emitter::reifyArgumentsLoose(FR frLazyReg) {
+  unsupported("reifyArgumentsLoose");
+}
+
+void Emitter::reifyArgumentsStrict(FR frLazyReg) {
+  unsupported("reifyArgumentsStrict");
+}
+
+void Emitter::getArgumentsLength(FR frRes, FR frLazyReg) {
+  unsupported("getArgumentsLength");
+}
+
+void Emitter::createThis(
+    FR frRes,
+    FR frCallee,
+    FR frNewTarget,
+    uint8_t cacheIdx,
+    uint32_t shapeTableIndex) {
+  unsupported("createThis");
+}
+
+void Emitter::selectObject(FR frRes, FR frThis, FR frConstructed) {
+  unsupported("selectObject");
+}
+
+void Emitter::loadThisNS(FR frRes) {
+  unsupported("loadThisNS");
+}
+
+void Emitter::coerceThisNS(FR frRes, FR frThis) {
+  unsupported("coerceThisNS");
+}
+
+void Emitter::getNewTarget(FR frRes) {
+  unsupported("getNewTarget");
+}
+
+void Emitter::iteratorBegin(FR frRes, FR frSource) {
+  unsupported("iteratorBegin");
+}
+
+void Emitter::iteratorNext(FR frRes, FR frIteratorOrIdx, FR frSourceOrNext) {
+  unsupported("iteratorNext");
+}
+
+void Emitter::iteratorClose(FR frIteratorOrIdx, bool ignoreExceptions) {
+  unsupported("iteratorClose");
+}
+
+void Emitter::debugger() {
+  unsupported("debugger");
+}
+
+void Emitter::throwInst(FR frInput) {
+  unsupported("throwInst");
+}
+
+void Emitter::throwIfEmpty(FR frRes, FR frInput) {
+  unsupported("throwIfEmpty");
+}
+
+void Emitter::throwIfUndefined(FR frRes, FR frInput) {
+  unsupported("throwIfUndefined");
+}
+
+void Emitter::throwIfThisInitialized(FR frInput) {
+  unsupported("throwIfThisInitialized");
+}
+
+void Emitter::createRegExp(
+    FR frRes,
+    SHSymbolID patternID,
+    SHSymbolID flagsID,
+    uint32_t regexpID) {
+  unsupported("createRegExp");
+}
+
+void Emitter::loadParentNoTraps(FR frRes, FR frObj) {
+  unsupported("loadParentNoTraps");
+}
+
+void Emitter::typedLoadParent(FR frRes, FR frObj) {
+  unsupported("typedLoadParent");
+}
+
+} // namespace hermes::vm::x86_64
+#endif // HERMESVM_JIT_X86_64

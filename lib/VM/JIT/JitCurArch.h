@@ -25,6 +25,15 @@
 /// FRType, etc. resolve to the current backend's types.
 #define HERMESVM_JIT_ARCH_NS arm64
 
+#elif defined(__x86_64__) || defined(_M_X64)
+
+#include "hermes/VM/JIT/x86-64/JIT.h"
+
+#include "x86-64/JitEmitter.h"
+#include "x86-64/JitImpl.h"
+
+#define HERMESVM_JIT_ARCH_NS x86_64
+
 #else
 #error "JitCurArch.h: unsupported JIT architecture"
 #endif

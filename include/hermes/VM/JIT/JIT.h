@@ -31,7 +31,12 @@ class Emitter;
   friend class arm64::Emitter;
 #elif defined(__x86_64__) || defined(_M_X64)
 using x86_64::JITContext;
-#define FRIEND_JIT friend class x86_64::JITContext;
+namespace x86_64 {
+class Emitter;
+}
+#define FRIEND_JIT                 \
+  friend class x86_64::JITContext; \
+  friend class x86_64::Emitter;
 #endif
 
 } // namespace vm
