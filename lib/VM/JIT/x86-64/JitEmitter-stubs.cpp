@@ -85,14 +85,6 @@ void Emitter::loadConstBigInt(
   unsupported("loadConstBigInt");
 }
 
-void Emitter::toNumber(FR frRes, FR frInput) {
-  unsupported("toNumber");
-}
-
-void Emitter::toNumeric(FR frRes, FR frInput) {
-  unsupported("toNumeric");
-}
-
 void Emitter::toInt32(FR frRes, FR frInput, bool isSigned) {
   unsupported("toInt32");
 }
@@ -103,42 +95,6 @@ void Emitter::addEmptyString(FR frRes, FR frInput) {
 
 void Emitter::addS(FR frRes, FR frLeft, FR frRight) {
   unsupported("addS");
-}
-
-void Emitter::mod(bool forceNumber, FR frRes, FR frLeft, FR frRight) {
-  unsupported("mod");
-}
-
-void Emitter::mul(FR rRes, FR rLeft, FR rRight) {
-  unsupported("mul");
-}
-
-void Emitter::add(FR rRes, FR rLeft, FR rRight) {
-  unsupported("add");
-}
-
-void Emitter::sub(FR rRes, FR rLeft, FR rRight) {
-  unsupported("sub");
-}
-
-void Emitter::div(FR rRes, FR rLeft, FR rRight) {
-  unsupported("div");
-}
-
-void Emitter::mulN(FR rRes, FR rLeft, FR rRight) {
-  unsupported("mulN");
-}
-
-void Emitter::addN(FR rRes, FR rLeft, FR rRight) {
-  unsupported("addN");
-}
-
-void Emitter::subN(FR rRes, FR rLeft, FR rRight) {
-  unsupported("subN");
-}
-
-void Emitter::divN(FR rRes, FR rLeft, FR rRight) {
-  unsupported("divN");
 }
 
 void Emitter::bitAnd(FR rRes, FR rLeft, FR rRight) {
@@ -163,18 +119,6 @@ void Emitter::rShift(FR rRes, FR rLeft, FR rRight) {
 
 void Emitter::urShift(FR rRes, FR rLeft, FR rRight) {
   unsupported("urShift");
-}
-
-void Emitter::dec(FR rRes, FR rInput) {
-  unsupported("dec");
-}
-
-void Emitter::inc(FR rRes, FR rInput) {
-  unsupported("inc");
-}
-
-void Emitter::negate(FR rRes, FR rInput) {
-  unsupported("negate");
 }
 
 void Emitter::jmpTrueFalse(

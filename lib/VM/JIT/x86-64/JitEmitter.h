@@ -552,14 +552,34 @@ class Emitter {
   void addS(FR frRes, FR frLeft, FR frRight);
   void mod(bool forceNumber, FR frRes, FR frLeft, FR frRight);
 
-  void mul(FR rRes, FR rLeft, FR rRight);
-  void add(FR rRes, FR rLeft, FR rRight);
-  void sub(FR rRes, FR rLeft, FR rRight);
-  void div(FR rRes, FR rLeft, FR rRight);
-  void mulN(FR rRes, FR rLeft, FR rRight);
-  void addN(FR rRes, FR rLeft, FR rRight);
-  void subN(FR rRes, FR rLeft, FR rRight);
-  void divN(FR rRes, FR rLeft, FR rRight);
+  // x86-64: the arm64 body is a three-operand `fadd res, dl, dr`; the VEX
+  // form is likewise three-operand, so res may alias either source without
+  // an extra move.
+#define DECL_BINOP(methodName, forceNum, commentStr, slowCall, x86body) \
+  void methodName(FR rRes, FR rLeft, FR rRight) {                       \
+    arithBinOp(                                                         \
+        forceNum,                                                       \
+        rRes,                                                           \
+        rLeft,                                                          \
+        rRight,                                                         \
+        commentStr,                                                     \
+        [](x86::Assembler & as,                                         \
+           const x86::Xmm &res,                                         \
+           const x86::Xmm &dl,                                          \
+           const x86::Xmm &dr) x86body,                                 \
+        (void *)slowCall,                                               \
+        #slowCall);                                                     \
+  }
+
+  DECL_BINOP(mul, false, "mul", _sh_ljs_mul_rjs, { as.vmulsd(res, dl, dr); })
+  DECL_BINOP(add, false, "add", _sh_ljs_add_rjs, { as.vaddsd(res, dl, dr); })
+  DECL_BINOP(sub, false, "sub", _sh_ljs_sub_rjs, { as.vsubsd(res, dl, dr); })
+  DECL_BINOP(div, false, "div", _sh_ljs_div_rjs, { as.vdivsd(res, dl, dr); })
+  DECL_BINOP(mulN, true, "mulN", _sh_ljs_mul_rjs, { as.vmulsd(res, dl, dr); })
+  DECL_BINOP(addN, true, "addN", _sh_ljs_add_rjs, { as.vaddsd(res, dl, dr); })
+  DECL_BINOP(subN, true, "subN", _sh_ljs_sub_rjs, { as.vsubsd(res, dl, dr); })
+  DECL_BINOP(divN, true, "divN", _sh_ljs_div_rjs, { as.vdivsd(res, dl, dr); })
+#undef DECL_BINOP
 
   void bitAnd(FR rRes, FR rLeft, FR rRight);
   void bitOr(FR rRes, FR rLeft, FR rRight);
@@ -568,9 +588,46 @@ class Emitter {
   void rShift(FR rRes, FR rLeft, FR rRight);
   void urShift(FR rRes, FR rLeft, FR rRight);
 
-  void dec(FR rRes, FR rInput);
-  void inc(FR rRes, FR rInput);
-  void negate(FR rRes, FR rInput);
+  // x86-64: the fast body receives the Emitter rather than the assembler,
+  // because x86 has no floating-point immediate: arm64's `fmov tmp, 1.0`
+  // becomes a load of an interned RO-data constant, which only the Emitter
+  // can hand out (roConst64()).
+#define DECL_UNOP(methodName, forceNum, commentStr, slowCall, x86body) \
+  void methodName(FR rRes, FR rInput) {                                \
+    arithUnop(                                                         \
+        forceNum,                                                      \
+        rRes,                                                          \
+        rInput,                                                        \
+        commentStr,                                                    \
+        [](Emitter & em,                                               \
+           const x86::Xmm &d,                                          \
+           const x86::Xmm &s,                                          \
+           const x86::Xmm &tmp) x86body,                               \
+        (void *)slowCall,                                              \
+        #slowCall);                                                    \
+  }
+
+  // The addend is taken straight from memory: `vaddsd xmm, xmm, m64` reads
+  // 8 bytes with no alignment requirement, so no temp is needed and the
+  // `tmp` operand goes unused (unlike arm64, which needs it for `fmov`).
+  DECL_UNOP(dec, false, "dec", _sh_ljs_dec_rjs, {
+    (void)tmp;
+    em.a.vaddsd(d, s, em.roConst64(llvh::DoubleToBits(-1.0), "-1.0"));
+  })
+  DECL_UNOP(inc, false, "inc", _sh_ljs_inc_rjs, {
+    (void)tmp;
+    em.a.vaddsd(d, s, em.roConst64(llvh::DoubleToBits(1.0), "1.0"));
+  })
+  // x86-64: arm64's `fneg` becomes a sign-bit flip. The mask is loaded into
+  // the vector temp first rather than used as a `vxorpd` memory operand,
+  // because that operand is 128 bits wide and would read past an 8-byte
+  // RO-data entry. `tmp` is `d` whenever `d != s`, so the load never
+  // clobbers the source.
+  DECL_UNOP(negate, false, "neg", _sh_ljs_minus_rjs, {
+    em.a.vmovsd(tmp, em.roConst64(UINT64_C(1) << 63, "-0.0"));
+    em.a.vxorpd(d, s, tmp);
+  });
+#undef DECL_UNOP
 
   void jmpTrueFalse(bool onTrue, const asmjit::Label &target, FR frInput);
   void jmpUndefined(const asmjit::Label &target, FR frInput);
@@ -811,6 +868,21 @@ class Emitter {
   void loadParentNoTraps(FR frRes, FR frObj);
   void typedLoadParent(FR frRes, FR frObj);
 
+  /// Emit, only when emitTypeAsserts_ is set, a trap-on-violation check
+  /// that the value of \p fr, currently held in \p hwVal, satisfies
+  /// \p pred.
+  ///
+  /// x86-64: a placeholder. The check sequences land with the type-assert
+  /// milestone; until then enter() declines any function that asks for
+  /// them, so the flag is never set here. The call sites exist already so
+  /// that the ported emitters stay textually identical to arm64's.
+  void emitTypeAssert(FR fr, HWReg hwVal, TypePred pred) {
+    (void)fr;
+    (void)hwVal;
+    (void)pred;
+    assert(!emitTypeAsserts_ && "type asserts are not implemented yet");
+  }
+
   /// Emit, at a bytecode instruction boundary, the global-register-class
   /// checks for every FR recorded since the last call.
   /// x86-64: the check sequences themselves land with the tag-helper
@@ -1002,6 +1074,65 @@ class Emitter {
   /// unless the FR owns a global register. Callers must check
   /// emitTypeAsserts_ themselves; this does not.
   void recordFRWriteForAssert(FR fr);
+
+  /// Like \c emitTypeAssert, but for an \p fr that the fast path never
+  /// materializes into a register. x86-64: a placeholder, exactly as
+  /// \c emitTypeAssert is.
+  void emitTypeAssertFR(FR fr, TypePred pred) {
+    (void)fr;
+    (void)pred;
+    assert(!emitTypeAsserts_ && "type asserts are not implemented yet");
+  }
+
+  /// Load the address of \p frameReg's frame slot into \p dst.
+  /// x86-64: every frame slot is reachable through lea's signed 32-bit
+  /// displacement, so unlike arm64 there is no immediate-range fallback.
+  void loadFrameAddr(const x86::Gp &dst, FR frameReg) {
+    a.lea(dst, x86::ptr(xFrame, (int32_t)frByteOffset(frameReg)));
+  }
+
+  /// \return a RIP-relative qword operand addressing the 64-bit constant
+  /// \p bits, interning it in RO data on first use. x86 has no
+  /// floating-point immediate, so a constant an emitter needs in a vector
+  /// register has to come from memory.
+  ///
+  /// The RO data block is emitted wherever the code stream happens to end,
+  /// so its absolute address carries no alignment beyond the code buffer's
+  /// own. Entries are therefore usable only by instructions with no
+  /// alignment requirement -- which is every VEX-encoded memory operand
+  /// this backend emits, but not the legacy aligned-SSE forms. An emitter
+  /// that needs an aligned operand must first make emitROData() align the
+  /// block, with an \c a.align() before it binds roDataLabel_.
+  x86::Mem roConst64(uint64_t bits, const char *comment) {
+    return x86::qword_ptr(roDataLabel_, uint64Const(bits, comment));
+  }
+
+  void arithUnop(
+      bool forceNumber,
+      FR frRes,
+      FR frInput,
+      const char *name,
+      void (*fast)(
+          Emitter &em,
+          const x86::Xmm &d,
+          const x86::Xmm &s,
+          const x86::Xmm &tmp),
+      void *slowCall,
+      const char *slowCallName);
+
+  void arithBinOp(
+      bool forceNumber,
+      FR frRes,
+      FR frLeft,
+      FR frRight,
+      const char *name,
+      void (*fast)(
+          x86::Assembler &a,
+          const x86::Xmm &res,
+          const x86::Xmm &dl,
+          const x86::Xmm &dr),
+      void *slowCall,
+      const char *slowCallName);
 
  private:
   /// Allocate or return the offset in RO DATA of the current function's debug
