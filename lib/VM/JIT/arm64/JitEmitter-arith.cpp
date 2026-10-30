@@ -17,8 +17,10 @@ namespace hermes::vm::arm64 {
 
 void Emitter::toNumber(FR frRes, FR frInput) {
   comment("// %s r%u, r%u", "toNumber", frRes.index(), frInput.index());
-  if (isFRKnownNumber(frInput))
+  if (isFRKnownNumber(frInput)) {
+    emitTypeAssertFR(frInput, TypePred::IsNumber);
     return mov(frRes, frInput, false);
+  }
 
   HWReg hwRes, hwInput;
   asmjit::Label slowPathLab = newSlowPathLabel();
@@ -65,8 +67,10 @@ void Emitter::toNumber(FR frRes, FR frInput) {
 
 void Emitter::toNumeric(FR frRes, FR frInput) {
   comment("// %s r%u, r%u", "toNumeric", frRes.index(), frInput.index());
-  if (isFRKnownNumber(frInput))
+  if (isFRKnownNumber(frInput)) {
+    emitTypeAssertFR(frInput, TypePred::IsNumber);
     return mov(frRes, frInput, false);
+  }
 
   HWReg hwRes, hwInput;
   asmjit::Label slowPathLab = newSlowPathLabel();
@@ -249,7 +253,7 @@ void Emitter::arithUnop(
   }
 
   hwInput = getOrAllocFRInVecD(frInput, true);
-  if (forceNumber)
+  if (inputIsNum)
     emitTypeAssert(frInput, hwInput, TypePred::IsNumber);
   if (!inputIsNum) {
     slowPathLab = newSlowPathLabel();
@@ -446,10 +450,10 @@ void Emitter::mod(bool forceNumber, FR frRes, FR frLeft, FR frRight) {
   hwLeft = getOrAllocFRInVecD(frLeft, true);
   hwRight = getOrAllocFRInVecD(frRight, true);
 
-  if (forceNumber) {
+  if (leftIsNum)
     emitTypeAssert(frLeft, hwLeft, TypePred::IsNumber);
+  if (rightIsNum)
     emitTypeAssert(frRight, hwRight, TypePred::IsNumber);
-  }
 
   if (slow) {
     // Since HermesValue is NaN-boxed we know that all non-number values will be
@@ -540,10 +544,10 @@ void Emitter::arithBinOp(
   hwLeft = getOrAllocFRInVecD(frLeft, true);
   hwRight = getOrAllocFRInVecD(frRight, true);
 
-  if (forceNumber) {
+  if (leftIsNum)
     emitTypeAssert(frLeft, hwLeft, TypePred::IsNumber);
+  if (rightIsNum)
     emitTypeAssert(frRight, hwRight, TypePred::IsNumber);
-  }
 
   if (slow) {
     slowPathLab = newSlowPathLabel();
@@ -705,6 +709,17 @@ void Emitter::strictEqualImpl(bool invert, FR frRes, FR frLeft, FR frRight) {
       isFRKnownOtherNonPtr(frLeft) || isFRKnownOtherNonPtr(frRight)) {
     HWReg hwLeft = getOrAllocFRInGpX(frLeft, true);
     HWReg hwRight = getOrAllocFRInGpX(frRight, true);
+
+    // Evaluate and check the guards before frRes is declared updated below:
+    // frRes may alias frLeft/frRight, and frUpdatedWithHW would otherwise
+    // make isFRKnownBool/isFRKnownOtherNonPtr true only because of the
+    // result declaration, asserting a predicate against a register that
+    // still holds the (differently-typed) original operand.
+    if (isFRKnownBool(frLeft) || isFRKnownOtherNonPtr(frLeft))
+      emitTypeAssert(frLeft, hwLeft, TypePred::BitComparable);
+    if (isFRKnownBool(frRight) || isFRKnownOtherNonPtr(frRight))
+      emitTypeAssert(frRight, hwRight, TypePred::BitComparable);
+
     HWReg hwRes = getOrAllocFRInGpX(frRes, false);
     frUpdatedWithHW(frRes, hwRes, FRType::Bool);
 
@@ -723,6 +738,15 @@ void Emitter::strictEqualImpl(bool invert, FR frRes, FR frLeft, FR frRight) {
     // Do this always, since this could be the end of the BB.
     HWReg hwLeftD = getOrAllocFRInVecD(frLeft, true);
     HWReg hwRightD = getOrAllocFRInVecD(frRight, true);
+
+    // See the raw-bit tier above: evaluate and check the guards before
+    // frRes is declared updated, since frRes may alias frLeft/frRight and
+    // frUpdatedWithHW would otherwise perturb isFRKnownNumber's answer.
+    if (isFRKnownNumber(frLeft))
+      emitTypeAssert(frLeft, hwLeftD, TypePred::IsNumber);
+    if (isFRKnownNumber(frRight))
+      emitTypeAssert(frRight, hwRightD, TypePred::IsNumber);
+
     HWReg hwRes = getOrAllocFRInGpX(frRes, false);
     frUpdatedWithHW(frRes, hwRes, FRType::Bool);
 
@@ -894,6 +918,10 @@ void Emitter::compareImpl(
 
   hwLeft = getOrAllocFRInVecD(frLeft, true);
   hwRight = getOrAllocFRInVecD(frRight, true);
+  if (leftIsNum)
+    emitTypeAssert(frLeft, hwLeft, TypePred::IsNumber);
+  if (rightIsNum)
+    emitTypeAssert(frRight, hwRight, TypePred::IsNumber);
   if (slow) {
     slowPathLab = newSlowPathLabel();
     contLab = newContLabel();

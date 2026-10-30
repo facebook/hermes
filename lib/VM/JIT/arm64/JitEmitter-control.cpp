@@ -633,6 +633,7 @@ void Emitter::jmpTrueFalse(
 
   if (isFRKnownType(frInput, FRType::Number)) {
     HWReg hwInput = getOrAllocFRInVecD(frInput, true);
+    emitTypeAssert(frInput, hwInput, TypePred::IsNumber);
     a.fcmp(hwInput.a64VecD(), 0.0);
     if (onTrue) {
       // Branch on < 0 and > 0. All that remains is 0 and NaN.
@@ -648,6 +649,7 @@ void Emitter::jmpTrueFalse(
   } else if (isFRKnownType(frInput, FRType::Bool)) {
     HWReg hwInput = getOrAllocFRInGpX(frInput, true);
     a64::GpX xInput = hwInput.a64GpX();
+    emitTypeAssert(frInput, hwInput, TypePred::IsBool);
 
     static_assert(
         HERMESVALUE_VERSION == 2, "bool is encoded as a bit at kHV_BoolBitIdx");
@@ -684,6 +686,10 @@ void Emitter::jmpUndefined(const asmjit::Label &target, FR frInput) {
 
   if (isFRKnownType(frInput, FRType::Number) ||
       isFRKnownType(frInput, FRType::Bool)) {
+    emitTypeAssertFR(
+        frInput,
+        isFRKnownType(frInput, FRType::Number) ? TypePred::IsNumber
+                                               : TypePred::IsBool);
     return;
   }
 
@@ -775,10 +781,10 @@ void Emitter::jCond(
   hwLeft = getOrAllocFRInVecD(frLeft, true);
   hwRight = getOrAllocFRInVecD(frRight, true);
 
-  if (forceNumber) {
+  if (leftIsNum)
     emitTypeAssert(frLeft, hwLeft, TypePred::IsNumber);
+  if (rightIsNum)
     emitTypeAssert(frRight, hwRight, TypePred::IsNumber);
-  }
 
   a.fcmp(hwLeft.a64VecD(), hwRight.a64VecD());
 
@@ -869,6 +875,11 @@ void Emitter::jStrictEqual(
     HWReg hwRight = getOrAllocFRInGpX(frRight, true);
     freeAllFRTempExcept({});
 
+    if (isFRKnownBool(frLeft) || isFRKnownOtherNonPtr(frLeft))
+      emitTypeAssert(frLeft, hwLeft, TypePred::BitComparable);
+    if (isFRKnownBool(frRight) || isFRKnownOtherNonPtr(frRight))
+      emitTypeAssert(frRight, hwRight, TypePred::BitComparable);
+
     a.cmp(hwLeft.a64GpX(), hwRight.a64GpX());
     a.b(!invert ? a64::CondCode::kEQ : a64::CondCode::kNE, target);
     return;
@@ -885,6 +896,12 @@ void Emitter::jStrictEqual(
     HWReg hwLeftD = getOrAllocFRInVecD(frLeft, true);
     HWReg hwRightD = getOrAllocFRInVecD(frRight, true);
     freeAllFRTempExcept({});
+
+    if (isFRKnownNumber(frLeft))
+      emitTypeAssert(frLeft, hwLeftD, TypePred::IsNumber);
+    if (isFRKnownNumber(frRight))
+      emitTypeAssert(frRight, hwRightD, TypePred::IsNumber);
+
     a.fcmp(hwLeftD.a64VecD(), hwRightD.a64VecD());
     a.b(!invert ? a64::CondCode::kEQ : a64::CondCode::kNE, target);
     return;

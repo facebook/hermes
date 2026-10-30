@@ -992,6 +992,11 @@ class Emitter {
   /// must have verified that flags are dead at the insertion point. That
   /// is an obligation, not a property emitters have in general: see
   /// selectObject, which holds flags across getOrAllocFRInGpX.
+  ///
+  /// Where an emitter knows a type fact per operand, guard each check on
+  /// that operand's own fact, never on the emitter's combined fast-path
+  /// condition: the point is to assert every fact the JIT holds, not only
+  /// the ones the chosen code shape happens to rely on.
   void emitTypeAssert(FR fr, HWReg hwVal, TypePred pred);
 
  private:
@@ -1284,7 +1289,24 @@ class Emitter {
 
   /// Emit \c emitTypeAssert's check sequence for \p pred against \p xVal,
   /// which holds the current value of \p fr, recording a TypeAssertSite.
+  /// The caller emits the dump comment, so that it precedes any load it
+  /// had to emit to produce \p xVal.
   void emitTypeAssertGpX(FR fr, const a64::GpX &xVal, TypePred pred);
+
+  /// Like \c emitTypeAssert, but for an \p fr that the fast path never
+  /// materializes into a register: reads it with \c readFRForAssert first.
+  /// Like \c emitTypeAssert, it does nothing unless emitTypeAsserts_ is
+  /// set, so callers need not check it themselves.
+  void emitTypeAssertFR(FR fr, TypePred pred);
+
+  /// Read the current value of \p fr into xScratch, for use immediately
+  /// before an \c emitTypeAssertGpX call, without allocating or perturbing
+  /// any FRState. Honors the FRState up-to-date invariants rather than
+  /// merely the location priority: the local register if any (locals are
+  /// always current), else the global register only if
+  /// globalRegUpToDate, else the frame slot (asserting frameUpToDate).
+  /// \pre \p fr is not dirty (regIsDirty).
+  void readFRForAssert(FR fr);
 
   /// Emit the shared out-of-line tail that all type assert failure stubs
   /// jump to, if any type assert was emitted for this function.

@@ -993,12 +993,21 @@ void Emitter::emitSlowPaths() {
 void Emitter::emitTypeAssert(FR fr, HWReg hwVal, TypePred pred) {
   if (LLVM_LIKELY(!emitTypeAsserts_))
     return;
+  comment("// type assert r%u is %s", fr.index(), typePredName(pred));
   if (hwVal.isVecD()) {
     a.fmov(xScratch, hwVal.a64VecD());
     emitTypeAssertGpX(fr, xScratch, pred);
   } else {
     emitTypeAssertGpX(fr, hwVal.a64GpX(), pred);
   }
+}
+
+void Emitter::emitTypeAssertFR(FR fr, TypePred pred) {
+  if (LLVM_LIKELY(!emitTypeAsserts_))
+    return;
+  comment("// type assert r%u is %s", fr.index(), typePredName(pred));
+  readFRForAssert(fr);
+  emitTypeAssertGpX(fr, xScratch, pred);
 }
 
 void Emitter::emitTypeAssertGpX(FR fr, const a64::GpX &xVal, TypePred pred) {
@@ -1016,7 +1025,6 @@ void Emitter::emitTypeAssertGpX(FR fr, const a64::GpX &xVal, TypePred pred) {
           (uint16_t)fr.index(),
           pred});
 
-  comment("// type assert r%u is %s", fr.index(), typePredName(pred));
   asmjit::Label failLab = newPrefLabel("TYPEASSERT_", idx);
 
   // The helpers below tolerate xTemp == xVal; every such use is the last
@@ -1055,6 +1063,32 @@ void Emitter::emitTypeAssertGpX(FR fr, const a64::GpX &xVal, TypePred pred) {
         em.a.mov(a64::w0, idx);
         em.a.b(em.typeAssertFailLab_);
       });
+}
+
+void Emitter::readFRForAssert(FR fr) {
+  assert(emitTypeAsserts_ && "caller must check emitTypeAsserts_");
+  FRState &frState = frameRegs_[fr.index()];
+  assert(!frState.regIsDirty && "reading an FR that is about to be written");
+
+  // Locals always hold the latest value; a global reg holds it only if
+  // globalRegUpToDate; otherwise the frame must be up to date.
+  if (frState.localGpX) {
+    a.mov(xScratch, frState.localGpX.a64GpX());
+  } else if (frState.localVecD) {
+    a.fmov(xScratch, frState.localVecD.a64VecD());
+  } else if (frState.globalReg && frState.globalRegUpToDate) {
+    if (frState.globalReg.isGpX())
+      a.mov(xScratch, frState.globalReg.a64GpX());
+    else
+      a.fmov(xScratch, frState.globalReg.a64VecD());
+  } else {
+    assert(frState.frameUpToDate && "FR has no up-to-date location");
+    // _loadFrame's large-offset encoding fallback also uses xScratch, but
+    // only as the address index in its mov/ldr pair, which is read before
+    // the ldr writes the loaded value into it, so passing xScratch as the
+    // destination here is safe.
+    _loadFrame(HWReg(xScratch), fr);
+  }
 }
 
 void Emitter::emitTypeAssertFailTail() {
