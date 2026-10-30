@@ -153,6 +153,68 @@ inline void emit_sh_ljs_is_double(
   a.cmp(input, tmp);
 }
 
+/// For a register \p dInput, which contains a double, check whether it is
+/// exactly an integer, i.e. whether truncating it and converting back gives
+/// the same value.
+/// CPU flags are updated: the value is an integer only if both \c jne and
+/// \c jp fall through (see below).
+/// If successful, \p xTemp will contain the number converted to a signed 64
+/// bit integer; \p dTemp is clobbered either way.
+/// \pre dTemp != dInput, because both are used in the comparison.
+///
+/// x86-64: arm64's fcvtzs saturates, so it has to defeat the saturation with
+/// an sbfx before the round trip, or the doubles 2^63 and -2^63 would both
+/// convert back to themselves and be accepted with the wrong low 32 bits.
+/// vcvttsd2si does not saturate: every out-of-range input, and every NaN,
+/// produces the "integer indefinite" value INT64_MIN, which converts back to
+/// exactly -2^63. The only input that value can compare equal to is -2^63
+/// itself, whose conversion to INT64_MIN is the correct one -- its low 32
+/// bits are 0, which is ToInt32(-2^63). So no sbfx analogue is needed here
+/// and the round-trip compare alone is exact.
+///
+/// The other divergence is the branch. arm64's fcmp leaves NE set on
+/// unordered, so a single b.ne covers "different" and "input was a NaN".
+/// vucomisd instead reports unordered as ZF=PF=CF=1, i.e. as *equal*, so the
+/// caller must branch on both: jne for an ordered mismatch and jp for the
+/// unordered case.
+inline void emit_double_is_int(
+    x86::Assembler &a,
+    const x86::Gp &xTemp,
+    const x86::Xmm &dTemp,
+    const x86::Xmm &dInput) {
+  assert(dTemp != dInput && "must use a different temp");
+  assert(xTemp.isGpq() && "the round trip must go through 64 bits");
+
+  // Convert the operand to a signed 64 bit integer.
+  a.vcvttsd2si(xTemp, dInput);
+  // Convert back to a double and see if they compare equal. dTemp is also
+  // the source of the untouched upper half, which is dead here.
+  a.vcvtsi2sd(dTemp, dTemp, xTemp);
+  a.vucomisd(dTemp, dInput);
+}
+
+/// Convert the low 32 bits of \p xInt to a double in \p dRes, interpreting
+/// them as unsigned if \p isUnsigned and as signed otherwise.
+/// \p xInt is clobbered when \p isUnsigned.
+///
+/// x86-64: this stands in for arm64's scvtf/ucvtf of a W register. x86 has
+/// no unsigned integer-to-double conversion at all, so the unsigned case
+/// zero-extends into 64 bits -- a 32-bit mov does that for free -- and
+/// converts that as a signed 64-bit value, which is exact for every uint32.
+inline void emit_int32_to_double(
+    x86::Assembler &a,
+    const x86::Xmm &dRes,
+    const x86::Gp &xInt,
+    bool isUnsigned) {
+  assert(xInt.isGpq() && "the unsigned conversion needs the full register");
+  if (isUnsigned) {
+    a.mov(xInt.r32(), xInt.r32());
+    a.vcvtsi2sd(dRes, dRes, xInt);
+  } else {
+    a.vcvtsi2sd(dRes, dRes, xInt.r32());
+  }
+}
+
 /// Encode the boolean in the low bit of \p inOut as a HermesValue in place.
 /// The high bits of \p inOut must be zero.
 ///

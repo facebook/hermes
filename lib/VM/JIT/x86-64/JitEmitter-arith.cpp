@@ -122,6 +122,69 @@ void Emitter::toNumeric(FR frRes, FR frInput) {
       });
 }
 
+void Emitter::toInt32(FR frRes, FR frInput, bool isSigned) {
+  comment(
+      "// %s r%u, r%u",
+      isSigned ? "ToInt32" : "ToUint32",
+      frRes.index(),
+      frInput.index());
+
+  HWReg hwTempGpX = allocTempGpX();
+  HWReg hwTempVecD = allocTempVecD();
+
+  syncAllFRTempExcept(frRes != frInput ? frRes : FR());
+  // TODO: As with binary bit ops, it should be possible to only do this in the
+  // slow path.
+  syncToFrame(frInput);
+
+  asmjit::Label slowPathLab = newSlowPathLabel();
+  asmjit::Label contLab = newContLabel();
+
+  HWReg hwInput = getOrAllocFRInVecD(frInput, true);
+  emit_double_is_int(a, hwTempGpX.gpq(), hwTempVecD.xmm(), hwInput.xmm());
+  // x86-64: two branches where arm64 has one. See emit_double_is_int: an
+  // ordered mismatch shows up in ZF, an unordered compare (the input is a
+  // NaN, so any non-number, or the JS NaN) only in PF.
+  a.jne(slowPathLab);
+  a.jp(slowPathLab);
+
+  // Done allocating registers. Free them all and allocate the result.
+  freeAllFRTempExcept({});
+  freeReg(hwTempGpX);
+  freeReg(hwTempVecD);
+  HWReg hwRes = getOrAllocFRInVecD(frRes, false);
+  frUpdatedWithHW(frRes, hwRes, FRType::Number);
+
+  // Convert the int32 back to a double.
+  emit_int32_to_double(
+      a, hwRes.xmm(), hwTempGpX.gpq(), /* isUnsigned */ !isSigned);
+
+  a.bind(contLab);
+
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      emittingIP,
+      [isSigned, frRes, frInput, hwRes](Emitter &em, SlowPath &sp) {
+        em.comment(
+            "// Slow path: %s, r%u, r%u",
+            isSigned ? "ToInt32" : "ToUint32",
+            frRes.index(),
+            frInput.index());
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(x86::rdi, xRuntime);
+        em.loadFrameAddr(x86::rsi, frInput);
+        em.callRuntimeWithSavedIP(
+            isSigned ? (void *)_sh_ljs_to_int32_rjs
+                     : (void *)_sh_ljs_to_uint32_rjs,
+            isSigned ? "_sh_ljs_to_int32_rjs" : "_sh_ljs_to_uint32_rjs");
+        // x86-64: these return a double, so the result arrives in xmm0,
+        // where arm64 reads it out of d0.
+        em.movHWFromHW<false>(hwRes, HWReg::vecD(0));
+        em.a.jmp(sp.contLab);
+      });
+}
+
 void Emitter::arithUnop(
     bool forceNumber,
     FR frRes,
@@ -224,6 +287,62 @@ void Emitter::booleanNot(FR frRes, FR frInput) {
   freeReg(hwTmp);
   emit_sh_ljs_bool(a, hwRes.gpq(), hwTmp.gpq());
   frUpdatedWithHW(frRes, hwRes, FRType::Bool);
+}
+
+void Emitter::bitNot(FR frRes, FR frInput) {
+  comment("// BitNot r%u, r%u", frRes.index(), frInput.index());
+
+  HWReg hwTempGpX = allocTempGpX();
+  HWReg hwTempVecD = allocTempVecD();
+
+  syncAllFRTempExcept(frRes != frInput ? frRes : FR());
+  // TODO: As with binary bit ops, it should be possible to only do this in the
+  // slow path.
+  syncToFrame(frInput);
+
+  asmjit::Label slowPathLab = newSlowPathLabel();
+  asmjit::Label contLab = newContLabel();
+
+  HWReg hwInput = getOrAllocFRInVecD(frInput, true);
+  emit_double_is_int(a, hwTempGpX.gpq(), hwTempVecD.xmm(), hwInput.xmm());
+  // x86-64: see toInt32 -- the unordered case needs its own branch.
+  a.jne(slowPathLab);
+  a.jp(slowPathLab);
+
+  // Done allocating registers. Free them all and allocate the result.
+  freeAllFRTempExcept({});
+  freeReg(hwTempGpX);
+  freeReg(hwTempVecD);
+  HWReg hwRes = getOrAllocFRInVecD(frRes, false);
+  frUpdatedWithHW(
+      frRes,
+      hwRes,
+      isFRKnownType(frInput, FRType::Number) ? FRType::Number
+                                             : FRType::UnknownPtr);
+
+  // Perform the negation and write it to the result.
+  a.not_(hwTempGpX.gpq().r32());
+  emit_int32_to_double(a, hwRes.xmm(), hwTempGpX.gpq(), /* isUnsigned */ false);
+
+  a.bind(contLab);
+
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      emittingIP,
+      [frRes, frInput, hwRes](Emitter &em, SlowPath &sp) {
+        em.comment(
+            "// Slow path: bitNot r%u, r%u", frRes.index(), frInput.index());
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(x86::rdi, xRuntime);
+        em.loadFrameAddr(x86::rsi, frInput);
+        EMIT_RUNTIME_CALL(
+            em,
+            SHLegacyValue (*)(SHRuntime *, const SHLegacyValue *),
+            _sh_ljs_bit_not_rjs);
+        em.movHWFromHW<false>(hwRes, HWReg::gpX(0));
+        em.a.jmp(sp.contLab);
+      });
 }
 
 void Emitter::mod(bool forceNumber, FR frRes, FR frLeft, FR frRight) {
@@ -408,6 +527,123 @@ void Emitter::arithBinOp(
         em.loadFrameAddr(x86::rsi, frLeft);
         em.loadFrameAddr(x86::rdx, frRight);
         em.callRuntimeWithSavedIP(slowCall, slowCallName);
+        em.movHWFromHW<false>(hwRes, HWReg::gpX(0));
+        em.a.jmp(sp.contLab);
+      });
+}
+
+void Emitter::bitBinOp(
+    FR frRes,
+    FR frLeft,
+    FR frRight,
+    bool unsignedRes,
+    bool rightInCl,
+    const char *name,
+    SHLegacyValue (*slowCall)(
+        SHRuntime *shr,
+        const SHLegacyValue *a,
+        const SHLegacyValue *b),
+    const char *slowCallName,
+    void (*fast)(x86::Assembler &a, const x86::Gp &res, const x86::Gp &right)) {
+  comment(
+      "// %s r%u, r%u, r%u",
+      name,
+      frRes.index(),
+      frLeft.index(),
+      frRight.index());
+
+  // x86-64: a variable shift can only take its count in cl, so for the shifts
+  // rcx is vacated here and the right temp is allocated into it. Moving the
+  // count into cl later is not an option: by the time the fast body runs, the
+  // two temps below are the only live GP temps, so if the left one happened
+  // to be rcx the move would destroy the value being shifted.
+  //
+  // The right temp is allocated first because allocTempGpX() without a hint
+  // takes the lowest-numbered free register, which is rcx itself whenever rax
+  // is in use. Which of the two temps is which register does not matter
+  // otherwise.
+  llvh::Optional<HWReg> preferredRight{};
+  if (rightInCl) {
+    syncAndFreeTempReg(HWReg(x86::rcx));
+    preferredRight = HWReg(x86::rcx);
+  }
+  HWReg hwTempRGpX = allocTempGpX(preferredRight);
+  HWReg hwTempLGpX = allocTempGpX();
+  // The two steps above are believed to always place the count in rcx, but
+  // "believed" is not good enough for a rule the instruction encoding
+  // imposes: a shift body reading a stale cl is a silent wrong answer, and
+  // an assert would only catch it in a debug build. Check it for real and
+  // decline the function instead. The cost is one compare per emitted shift
+  // at compile time.
+  if (rightInCl && hwTempRGpX != HWReg(x86::rcx))
+    unsupported("shift count not in rcx");
+  HWReg hwTempLVecD = allocTempVecD();
+  HWReg hwTempRVecD = allocTempVecD();
+
+  syncAllFRTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
+  // TODO: In principle, it should be possible to only sync these in the slow
+  // path. If we do that, we have to ensure that the frameUpToDate bit is not
+  // set, since subsequent instructions cannot rely on it. To do this, we would
+  // need to preserve information for the slow path to know whether they were
+  // already sync'd to memory.
+  syncToFrame(frLeft);
+  syncToFrame(frRight);
+
+  asmjit::Label slowPathLab = newSlowPathLabel();
+  asmjit::Label contLab = newContLabel();
+
+  HWReg hwLeft = getOrAllocFRInVecD(frLeft, true);
+  emit_double_is_int(a, hwTempLGpX.gpq(), hwTempLVecD.xmm(), hwLeft.xmm());
+  // x86-64: see toInt32 -- an ordered mismatch is in ZF, unordered in PF.
+  a.jne(slowPathLab);
+  a.jp(slowPathLab);
+
+  // Do the same for the RHS.
+  HWReg hwRight = getOrAllocFRInVecD(frRight, true);
+  emit_double_is_int(a, hwTempRGpX.gpq(), hwTempRVecD.xmm(), hwRight.xmm());
+  a.jne(slowPathLab);
+  a.jp(slowPathLab);
+
+  // Done allocating registers. Free them all and allocate the result.
+  freeAllFRTempExcept({});
+  freeReg(hwTempLGpX);
+  freeReg(hwTempRGpX);
+  freeReg(hwTempLVecD);
+  freeReg(hwTempRVecD);
+  HWReg hwRes = getOrAllocFRInVecD(frRes, false);
+  frUpdatedWithHW(
+      frRes,
+      hwRes,
+      isFRKnownNumber(frLeft) && isFRKnownNumber(frRight) ? FRType::Number
+                                                          : FRType::UnknownPtr);
+
+  // Invoke the fast path, and move the result back as a 32 bit integer.
+  // x86-64: the integer ALU is two-operand, and arm64's call site passes the
+  // left temp as both the destination and the first source, so the separate
+  // destination operand is dropped instead of adding a move that would always
+  // be a no-op.
+  fast(a, hwTempLGpX.gpq(), hwTempRGpX.gpq());
+  emit_int32_to_double(a, hwRes.xmm(), hwTempLGpX.gpq(), unsignedRes);
+
+  a.bind(contLab);
+
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      emittingIP,
+      [name, frRes, frLeft, frRight, hwRes, slowCall, slowCallName](
+          Emitter &em, SlowPath &sp) {
+        em.comment(
+            "// %s r%u, r%u, r%u",
+            name,
+            frRes.index(),
+            frLeft.index(),
+            frRight.index());
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(x86::rdi, xRuntime);
+        em.loadFrameAddr(x86::rsi, frLeft);
+        em.loadFrameAddr(x86::rdx, frRight);
+        em.callRuntimeWithSavedIP((void *)slowCall, slowCallName);
         em.movHWFromHW<false>(hwRes, HWReg::gpX(0));
         em.a.jmp(sp.contLab);
       });

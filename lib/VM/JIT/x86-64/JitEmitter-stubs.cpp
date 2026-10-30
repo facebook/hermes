@@ -85,10 +85,6 @@ void Emitter::loadConstBigInt(
   unsupported("loadConstBigInt");
 }
 
-void Emitter::toInt32(FR frRes, FR frInput, bool isSigned) {
-  unsupported("toInt32");
-}
-
 void Emitter::addEmptyString(FR frRes, FR frInput) {
   unsupported("addEmptyString");
 }
@@ -97,40 +93,12 @@ void Emitter::addS(FR frRes, FR frLeft, FR frRight) {
   unsupported("addS");
 }
 
-void Emitter::bitAnd(FR rRes, FR rLeft, FR rRight) {
-  unsupported("bitAnd");
-}
-
-void Emitter::bitOr(FR rRes, FR rLeft, FR rRight) {
-  unsupported("bitOr");
-}
-
-void Emitter::bitXor(FR rRes, FR rLeft, FR rRight) {
-  unsupported("bitXor");
-}
-
-void Emitter::lShift(FR rRes, FR rLeft, FR rRight) {
-  unsupported("lShift");
-}
-
-void Emitter::rShift(FR rRes, FR rLeft, FR rRight) {
-  unsupported("rShift");
-}
-
-void Emitter::urShift(FR rRes, FR rLeft, FR rRight) {
-  unsupported("urShift");
-}
-
 void Emitter::jmpBuiltinIs(
     bool invert,
     const asmjit::Label &target,
     uint8_t builtinIndex,
     FR frInput) {
   unsupported("jmpBuiltinIs");
-}
-
-void Emitter::bitNot(FR frRes, FR frInput) {
-  unsupported("bitNot");
 }
 
 void Emitter::typeOf(FR frRes, FR frInput) {

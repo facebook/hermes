@@ -581,12 +581,70 @@ class Emitter {
   DECL_BINOP(divN, true, "divN", _sh_ljs_div_rjs, { as.vdivsd(res, dl, dr); })
 #undef DECL_BINOP
 
-  void bitAnd(FR rRes, FR rLeft, FR rRight);
-  void bitOr(FR rRes, FR rLeft, FR rRight);
-  void bitXor(FR rRes, FR rLeft, FR rRight);
-  void lShift(FR rRes, FR rLeft, FR rRight);
-  void rShift(FR rRes, FR rLeft, FR rRight);
-  void urShift(FR rRes, FR rLeft, FR rRight);
+  // x86-64: two differences from the arm64 table. The fast body takes one
+  // source register instead of two, because x86's integer ALU is
+  // two-operand and arm64 already passes the same register as destination
+  // and first source. And there is an extra rightInCl column: a variable
+  // shift on x86 reads its count from cl and nowhere else, so those three
+  // rows ask bitBinOp to allocate the right-hand temp into rcx (see there).
+  // The shifts operate on the 32-bit halves, as arm64's do on W registers,
+  // which also makes the CPU's count masking (count & 31) the same as the
+  // masking JS specifies.
+  //
+  // bitBinOp verifies the rcx placement at emission time and declines the
+  // function if it ever fails, so the asserts in the shift bodies below are
+  // redundant for that. They are kept because they catch the one mistake
+  // that check cannot see -- a body that uses cl while its rightInCl column
+  // says false, which asks bitBinOp for no placement at all -- and the
+  // (void)right casts go with them, since a release build then has no other
+  // use for the parameter.
+#define DECL_BIT_BINOP(                                                  \
+    methodName, unsignedRes, rightInCl, commentStr, slowCall, x86body)   \
+  void methodName(FR rRes, FR rLeft, FR rRight) {                        \
+    bitBinOp(                                                            \
+        rRes,                                                            \
+        rLeft,                                                           \
+        rRight,                                                          \
+        unsignedRes,                                                     \
+        rightInCl,                                                       \
+        commentStr,                                                      \
+        slowCall,                                                        \
+        #slowCall,                                                       \
+        [](x86::Assembler & a, const x86::Gp &res, const x86::Gp &right) \
+            x86body);                                                    \
+  }
+
+  DECL_BIT_BINOP(bitAnd, false, false, "bit_and", _sh_ljs_bit_and_rjs, {
+    a.and_(res, right);
+  })
+  DECL_BIT_BINOP(bitOr, false, false, "bit_or", _sh_ljs_bit_or_rjs, {
+    a.or_(res, right);
+  })
+  DECL_BIT_BINOP(bitXor, false, false, "bit_xor", _sh_ljs_bit_xor_rjs, {
+    a.xor_(res, right);
+  })
+  DECL_BIT_BINOP(lShift, false, true, "lshift", _sh_ljs_left_shift_rjs, {
+    assert(right.id() == x86::rcx.id() && "shift count must be in cl");
+    (void)right;
+    a.shl(res.r32(), x86::cl);
+  })
+  DECL_BIT_BINOP(rShift, false, true, "rshift", _sh_ljs_right_shift_rjs, {
+    assert(right.id() == x86::rcx.id() && "shift count must be in cl");
+    (void)right;
+    a.sar(res.r32(), x86::cl);
+  })
+  DECL_BIT_BINOP(
+      urShift,
+      true,
+      true,
+      "rshiftu",
+      _sh_ljs_unsigned_right_shift_rjs,
+      {
+        assert(right.id() == x86::rcx.id() && "shift count must be in cl");
+        (void)right;
+        a.shr(res.r32(), x86::cl);
+      })
+#undef DECL_BIT_BINOP
 
   // x86-64: the fast body receives the Emitter rather than the assembler,
   // because x86 has no floating-point immediate: arm64's `fmov tmp, 1.0`
@@ -1222,6 +1280,23 @@ class Emitter {
           const x86::Xmm &dr),
       void *slowCall,
       const char *slowCallName);
+
+  // x86-64: \p fast takes one source instead of arm64's two, and \p
+  // rightInCl has no arm64 counterpart; see DECL_BIT_BINOP.
+  void bitBinOp(
+      FR frRes,
+      FR frLeft,
+      FR frRight,
+      bool unsignedRes,
+      bool rightInCl,
+      const char *name,
+      SHLegacyValue (*slowCall)(
+          SHRuntime *shr,
+          const SHLegacyValue *a,
+          const SHLegacyValue *b),
+      const char *slowCallName,
+      void (
+          *fast)(x86::Assembler &a, const x86::Gp &res, const x86::Gp &right));
 
   /// x86-64 helper with no arm64 counterpart: materialize the boolean result
   /// of a preceding \c vucomisd into \p res as 0 or 1.
