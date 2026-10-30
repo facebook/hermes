@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes -fno-inline -Xjit=force -Xjit-crash-on-error %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -fno-inline -Xjit=force -Xjit-crash-on-error -Xjit-emit-type-asserts %s | %FileCheck --match-full-lines %s
 // REQUIRES: jit
 
 function foo(

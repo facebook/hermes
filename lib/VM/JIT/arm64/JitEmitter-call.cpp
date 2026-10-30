@@ -532,6 +532,7 @@ void Emitter::callWithNewTargetLong(
   HWReg hwArgcArg = getOrAllocFRInGpX(argcFrameArg, false);
   frUpdatedWithHW(argcFrameArg, hwArgcArg, FRType::OtherNonPtr);
 
+  emitTypeAssert(frArgc, hwArgc, TypePred::IsNumber);
   static_assert(HERMESVALUE_VERSION == 2, "Native u32 must not need encoding");
   a.fcvtzu(hwArgcArg.a64GpX(), hwArgc.a64VecD());
   // The bytecode arg count includes "this", but the frame one does not, so

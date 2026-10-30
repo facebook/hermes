@@ -775,6 +775,11 @@ void Emitter::jCond(
   hwLeft = getOrAllocFRInVecD(frLeft, true);
   hwRight = getOrAllocFRInVecD(frRight, true);
 
+  if (forceNumber) {
+    emitTypeAssert(frLeft, hwLeft, TypePred::IsNumber);
+    emitTypeAssert(frRight, hwRight, TypePred::IsNumber);
+  }
+
   a.fcmp(hwLeft.a64VecD(), hwRight.a64VecD());
 
   // If the condition is not inverted, then it can only produce true if both

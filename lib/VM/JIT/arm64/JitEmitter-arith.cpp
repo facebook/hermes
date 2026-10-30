@@ -249,6 +249,8 @@ void Emitter::arithUnop(
   }
 
   hwInput = getOrAllocFRInVecD(frInput, true);
+  if (forceNumber)
+    emitTypeAssert(frInput, hwInput, TypePred::IsNumber);
   if (!inputIsNum) {
     slowPathLab = newSlowPathLabel();
     contLab = newContLabel();
@@ -443,6 +445,11 @@ void Emitter::mod(bool forceNumber, FR frRes, FR frLeft, FR frRight) {
 
   hwLeft = getOrAllocFRInVecD(frLeft, true);
   hwRight = getOrAllocFRInVecD(frRight, true);
+
+  if (forceNumber) {
+    emitTypeAssert(frLeft, hwLeft, TypePred::IsNumber);
+    emitTypeAssert(frRight, hwRight, TypePred::IsNumber);
+  }
 
   if (slow) {
     // Since HermesValue is NaN-boxed we know that all non-number values will be
