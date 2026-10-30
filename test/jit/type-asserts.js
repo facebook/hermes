@@ -81,3 +81,25 @@ print(eqNullAlias({p: {}}));
 // CHECK-NEXT: false
 print(eqNullAlias({p: null}));
 // CHECK-NEXT: true
+
+// Class C: the boolean-typed values here earn a non-pointer-classed
+// global register (FRType::UnknownNonPtr), whose write is checked against
+// TypePred::NotPointer at the following instruction boundary. Under -O
+// the loop is rotated and `flag` is folded into the branch, so exactly
+// one such check survives, in the loop pre-header. The numbers earn
+// Number-classed global registers, checked the same way at many more
+// sites, including inside the loop body. The -O0 RUN line contributes no
+// Class C coverage at all: without optimization no FR gets a global
+// register.
+function nonPtrGlobalReg(n) {
+  var flag = false;
+  var total = 0;
+  for (var i = 0; i < n; ++i) {
+    flag = (i % 2) === 0;
+    if (flag)
+      total += i;
+  }
+  return total;
+}
+print(nonPtrGlobalReg(10));
+// CHECK-NEXT: 20
