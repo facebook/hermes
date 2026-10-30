@@ -227,6 +227,41 @@ CallResult<HermesValue> StringPrimitive::createDynamicWithKnownEncoding(
   }
 }
 
+CallResult<HermesValue> StringPrimitive::createExternal(
+    Runtime &runtime,
+    UTF16Ref str) {
+  // Reject before scanning an oversized input.
+  if (LLVM_UNLIKELY(str.size() > MAX_STRING_LENGTH))
+    return runtime.raiseRangeError("String length exceeds limit");
+  return createExternal(runtime, str, isAllASCII(str));
+}
+
+CallResult<HermesValue>
+StringPrimitive::createExternal(Runtime &runtime, UTF16Ref str, bool isASCII) {
+  assert(isExternalLength(str.size()) && "length should be external");
+  // Reject before narrowing the length to uint32_t.
+  if (LLVM_UNLIKELY(str.size() > MAX_STRING_LENGTH))
+    return runtime.raiseRangeError("String length exceeds limit");
+  auto res = create(runtime, str.size(), isASCII);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto *strPrim = vmcast<StringPrimitive>(*res);
+  if (isASCII) {
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4244)
+#endif
+    std::copy(str.begin(), str.end(), strPrim->castToASCIIPointerForWrite());
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+  } else {
+    std::copy(str.begin(), str.end(), strPrim->castToUTF16PointerForWrite());
+  }
+  return *res;
+}
+
 bool StringPrimitive::sliceEquals(
     uint32_t start,
     uint32_t length,

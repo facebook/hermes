@@ -427,4 +427,72 @@ TEST_F(StringPrimTest, BuiltinsKeepASCII) {
   EXPECT_TRUE(lv.str->isASCII());
   EXPECT_EQ(externalLen, lv.str->getStringLength());
 }
+
+TEST_F(StringPrimTest, ExternalFromUTF16KeepsASCII) {
+  struct : public Locals {
+    PinnedValue<StringPrimitive> str;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  // Long enough to be allocated as an external string.
+  const size_t len = 1 << 17;
+  const std::u16string ascii(len, u'a');
+  std::u16string nonASCII(len, u'a');
+  nonASCII.back() = u'é';
+
+  /// Store \p res in lv.str and check that it holds \p expected, encoded as
+  /// ASCII exactly when \p isASCII.
+  auto check = [&](CallResult<HermesValue> res,
+                   const std::u16string &expected,
+                   bool isASCII) {
+    ASSERT_NE(ExecutionStatus::EXCEPTION, res);
+    lv.str.castAndSetHermesValue<StringPrimitive>(*res);
+    EXPECT_EQ(isASCII, lv.str->isASCII());
+    EXPECT_TRUE(
+        StringPrimitive::createStringView(runtime, lv.str)
+            .equals(UTF16Ref(expected.data(), expected.size())));
+  };
+
+  check(
+      StringPrimitive::create(runtime, UTF16Ref(ascii.data(), len)),
+      ascii,
+      true);
+  check(
+      StringPrimitive::create(runtime, UTF16Ref(nonASCII.data(), len)),
+      nonASCII,
+      false);
+  check(
+      StringPrimitive::createWithKnownEncoding(
+          runtime, UTF16Ref(ascii.data(), len), true),
+      ascii,
+      true);
+  check(
+      StringPrimitive::createWithKnownEncoding(
+          runtime, UTF16Ref(nonASCII.data(), len), false),
+      nonASCII,
+      false);
+
+  // An oversized length is rejected before anything is read, including ones
+  // that would wrap to an external or a dynamic length if narrowed to 32 bits.
+  std::vector<size_t> oversized{size_t(StringPrimitive::MAX_STRING_LENGTH) + 1};
+  if (sizeof(size_t) > sizeof(uint32_t)) {
+    oversized.push_back((size_t(1) << 32) + len);
+    oversized.push_back((size_t(1) << 32) + 2);
+  }
+  for (size_t badLen : oversized) {
+    UTF16Ref bad(ascii.data(), badLen);
+    EXPECT_EQ(
+        ExecutionStatus::EXCEPTION, StringPrimitive::create(runtime, bad));
+    runtime.clearThrownValue();
+    EXPECT_EQ(
+        ExecutionStatus::EXCEPTION,
+        StringPrimitive::createWithKnownEncoding(runtime, bad, true));
+    runtime.clearThrownValue();
+  }
+
+  // JSON.stringify assembles its result in a UTF16 buffer.
+  evalToString(runtime, "JSON.stringify('a'.repeat(1 << 17))", lv.str);
+  EXPECT_TRUE(lv.str->isASCII());
+  EXPECT_EQ((1u << 17) + 2, lv.str->getStringLength());
+}
 } // namespace

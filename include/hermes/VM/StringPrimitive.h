@@ -93,6 +93,15 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   static CallResult<HermesValue>
   createDynamicWithKnownEncoding(Runtime &runtime, UTF16Ref str, bool isASCII);
 
+  /// Create an ExternalStringPrimitive with the contents of \p str, which must
+  /// have an external length: ASCII if \p isASCII is true, otherwise UTF16.
+  /// Raises a RangeError if the GC cannot admit the external memory.
+  static CallResult<HermesValue>
+  createExternal(Runtime &runtime, UTF16Ref str, bool isASCII);
+
+  /// Like the above, storing \p str as ASCII if every code unit is ASCII.
+  static CallResult<HermesValue> createExternal(Runtime &runtime, UTF16Ref str);
+
   /// The following private overloads are to prevent creation of a
   /// StringPrimitive from a string literal. Naively allowing this would invoke
   /// ArrayRef's array template constructor, which would include the terminating
@@ -120,8 +129,9 @@ class StringPrimitive : public VariableSizeRuntimeCell {
 
   /// Returns true if a string of the given \p length should be allocated as an
   /// external string, outside the JS heap. Note that some external strings may
-  /// be shorter than this length.
-  static bool isExternalLength(uint32_t length) {
+  /// be shorter than this length. \p length is a size_t so that the length of
+  /// an input buffer is compared without truncation.
+  static bool isExternalLength(size_t length) {
     return length >= EXTERNAL_STRING_THRESHOLD;
   }
 
@@ -175,12 +185,12 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   /// Proxy to {Dynamic,External}StringPrimitive<char>::create(runtime, str).
   static CallResult<HermesValue> create(Runtime &runtime, ASCIIRef str);
 
-  /// Proxy to {Dynamic,External}StringPrimitive<char16_t>::create(runtime,
-  /// str).
+  /// Create a string with the contents of \p str, stored as ASCII if every
+  /// code unit is ASCII and as UTF16 otherwise.
   static CallResult<HermesValue> create(Runtime &runtime, UTF16Ref str);
 
-  /// Proxy to {Dynamic,External}StringPrimitive<char16_t>::create(runtime,
-  /// str).
+  /// Like create(Runtime &, UTF16Ref), with the caller stating whether every
+  /// code unit of \p str is ASCII in \p isASCII.
   static CallResult<HermesValue>
   createWithKnownEncoding(Runtime &runtime, UTF16Ref str, bool isASCII);
 
@@ -996,8 +1006,7 @@ inline CallResult<HermesValue> StringPrimitive::create(
   if (LLVM_LIKELY(!isExternalLength(str.size()))) {
     return createDynamic(runtime, str);
   } else {
-    return ExternalStringPrimitive<char16_t>::create(
-        runtime, arrayToString(str));
+    return createExternal(runtime, str);
   }
 }
 
@@ -1011,8 +1020,7 @@ inline CallResult<HermesValue> StringPrimitive::createWithKnownEncoding(
   if (LLVM_LIKELY(!isExternalLength(str.size()))) {
     return createDynamicWithKnownEncoding(runtime, str, isASCII);
   } else {
-    return ExternalStringPrimitive<char16_t>::create(
-        runtime, arrayToString(str));
+    return createExternal(runtime, str, isASCII);
   }
 }
 
