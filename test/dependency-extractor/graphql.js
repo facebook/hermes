@@ -56,3 +56,12 @@ graphql`
 // CHECK-NEXT: GraphQL | Bar.graphql
 // CHECK-NEXT: GraphQL | Bar2.graphql
 // CHECK-NEXT: GraphQL | Bar3.graphql
+
+// Non-ASCII text in the template reaches the regex as UTF-8 bytes >= 0x80.
+graphql`
+  # café — naïve
+  fragment Baz on Bar {
+    id
+  }
+`;
+// CHECK-NEXT: GraphQL | Baz.graphql

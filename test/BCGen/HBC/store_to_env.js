@@ -106,6 +106,7 @@ function foo() {
 // CHECK:RegExp Bytecodes:
 // CHECK-NEXT:0: /Hermes/i
 // CHECK-NEXT:  Header: marked: 0 loops: 0 flags: 1 constraints: 4
+// CHECK-NEXT:  StartSet: 0x48 0x68
 // CHECK-NEXT:  0000  MatchNCharICase8: 'HERMES'
 // CHECK-NEXT:  0008  Goal
 

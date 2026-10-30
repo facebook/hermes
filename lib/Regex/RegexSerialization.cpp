@@ -350,6 +350,26 @@ void dumpRegexBytecode(llvh::ArrayRef<uint8_t> bytes, llvh::raw_ostream &OS) {
       aligner(header->loopCount),
       aligner(header->syntaxFlags),
       header->constraints);
+  if (header->startFlags & regex::StartFilterPresent) {
+    // ASCII members as hex ranges in increasing order.
+    OS << "  StartSet:";
+    for (uint32_t u = 0; u < 128;) {
+      if (!regex::startSetHasASCII(*header, u)) {
+        ++u;
+        continue;
+      }
+      uint32_t last = u;
+      while (last + 1 < 128 && regex::startSetHasASCII(*header, last + 1))
+        ++last;
+      OS << llvh::format(" 0x%02x", u);
+      if (last != u)
+        OS << llvh::format("-0x%02x", last);
+      u = last + 1;
+    }
+    if (header->startFlags & regex::StartFilterNonASCII)
+      OS << " nonascii";
+    OS << '\n';
+  }
   bytes = bytes.slice(sizeof *header);
   uint32_t cursor = 0;
   while (cursor < bytes.size()) {

@@ -45,6 +45,10 @@ enum MatchFlagType {
 
   /// Do not search for a match past the search start location.
   matchOnlyAtStart = 1 << 3,
+
+  /// Do not use the start-position filter. Only tests use it, to compare
+  /// filtered and unfiltered searches.
+  matchNoStartFilter = 1 << 4,
 };
 
 inline constexpr MatchFlagType operator~(MatchFlagType x) {

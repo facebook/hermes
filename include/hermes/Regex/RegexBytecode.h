@@ -12,6 +12,7 @@
 #include "llvh/ADT/DenseMap.h"
 #include "llvh/Support/Casting.h"
 
+#include <cassert>
 #include <cstdint>
 #include <vector>
 
@@ -294,9 +295,44 @@ struct RegexBytecodeHeader {
 
   /// Constraints on what strings can match this regex.
   MatchConstraintSet constraints;
+
+  /// The start filter: a set of StartFilterFlags.
+  uint8_t startFlags;
+
+  /// The only ASCII member of the start set when StartFilterSingleChar is
+  /// set, 0 otherwise.
+  uint8_t startChar;
+
+  /// The ASCII members of the start set: bit u % 8 of startASCII[u / 8] is
+  /// set if a match can begin with code unit u.
+  uint8_t startASCII[16];
 };
 
 LLVM_PACKED_END;
+
+static_assert(
+    sizeof(RegexBytecodeHeader) == 24,
+    "RegexBytecodeHeader must stay packed");
+
+/// Flags of RegexBytecodeHeader::startFlags.
+enum StartFilterFlags : uint8_t {
+  /// The header holds a start filter: every match begins with a code unit
+  /// of the start set. Such a regex cannot match the empty string.
+  StartFilterPresent = 1 << 0,
+
+  /// A match may begin with any code unit >= 0x80.
+  StartFilterNonASCII = 1 << 1,
+
+  /// The start set has exactly one ASCII member, startChar.
+  StartFilterSingleChar = 1 << 2,
+};
+
+/// \return whether the ASCII code unit \p u is in the start set of
+/// \p header.
+inline bool startSetHasASCII(const RegexBytecodeHeader &header, uint32_t u) {
+  assert(u < 128 && "not an ASCII code unit");
+  return (header.startASCII[u >> 3] >> (u & 7)) & 1;
+}
 
 /// OpcodeFor<Instruction>::value is the opcode for the Instruction.
 template <typename Instruction>

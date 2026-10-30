@@ -153,6 +153,43 @@ struct ASCIIRegexTraits {
   }
 };
 
+/// \return whether the code point \p ch matches a bracket whose character
+/// classes are \p positiveClasses and \p negativeClasses (sets of
+/// CharacterClass::Type bits), whose ranges are \p ranges (closed under
+/// canonical equivalence when \p icase), and which is negated if \p negate.
+/// \p unicode is the regex's unicode flag. The executor and the start-set
+/// analysis both call this, so that they agree on every code unit.
+template <class Traits>
+bool bracketMatchesCodePoint(
+    const Traits &traits,
+    uint8_t positiveClasses,
+    uint8_t negativeClasses,
+    bool negate,
+    llvh::ArrayRef<BracketRange32> ranges,
+    typename Traits::CodePoint ch,
+    bool icase,
+    bool unicode) {
+  // When both ignoreCase and unicode are set (/iu), canonicalize the
+  // character before testing, because per ES spec 22.2.2.9.2
+  // (WordCharacters), \w with /iu must match any character whose canonical
+  // form is a word character (e.g. U+212A KELVIN SIGN canonicalizes to 'k').
+  if (positiveClasses || negativeClasses) {
+    auto testCh = icase && unicode ? Traits::canonicalize(ch, true) : ch;
+    for (auto charClass :
+         {CharacterClass::Digits,
+          CharacterClass::Spaces,
+          CharacterClass::Words}) {
+      if ((positiveClasses & charClass) &&
+          traits.characterHasType(testCh, charClass))
+        return !negate;
+      if ((negativeClasses & charClass) &&
+          !traits.characterHasType(testCh, charClass))
+        return !negate;
+    }
+  }
+  return traits.rangesContain(ranges, ch) != negate;
+}
+
 } // end namespace regex
 } // end namespace hermes
 

@@ -9,6 +9,8 @@
 #include "hermes/Regex/Executor.h"
 #include "hermes/Regex/RegexTraits.h"
 
+#include <cstdio>
+#include <cstring>
 #include <string>
 #include "gtest/gtest.h"
 
@@ -819,6 +821,419 @@ TEST(Regex, NonASCII) {
       matchRanges,
       cregex(u"(?!(((.*)*)*)*\xFF)abc"),
       constants::matchInputAllAscii));
+}
+
+/// \return the start filter in the header of \p bytecode as a string:
+/// "none" if absent; otherwise the ASCII members as hex ranges in
+/// increasing order, then "nonascii" if StartFilterNonASCII is set, then
+/// "single" if StartFilterSingleChar is set; "empty" for a present filter
+/// with no members. Checks that StartFilterSingleChar and startChar agree
+/// with the bitmap.
+std::string describeStartFilter(const std::vector<uint8_t> &bytecode) {
+  RegexBytecodeHeader header;
+  EXPECT_GE(bytecode.size(), sizeof(header));
+  std::memcpy(&header, bytecode.data(), sizeof(header));
+  if (!(header.startFlags & StartFilterPresent)) {
+    EXPECT_EQ(0u, header.startFlags);
+    return "none";
+  }
+  std::string out;
+  unsigned count = 0;
+  for (uint32_t u = 0; u < 128;) {
+    if (!startSetHasASCII(header, u)) {
+      ++u;
+      continue;
+    }
+    uint32_t last = u;
+    while (last + 1 < 128 && startSetHasASCII(header, last + 1))
+      ++last;
+    char buf[16];
+    if (last == u)
+      snprintf(buf, sizeof(buf), "0x%02x", u);
+    else
+      snprintf(buf, sizeof(buf), "0x%02x-0x%02x", u, last);
+    if (!out.empty())
+      out += ' ';
+    out += buf;
+    count += last - u + 1;
+    u = last + 1;
+  }
+  if (header.startFlags & StartFilterNonASCII) {
+    if (!out.empty())
+      out += ' ';
+    out += "nonascii";
+  }
+  const bool single = header.startFlags & StartFilterSingleChar;
+  EXPECT_EQ(count == 1, single) << out;
+  if (single) {
+    EXPECT_TRUE(startSetHasASCII(header, header.startChar)) << out;
+    out += " single";
+  }
+  return out.empty() ? "empty" : out;
+}
+
+/// \return describeStartFilter() of the regex \p pattern with \p flags.
+std::string startFilterOf(
+    const std::u16string &pattern,
+    const char16_t *flags = u"") {
+  cregex re(pattern.c_str(), flags);
+  EXPECT_TRUE(re.valid());
+  if (!re.valid())
+    return "invalid";
+  return describeStartFilter(re.compile());
+}
+
+/// \return \p depth nested capture groups around the pattern "a".
+std::u16string nestedGroups(unsigned depth) {
+  return std::u16string(depth, u'(') + u"a" + std::u16string(depth, u')');
+}
+
+TEST(Regex, StartFilterHeader) {
+  // Literals. /abc/ is coalesced into one MatchCharNode.
+  EXPECT_EQ("0x61 single", startFilterOf(u"abc"));
+  EXPECT_EQ("0x61 single", startFilterOf(u"(){999999999}a"));
+
+  // Case folding: both cases of an ASCII letter; under /iu also every
+  // non-ASCII unit, for U+017F -> 's' and U+212A -> 'k'.
+  EXPECT_EQ("0x41 0x61", startFilterOf(u"a", u"i"));
+  EXPECT_EQ("0x41 0x61 nonascii", startFilterOf(u"a", u"iu"));
+  EXPECT_EQ("0x53 0x73 nonascii", startFilterOf(u"s", u"iu"));
+  EXPECT_EQ("0x4b 0x6b nonascii", startFilterOf(u"k", u"iu"));
+  EXPECT_EQ("0x53 0x73", startFilterOf(u"s", u"i"));
+  EXPECT_EQ("nonascii", startFilterOf(u"\\u017f", u"i"));
+  EXPECT_EQ("0x53 0x73 nonascii", startFilterOf(u"\\u017f", u"iu"));
+
+  // Alternation, including an empty alternative.
+  EXPECT_EQ("0x61 0x63", startFilterOf(u"ab|cd"));
+  EXPECT_EQ("none", startFilterOf(u"a|"));
+
+  // Loops, including one that never runs and a lazy one.
+  EXPECT_EQ("0x78-0x79", startFilterOf(u"x*y"));
+  EXPECT_EQ("0x78 single", startFilterOf(u"x+y"));
+  EXPECT_EQ("0x61-0x62", startFilterOf(u"a{0}b"));
+  EXPECT_EQ("0x61-0x62", startFilterOf(u"a*?b"));
+  EXPECT_EQ("0x61-0x62", startFilterOf(u"(a|)b"));
+
+  // Zero-width nodes are transparent; lookarounds are not descended into.
+  EXPECT_EQ("0x61 single", startFilterOf(u"^a"));
+  EXPECT_EQ("0x61 single", startFilterOf(u"\\ba"));
+  EXPECT_EQ("0x61 single", startFilterOf(u"(?=b)a"));
+  EXPECT_EQ("0x61 single", startFilterOf(u"(?!b)a"));
+  EXPECT_EQ("0x61 single", startFilterOf(u"(?<=b)a"));
+  EXPECT_EQ("none", startFilterOf(u"\\b"));
+
+  // A back-reference first gives up; after a consuming node it is never
+  // reached.
+  EXPECT_EQ("none", startFilterOf(u"\\1(a)"));
+  EXPECT_EQ("none", startFilterOf(u"(?=(a))\\1"));
+  EXPECT_EQ("0x61 single", startFilterOf(u"(a)\\1"));
+  EXPECT_EQ("none", startFilterOf(u"(?<=(a))\\1"));
+  EXPECT_EQ("none", startFilterOf(u"(?<=(a))\\1b"));
+
+  // Any character.
+  EXPECT_EQ("0x00-0x09 0x0b-0x0c 0x0e-0x7f nonascii", startFilterOf(u"."));
+  EXPECT_EQ("0x00-0x7f nonascii", startFilterOf(u".", u"s"));
+
+  // Brackets and classes: exact on ASCII, a superset on non-ASCII.
+  EXPECT_EQ("0x61-0x63", startFilterOf(u"[a-c]"));
+  EXPECT_EQ("0x00-0x60 0x62-0x7f nonascii", startFilterOf(u"[^a]"));
+  EXPECT_EQ("0x30-0x39", startFilterOf(u"\\d"));
+  EXPECT_EQ("0x30-0x39", startFilterOf(u"[\\d]"));
+  EXPECT_EQ("0x00-0x2f 0x3a-0x7f nonascii", startFilterOf(u"\\D"));
+  EXPECT_EQ(
+      "0x30-0x39 0x41-0x5a 0x5f 0x61-0x7a nonascii", startFilterOf(u"\\w"));
+  EXPECT_EQ("0x09-0x0d 0x20 nonascii", startFilterOf(u"\\s"));
+  EXPECT_EQ(
+      "0x00-0x2f 0x3a-0x40 0x5b-0x5e 0x60 0x7b-0x7f nonascii",
+      startFilterOf(u"\\W", u"iu"));
+  EXPECT_EQ(
+      "0x30-0x39 0x41-0x5a 0x5f 0x61-0x7a nonascii",
+      startFilterOf(u"\\w", u"iu"));
+  EXPECT_EQ("0x09-0x0d 0x20 nonascii", startFilterOf(u"[\\s\u00e9]"));
+  EXPECT_EQ("0x61 nonascii single", startFilterOf(u"[a\\u00e9]"));
+  EXPECT_EQ("0x41-0x5a 0x61-0x7a", startFilterOf(u"[a-z]", u"i"));
+  EXPECT_EQ("0x41-0x5a 0x61-0x7a nonascii", startFilterOf(u"[a-z]", u"iu"));
+  // An empty bracket rejects every unit; a full one keeps non-ASCII units.
+  EXPECT_EQ("empty", startFilterOf(u"[]"));
+  EXPECT_EQ("0x00-0x7f nonascii", startFilterOf(u"[^]"));
+#ifdef HERMES_ENABLE_UNICODE_REGEXP_PROPERTY_ESCAPES
+  // Property escapes are ranges added by the parser, not classes.
+  EXPECT_EQ("0x41-0x5a nonascii", startFilterOf(u"\\p{Lu}", u"u"));
+  EXPECT_EQ("0x00-0x40 0x5b-0x7f nonascii", startFilterOf(u"\\P{Lu}", u"u"));
+  EXPECT_EQ("0x41-0x5a 0x61-0x7a nonascii", startFilterOf(u"\\p{Lu}", u"iu"));
+#endif
+
+  // Surrogates under /u: an astral literal starts with its high surrogate;
+  // a lone surrogate is itself non-ASCII.
+  EXPECT_EQ("nonascii", startFilterOf(u"\\u{1F600}", u"u"));
+  EXPECT_EQ("nonascii", startFilterOf(u"\\uD83D", u"u"));
+
+  // Modifier groups make icase node-local.
+  EXPECT_EQ("0x41 0x61", startFilterOf(u"(?i:a)b"));
+  EXPECT_EQ("0x61 single", startFilterOf(u"a(?i:b)"));
+
+  // The depth cap: the innermost list of N nested groups is at depth N.
+  EXPECT_EQ("0x61 single", startFilterOf(nestedGroups(63)));
+  EXPECT_EQ("none", startFilterOf(nestedGroups(64)));
+  EXPECT_EQ("none", startFilterOf(nestedGroups(100)));
+}
+
+/// \return the outcome of searching \p text (\p length units) for
+/// \p bytecode from \p start with \p flags: "nomatch", "overflow", or
+/// "match" and the captures.
+template <typename CharT>
+std::string searchOutcome(
+    const std::vector<uint8_t> &bytecode,
+    const CharT *text,
+    uint32_t length,
+    uint32_t start,
+    constants::MatchFlagType flags) {
+  cmatch m;
+  switch (searchWithBytecode(bytecode, text, start, length, &m, flags)) {
+    case MatchRuntimeResult::Match:
+      return "match " + flatten(m);
+    case MatchRuntimeResult::NoMatch:
+      return "nomatch";
+    case MatchRuntimeResult::StackOverflow:
+      return "overflow";
+  }
+  return "?";
+}
+
+/// \return \p s with each non-ASCII code unit written as \uXXXX.
+std::string printable(const std::u16string &s) {
+  std::string out;
+  for (char16_t c : s) {
+    if (c < 0x80) {
+      out += static_cast<char>(c);
+    } else {
+      char buf[8];
+      snprintf(buf, sizeof(buf), "\\u%04x", static_cast<unsigned>(c));
+      out += buf;
+    }
+  }
+  return out;
+}
+
+/// \return \p s with each byte >= 0x80 written as \xXX.
+std::string printableBytes(const std::string &s) {
+  std::string out;
+  for (char c : s) {
+    const unsigned u = static_cast<unsigned char>(c);
+    if (u < 0x80) {
+      out += c;
+    } else {
+      char buf[8];
+      snprintf(buf, sizeof(buf), "\\x%02x", u);
+      out += buf;
+    }
+  }
+  return out;
+}
+
+/// Check that the start filter of \p pattern with \p flags never changes a
+/// search result: over UTF-16, ASCII and other byte inputs, at every start
+/// index, with and without matchOnlyAtStart (sticky), the filtered search
+/// and the unfiltered one (matchNoStartFilter) give the same outcome,
+/// unless the unfiltered one overflows: a position the filter skips could
+/// spend backtracking budget before its first unit is tested.
+void expectStartFilterTransparent(
+    const std::u16string &pattern,
+    const std::u16string &flags) {
+  // Case folds to ASCII (U+017F, U+212A), line terminators, a surrogate
+  // pair, lone surrogates, Latin-1, and ASCII units held as UTF-16.
+  // \x escapes are split so no hex digit follows them.
+  static const std::u16string utf16Inputs[] = {
+      u"xaAbsSkK\u017f\u212a",
+      u"b\u2028a\nc\rd e\tf_9",
+      u"\xD83D\xDE00"
+      u"a"
+      u"\xD83D\xDE00",
+      u"a\xD83D"
+      u"b\xDE00"
+      u"c",
+      u"\u00e9\u00c9x1_9",
+      u"abcAB 1\nxyz",
+      // More than kMaxStartFilterPasses passing units, then a gap: the
+      // search must resume at the unit right after the gap.
+      u"aaaaaaaaaaaaaaaaaaaazabczaab",
+      // The only 'a' is the last unit.
+      u"bcdefa",
+      u"",
+  };
+  static const std::string asciiInputs[] = {
+      "xaAbsSkK",
+      "b a\nc\rd\te_9",
+      "abcabd012_",
+      "aaaaaaaaaaaaaaaaaaaazabczaab",
+      "bcdefa",
+      "",
+  };
+  // Inputs of the char path that are not 7-bit, like the UTF-8 text the
+  // dependency extractor passes: units >= 0x80, searched without
+  // matchInputAllAscii. \x escapes are split so no hex digit follows them.
+  static const std::string byteInputs[] = {
+      "caf\xc3\xa9 x\xe9y\x80",
+      "\xe2\x80\xa8"
+      "a\xff"
+      "b",
+  };
+  cregex re(pattern.c_str(), flags.c_str());
+  ASSERT_TRUE(re.valid()) << printable(pattern);
+  const std::vector<uint8_t> bytecode = re.compile();
+  for (constants::MatchFlagType mode :
+       {constants::matchDefault, constants::matchOnlyAtStart}) {
+    for (const std::u16string &in : utf16Inputs) {
+      const uint32_t len = in.size();
+      for (uint32_t start = 0; start <= len; ++start) {
+        std::string unfiltered = searchOutcome(
+            bytecode,
+            in.data(),
+            len,
+            start,
+            mode | constants::matchNoStartFilter);
+        if (unfiltered == "overflow")
+          continue;
+        EXPECT_EQ(
+            unfiltered, searchOutcome(bytecode, in.data(), len, start, mode))
+            << "/" << printable(pattern) << "/" << printable(flags) << " on \""
+            << printable(in) << "\" from " << start << (mode ? " sticky" : "");
+      }
+    }
+    for (const std::string &in : asciiInputs) {
+      const uint32_t len = in.size();
+      const constants::MatchFlagType asciiMode =
+          mode | constants::matchInputAllAscii;
+      for (uint32_t start = 0; start <= len; ++start) {
+        std::string unfiltered = searchOutcome(
+            bytecode,
+            in.data(),
+            len,
+            start,
+            asciiMode | constants::matchNoStartFilter);
+        if (unfiltered == "overflow")
+          continue;
+        EXPECT_EQ(
+            unfiltered,
+            searchOutcome(bytecode, in.data(), len, start, asciiMode))
+            << "/" << printable(pattern) << "/" << printable(flags)
+            << " on ascii \"" << in << "\" from " << start
+            << (mode ? " sticky" : "");
+      }
+    }
+    for (const std::string &in : byteInputs) {
+      const uint32_t len = in.size();
+      for (uint32_t start = 0; start <= len; ++start) {
+        std::string unfiltered = searchOutcome(
+            bytecode,
+            in.data(),
+            len,
+            start,
+            mode | constants::matchNoStartFilter);
+        if (unfiltered == "overflow")
+          continue;
+        EXPECT_EQ(
+            unfiltered, searchOutcome(bytecode, in.data(), len, start, mode))
+            << "/" << printable(pattern) << "/" << printable(flags)
+            << " on bytes of \"" << printableBytes(in) << "\" from " << start
+            << (mode ? " sticky" : "");
+      }
+    }
+  }
+}
+
+TEST(Regex, StartFilterTransparent) {
+  const std::pair<std::u16string, std::u16string> corpus[] = {
+      {u"abc", u""},
+      {u"a", u""},
+      {u"a", u"i"},
+      {u"a", u"iu"},
+      {u"s", u"iu"},
+      {u"k", u"iu"},
+      {u"s", u"i"},
+      {u"K", u"i"},
+      {u"\\u017f", u"i"},
+      {u"\\u017f", u"iu"},
+      {u"\\u212a", u"iu"},
+      {u"ab|cd", u""},
+      {u"a|", u""},
+      {u"x*y", u""},
+      {u"x+y", u""},
+      {u"^a", u""},
+      {u"^b", u"m"},
+      {u"a$", u"m"},
+      {u"\\ba", u""},
+      {u"\\bb", u"i"},
+      {u"(?=b)a", u""},
+      {u"(?<=a)b", u""},
+      {u"(?!a)b", u""},
+      {u"(?!a)\\w", u""},
+      {u"(?<!a)\\w", u"u"},
+      {u"\\1(a)", u""},
+      {u"(?=(a))\\1", u""},
+      {u"(a)\\1", u"i"},
+      {u".", u""},
+      {u".", u"s"},
+      {u".", u"u"},
+      {u".a", u"su"},
+      {u"[a-c]", u""},
+      {u"[^a]", u""},
+      {u"[^a]", u"u"},
+      {u"\\d", u""},
+      {u"\\D", u""},
+      {u"\\w", u""},
+      {u"\\w", u"iu"},
+      {u"\\W", u"iu"},
+      {u"\\s", u""},
+      {u"\\s+x", u""},
+      {u"[\\s\\S]a", u""},
+      {u"\\S", u""},
+      {u"[a-z]", u"i"},
+      {u"[a-z]", u"iu"},
+      {u"[a\\u00e9]", u""},
+      {u"[]", u""},
+      {u"[^]", u""},
+      {u"\\u{1F600}", u"u"},
+      {u"[\\u{1F600}x]", u"u"},
+      {u"\\uD83D", u"u"},
+      {u"\\uDE00", u"u"},
+      {u"\\uD83D", u""},
+      {u"\\u2028|\\n", u""},
+      {u"(?i:a)b", u""},
+      {u"a(?i:b)", u""},
+      {u"[\\s\u00e9]", u""},
+      {u"[a\u00e9]x", u""},
+      {u"a{0}b", u""},
+      {u"a*?b", u""},
+      {u"(a|)b", u""},
+      {u"(?<=(a))\\1", u""},
+      {u"(?<=(a))\\1b", u""},
+#ifdef HERMES_ENABLE_UNICODE_REGEXP_PROPERTY_ESCAPES
+      {u"\\p{Lu}", u"u"},
+      {u"\\P{Lu}", u"u"},
+      {u"\\p{Lu}", u"iu"},
+#endif
+      {nestedGroups(63), u""},
+      {nestedGroups(64), u""},
+  };
+  for (const auto &entry : corpus)
+    expectStartFilterTransparent(entry.first, entry.second);
+}
+
+TEST(Regex, StartFilterAvoidsOverflow) {
+  // Unfiltered, position 0 enters the loop and overflows the
+  // backtrack stack before testing 'a'; filtered, no position is tried. It
+  // runs once each way: an unfiltered run builds 2^24 backtrack records.
+  const std::vector<uint8_t> bytecode = cregex(u"(){999999999}a").compile();
+  const char16_t text[] = u"b";
+  cmatch m;
+  EXPECT_EQ(
+      MatchRuntimeResult::StackOverflow,
+      searchWithBytecode(
+          bytecode, text, 0, 1, &m, constants::matchNoStartFilter));
+  EXPECT_EQ(
+      MatchRuntimeResult::NoMatch,
+      searchWithBytecode(bytecode, text, 0, 1, &m, constants::matchDefault));
 }
 
 } // end anonymous namespace

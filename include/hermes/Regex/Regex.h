@@ -73,6 +73,10 @@ class Regex {
   // Constraints on the type of strings that can match this regex.
   MatchConstraintSet matchConstraints_ = 0;
 
+  /// The code units that can begin a match, or None if there is no start
+  /// filter: the regex can match the empty string, or the analysis gave up.
+  llvh::Optional<StartSet> startSet_;
+
   // This holds the named capture groups in the order they were defined.
   std::deque<llvh::SmallVector<char16_t, 5>> orderedGroupNames_{};
 
@@ -147,11 +151,13 @@ class Regex {
         markedCount_ <= constants::kMaxCaptureGroupCount &&
         "Too many capture groups");
     assert(loopCount_ <= constants::kMaxLoopCount && "Too many loops");
-    RegexBytecodeHeader header = {
-        markedCount_,
-        static_cast<uint16_t>(loopCount_),
-        globalFlags_.toByte(),
-        matchConstraints_};
+    RegexBytecodeHeader header{};
+    header.markedCount = markedCount_;
+    header.loopCount = static_cast<uint16_t>(loopCount_);
+    header.syntaxFlags = globalFlags_.toByte();
+    header.constraints = matchConstraints_;
+    if (startSet_)
+      startSet_->writeTo(header);
     RegexBytecodeStream bcs(header);
     Node::compile(nodes_, bcs);
     return bcs.acquireBytecode();
@@ -346,7 +352,8 @@ constants::ErrorType Regex<Traits>::parseWithBackRefLimit(
     uint32_t *outMaxBackRef) {
   // Initialize our node list with a single no-op node (it must never be empty.)
   nodes_.clear();
-  appendNode<Node>();
+  startSet_ = llvh::None;
+  appendNode<EmptyNode>();
   auto result = parseRegex(
       first,
       last,
@@ -368,6 +375,13 @@ constants::ErrorType Regex<Traits>::parseWithBackRefLimit(
 
   // Compute any match constraints.
   matchConstraints_ = Node::matchConstraintsForList(nodes_);
+
+  // Compute the start-position filter.
+  if (result == constants::ErrorType::None) {
+    StartSet set;
+    if (Node::addStartSetForList(nodes_, set, 0) == StartSetResult::Consumes)
+      startSet_ = set;
+  }
 
   return result;
 }

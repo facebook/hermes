@@ -22,10 +22,12 @@
 #include "hermes/Platform/Unicode/CodePointSet.h"
 
 #include "hermes/Regex/RegexBytecode.h"
+#include "hermes/Regex/RegexTraits.h"
 #include "hermes/Regex/RegexTypes.h"
 
 #include "llvh/ADT/SmallVector.h"
 
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -39,11 +41,91 @@ using NodeList = std::vector<Node *>;
 /// A NodeHolder is list of owned Nodes. Note it is move-only.
 using NodeHolder = std::vector<std::unique_ptr<Node>>;
 
+/// The result of Node::addStartSet().
+enum class StartSetResult : uint8_t {
+  /// Every match of the node consumes input and begins with a code unit of
+  /// the set.
+  Consumes,
+  /// The node can match without consuming input, so what follows it also
+  /// contributes to the start set.
+  Nullable,
+  /// The analysis cannot bound the first code unit: no filter.
+  Unknown,
+};
+
+/// The nesting depth of node lists at which the start-set analysis gives
+/// up. The node tree has no depth limit (test/hermes/regexp.js:94 nests
+/// 50000 groups), so the recursive analysis is bounded instead.
+constexpr unsigned kMaxStartSetDepth = 64;
+
+/// A superset of the code units that can begin a match: exact for ASCII
+/// code units, and one bit standing for every code unit >= 0x80. Treating
+/// every non-ASCII unit alike keeps a /u search from stopping on a low
+/// surrogate whose high surrogate it skipped.
+class StartSet {
+ public:
+  /// Add the ASCII code unit \p u.
+  inline void addASCII(uint32_t u);
+
+  /// Add every code unit >= 0x80.
+  void addNonASCII() {
+    nonASCII_ = true;
+  }
+
+  /// \return whether the ASCII code unit \p u is in the set.
+  inline bool hasASCII(uint32_t u) const;
+
+  /// \return whether the code units >= 0x80 are in the set.
+  bool hasNonASCII() const {
+    return nonASCII_;
+  }
+
+  /// Store this set as the start filter of \p header.
+  inline void writeTo(RegexBytecodeHeader &header) const;
+
+ private:
+  /// Bit u % 8 of ascii_[u / 8] is set if the ASCII unit u is in the set.
+  uint8_t ascii_[16] = {};
+
+  /// Whether every code unit >= 0x80 is in the set.
+  bool nonASCII_ = false;
+};
+
+void StartSet::addASCII(uint32_t u) {
+  assert(u < 128 && "not an ASCII code unit");
+  ascii_[u >> 3] |= 1u << (u & 7);
+}
+
+bool StartSet::hasASCII(uint32_t u) const {
+  assert(u < 128 && "not an ASCII code unit");
+  return (ascii_[u >> 3] >> (u & 7)) & 1;
+}
+
+void StartSet::writeTo(RegexBytecodeHeader &header) const {
+  header.startFlags = StartFilterPresent;
+  if (nonASCII_)
+    header.startFlags |= StartFilterNonASCII;
+  unsigned count = 0;
+  uint32_t only = 0;
+  for (uint32_t u = 0; u < 128; ++u) {
+    if (hasASCII(u)) {
+      ++count;
+      only = u;
+    }
+  }
+  if (count == 1) {
+    header.startFlags |= StartFilterSingleChar;
+    header.startChar = static_cast<uint8_t>(only);
+  }
+  static_assert(
+      sizeof(header.startASCII) == sizeof(ascii_), "bitmap size mismatch");
+  std::memcpy(header.startASCII, ascii_, sizeof(ascii_));
+}
+
 /// Base class representing some part of a compiled regular expression.
 /// A Node is part of an expression that knows how to match against a State.
 /// There are nodes for Alternations, Literals, etc.
-/// Node itself is useful as an empty matcher: it always succeeds while
-/// consuming nothing.
+/// Node itself emits nothing; EmptyNode is the concrete empty matcher.
 class Node {
  public:
   /// Nodes may not be copied or moved.
@@ -91,6 +173,14 @@ class Node {
   inline static void
   optimizeNodeList(NodeList &nodes, SyntaxFlags flags, NodeHolder &nodeHolder);
 
+  /// Add to \p set the start sets of the nodes of \p nodes, in order, up to
+  /// and including the first node that consumes input. \p depth is the
+  /// nesting depth of \p nodes: 0 for the root list.
+  /// \return Consumes if a node of the list consumes, Nullable if none
+  /// does, Unknown if the analysis gave up.
+  inline static StartSetResult
+  addStartSetForList(const NodeList &nodes, StartSet &set, unsigned depth);
+
   /// \return whether the node always matches exactly one character.
   virtual bool matchesExactlyOneCharacter() const {
     return false;
@@ -111,6 +201,18 @@ class Node {
   }
 
  protected:
+  /// Add to \p set every code unit that can begin a match of this node.
+  /// \p depth is the nesting depth of the list holding this node; a node
+  /// that descends into a child list passes depth + 1.
+  /// \return Nullable if the node can match without consuming input, so
+  /// the caller must also add the start set of what follows; Consumes if
+  /// every match consumes; Unknown to give up (no filter).
+  /// The default is Unknown, so that a node kind that does not override
+  /// this disables the filter rather than producing a wrong one.
+  virtual StartSetResult addStartSet(StartSet &set, unsigned depth) const {
+    return StartSetResult::Unknown;
+  }
+
   /// \return the match constraints for this node.
   /// This should be overridden by subclasses to report the constraints for that
   /// node.
@@ -147,6 +249,16 @@ class Node {
   }
 };
 
+/// EmptyNode matches the empty string and emits nothing. A regex's node
+/// list starts with one, so that the list is never empty.
+class EmptyNode final : public Node {
+ protected:
+  /// Matching the empty string consumes nothing.
+  StartSetResult addStartSet(StartSet &, unsigned) const override {
+    return StartSetResult::Nullable;
+  }
+};
+
 /// GoalNode is the terminal Node that represents successful execution.
 class GoalNode final : public Node {
  private:
@@ -156,6 +268,11 @@ class GoalNode final : public Node {
   }
 
  protected:
+  /// Reaching the goal means the list can match the empty string.
+  StartSetResult addStartSet(StartSet &, unsigned) const override {
+    return StartSetResult::Nullable;
+  }
+
   bool isGoal() const override {
     return true;
   }
@@ -234,6 +351,15 @@ class LoopNode final : public Node {
   }
 
  protected:
+  /// The loopee's set is added even for {0}: a superset is safe. The loop is
+  /// nullable if it may run zero times or its loopee is nullable.
+  StartSetResult addStartSet(StartSet &set, unsigned depth) const override {
+    StartSetResult result = addStartSetForList(loopee_, set, depth + 1);
+    if (result == StartSetResult::Unknown)
+      return result;
+    return min_ == 0 ? StartSetResult::Nullable : result;
+  }
+
   void reverseChildren() override {
     reverseNodeList(loopee_);
   }
@@ -375,6 +501,21 @@ class AlternationNode final : public Node {
     }
   }
 
+ protected:
+  /// The union over the alternatives. An alternative may be empty (/a|/).
+  StartSetResult addStartSet(StartSet &set, unsigned depth) const override {
+    StartSetResult result = StartSetResult::Consumes;
+    for (const NodeList &alternative : alternatives_) {
+      StartSetResult altResult =
+          addStartSetForList(alternative, set, depth + 1);
+      if (altResult == StartSetResult::Unknown)
+        return altResult;
+      if (altResult == StartSetResult::Nullable)
+        result = StartSetResult::Nullable;
+    }
+    return result;
+  }
+
  private:
   virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
     // Instruction stream looks like:
@@ -455,6 +596,12 @@ class MarkedSubexpressionNode final : public Node {
     return contentsConstraints_ | Super::matchConstraints();
   }
 
+ protected:
+  /// A capture group matches what its contents match.
+  StartSetResult addStartSet(StartSet &set, unsigned depth) const override {
+    return addStartSetForList(contents_, set, depth + 1);
+  }
+
  private:
   virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
     if (!emitEnd_) {
@@ -484,6 +631,13 @@ class BackRefNode final : public Node {
     mexp_ = mexp;
   }
 
+ protected:
+  /// A back-reference can repeat text captured inside a lookahead, e.g.
+  /// /(?=(a))\1/, so its first unit is unknown.
+  StartSetResult addStartSet(StartSet &, unsigned) const override {
+    return StartSetResult::Unknown;
+  }
+
  private:
   virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
     if (icase_)
@@ -506,6 +660,12 @@ class WordBoundaryNode final : public Node {
 
  public:
   WordBoundaryNode(bool invert, bool icase) : invert_(invert), icase_(icase) {}
+
+ protected:
+  /// A zero-width assertion consumes nothing.
+  StartSetResult addStartSet(StartSet &, unsigned) const override {
+    return StartSetResult::Nullable;
+  }
 
  private:
   virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
@@ -536,6 +696,12 @@ class LeftAnchorNode final : public Node {
     return result | Super::matchConstraints();
   }
 
+ protected:
+  /// A zero-width assertion consumes nothing.
+  StartSetResult addStartSet(StartSet &, unsigned) const override {
+    return StartSetResult::Nullable;
+  }
+
  private:
   virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
     if (multiline_)
@@ -554,6 +720,12 @@ class RightAnchorNode : public Node {
 
  public:
   RightAnchorNode(bool multiline) : multiline_(multiline) {}
+
+ protected:
+  /// A zero-width assertion consumes nothing.
+  StartSetResult addStartSet(StartSet &, unsigned) const override {
+    return StartSetResult::Nullable;
+  }
 
  private:
   virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
@@ -587,6 +759,18 @@ class MatchAnyNode final : public Node {
   virtual bool matchesExactlyOneCharacter() const override {
     // In Unicode we may match a surrogate pair.
     return !unicode_;
+  }
+
+ protected:
+  /// Without dotAll, '.' rejects the line terminators: 0x0A and 0x0D in
+  /// ASCII, U+2028 and U+2029 beyond (Executor.cpp isLineTerminator).
+  StartSetResult addStartSet(StartSet &set, unsigned) const override {
+    for (uint32_t u = 0; u < 128; ++u) {
+      if (dotAll_ || (u != u'\n' && u != u'\r'))
+        set.addASCII(u);
+    }
+    set.addNonASCII();
+    return StartSetResult::Consumes;
   }
 
  private:
@@ -674,6 +858,33 @@ class MatchCharNode final : public Node {
   }
 
  protected:
+  /// The first unit of a match is the first unit of chars_[0], which is
+  /// already canonical when icase_ (Regex::pushChar).
+  StartSetResult addStartSet(StartSet &set, unsigned) const override {
+    assert(!chars_.empty() && "MatchCharNode without characters");
+    const CodePoint c = chars_.front();
+    if (!isASCII(c)) {
+      // An astral character starts with its high surrogate, a lone
+      // surrogate is non-ASCII, and no ASCII unit canonicalizes to a
+      // non-ASCII character.
+      set.addNonASCII();
+    } else if (!icase_) {
+      set.addASCII(c);
+    } else {
+      // Every ASCII unit the executor accepts for c: u == c or
+      // canonicalize(u) == c (MatchCharICase8, MatchNCharICase8).
+      for (uint32_t u = 0; u < 128; ++u) {
+        if (u == c || UTF16RegexTraits::canonicalize(u, unicode_) == c)
+          set.addASCII(u);
+      }
+      // Under /iu, U+017F and U+212A canonicalize to 's' and 'k'. Setting
+      // the bit for every /iu character is a deliberate superset.
+      if (unicode_)
+        set.addNonASCII();
+    }
+    return StartSetResult::Consumes;
+  }
+
   virtual bool matchesExactlyOneCharacter() const override {
     // If our character is astral it will need to match a surrogate pair, which
     // requires two characters.
@@ -811,6 +1022,14 @@ class BracketNode : public Node {
     }
   }
 
+  /// \return the code point set this bracket emits: the parsed set, closed
+  /// under canonical equivalence when icase_. emitStep() and addStartSet()
+  /// both use it, so they cannot diverge.
+  CodePointSet emittedCodePointSet() const {
+    return icase_ ? makeCanonicallyEquivalent(codePointSet_, unicode_)
+                  : codePointSet_;
+  }
+
   /// Helper implementation of emit(). Given that we have emitted an instruction
   /// \p insn (which is either BracketInsn or U16BracketInsn), emit our bracket
   /// ranges and populate the instruction's fields.
@@ -825,10 +1044,7 @@ class BracketNode : public Node {
       }
     }
 
-    // Canonicalize our code point set if needed.
-    CodePointSet cps = icase_
-        ? makeCanonicallyEquivalent(codePointSet_, unicode_)
-        : codePointSet_;
+    CodePointSet cps = emittedCodePointSet();
     for (const CodePointRange &range : cps.ranges()) {
       assert(range.length > 0 && "Ranges should never be empty");
       bcs.emitBracketRange(
@@ -875,6 +1091,44 @@ class BracketNode : public Node {
   virtual bool matchesExactlyOneCharacter() const override {
     // A unicode bracket may match a surrogate pair.
     return !unicode_;
+  }
+
+ protected:
+  /// The ASCII bits are the executor's own answers: bracketMatchesCodePoint
+  /// on the emitted ranges. Non-ASCII units are a superset: they are in the
+  /// set unless the bracket is not negated, has no class other than a
+  /// positive \d, and has no emitted range reaching 0x80.
+  StartSetResult addStartSet(StartSet &set, unsigned) const override {
+    const CodePointSet cps = emittedCodePointSet();
+    llvh::SmallVector<BracketRange32, 8> ranges;
+    for (const CodePointRange &range : cps.ranges())
+      ranges.push_back(
+          BracketRange32{range.first, range.first + range.length - 1});
+    uint8_t positive = 0;
+    uint8_t negative = 0;
+    for (CharacterClass cc : classes_) {
+      if (cc.inverted_)
+        negative |= cc.type_;
+      else
+        positive |= cc.type_;
+    }
+    for (uint32_t u = 0; u < 128; ++u) {
+      if (bracketMatchesCodePoint(
+              traits_,
+              positive,
+              negative,
+              negate_,
+              ranges,
+              u,
+              icase_,
+              unicode_))
+        set.addASCII(u);
+    }
+    if (negate_ || negative != 0 ||
+        (positive & ~uint8_t(CharacterClass::Digits)) != 0 ||
+        (!cps.ranges().empty() && cps.end() > 0x80))
+      set.addNonASCII();
+    return StartSetResult::Consumes;
   }
 
  private:
@@ -956,6 +1210,14 @@ class LookaroundNode : public Node {
     return {&exp_};
   }
 
+ protected:
+  /// Every lookaround is zero-width at the match start. Its body is not
+  /// descended into: a lookbehind body is reversed and reads the text to
+  /// the left.
+  StartSetResult addStartSet(StartSet &, unsigned) const override {
+    return StartSetResult::Nullable;
+  }
+
  private:
   // Override emitStep() to compile our lookahead expression.
   virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
@@ -997,6 +1259,18 @@ void Node::reverseNodeList(NodeList &nodes) {
   for (auto &node : nodes) {
     node->reverseChildren();
   }
+}
+
+StartSetResult
+Node::addStartSetForList(const NodeList &nodes, StartSet &set, unsigned depth) {
+  if (depth >= kMaxStartSetDepth)
+    return StartSetResult::Unknown;
+  for (const Node *node : nodes) {
+    StartSetResult result = node->addStartSet(set, depth);
+    if (result != StartSetResult::Nullable)
+      return result;
+  }
+  return StartSetResult::Nullable;
 }
 
 void Node::optimizeNodeList(

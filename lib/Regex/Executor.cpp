@@ -14,6 +14,9 @@
 #include "llvh/Support/TrailingObjects.h"
 #include "llvh/Support/raw_ostream.h"
 
+#include <cstring>
+#include <type_traits>
+
 // This file contains the machinery for executing a regexp compiled to bytecode.
 
 namespace hermes {
@@ -726,34 +729,15 @@ bool bracketMatchesChar(
     const BracketRange32 *ranges,
     typename Traits::CodePoint ch,
     bool icase) {
-  const auto &traits = ctx.traits_;
-  // Note that if the bracket is negated /[^abc]/, we want to return true if we
-  // do not match, false if we do. Implement this by xor with the negate flag.
-
-  // Check character classes.
-  // When both ignoreCase and unicode are set (/iu), canonicalize the character
-  // before testing, because per ES spec 22.2.2.9.2 (WordCharacters), \w with
-  // /iu must match any character whose canonical form is a word character
-  // (e.g. U+212A KELVIN SIGN canonicalizes to 'k').
-  if (insn->positiveCharClasses || insn->negativeCharClasses) {
-    auto testCh =
-        icase && ctx.syntaxFlags_.unicode ? Traits::canonicalize(ch, true) : ch;
-    for (auto charClass :
-         {CharacterClass::Digits,
-          CharacterClass::Spaces,
-          CharacterClass::Words}) {
-      if ((insn->positiveCharClasses & charClass) &&
-          traits.characterHasType(testCh, charClass))
-        return true ^ insn->negate;
-      if ((insn->negativeCharClasses & charClass) &&
-          !traits.characterHasType(testCh, charClass))
-        return true ^ insn->negate;
-    }
-  }
-
-  bool contained =
-      traits.rangesContain(llvh::makeArrayRef(ranges, insn->rangeCount), ch);
-  return contained ^ insn->negate;
+  return bracketMatchesCodePoint(
+      ctx.traits_,
+      insn->positiveCharClasses,
+      insn->negativeCharClasses,
+      insn->negate,
+      llvh::makeArrayRef(ranges, insn->rangeCount),
+      ch,
+      icase,
+      ctx.syntaxFlags_.unicode);
 }
 
 template <class Traits>
@@ -1060,6 +1044,50 @@ inline size_t Context<Traits>::advanceStringIndex(
   return index + 2;
 }
 
+/// The number of consecutive attempted start positions that pass the start
+/// filter after which a search stops consulting it. Dropping the filter
+/// only adds positions to try, so the search still finds the same match.
+static constexpr unsigned kMaxStartFilterPasses = 16;
+
+/// \return whether the code unit \p cu can begin a match according to the
+/// start filter of \p header. A unit >= 0x80 passes iff StartFilterNonASCII
+/// is set. The char path is not always 7-bit: the VM passes only ASCII
+/// strings, but other callers of searchWithBytecode(const char *) pass
+/// UTF-8 bytes, which are then units >= 0x80 like any other.
+template <typename CU>
+static inline bool startUnitPasses(const RegexBytecodeHeader &header, CU cu) {
+  const uint32_t u = static_cast<typename std::make_unsigned<CU>::type>(cu);
+  return u >= 0x80 ? (header.startFlags & StartFilterNonASCII) != 0
+                   : startSetHasASCII(header, u);
+}
+
+/// \return the first index i in [\p from, \p length) such that the code
+/// unit \p start[i] can begin a match according to the start filter of
+/// \p header (see startUnitPasses()), or \p length if there is none.
+template <typename CU>
+static inline size_t findStartCandidate(
+    const RegexBytecodeHeader &header,
+    const CU *start,
+    size_t from,
+    size_t length) {
+  if (from >= length)
+    return length;
+  if constexpr (sizeof(CU) == 1) {
+    // With one ASCII member and no unit >= 0x80, a byte search finds it.
+    if ((header.startFlags & (StartFilterSingleChar | StartFilterNonASCII)) ==
+        StartFilterSingleChar) {
+      const void *found =
+          std::memchr(start + from, header.startChar, length - from);
+      return found ? static_cast<const CU *>(found) - start : length;
+    }
+  }
+  for (size_t i = from; i < length; ++i) {
+    if (startUnitPasses(header, start[i]))
+      return i;
+  }
+  return length;
+}
+
 template <class Traits>
 auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
     -> ExecutorResult<const CodeUnit *> {
@@ -1085,6 +1113,22 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
   // Note that we do want to check the empty range at the end, so add one to
   // charsToRight.
   const size_t locsToCheckCount = onlyAtStart ? 1 : 1 + charsToRight;
+
+  // The start-position filter. Only a search that tries several positions
+  // uses it: sticky and anchored searches and every lookaround recursion
+  // (which may run a backwards cursor) pass onlyAtStart.
+  // startFilterPasses counts the consecutive attempted positions whose unit
+  // passed the filter. The filter is in use while it is below
+  // kMaxStartFilterPasses: past that, the filter is not paying for itself
+  // and is dropped for the rest of this search. One variable holds both, to
+  // keep register pressure off the matching loop below.
+  const auto *header =
+      reinterpret_cast<const RegexBytecodeHeader *>(bytecodeStream_.data());
+  unsigned startFilterPasses = !onlyAtStart &&
+          (header->startFlags & StartFilterPresent) &&
+          !(flags_ & constants::matchNoStartFilter)
+      ? 0
+      : kMaxStartFilterPasses;
 
   // If we are tracking backwards, we should only ever have one potential match
   // location. This is because advanceStringIndex only ever tracks forwards.
@@ -1115,6 +1159,25 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
 
   for (size_t locIndex = 0; locIndex < locsToCheckCount;
        locIndex = advanceStringIndex(startLoc, locIndex, charsToRight)) {
+    if (startFilterPasses < kMaxStartFilterPasses) {
+      // A filtered regex cannot match the empty string, so the position at
+      // the end of the input needs no attempt.
+      if (LLVM_UNLIKELY(locIndex >= charsToRight))
+        return nullptr;
+      if (startUnitPasses(*header, startLoc[locIndex])) {
+        ++startFilterPasses;
+      } else {
+        // Skip to the next position whose unit can begin a match. Under /u,
+        // every non-ASCII unit is treated alike, so the scan stops on a high
+        // surrogate before its low surrogate, and advanceStringIndex then
+        // steps over the pair.
+        startFilterPasses = 0;
+        locIndex =
+            findStartCandidate(*header, startLoc, locIndex + 1, charsToRight);
+        if (locIndex >= charsToRight)
+          return nullptr;
+      }
+    }
     const CodeUnit *potentialMatchLocation = startLoc + locIndex;
     c.setCurrentPointer(potentialMatchLocation);
     s->ip_ = startIp;
