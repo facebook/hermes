@@ -174,6 +174,7 @@ if (HERMESVM_ALLOW_JIT)
           JIT/arm64/JitEmitter-control.cpp
           JIT/arm64/JIT.cpp
           JIT/JitHandlers.cpp JIT/JitHandlers.h
+          JIT/JitCompiler.cpp JIT/JitCurArch.h
           JIT/PerfJitDump.cpp
   )
   set(JITLIBS asmjit)

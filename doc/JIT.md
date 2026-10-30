@@ -34,7 +34,8 @@ The machine-code emitter is [asmjit](https://asmjit.com) (vendored in
 | `include/hermes/VM/JIT/Config.h` | Decides `HERMESVM_JIT` from `HERMESVM_ALLOW_JIT` + platform. Requires arm64 and either no compressed pointers or a contiguous heap. On Apple platforms the JIT is additionally disabled *except* on macOS and Mac Catalyst, so arm64 macOS is a supported (and convenient) host for testing the JIT. |
 | `include/hermes/VM/JIT/JIT.h` | Dispatches to the per-arch `JITContext`; provides a no-op `JITContext` when the JIT is disabled. Already contains an `#elif defined(__x86_64__)` branch expecting `hermes/VM/JIT/x86-64/JIT.h` (does not exist yet). |
 | `include/hermes/VM/JIT/arm64/JIT.h` | Public `JITContext`: enablement, thresholds, `shouldCompile`/`compile`, counters, `markRoots`. |
-| `lib/VM/JIT/arm64/JIT.cpp` | `JITContext::Compiler`: per-opcode `emitXXX` methods that decode operands and forward to the `Emitter`. Drives BB-by-BB compilation. |
+| `lib/VM/JIT/JitCompiler.cpp` | `JITContext::Compiler`: per-opcode `emitXXX` methods that decode operands and forward to the `Emitter`. Drives BB-by-BB compilation. Arch-independent; compiled inside the arch namespace selected by `JitCurArch.h`. |
+| `lib/VM/JIT/arm64/JIT.cpp` | `JITContext` housekeeping: construction, `setHCIdLimit`, `dumpCounters`, `markRoots`. |
 | `lib/VM/JIT/arm64/JitEmitter.h` | The `Emitter` class definition: the FR/HWReg model, `TempRegAlloc`, the capture-based `SlowPath` class, and the full emitter method surface (which is effectively the porting contract). |
 | `lib/VM/JIT/arm64/JitEmitter.cpp` | Emitter lifecycle: constructor, `enter`/`frameSetup`/`leave` (prologue/epilogue), `newBasicBlock`, the runtime-call plumbing (`callRuntime*`), slow-path/catch-table/RO-data emission, `initHCLazyIDMayAlloc`, `addToRuntime`. |
 | `lib/VM/JIT/arm64/JitEmitter-regalloc.cpp` | The register-file engine: `getOrAllocFRIn*`, `movHW*`, sync/spill/free. |
@@ -496,9 +497,10 @@ Observations from this analysis, to be refined into a plan:
   when targeting arm64; a parallel `lib/VM/JIT/x86-64/` tree is expected by
   `include/hermes/VM/JIT/JIT.h`.
 - **Arch-independent pieces** usable as-is: DiscoverBB, RuntimeOffsets,
-  PerfJitDump, JitHandlers and JitCounters (both already moved out of
-  `arm64/`), the Compiler driver in JIT.cpp (contains no assembly; it could
-  move to a shared location or be duplicated with the namespace changed).
+  PerfJitDump, JitHandlers, JitCounters, and the Compiler driver
+  (JitCompiler.cpp) -- all now outside `arm64/`. A new backend implements
+  the Emitter method surface and adds its branch to `JitCurArch.h`; the
+  driver then compiles against it unchanged.
 - **The file split is a map for the arch split.** The `JitEmitter-*.cpp`
   topical boundaries separate the register-file engine (`-regalloc`), the
   shared inline helpers (`-internal.h`), and lifecycle (`JitEmitter.cpp`)
