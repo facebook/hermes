@@ -73,7 +73,15 @@ _hoost_ontop_fcontext:
     stp  x29, x30, [sp, #0x90]
 
     ; save LR as PC
+#if defined(__arm64e__)
+    ; signed with the address of its slot, which jump_fcontext authenticates
+    mov  x16, x30
+    add  x17, sp, #0xa0
+    pacia x16, x17
+    str  x16, [sp, #0xa0]
+#else
     str  x30, [sp, #0xa0]
+#endif
 
     ; store RSP (pointing to context-data) in X5
     mov  x4, sp
@@ -105,4 +113,9 @@ _hoost_ontop_fcontext:
     add  sp, sp, #0xb0
 
     ; jump to ontop-function
+#if defined(__arm64e__)
+    ; a C function pointer: IA, zero discriminator
+    braaz x2
+#else
     ret x2
+#endif

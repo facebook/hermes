@@ -73,7 +73,15 @@ _hoost_jump_fcontext:
     stp  fp,  lr,  [sp, #0x90]
 
     ; save LR as PC
+#if defined(__arm64e__)
+    ; signed with the address of its slot
+    mov  x16, lr
+    add  x17, sp, #0xa0
+    pacia x16, x17
+    str  x16, [sp, #0xa0]
+#else
     str  lr, [sp, #0xa0]
+#endif
 
     ; store RSP (pointing to context-data) in X0
     mov  x4, sp
@@ -102,8 +110,15 @@ _hoost_jump_fcontext:
 
     ; load pc
     ldr  x4, [sp, #0xa0]
+#if defined(__arm64e__)
+    add  x17, sp, #0xa0
+#endif
 
     ; restore stack from GP + FPU
     add  sp, sp, #0xb0
 
+#if defined(__arm64e__)
+    braa x4, x17
+#else
     ret x4
+#endif
