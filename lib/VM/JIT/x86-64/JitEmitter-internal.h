@@ -62,6 +62,27 @@ static_assert(
     (em).callRuntime((void *)func, #func);                 \
   } while (0)
 
+/// Emit code to check whether the input reg holds undefined, using the
+/// specified temp register, which must differ from the input.
+/// CPU flags are updated as a result: je on success.
+///
+/// x86-64: arm64 extracts the tag with an arithmetic shift and compares that.
+/// Here the whole undefined bit pattern is materialized into the temp
+/// instead, because x86 has a one-instruction 64-bit immediate load and no
+/// three-operand shift. Undefined carries no payload -- it is a single bit
+/// pattern -- so comparing the full value is exactly the tag check.
+inline void emit_sh_ljs_is_undefined(
+    x86::Assembler &a,
+    const x86::Gp &tempReg,
+    const x86::Gp &inputReg) {
+  static_assert(
+      HERMESVALUE_VERSION == 2,
+      "undefined must be a single bit pattern with no payload");
+  assert(tempReg != inputReg && "temp register must differ from the input");
+  a.mov(tempReg, asmjit::Imm(_sh_ljs_undefined().raw));
+  a.cmp(inputReg, tempReg);
+}
+
 class OurErrorHandler : public asmjit::ErrorHandler {
   asmjit::Error &expectedError_;
   std::function<void(std::string &&message)> const longjmpError_;

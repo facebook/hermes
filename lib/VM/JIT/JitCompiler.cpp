@@ -86,6 +86,16 @@ class JITContext::Compiler {
       std::vector<Emitter::StringSwitchCase>>
       stringSwitchImmTargetLabels_;
 
+  /// Scratch buffers owned by the compiler rather than by the frame that
+  /// fills them. An emitter can abandon compilation with a longjmp back to
+  /// compileCodeBlock() -- on a genuine AsmJit error, or when a backend
+  /// under bring-up meets an instruction it does not implement yet -- which
+  /// skips the destructors of every local between here and there. Anything
+  /// owning heap memory across an emitter call therefore has to live in this
+  /// object, which the longjmp target destroys normally.
+  std::vector<const asmjit::Label *> jumpTableLabels_{};
+  llvh::SmallVector<const asmjit::Label *, 4> exceptionHandlers_{};
+
  public:
   Compiler(Runtime &runtime, JITContext &jc, CodeBlock *codeBlock)
       : jc_(jc),
@@ -292,14 +302,15 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
   auto excTable =
       codeBlock_->getRuntimeModule()->getBytecode()->getExceptionTable(
           codeBlock_->getFunctionID());
-  llvh::SmallVector<const asmjit::Label *, 4> handlers{};
-  handlers.reserve(excTable.size());
+  // See exceptionHandlers_: leave() may longjmp, so this cannot be a local
+  // once the handler list outgrows the inline capacity.
+  exceptionHandlers_.reserve(excTable.size());
   for (const auto &entry : excTable) {
-    handlers.push_back(&bbLabels_.at(ofsToBBIndex_.at(entry.target)));
+    exceptionHandlers_.push_back(&bbLabels_.at(ofsToBBIndex_.at(entry.target)));
   }
 
   // Emit the leave before getting the codeSize so the measurement is accurate.
-  em_.leave(handlers);
+  em_.leave(exceptionHandlers_);
 
   size_t memoryLimit = jc_.memoryLimit_;
   size_t usedSize =
@@ -633,19 +644,21 @@ inline void JITContext::Compiler::emitUIntSwitchImm(
   const uint8_t *tablestart = (const uint8_t *)llvh::alignAddr(
       (const uint8_t *)inst + inst->op2, sizeof(uint32_t));
 
-  std::vector<const asmjit::Label *> jumpTableLabels{};
-  jumpTableLabels.reserve(entries);
+  // See jumpTableLabels_: this cannot be a local, because the emitter call
+  // below may longjmp past its destructor.
+  jumpTableLabels_.clear();
+  jumpTableLabels_.reserve(entries);
 
   // Add a label for each offset in the table.
   for (uint32_t i = 0; i < entries; ++i) {
     const int32_t *loc = (const int32_t *)tablestart + i;
     int32_t offset = *loc;
-    jumpTableLabels.push_back(&bbLabelFromInst(inst, offset));
+    jumpTableLabels_.push_back(&bbLabelFromInst(inst, offset));
   }
   em_.uintSwitchImm(
       FR(inst->op1),
       bbLabelFromInst(inst, inst->op3),
-      jumpTableLabels,
+      jumpTableLabels_,
       min,
       max);
 }
@@ -671,7 +684,21 @@ inline void JITContext::Compiler::emitStringSwitchImm(
         table, tablestart, inst->op5);
   }
 
-  std::vector<Emitter::StringSwitchCase> switchTableLabels{};
+  // Build the case list straight into the map that keeps it -- so that we can
+  // record the labels in the runtime table when compilation completes -- and
+  // not in a local: the emitter call below may longjmp past a local's
+  // destructor. See jumpTableLabels_.
+  auto [it, res] = stringSwitchImmTargetLabels_.try_emplace(inst);
+  (void)res;
+  assert(res);
+  std::vector<Emitter::StringSwitchCase> &switchTableLabels = it->second;
+  // Mirrors jumpTableLabels_.clear() above: on the (impossible in a
+  // well-formed codeblock) path where this inst was already a key -- so
+  // try_emplace left the existing entry alone and assert(res) is compiled
+  // out -- this drops the stale entries instead of appending to them. On
+  // the normal path try_emplace just default-constructed an empty vector,
+  // so clearing it here is a no-op.
+  switchTableLabels.clear();
   switchTableLabels.reserve(entries);
 
   // Add a label for each offset in the table.
@@ -688,12 +715,6 @@ inline void JITContext::Compiler::emitStringSwitchImm(
       inst->op2,
       bbLabelFromInst(inst, inst->op4),
       switchTableLabels);
-
-  // Save the labels, so we can record them in the runtime table when the
-  // compilation is complete.
-  [[maybe_unused]] auto [_, res] = stringSwitchImmTargetLabels_.try_emplace(
-      inst, std::move(switchTableLabels));
-  assert(res);
 }
 
 inline void JITContext::Compiler::emitTryGetByIdLong(

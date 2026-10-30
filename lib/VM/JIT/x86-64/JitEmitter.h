@@ -211,6 +211,8 @@ static constexpr std::pair<uint8_t, uint8_t> kGPTemp2(6, 10);
 // Callee-saved global pool: rbx (also the return-value stash, the x21
 // analogue), r12, r13. Not contiguous, so a list, not a range.
 static constexpr uint8_t kGPSavedList[] = {3, 12, 13};
+// rbx: return-value stash (arm64 x21 analogue); must equal kGPSavedList[0].
+static constexpr uint8_t kGPReturnStash = 3;
 // Vector temps: all of xmm0-xmm15; no callee-saved vector registers
 // exist in SysV, so there are no vector globals.
 static constexpr std::pair<uint8_t, uint8_t> kVecTemp(0, 15);
@@ -293,8 +295,10 @@ class TempRegAlloc {
 };
 
 class Emitter {
-  Runtime &runtime_;
-  JITContext::Impl &jitImpl_;
+  // x86-64: unreferenced in the milestone-1 tree -- used from milestone 2;
+  // keeps -Wunused-private-field clean until then.
+  [[maybe_unused]] Runtime &runtime_;
+  [[maybe_unused]] JITContext::Impl &jitImpl_;
 
   /// Level of dumping JIT code. Bit 0 indicates code printing on or off.
   unsigned const dumpJitCode_;
@@ -303,7 +307,9 @@ class Emitter {
   /// Whether to verify FR type assumptions in the JIT'ed code.
   bool const emitTypeAsserts_;
   /// Whether to emit counters in the JIT'ed code.
-  bool const emitCounters_;
+  // x86-64: unreferenced in the milestone-1 tree -- used from milestone 2;
+  // keeps -Wunused-private-field clean until then.
+  [[maybe_unused]] bool const emitCounters_;
 
 #ifndef ASMJIT_NO_LOGGING
   std::unique_ptr<asmjit::Logger> logger_{};
@@ -319,6 +325,93 @@ class Emitter {
   TempRegAlloc gpTemp_{kGPTemp1, kGPTemp2};
   /// Vec temp registers.
   TempRegAlloc vecTemp_{kVecTemp};
+
+  /// A deferred slow path, emitted at the end of the function.
+  ///
+  /// Everything the slow path needs beyond the common fields below is held in
+  /// the lambda passed to the constructor, stored inline in \c storage_. This
+  /// keeps each slow path's state private to the one place that produces and
+  /// consumes it, instead of a shared set of fields that any slow path could
+  /// read whether or not its producer set them.
+  class SlowPath {
+   public:
+    /// Label of the slow path.
+    asmjit::Label slowPathLab;
+    /// Label to jump to after the slow path.
+    asmjit::Label contLab;
+    /// Bytecode IP of the instruction that this is a slow path for.
+    const inst::Inst *emittingIP;
+
+    /// \param l is invoked as l(Emitter &, SlowPath &) to emit the slow path.
+    /// Its captures are copied into \c storage_ and never destroyed, so they
+    /// must be trivially destructible and must fit.
+    template <typename L>
+    SlowPath(
+        asmjit::Label slowPathLab,
+        asmjit::Label contLab,
+        const inst::Inst *emittingIP,
+        L &&l)
+        : slowPathLab(slowPathLab),
+          contLab(contLab),
+          emittingIP(emittingIP),
+          emit_([](Emitter &em, SlowPath &sp) {
+            (*reinterpret_cast<std::decay_t<L> *>(sp.storage_))(em, sp);
+          }) {
+      using Lambda = std::decay_t<L>;
+      static_assert(
+          sizeof(Lambda) <= sizeof(storage_),
+          "slow path captures too much; enlarge storage_ or capture less");
+      static_assert(
+          alignof(Lambda) <= alignof(void *),
+          "slow path captures are over-aligned");
+      static_assert(
+          std::is_trivially_destructible_v<Lambda>,
+          "slow path captures must be trivially destructible");
+      ::new (storage_) Lambda(std::forward<L>(l));
+    }
+
+    /// Overload for slow paths that do not branch back to a continuation.
+    template <typename L>
+    SlowPath(asmjit::Label slowPathLab, const inst::Inst *emittingIP, L &&l)
+        : SlowPath(
+              slowPathLab,
+              asmjit::Label(),
+              emittingIP,
+              std::forward<L>(l)) {}
+
+    /// Non-copyable and non-movable: \c storage_ holds a type-erased lambda
+    /// that cannot be relocated by the implicit memberwise copy. std::deque
+    /// never relocates existing elements, so emplace_back and pop_front are
+    /// all that is needed.
+    SlowPath(const SlowPath &) = delete;
+    SlowPath &operator=(const SlowPath &) = delete;
+
+    /// Emit this slow path.
+    void emit(Emitter &em) {
+      emit_(em, *this);
+    }
+
+   private:
+    void (*emit_)(Emitter &em, SlowPath &sp);
+    /// Inline storage for the lambda's captures. Sized to match arm64, whose
+    /// largest slow path captures an asmjit::Label (16 bytes, an Operand)
+    /// plus three pointers, two FRs and two bools. Raising this is fine; the
+    /// static_assert above is what keeps a too-large capture from becoming a
+    /// silent heap allocation.
+    alignas(void *) char storage_[56];
+  };
+  /// Queue of slow paths.
+  std::deque<SlowPath> slowPaths_{};
+  /// x86-64: monotonically increasing counter used to name SLOW_/CONT_
+  /// labels. Unlike arm64 -- which still names labels from
+  /// slowPaths_.size() -- this backend does not reuse an index once it is
+  /// handed out. See newSlowPathLabel()/newContLabel().
+  unsigned slowPathLabelCounter_{0};
+
+  /// FRs written by the bytecode instruction currently being emitted whose
+  /// global register class requires a check. Drained at each instruction
+  /// boundary by emitPendingTypeAsserts().
+  llvh::SmallVector<FR, 4> typeAssertPendingWrites_{};
 
   /// Descriptor for a single RO data entry.
   struct DataDesc {
@@ -337,11 +430,19 @@ class Emitter {
   /// Map from the bit pattern of a double value to offset in constant pool.
   llvh::DenseMap<hermes::DenseUInt64, int32_t> fp64ConstMap_{};
 
-  /// Label to branch to when returning from a function.
+  /// Label to branch to when returning from a function. The return value
+  /// will be in rbx.
   asmjit::Label returnLabel_{};
+
+  /// Label to branch to when catching an exception with setjmp.
+  /// Invalid if there's no try/catch in the function.
+  asmjit::Label catchTableLabel_{};
 
   /// The bytecode codeblock.
   CodeBlock *const codeBlock_;
+
+  /// Optionally, the offset of the string name, used for debug printing.
+  int32_t roOfsDebugFunctionName_ = -1;
 
   /// Offset in RODATA of the pointer to the start of the read property
   /// cache.
@@ -352,6 +453,10 @@ class Emitter {
   /// Offset in RODATA of the pointer to the start of the private name
   /// cache.
   int32_t roOfsPrivateNameCachePtr_;
+
+  /// Number of entries of kGPSavedList pushed by the prologue. Always at
+  /// least one, since rbx is saved even when no FR uses it.
+  unsigned gpSaveCount_ = 0;
 
  public:
   asmjit::CodeHolder code{};
@@ -707,12 +812,32 @@ class Emitter {
   void typedLoadParent(FR frRes, FR frObj);
 
   /// Emit, at a bytecode instruction boundary, the global-register-class
-  /// checks for every FR recorded since the last call. Task 2: no code is
-  /// ever emitted, so there is nothing pending; this is a no-op stub until
-  /// Task 3 lands the real substrate.
-  void emitPendingTypeAsserts() {}
+  /// checks for every FR recorded since the last call.
+  /// x86-64: the check sequences themselves land with the tag-helper
+  /// milestone. The recording side is ported now so that the register
+  /// allocator stays textually identical to arm64's; draining here keeps
+  /// newBasicBlock()'s "nothing pending at a boundary" invariant true.
+  /// enter() declines any function when type asserts are requested, so a
+  /// caller asking for them never silently gets code without them.
+  void emitPendingTypeAsserts() {
+    typeAssertPendingWrites_.clear();
+  }
 
  private:
+  /// \return the byte offset of \p fr's slot from xFrame.
+  static constexpr inline uint32_t frByteOffset(FR fr) {
+    return (fr.index() + hbc::StackFrameLayout::FirstLocal) *
+        sizeof(SHLegacyValue);
+  }
+
+  /// Create an x86::Mem addressing a specific frame register.
+  /// x86-64: every memory operand takes a signed 32-bit displacement, which
+  /// spans any frame the bytecode can describe, so unlike arm64 there is no
+  /// immediate-range fallback anywhere in the frame accessors.
+  static inline x86::Mem frMem(FR fr) {
+    return x86::qword_ptr(xFrame, (int32_t)frByteOffset(fr));
+  }
+
   /// Return true if we are logging, false otherwise.
   bool hasLogger() {
 #ifndef ASMJIT_NO_LOGGING
@@ -721,6 +846,241 @@ class Emitter {
     return false;
 #endif
   }
+
+  /// Load an arbitrary bit pattern into a Gp.
+  /// x86-64: any 64-bit constant is a single mov, so there is neither a
+  /// cheap/expensive split nor an RO-data fallback. \p constName is kept
+  /// for signature parity with arm64.
+  template <typename REG>
+  void loadBits64InGp(const REG &dest, uint64_t bits, const char *constName) {
+    (void)constName;
+    a.mov(dest, asmjit::Imm(bits));
+  }
+
+  void _loadFrame(HWReg dest, FR rFrom) {
+    if (dest.isGpX())
+      a.mov(dest.gpq(), frMem(rFrom));
+    else
+      a.vmovsd(dest.xmm(), frMem(rFrom));
+  }
+  void _storeFrame(HWReg src, FR rFrom) {
+    if (src.isGpX())
+      a.mov(frMem(rFrom), src.gpq());
+    else
+      a.vmovsd(frMem(rFrom), src.xmm());
+  }
+
+  bool isTempGpX(HWReg hwReg) const {
+    assert(hwReg.isGpX());
+    unsigned index = hwReg.indexInClass();
+    return (index >= kGPTemp1.first && index <= kGPTemp1.second) ||
+        (index >= kGPTemp2.first && index <= kGPTemp2.second);
+  }
+
+  bool isTempVecD(HWReg hwReg) const {
+    assert(hwReg.isVecD());
+    unsigned index = hwReg.indexInClass();
+    return index >= kVecTemp.first && index <= kVecTemp.second;
+  }
+
+  bool isTemp(HWReg hwReg) const {
+    return hwReg.isGpX() ? isTempGpX(hwReg) : isTempVecD(hwReg);
+  }
+
+  template <bool use>
+  void movHWFromHW(HWReg dst, HWReg src);
+  void _storeHWToFrame(FR fr, HWReg src);
+  void movHWFromFR(HWReg hwRes, FR src);
+  void movHWFromMem(HWReg hwRes, x86::Mem src);
+
+  /// Move a value from a hardware register \p src to the frame register \p
+  /// frDest.
+  void movFRFromHW(FR frDest, HWReg src, FRType type);
+
+  /// In rare cases, such as when we have in/out parameters to operations, the
+  /// frame may get updated with a new value. This will ensure that the frame is
+  /// marked up-to-date, and that any associated global register holds the same
+  /// value.
+  void syncFrameOutParam(FR fr, FRType type = FRType::UnknownPtr);
+
+  template <class TAG>
+  HWReg _allocTemp(TempRegAlloc &ra, llvh::Optional<HWReg> preferred);
+  HWReg allocTempGpX(llvh::Optional<HWReg> preferred = llvh::None) {
+    assert((!preferred || preferred->isGpX()) && "invalid preferred register");
+    return _allocTemp<HWReg::GpX>(gpTemp_, preferred);
+  }
+  HWReg allocTempVecD(llvh::Optional<HWReg> preferred = llvh::None) {
+    assert((!preferred || preferred->isVecD()) && "invalid preferred register");
+    return _allocTemp<HWReg::VecD>(vecTemp_, preferred);
+  }
+  HWReg allocAndLogTempGpX() {
+    HWReg res = allocTempGpX();
+    comment("    ; alloc: r%u (temp)", res.indexInClass());
+    return res;
+  }
+  /// Free \p hwReg, which may be any HWReg.
+  void freeReg(HWReg hwReg);
+  /// If \p hwReg is a valid temp associated with an FR, sync it to the global
+  /// register if the FR has one, else store it in the frame. Then free the
+  /// temp, making it available to be used again.
+  /// Else, do nothing.
+  void syncAndFreeTempReg(HWReg hwReg);
+  HWReg useReg(HWReg hwReg);
+
+  /// Ensure that an HWReg currently containing an FR is available to be used
+  /// again by "spilling" its value to its canonical location (either the frame
+  /// or a global reg). Conceptually it then frees the HWReg and immediately
+  /// allocates it again, so now it is as if it was just allocated.
+  /// \pre \p toSpill must have a corresponding FR.
+  void _spillTempForFR(HWReg toSpill);
+
+  /// Ensure that \p fr is stored in the frame so that we can take its address
+  /// (e.g. when passing the address of \p fr as a param to a function).
+  ///
+  /// Store any temporary or global register associated with \p fr to the frame
+  /// in memory.
+  void syncToFrame(FR fr);
+
+  /// Ensure all FRs have their values stored in either global registers or the
+  /// frame, not just temporary registers.
+  /// Must run before calls because temporary registers will be clobbered by the
+  /// call.
+  ///
+  /// Sync all temporary registers associated with FRs to either the global
+  /// register or the frame.
+  /// \param exceptFR If specified, do not sync this FR (used for output FRs
+  /// that we aren't going to load from before storing to them anyway).
+  void syncAllFRTempExcept(FR exceptFR);
+
+  /// Free all temporary registers associated with FRs except \p exceptFR.
+  void freeAllFRTempExcept(FR exceptFR);
+
+  /// Free any temporary register associated with \p FR.
+  void freeFRTemp(FR fr);
+
+  void _assignAllocatedLocalHWReg(FR fr, HWReg hwReg);
+
+  /// \return a valid register if the FR is in a hw register, otherwise invalid.
+  HWReg _isFRInRegister(FR fr);
+  HWReg getOrAllocFRInVecD(
+      FR fr,
+      bool load,
+      llvh::Optional<HWReg> preferred = llvh::None);
+  HWReg getOrAllocFRInGpX(
+      FR fr,
+      bool load,
+      llvh::Optional<HWReg> preferred = llvh::None);
+  HWReg getOrAllocFRInAnyReg(
+      FR fr,
+      bool load,
+      llvh::Optional<HWReg> preferred = llvh::None);
+
+  void
+  frUpdatedWithHW(FR fr, HWReg hwReg, FRType localType = FRType::UnknownPtr);
+  void frUpdateType(FR fr, FRType type);
+
+  /// \return true if the FR is currently known to contain the specified type.
+  bool isFRKnownType(FR fr, FRType frType) const {
+    auto &frState = frameRegs_[fr.index()];
+    return frState.globalType == frType || frState.localType == frType;
+  }
+  /// \return true if the FR is currently known to contain a number.
+  bool isFRKnownNumber(FR fr) const {
+    return isFRKnownType(fr, FRType::Number);
+  }
+  /// \return true if the FR is currently known to contain a number.
+  bool isFRKnownBool(FR fr) const {
+    return isFRKnownType(fr, FRType::Bool);
+  }
+  /// \return true if the FR is currently known to contain an OtherNonPtr.
+  bool isFRKnownOtherNonPtr(FR fr) const {
+    return isFRKnownType(fr, FRType::OtherNonPtr);
+  }
+
+  /// Record that \p fr was written, so that the instruction boundary can
+  /// check the value against its global register class. Records nothing
+  /// unless the FR owns a global register. Callers must check
+  /// emitTypeAsserts_ themselves; this does not.
+  void recordFRWriteForAssert(FR fr);
+
+ private:
+  /// Allocate or return the offset in RO DATA of the current function's debug
+  /// name, in the format ID(name).
+  int32_t getDebugFunctionName();
+
+  /// \return the number of bytes subtracted from/added to rsp by the single
+  /// sub/add that follows the pushes. Covers the optional SHJmpBuf and saved
+  /// SHLocals, plus the padding that restores 16-byte alignment.
+  uint32_t getStackSize() const {
+    return getSavedRegsPadding() + getExceptionAreaSize();
+  }
+
+  /// \return the size of the optional SHJmpBuf + saved SHLocals area, which
+  /// is a multiple of 16 so that it cannot perturb the stack alignment.
+  uint32_t getExceptionAreaSize() const {
+    return catchTableLabel_.isValid() ? llvh::alignTo(sizeof(SHJmpBuf) + 8, 16)
+                                      : 0;
+  }
+
+  /// \return the alignment padding between the saved registers and the
+  /// exception area (SHLocals*/SHJmpBuf). See the arithmetic in
+  /// frameSetup().
+  uint32_t getSavedRegsPadding() const {
+    return 8 * (gpSaveCount_ % 2);
+  }
+
+  /// \return the offset of the SHJmpBuf from rsp. The SHJmpBuf sits directly
+  /// above rsp (below the padding), so it is 16-byte aligned regardless of
+  /// the parity of gpSaveCount_ -- see the frame-layout comment in
+  /// frameSetup().
+  uint32_t getJmpBufOffset() const {
+    assert(catchTableLabel_.isValid() && "no SHJmpBuf on stack");
+    return 0;
+  }
+
+  /// \return the offset of the saved SHLocals pointer from rsp.
+  uint32_t getSavedSHLocalsOffset() const {
+    assert(catchTableLabel_.isValid() && "no saved SHLocals * on stack");
+    return sizeof(SHJmpBuf);
+  }
+
+  /// \return true if \c emittingIP is in a try (i.e. exceptions can be observed
+  ///   in this function).
+  bool isInTry() const {
+    return codeBlock_->findCatchTargetOffset(
+               codeBlock_->getOffsetOf(emittingIP)) != -1;
+  }
+
+  /// Emit the function prologue.
+  /// \param numFrameRegs the number of JS frame registers to reserve.
+  /// \param gpSaveCount the number of kGPSavedList entries used by globals.
+  void frameSetup(unsigned numFrameRegs, unsigned gpSaveCount);
+
+  // x86-64: unlike arm64, label names here are drawn from a dedicated
+  // monotonically-increasing counter rather than slowPaths_.size(). The
+  // latter is non-monotonic -- emitSlowPaths() pops from the front as it
+  // emits -- and two label pairs created before either is emplaced would
+  // sample the same size() and collide. newSlowPathLabel() advances the
+  // counter and newContLabel() reads it back, so a SLOW/CONT pair always
+  // shares one index and no two pairs ever collide.
+  asmjit::Label newSlowPathLabel() {
+    return newPrefLabel("SLOW_", ++slowPathLabelCounter_);
+  }
+  asmjit::Label newContLabel() {
+    return newPrefLabel("CONT_", slowPathLabelCounter_);
+  }
+
+  /// Emit a call to \p fn, saving the bytecode IP to Runtime::currentIP
+  /// before making the call. This should be used for all calls that may
+  /// observe the IP, such as calls that may throw exceptions, or perform
+  /// allocations.
+  void callRuntimeWithSavedIP(void *fn, const char *name);
+
+  /// Emit a call to \p fn without saving the IP. This should be used only
+  /// where saving the IP is unnecessary or incorrect.
+  void callRuntime(void *fn, const char *name);
+
+  void emitSlowPaths();
 
   int32_t reserveData(
       int32_t dsize,
@@ -755,6 +1115,42 @@ inline void Emitter::comment(const char *fmt, ...) {
   va_start(args, fmt);
   commentV(fmt, args);
   va_end(args);
+}
+
+template <bool use>
+void Emitter::movHWFromHW(HWReg dst, HWReg src) {
+  if (dst != src) {
+    // x86-64: vmovaps is the reg-to-reg vector move (no partial-register
+    // merge, unlike the three-operand vmovsd), and vmovq moves the whole
+    // 64-bit pattern between a Gp and the low half of an Xmm.
+    if (dst.isVecD() && src.isVecD())
+      a.vmovaps(dst.xmm(), src.xmm());
+    else if (dst.isVecD())
+      a.vmovq(dst.xmm(), src.gpq());
+    else if (src.isVecD())
+      a.vmovq(dst.gpq(), src.xmm());
+    else
+      a.mov(dst.gpq(), src.gpq());
+  }
+  if constexpr (use) {
+    useReg(src);
+    useReg(dst);
+  }
+}
+
+template <class TAG>
+HWReg Emitter::_allocTemp(TempRegAlloc &ra, llvh::Optional<HWReg> preferred) {
+  llvh::Optional<unsigned> pr{};
+  if (preferred)
+    pr = preferred->indexInClass();
+  if (auto optReg = ra.alloc(pr); optReg)
+    return HWReg(*optReg, TAG{});
+  // Spill one register.
+  unsigned index = pr ? *pr : ra.leastRecentlyUsed();
+  _spillTempForFR(HWReg(index, TAG{}));
+  ra.free(index);
+  // Allocate again. This must succeed.
+  return HWReg(*ra.alloc(), TAG{});
 }
 
 } // namespace hermes::vm::x86_64

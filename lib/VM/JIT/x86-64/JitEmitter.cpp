@@ -11,9 +11,14 @@
 #include "JitEmitter.h"
 #include "JitImpl.h"
 
+#include "../JitHandlers.h"
+
+#include "../RuntimeOffsets.h"
 #include "hermes/Support/ErrorHandling.h"
+#include "hermes/VMLayouts/StackFrameLayout.h"
 
 #include <cstdio>
+#include <limits>
 
 #if defined(HERMESVM_COMPRESSED_POINTERS) && !defined(HERMESVM_CONTIGUOUS_HEAP)
 #error JIT does not support non-contiguous heap with compressed pointers
@@ -136,23 +141,539 @@ void Emitter::assertPostInstructionInvariants() {
 #endif
 
 void Emitter::enter(uint32_t numCount, uint32_t npCount) {
-  // Task 2: the x86-64 backend has no real substrate yet. Decline every
-  // function unconditionally; JITContext::Compiler catches this and falls
-  // back to the interpreter. Task 3 replaces this with the real prologue.
-  unsupported("enter");
+  // x86-64: the emitted type-assert check sequences land with the tag-helper
+  // milestone. Decline rather than silently emit code without the checks the
+  // caller asked for.
+  if (LLVM_UNLIKELY(emitTypeAsserts_))
+    unsupported("type asserts");
+
+  // x86-64: SysV has no callee-saved vector registers, so there is a single
+  // pool of global registers, kGPSavedList, which both number FRs and
+  // non-pointer FRs draw from, numbers first. arm64's second (vector) loop
+  // has no analogue here.
+  unsigned nextGp = 0;
+
+  // Number registers.
+  for (unsigned frIndex = 0; frIndex < numCount; ++frIndex) {
+    if (nextGp >= std::size(kGPSavedList))
+      break;
+    unsigned regIndex = kGPSavedList[nextGp];
+    comment("    ; alloc: r%u <= r%u", regIndex, frIndex);
+    ++nextGp;
+
+    frameRegs_[frIndex].globalReg = HWReg::gpX(regIndex);
+    frameRegs_[frIndex].globalType = FRType::Number;
+  }
+  // Non-pointer regs.
+  for (unsigned frIndex = numCount; frIndex < npCount + numCount; ++frIndex) {
+    if (nextGp >= std::size(kGPSavedList))
+      break;
+    unsigned regIndex = kGPSavedList[nextGp];
+    comment("    ; alloc: r%u <= r%u", regIndex, frIndex);
+    ++nextGp;
+
+    frameRegs_[frIndex].globalReg = HWReg::gpX(regIndex);
+    frameRegs_[frIndex].globalType = FRType::UnknownNonPtr;
+  }
+
+  bool hasExceptionTable = !codeBlock_->getRuntimeModule()
+                                ->getBytecode()
+                                ->getExceptionTable(codeBlock_->getFunctionID())
+                                .empty();
+
+  // A function with exception handlers must end up with no global registers.
+  // longjmp restores callee-saved registers to their values at the setjmp,
+  // so a global register would present a stale value to a catch handler;
+  // correctness depends on every FR's canonical location being the memory
+  // frame, which is also what makes the isInTry() sync in the throwing
+  // emitters sufficient.
+  //
+  // Nothing here enforces that: it holds because
+  // RegisterAllocator::getRegClass (lib/BCGen/RegAlloc.cpp) forces
+  // RegClass::Other for any function containing a try, which leaves both
+  // counts at zero. That is a contract with another module, so check it.
+  assert(
+      (!hasExceptionTable || (numCount == 0 && npCount == 0)) &&
+      "function with exception handlers must have no global registers");
+
+  if (hasExceptionTable)
+    catchTableLabel_ = a.newNamedLabel("CATCH_TABLE");
+
+  frameSetup(frameRegs_.size(), nextGp);
+}
+
+int32_t Emitter::getDebugFunctionName() {
+  if (roOfsDebugFunctionName_ < 0) {
+    std::string str;
+    llvh::raw_string_ostream ss(str);
+    ss << codeBlock_->getFunctionID() << "(" << codeBlock_->getNameString()
+       << ")";
+    ss.flush();
+    int32_t size = str.size() + 1;
+    roOfsDebugFunctionName_ = reserveData(size, 1, asmjit::TypeId::kInt8, size);
+    memcpy(roData_.data() + roOfsDebugFunctionName_, str.data(), size);
+  }
+  return roOfsDebugFunctionName_;
+}
+
+void Emitter::frameSetup(unsigned numFrameRegs, unsigned gpSaveCount) {
+  assert(
+      gpSaveCount <= std::size(kGPSavedList) &&
+      "Too many callee saved GP regs");
+
+  static_assert(
+      kGPSavedList[0] == kGPReturnStash,
+      "Callee saved GP regs must start at rbx");
+  // Always save rbx even if it is not needed for an FR, because we use it for
+  // the return value.
+  if (gpSaveCount == 0)
+    gpSaveCount = 1;
+
+  gpSaveCount_ = gpSaveCount;
+
+  // Higher addresses are at the top.
+  // +-----------------------------+ <-- caller rsp before the call
+  // |      return address         |
+  // +-----------------------------+
+  // |         saved rbp           | <-- rbp
+  // +-----------------------------+
+  // |   saved r15, r14, then      |
+  // |   rbx/r12/r13 as used       |
+  // +-----------------------------+
+  // |   alignment padding 0-8     |
+  // +-----------------------------+
+  // |  Saved SHLocals* (optional) |
+  // +-----------------------------+
+  // |     SHJmpBuf (optional)     | <-- rsp (rsp % 16 == 0 here)
+  // +-----------------------------+
+  //
+  // Stack alignment. SysV requires rsp % 16 == 0 immediately before every
+  // `call`, i.e. rsp % 16 == 8 on entry to the callee. On entry here the
+  // caller's `call` has pushed a return address, so rsp % 16 == 8;
+  // `push rbp` brings it to 0, and each of the (2 + gpSaveCount) further
+  // pushes flips it by 8:
+  //   after the pushes: rsp % 16 == 8 * ((2 + gpSaveCount) % 2)
+  //                              == 8 * (gpSaveCount % 2)
+  // getSavedRegsPadding() is exactly that value, and the optional SHJmpBuf +
+  // SHLocals area is rounded up to a multiple of 16, so the single
+  // `sub rsp, getStackSize()` below lands on rsp % 16 == 0 and every call
+  // emitted afterwards is aligned. Putting the padding above the exception
+  // area (rather than between it and rsp) means the SHJmpBuf itself always
+  // starts at rsp + 0, so it is 16-byte aligned regardless of the padding's
+  // size -- i.e. regardless of push parity.
+  a.push(x86::rbp);
+  a.mov(x86::rbp, x86::rsp);
+  a.push(xRuntime);
+  a.push(xFrame);
+  for (unsigned i = 0; i < gpSaveCount; ++i)
+    a.push(x86::gpq(kGPSavedList[i]));
+  if (uint32_t stackSize = getStackSize())
+    a.sub(x86::rsp, stackSize);
+
+  comment("// xRuntime");
+  a.mov(xRuntime, x86::rdi);
+
+  // Save the SHLocals pointer because we don't allocate and push a new
+  // SHLocals in the JIT.
+  // Used in CatchInst to restore state.
+  if (catchTableLabel_.isValid()) {
+    comment("// saved SHLocals *");
+    a.mov(x86::rax, x86::qword_ptr(xRuntime, RuntimeOffsets::shLocals));
+    a.mov(
+        x86::qword_ptr(x86::rsp, (int32_t)getSavedSHLocalsOffset()), x86::rax);
+  }
+
+#ifndef HERMES_CHECK_NATIVE_STACK
+#error Only native stack checking is supported in the JIT
+#endif
+
+  comment("// _sh_check_native_stack_overflow");
+  asmjit::Label nativeOverflowLab = newSlowPathLabel();
+  asmjit::Label nativeOverflowContLab = newContLabel();
+  // Subtract the frame pointer from nativeStackHigh and compare it against
+  // the size. If the difference is less than the stack size, then we are
+  // still within the current stack bounds.
+  // x86-64: rbp is the frame pointer (arm64 used x29), and the second load
+  // folds into the cmp as a memory operand, so only xScratch is needed.
+  a.mov(xScratch, x86::qword_ptr(xRuntime, RuntimeOffsets::nativeStackHigh));
+  a.sub(xScratch, x86::rbp);
+  a.cmp(xScratch, x86::qword_ptr(xRuntime, RuntimeOffsets::nativeStackSize));
+  // If the frame pointer is within bounds, we are done. Otherwise, we need to
+  // check if the bounds have changed.
+  a.ja(nativeOverflowLab);
+  a.bind(nativeOverflowContLab);
+  slowPaths_.emplace_back(
+      nativeOverflowLab,
+      nativeOverflowContLab,
+      /* emittingIP */ nullptr,
+      [](Emitter &em, SlowPath &sp) {
+        em.comment("// Slow path: _sh_check_native_stack_overflow");
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(x86::rdi, xRuntime);
+        // Do not save the IP because we have not yet set up the stack frame
+        // for this function. If this throws, the exception should appear in
+        // the caller.
+        EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(
+            em, void (*)(SHRuntime *), _sh_check_native_stack_overflow);
+        em.a.jmp(sp.contLab);
+      });
+
+  comment("// xFrame");
+  a.mov(xFrame, x86::qword_ptr(xRuntime, RuntimeOffsets::stackPointer));
+
+  // If the function has a prohibitInvoke flag, we need to check if it has been
+  // called correctly.
+  auto prohibitInvoke = codeBlock_->getHeaderFlags().getProhibitInvoke();
+  if (prohibitInvoke != ProhibitInvoke::None) {
+    // Load new.target.
+    a.mov(
+        x86::rax,
+        x86::qword_ptr(
+            xFrame, StackFrameLayout::NewTarget * (int)sizeof(SHLegacyValue)));
+    // Compare new.target against undefined.
+    emit_sh_ljs_is_undefined(a, xScratch, x86::rax);
+
+    void (*slowCall)(SHRuntime *);
+    const char *slowCallName;
+    asmjit::Label throwInvalidInvokeLab;
+    if (prohibitInvoke == ProhibitInvoke::Call) {
+      // If regular calls are prohibited, then we jump to throwInvalidInvoke if
+      // new.target is undefined.
+      throwInvalidInvokeLab = a.newNamedLabel("throwInvalidCall");
+      a.je(throwInvalidInvokeLab);
+
+      slowCall = _sh_throw_invalid_call;
+      slowCallName = "_sh_throw_invalid_call";
+    } else {
+      assert(
+          prohibitInvoke == ProhibitInvoke::Construct &&
+          "Unknown prohibitInvoke");
+      // If construct calls are prohibited, then we jump to throwInvalidInvoke
+      // if new.target is not undefined.
+      throwInvalidInvokeLab = a.newNamedLabel("throwInvalidConstruct");
+      a.jne(throwInvalidInvokeLab);
+
+      slowCall = _sh_throw_invalid_construct;
+      slowCallName = "_sh_throw_invalid_construct";
+    }
+
+    slowPaths_.emplace_back(
+        throwInvalidInvokeLab,
+        /* emittingIP */ nullptr,
+        [slowCall, slowCallName](Emitter &em, SlowPath &sp) {
+          em.comment("// Slow path: %s", slowCallName);
+          em.a.bind(sp.slowPathLab);
+          em.a.mov(x86::rdi, xRuntime);
+          // We don't save the IP, because this is being thrown in the
+          // caller's context.
+          em.callRuntime((void *)slowCall, slowCallName);
+          // Function does not return.
+        });
+  }
+
+  // NOTE: Unlike _sh_enter, we do not push an SHLocals object.
+  //  SHLegacyValue *frame = _sh_enter(shr, &locals.head, 13);
+  comment("// _sh_enter");
+  asmjit::Label registerOverflowLab = newSlowPathLabel();
+
+  // Compute the remaining available stack space:
+  // runtime.registerStackEnd - runtime.stackPointer
+  a.mov(x86::rax, x86::qword_ptr(xRuntime, RuntimeOffsets::registerStackEnd));
+  a.sub(x86::rax, xFrame);
+  // Check if we need more registers than remain.
+  size_t totalRegsToAlloc = numFrameRegs + hbc::StackFrameLayout::FirstLocal;
+  size_t regAllocSize = totalRegsToAlloc * sizeof(SHLegacyValue);
+  // x86-64: cmp and lea take a 32-bit immediate directly, so arm64's
+  // isAddSubImm special casing has no analogue. A frame this large cannot be
+  // described by the bytecode, but the encoding depends on it, so check.
+  assert(
+      regAllocSize <= (size_t)std::numeric_limits<int32_t>::max() &&
+      "frame size must fit in an imm32");
+  a.cmp(x86::rax, (int32_t)regAllocSize);
+  a.jb(registerOverflowLab);
+  a.lea(x86::rax, x86::ptr(xFrame, (int32_t)regAllocSize));
+
+  // Advance the register stack.
+  a.mov(x86::qword_ptr(xRuntime, RuntimeOffsets::stackPointer), x86::rax);
+  a.mov(x86::qword_ptr(xRuntime, RuntimeOffsets::currentFrame), xFrame);
+
+  static_assert(
+      HERMESVALUE_VERSION == 2, "Raw zero value must be ignored by GC");
+  // Initialize the registers with zero, in groups of 4, then 2, then 1.
+  // x86-64: there is no zero register, so xmm0 is zeroed once and stored
+  // with unaligned 16-byte stores (the register stack is only 8-byte
+  // aligned). arm64's post-indexed stores become explicit displacements off
+  // the fill base, which stays xFrame unless the loop below advances it.
+  size_t regsToFill = totalRegsToAlloc;
+  assert(regsToFill > 0 && "there is always at least one register");
+  a.vpxor(x86::xmm0, x86::xmm0, x86::xmm0);
+  x86::Gp fillPtr = xFrame;
+  int32_t fillOfs = 0;
+  // If there are more than 32 registers, start with a loop.
+  if (regsToFill > 32) {
+    a.mov(x86::rax, xFrame);
+    fillPtr = x86::rax;
+    // We will fill 4 registers on each iteration.
+    unsigned loopBytes = llvh::alignDown(regsToFill, 4) * sizeof(SHLegacyValue);
+    // Initialize the loop limit in xScratch.
+    a.lea(xScratch, x86::ptr(x86::rax, (int32_t)loopBytes));
+    asmjit::Label loop = a.newLabel();
+    a.bind(loop);
+    // Loop until we reach the limit.
+    a.vmovups(x86::xmmword_ptr(x86::rax), x86::xmm0);
+    a.vmovups(x86::xmmword_ptr(x86::rax, 16), x86::xmm0);
+    a.add(x86::rax, 32);
+    a.cmp(x86::rax, xScratch);
+    a.jb(loop);
+
+    regsToFill %= 4;
+  } else {
+    // If the number of registers is small, just fill them directly.
+    while (regsToFill >= 4) {
+      a.vmovups(x86::xmmword_ptr(fillPtr, fillOfs), x86::xmm0);
+      a.vmovups(x86::xmmword_ptr(fillPtr, fillOfs + 16), x86::xmm0);
+      fillOfs += 32;
+      regsToFill -= 4;
+    }
+  }
+  // Fill any excess registers.
+  if (regsToFill >= 2) {
+    a.vmovups(x86::xmmword_ptr(fillPtr, fillOfs), x86::xmm0);
+    fillOfs += 16;
+    regsToFill -= 2;
+  }
+  if (regsToFill > 0) {
+    assert(regsToFill == 1 && "All regs must be filled");
+    a.vmovsd(x86::qword_ptr(fillPtr, fillOfs), x86::xmm0);
+  }
+
+  // Create the slow path for throwing a register stack overflow.
+  slowPaths_.emplace_back(
+      registerOverflowLab,
+      /* emittingIP */ nullptr,
+      [](Emitter &em, SlowPath &sp) {
+        em.comment("// Slow path: _sh_throw_register_stack_overflow");
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(x86::rdi, xRuntime);
+        // Do not save the IP because we have not yet set up the stack frame
+        // for this function. The exception should appear in the caller.
+        EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(
+            em, void (*)(SHRuntime *), _sh_throw_register_stack_overflow);
+      });
+
+  if (catchTableLabel_.isValid()) {
+    comment("// _sh_try");
+    int32_t jmpBufOffset = (int32_t)getJmpBufOffset();
+    // buf->prev = shr->shCurJmpBuf;
+    a.mov(x86::rax, x86::qword_ptr(xRuntime, offsetof(SHRuntime, shCurJmpBuf)));
+    a.mov(
+        x86::qword_ptr(x86::rsp, jmpBufOffset + offsetof(SHJmpBuf, prev)),
+        x86::rax);
+
+    // shr->shCurJmpBuf = buf;
+    a.lea(x86::rax, x86::ptr(x86::rsp, jmpBufOffset));
+    a.mov(x86::qword_ptr(xRuntime, offsetof(SHRuntime, shCurJmpBuf)), x86::rax);
+
+    // _setjmp(buf->buf);
+    a.lea(
+        x86::rdi,
+        x86::ptr(x86::rsp, jmpBufOffset + (int32_t)offsetof(SHJmpBuf, buf)));
+    // setjmp can't throw, so the IP does not need to be saved.
+    EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(*this, int (*)(jmp_buf), _sh_setjmp);
+    // If this a catch, go to the catch table to jump to either a handler BB or
+    // rethrow.
+    a.test(x86::eax, x86::eax);
+    a.jnz(catchTableLabel_);
+  }
+
+  if (dumpJitCode_ & DumpJitCode::EntryExit) {
+    comment("// print entry");
+    a.mov(x86::edi, 1);
+    a.lea(x86::rsi, x86::ptr(roDataLabel_, getDebugFunctionName()));
+    EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(
+        *this, void (*)(bool, const char *), _sh_print_function_entry_exit);
+  }
 }
 
 void Emitter::leave(llvh::ArrayRef<const asmjit::Label *> exceptionHandlers) {
-  // Unreachable in Task 2: enter() always calls unsupported(), which aborts
-  // compilation (via longjmp) before compileCodeBlockImpl() can reach the
-  // point where leave() would be called. Task 3 ports the arm64 epilogue
-  // logic here once enter() can succeed.
-  hermes::hermes_fatal("x86-64 jit: leave() not yet implemented");
+  // x86-64: the catch table lands with the exception-handling milestone. It
+  // is unreachable today -- a function with an exception table contains a
+  // Catch instruction, whose emitter still declines -- but decline here too
+  // rather than emit a function whose catch label is never bound.
+  if (LLVM_UNLIKELY(catchTableLabel_.isValid()))
+    unsupported("catch table");
+  assert(exceptionHandlers.empty() && "no exception handlers without a table");
+
+  comment("// leaveFrame");
+  a.bind(returnLabel_);
+  if (dumpJitCode_ & DumpJitCode::EntryExit) {
+    comment("// print exit");
+    a.mov(x86::edi, 0);
+    a.lea(x86::rsi, x86::ptr(roDataLabel_, getDebugFunctionName()));
+    EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(
+        *this, void (*)(bool, const char *), _sh_print_function_entry_exit);
+  }
+
+  // _sh_leave(shr, &locals.head, frame);
+  // Restore the previous stack frame.
+  a.mov(x86::qword_ptr(xRuntime, RuntimeOffsets::stackPointer), xFrame);
+  a.mov(
+      x86::rax,
+      x86::qword_ptr(
+          xFrame,
+          StackFrameLayout::PreviousFrame * (int)sizeof(SHLegacyValue)));
+  a.mov(x86::qword_ptr(xRuntime, RuntimeOffsets::currentFrame), x86::rax);
+
+  // The return value has been stashed in rbx by ret(). Move it to the return
+  // register.
+  a.mov(x86::rax, x86::rbx);
+
+  // Restore the stack in the exact reverse of the prologue.
+  if (uint32_t stackSize = getStackSize())
+    a.add(x86::rsp, stackSize);
+  for (unsigned i = gpSaveCount_; i > 0; --i)
+    a.pop(x86::gpq(kGPSavedList[i - 1]));
+  a.pop(xFrame);
+  a.pop(xRuntime);
+  a.pop(x86::rbp);
+
+  a.ret();
+
+  emitSlowPaths();
+  emitROData();
 }
 
 void Emitter::newBasicBlock(const asmjit::Label &label) {
-  // Unreachable in Task 2, for the same reason as leave() above.
-  hermes::hermes_fatal("x86-64 jit: newBasicBlock() not yet implemented");
+  assert(
+      typeAssertPendingWrites_.empty() &&
+      "pending type asserts must be drained at each instruction");
+  syncAllFRTempExcept({});
+  freeAllFRTempExcept({});
+
+  // Clear all local types and regs when starting a new basic block.
+  // TODO: there must be a faster way to do this when there are many regs.
+  for (FRState &frState : frameRegs_) {
+    frState.localType = frState.globalType;
+    assert(!frState.localGpX);
+    assert(!frState.localVecD);
+    if (frState.globalReg)
+      frState.frameUpToDate = false;
+  }
+
+  a.bind(label);
+}
+
+void Emitter::callRuntimeWithSavedIP(void *fn, const char *name) {
+  // Save the current IP in the runtime.
+  // x86-64: the IP is a single 64-bit immediate, so there is no analogue of
+  // arm64's "materialize the function start, then add the offset" chain.
+  a.mov(
+      xScratch,
+      asmjit::Imm(
+          (uint64_t)codeBlock_->begin() + codeBlock_->getOffsetOf(emittingIP)));
+  a.mov(x86::qword_ptr(xRuntime, RuntimeOffsets::currentIP), xScratch);
+
+  // Call the passed function.
+  callRuntime(fn, name);
+
+  if (emitAsserts_) {
+    // Invalidate the current IP to make sure it is set before the next call.
+    a.mov(xScratch, asmjit::Imm(Runtime::kInvalidCurrentIP));
+    a.mov(x86::qword_ptr(xRuntime, RuntimeOffsets::currentIP), xScratch);
+  }
+}
+
+void Emitter::callRuntime(void *fn, const char *name) {
+  comment("// call %s", name);
+  loadBits64InGp(xScratch, (uint64_t)fn, name);
+  a.call(xScratch);
+}
+
+void Emitter::emitSlowPaths() {
+  while (!slowPaths_.empty()) {
+    SlowPath &sp = slowPaths_.front();
+    emittingIP = sp.emittingIP;
+    sp.emit(*this);
+    slowPaths_.pop_front();
+  }
+  emittingIP = nullptr;
+}
+
+void Emitter::mov(FR frRes, FR frInput, bool logComment) {
+  // Sometimes mov() is used by other instructions, so logging is optional.
+  if (logComment)
+    comment("// %s r%u, r%u", "mov", frRes.index(), frInput.index());
+  if (frRes == frInput)
+    return;
+
+  HWReg hwInput = getOrAllocFRInAnyReg(frInput, true);
+  HWReg hwDest = getOrAllocFRInAnyReg(frRes, false);
+  movHWFromHW<false>(hwDest, hwInput);
+  frUpdatedWithHW(frRes, hwDest, frameRegs_[frInput.index()].localType);
+}
+
+void Emitter::loadParam(FR frRes, uint32_t paramIndex) {
+  comment("// LoadParam r%u, %u", frRes.index(), paramIndex);
+
+  asmjit::Label slowPathLab = newSlowPathLabel();
+  asmjit::Label contLab = newContLabel();
+
+  HWReg hwTmp = allocAndLogTempGpX();
+  x86::Gp wTmp = hwTmp.gpq().r32();
+
+  a.mov(
+      wTmp,
+      x86::dword_ptr(
+          xFrame,
+          (int)StackFrameLayout::ArgCount * (int)sizeof(SHLegacyValue)));
+
+  // x86-64: cmp takes the immediate directly, so arm64's isAddSubImm
+  // fallback through a second temp has no analogue.
+  a.cmp(wTmp, paramIndex);
+  a.jb(slowPathLab);
+
+  freeReg(hwTmp);
+
+  // freeReg(hwTmp) above guarantees a free GP temp, so this allocation
+  // cannot spill. That matters here specifically: a spill store would be
+  // emitted after the `jb` to the slow path above, so it would be skipped
+  // whenever the slow path is taken, desynchronizing the allocator's view
+  // of the spilled FR from the value actually left on the stack.
+  HWReg hwRes = getOrAllocFRInGpX(frRes, false);
+
+  // Compute the frame offset in 64 bits. paramIndex is a UInt32 operand of
+  // LoadParamLong, and (ThisArg - paramIndex) * sizeof(SHLegacyValue)
+  // overflows int32 from paramIndex 2^28 upwards, long before that range is
+  // exhausted.
+  int64_t ofs64 = ((int64_t)StackFrameLayout::ThisArg - (int64_t)paramIndex) *
+      (int64_t)sizeof(SHLegacyValue);
+  assert(ofs64 < 0 && "frame offset of a parameter must be negative");
+
+  if (LLVM_UNLIKELY(ofs64 <= std::numeric_limits<int32_t>::min())) {
+    // The parameter is so far away that no argument count can reach it, so
+    // the comparison above always branches. Emit the branch unconditionally
+    // rather than a fast path that cannot be reached and whose offset would
+    // not encode; the slow path yields undefined, which is the right answer.
+    a.jmp(slowPathLab);
+  } else {
+    // x86-64: any int32 displacement encodes, so unlike arm64 there is no
+    // narrower-immediate form to try first and no fallback.
+    a.mov(hwRes.gpq(), x86::qword_ptr(xFrame, (int32_t)ofs64));
+  }
+
+  a.bind(contLab);
+  frUpdatedWithHW(frRes, hwRes);
+
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      emittingIP,
+      [frRes, hwRes](Emitter &em, SlowPath &sp) {
+        em.comment("// Slow path: LoadParam r%u", frRes.index());
+        em.a.bind(sp.slowPathLab);
+        em.loadBits64InGp(hwRes.gpq(), _sh_ljs_undefined().raw, "undefined");
+        em.a.jmp(sp.contLab);
+      });
 }
 
 asmjit::Label Emitter::newPrefLabel(const char *pref, size_t index) {

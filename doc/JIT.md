@@ -492,6 +492,23 @@ JIT host — see the Config.h row in the source layout table.
 
 Observations from this analysis, to be refined into a plan:
 
+The x86-64 backend skeleton (`lib/VM/JIT/x86-64/`) now compiles functions
+consisting only of LoadParam/LoadParamLong, all LoadConst* forms, Mov/
+MovLong, and Ret; all other instructions decline per-function and fall back
+to the interpreter. To build and test:
+
+  cmake -B cmake-build-x86jit -G Ninja -DCMAKE_BUILD_TYPE=Debug \
+    -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
+    -DHERMES_ENABLE_ADDRESS_SANITIZER=ON \
+    -DCMAKE_CXX_FLAGS="-O1" -DCMAKE_C_FLAGS="-O1" -DHERMESVM_ALLOW_JIT=2
+
+The skeleton test lives at test/jit/x86-64/skeleton.js (gated by
+jit-arch-x86-64); test/jit itself is gated to arm64 during bring-up.
+`enter()` declines under `-Xjit-emit-type-asserts` -- a caller asking for
+checks must not silently get code without them -- while `-Xjit-emit-counters`
+needs no such decline, since a declined function legitimately emits no
+counters and counter output stays honest either way.
+
 - **asmjit already supports x86-64** and the vendored copy ships the backend
   (`external/asmjit/.../x86`). CMake currently compiles only `arm64/*.cpp`
   when targeting arm64; a parallel `lib/VM/JIT/x86-64/` tree is expected by

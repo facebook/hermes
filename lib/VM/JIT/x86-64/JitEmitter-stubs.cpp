@@ -6,12 +6,12 @@
  */
 
 /// \file
-/// Task 2: the x86-64 backend has no real instruction substrate yet. Every
-/// per-opcode Emitter method below reports itself as unsupported, which
-/// aborts compilation of the current function (see Emitter::unsupported())
-/// so the interpreter runs it instead. Task 3 replaces these bodies with
-/// real code generation, one opcode family at a time, without changing any
-/// signature here.
+/// The per-opcode Emitter methods that the x86-64 backend does not implement
+/// yet. Each reports itself as unsupported, which aborts compilation of the
+/// current function (see Emitter::unsupported()) so the interpreter runs it
+/// instead. Later milestones replace these bodies with real code generation,
+/// one opcode family at a time, moving each into the topic file that matches
+/// the arm64 layout, without changing any signature here.
 
 #include "hermes/VM/JIT/Config.h"
 #if HERMESVM_JIT_X86_64
@@ -69,30 +69,6 @@ void Emitter::getBuiltinClosure(FR frRes, uint32_t builtinIndex) {
 
 void Emitter::catchInst(FR frRes) {
   unsupported("catchInst");
-}
-
-void Emitter::ret(FR frValue) {
-  unsupported("ret");
-}
-
-void Emitter::mov(FR frRes, FR frInput, bool logComment) {
-  unsupported("mov");
-}
-
-void Emitter::loadParam(FR frRes, uint32_t paramIndex) {
-  unsupported("loadParam");
-}
-
-void Emitter::loadConstDouble(FR frRes, double val, const char *name) {
-  unsupported("loadConstDouble");
-}
-
-void Emitter::loadConstBits64(
-    FR frRes,
-    uint64_t val,
-    FRType type,
-    const char *name) {
-  unsupported("loadConstBits64");
 }
 
 void Emitter::loadConstString(

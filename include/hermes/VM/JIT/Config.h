@@ -56,7 +56,7 @@
 #else
 #define HERMESVM_JIT_ARM64 0
 #endif
-#if HERMESVM_JIT && (defined(__x86_64__) || defined(_M_X64))
+#if HERMESVM_JIT && (defined(__x86_64__) || defined(_M_X64)) && !defined(_WIN32)
 #define HERMESVM_JIT_X86_64 1
 #else
 #define HERMESVM_JIT_X86_64 0
