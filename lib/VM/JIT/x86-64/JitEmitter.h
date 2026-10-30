@@ -327,10 +327,7 @@ class TempRegAlloc {
 };
 
 class Emitter {
-  // x86-64: still unreferenced -- kept for parity with arm64 and for the
-  // runtime calls a later milestone will add; keeps -Wunused-private-field
-  // clean until then.
-  [[maybe_unused]] Runtime &runtime_;
+  Runtime &runtime_;
   // Used by emitTypeAssertGpX() to claim this function's entry in
   // jitImpl_.typeAssertSites (JitEmitter.cpp).
   JITContext::Impl &jitImpl_;
@@ -1134,6 +1131,22 @@ class Emitter {
     a.mov(dest, asmjit::Imm(bits));
   }
 
+  /// Load the bit pattern of the SmallHermesValue \p shv into \p dest.
+  void loadSmallHermesValueInGpX(
+      const x86::Gp &dest,
+      SmallHermesValue shv,
+      const char *constName);
+
+  /// Load the StringPrimitive for \p id as a pointer into \p out.
+  /// The StringPrimitive must already be known to be allocated in the
+  /// IdentifierTable at JIT time.
+  ///
+  /// x86-64: arm64 takes an extra temporary, because the lookup entry's
+  /// offset can outgrow its scaled load immediate. Every x86 displacement is
+  /// a signed 32-bit one, which covers any entry the identifier table can
+  /// hold, so there is no fallback and no temporary.
+  void loadConstStringInGpX(SymbolID id, const x86::Gp &out);
+
   void _loadFrame(HWReg dest, FR rFrom) {
     if (dest.isGpX())
       a.mov(dest.gpq(), frMem(rFrom));
@@ -1622,6 +1635,20 @@ class Emitter {
   /// Emit the shared out-of-line tail that all type assert failure stubs
   /// jump to, if any type assert was emitted for this function.
   void emitTypeAssertFailTail();
+
+  /// Slow version of newObjectWithBuffer.
+  /// Used temporarily while full functionality is being added to
+  /// newObjectWithBuffer.
+  void newObjectWithBufferSlow(
+      FR frRes,
+      uint32_t shapeTableIndex,
+      uint32_t valBufferOffset);
+
+  /// Initialize or obtain an existing lazy JIT ID for the given hidden class.
+  /// NOTE: this call performs GC allocations, to the HC might move. The raw
+  /// pointer MUST NOT be used after this call.
+  /// \return 0 if too many IDs have been assigned.
+  uint16_t initHCLazyIDMayAlloc(HiddenClass *hc);
 
   /// Report that the emitter does not yet support \p what, aborting
   /// compilation of the current function cleanly (the JITContext::Compiler

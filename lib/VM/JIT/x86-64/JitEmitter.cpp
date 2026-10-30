@@ -15,6 +15,7 @@
 
 #include "../RuntimeOffsets.h"
 #include "hermes/Support/ErrorHandling.h"
+#include "hermes/VM/ArrayStorage.h"
 #include "hermes/VMLayouts/StackFrameLayout.h"
 
 #include <cstdio>
@@ -605,6 +606,68 @@ void Emitter::callRuntime(void *fn, const char *name) {
   comment("// call %s", name);
   loadBits64InGp(xScratch, (uint64_t)fn, name);
   a.call(xScratch);
+}
+
+uint16_t Emitter::initHCLazyIDMayAlloc(HiddenClass *hc) {
+  // Callers pass the result of WeakRoot::get(), which is null if the GC has
+  // cleared the root. Since 0 already means "no id" and every caller checks
+  // for it, tolerating null here keeps all present and future call sites safe
+  // without each of them having to re-validate across safepoints.
+  if (!hc)
+    return 0;
+
+  uint16_t id = hc->getLazyJITId();
+  // Assign a new ID to the HC if we have to.
+  if (id != 0)
+    return id;
+
+  // Too many IDs. Fail.
+  if (jitImpl_.prevHCId >= jitImpl_.hcIdLimit)
+    return 0;
+
+  struct : Locals {
+    PinnedValue<HiddenClass> hc;
+  } lv;
+  LocalsRAII lraii{runtime_, &lv};
+  lv.hc = hc;
+
+  if (jitImpl_.usedHCs.isUndefined()) {
+    CallResult<HermesValue> cr = ArrayStorageSmall::create(runtime_, 8);
+    if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
+      // Failing to pin is not fatal: report "no id" and let the caller fall
+      // back to a non-specialized path. Swallow the pending OOM, since we are
+      // in the compiler and there is nobody to propagate it to.
+      runtime_.clearThrownValue();
+      return 0;
+    }
+    // We would like to use a long-lived object, but we can't, because
+    // ArrayStorage cannot be long-lived: it can be allocated that way
+    // initially, but when it grows, it is allocated "normally".
+    jitImpl_.usedHCs = *cr;
+  }
+
+  // Pin the class before assigning the id, so that the invariant
+  // "id != 0 implies the class is in usedHCs" cannot be broken by a failed
+  // allocation. usedHCs is the only strong root for these classes, and the id
+  // is baked into immutable machine code, so an id on an unpinned class would
+  // be a dangling reference.
+  auto mh = MutableHandle<ArrayStorageSmall>::vmcast(&jitImpl_.usedHCs);
+  if (LLVM_UNLIKELY(
+          ArrayStorageSmall::push_back(mh, runtime_, lv.hc) ==
+          ExecutionStatus::EXCEPTION)) {
+    // Failing to pin is not fatal: report "no id" and let the caller fall
+    // back to a non-specialized path. Swallow the pending OOM, since we are
+    // in the compiler and there is nobody to propagate it to.
+    runtime_.clearThrownValue();
+    return 0;
+  }
+
+  id = ++jitImpl_.prevHCId;
+  // Note: use the pinned handle rather than the raw argument, which the
+  // allocation above may have invalidated by moving the object.
+  lv.hc->setLazyJITId(id);
+
+  return id;
 }
 
 void Emitter::emitSlowPaths() {

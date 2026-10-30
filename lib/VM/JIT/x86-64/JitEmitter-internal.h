@@ -187,6 +187,62 @@ emit_sh_ljs_object2(x86::Assembler &a, const x86::Gp &out, const x86::Gp &in) {
   emit_sh_ljs_object(a, out);
 }
 
+/// Encode a string pointer into a tagged string (SHLegacyValue).
+/// The same register is used for input and output.
+///
+/// x86-64: the rotate-or-rotate shape and its preconditions are exactly
+/// emit_sh_ljs_object()'s -- see the comment there, including the note that
+/// all three instructions write EFLAGS where arm64's single `movk` writes
+/// none.
+inline void emit_sh_ljs_string(x86::Assembler &a, const x86::Gp &inOut) {
+  static_assert(
+      HERMESVALUE_VERSION == 2,
+      "HVTag_Str << kHV_NumDataBits is 0x1101...0000...");
+  constexpr unsigned kTagBits = 64 - kHV_NumDataBits;
+  static_assert(kTagBits == 16, "the tag must be exactly the top 16 bits");
+  a.rol(inOut, kTagBits);
+  a.or_(inOut, asmjit::Imm((uint16_t)HVTag_Str));
+  a.ror(inOut, kTagBits);
+}
+
+/// Encode a string pointer into a tagged string (SmallHermesValue).
+/// The same register is used for input and output.
+///
+/// x86-64: in the boxed-doubles configuration the tag is a small constant
+/// that fits a sign-extended imm32, so the `or` takes no scratch register.
+/// That branch is not compiled on x86-64 yet -- see
+/// emit_sh_cp_decode_non_null().
+inline void emit_shv_string(x86::Assembler &a, const x86::Gp &inOut) {
+#ifdef HERMESVM_BOXED_DOUBLES
+  static_assert(
+      SmallHermesValue::kVersion == 1, "String tagging requires simple or");
+  a.or_(inOut, asmjit::Imm((uint32_t)HermesValue32::Tag::String));
+#else
+  emit_sh_ljs_string(a, inOut);
+#endif
+}
+
+/// Emit code to check whether the input reg is null, using the specified
+/// temp register. The input reg is not modified unless it is the same as the
+/// temp, which is allowed.
+/// CPU flags are updated as result. je on success.
+///
+/// x86-64: shaped exactly like emit_sh_ljs_is_bool() below -- the
+/// two-operand shift needs a copy when the registers differ, and the
+/// sign-extended imm32 makes arm64's cmn-with-negation unnecessary.
+inline void emit_sh_ljs_is_null(
+    x86::Assembler &a,
+    const x86::Gp &tempReg,
+    const x86::Gp &inputReg) {
+  // Get the ETag bits by right shifting one bit further than the tag.
+  static_assert(
+      (int16_t)HVETag_Null == (int16_t)(-11) && "HVETag_Null must be -11");
+  if (tempReg != inputReg)
+    a.mov(tempReg, inputReg);
+  a.sar(tempReg, kHV_NumDataBits - 1);
+  a.cmp(tempReg, asmjit::Imm(HVETag_Null));
+}
+
 /// Given a compressed pointer in \p inOut that is known to be non-null,
 /// decompress it and place the result in \p inOut.
 ///
@@ -203,6 +259,32 @@ inline void emit_sh_cp_decode_non_null(
     const x86::Gp &inOut) {
 #ifdef HERMESVM_COMPRESSED_POINTERS
   a.add(inOut, xRuntime);
+#endif
+}
+
+/// Given a compressed pointer in \p inOut, which may be null, decompress it
+/// and place the result in \p inOut. A null input decodes to a null pointer
+/// rather than to the heap base.
+///
+/// x86-64: arm64 selects between the sum and zero with a csel against its
+/// hardwired zero register. x86 has no such register, so \p zeroTemp -- which
+/// must differ from \p inOut -- is zeroed and used as the cmov source. This
+/// helper therefore takes a parameter arm64's does not. The add is written as
+/// an lea precisely because lea does not write EFLAGS, which lets the `test`
+/// that reads the original value sit before it and still control the cmov.
+///
+/// See emit_sh_cp_decode_non_null() -- the branch below is not compiled on
+/// x86-64 yet, so \p zeroTemp is unused in the HV64 build.
+inline void emit_sh_cp_decode(
+    x86::Assembler &a,
+    const x86::Gp &inOut,
+    [[maybe_unused]] const x86::Gp &zeroTemp) {
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  assert(zeroTemp != inOut && "zero temp must differ from the input");
+  a.mov(zeroTemp, asmjit::Imm(0));
+  a.test(inOut, inOut);
+  a.lea(inOut, x86::ptr(inOut, xRuntime));
+  a.cmovz(inOut, zeroTemp);
 #endif
 }
 
@@ -254,6 +336,25 @@ inline void
 emit_store_cp(x86::Assembler &a, const x86::Gp &val, const x86::Mem &mem) {
   x86::Mem m = mem;
   if constexpr (sizeof(CompressedPointer) == 4) {
+    m.setSize(4);
+    a.mov(m, val.r32());
+  } else {
+    m.setSize(8);
+    a.mov(m, val);
+  }
+}
+
+/// Store a SmallHermesValue held in \p val to \p mem.
+///
+/// x86-64: see emit_load_cp() for the operand-size handling. arm64's version
+/// returns an asmjit::Error because its scaled store immediate runs out of
+/// range for a large enough slot index and the caller has to retry through a
+/// register offset; every x86 displacement is a signed 32-bit one, so this
+/// always encodes and returns nothing.
+inline void
+emit_store_shv(x86::Assembler &a, const x86::Gp &val, const x86::Mem &mem) {
+  x86::Mem m = mem;
+  if constexpr (sizeof(SmallHermesValue) == 4) {
     m.setSize(4);
     a.mov(m, val.r32());
   } else {
@@ -479,6 +580,21 @@ inline void emit_sh_ljs_is_undefined(
   a.mov(tempReg, asmjit::Imm(_sh_ljs_undefined().raw));
   a.cmp(inputReg, tempReg);
 }
+
+/// Emit code to initialize the fields of a newly created JSObject.
+/// \param obj contains a pointer to the object to initialise.
+/// \param tempOrPropStorageOpt if \p hasPropStorage, contains an uncompressed
+///   pointer to the property storage, which is used to initialize the
+///   PropStorage, otherwise it's used as a temporary register.
+///   Either way, the value in tempOrPropStorageOpt WILL be overwritten.
+/// \param clazzOpt if invalid will use the default JSObject HiddenClass,
+///   otherwise a compressed pointer to the HiddenClass of the new object.
+void emit_jsobject_init(
+    x86::Assembler &a,
+    const x86::Gp &obj,
+    const x86::Gp &tempOrPropStorageOpt,
+    bool hasPropStorage,
+    const x86::Gp &clazzOpt = x86::Gp{});
 
 /// Emit code to initialize the fields of a newly created environment.
 /// \param newEnvPtr contains a pointer to the object to initialise.

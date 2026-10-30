@@ -178,6 +178,7 @@ if (HERMESVM_ALLOW_JIT)
           JIT/x86-64/JitEmitter-regalloc.cpp
           JIT/x86-64/JitEmitter-alloc.cpp
           JIT/x86-64/JitEmitter-const.cpp
+          JIT/x86-64/JitEmitter-object.cpp
           JIT/x86-64/JitEmitter-call.cpp
           JIT/x86-64/JitEmitter-env.cpp
           JIT/x86-64/JitEmitter-arith.cpp

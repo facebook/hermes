@@ -9,9 +9,81 @@
 #if HERMESVM_JIT_X86_64
 #include "JitEmitter-internal.h"
 
+#include "hermes/VM/JSObject-inline.h"
+
 #define DEBUG_TYPE "jit"
 
 namespace hermes::vm::x86_64 {
+
+void emit_jsobject_init(
+    x86::Assembler &a,
+    const x86::Gp &obj,
+    const x86::Gp &tempOrPropStorageOpt,
+    bool hasPropStorage,
+    const x86::Gp &clazzOpt) {
+  // obj->flags = 0
+  // x86-64: a 32-bit store of an immediate needs no register, so arm64's
+  // wzr has no counterpart to give up here.
+  a.mov(x86::dword_ptr(obj, offsetof(SHJSObject, flags)), asmjit::Imm(0));
+
+  if (hasPropStorage) {
+    emit_sh_cp_encode_non_null(a, tempOrPropStorageOpt);
+    emit_store_cp(
+        a,
+        tempOrPropStorageOpt,
+        x86::ptr(obj, offsetof(SHJSObject, propStorage)));
+  }
+
+  // No longer need the propStorage pointer. Alias for clarity.
+  const x86::Gp &temp = tempOrPropStorageOpt;
+
+  if (!clazzOpt.isValid()) {
+    // Load the hidden class compressed pointer into clazz.
+    a.mov(temp, x86::qword_ptr(xRuntime, offsetof(Runtime, classJSObject)));
+    emit_sh_ljs_get_pointer(a, temp, temp);
+    emit_sh_cp_encode_non_null(a, temp);
+  }
+
+  const x86::Gp &clazz = clazzOpt.isValid() ? clazzOpt : temp;
+
+  // Store the hidden class, which also determines the parent.
+  // obj->clazz = clazz (may be the same register as temp).
+  assert(clazz.isValid());
+  emit_store_cp(a, clazz, x86::ptr(obj, offsetof(SHJSObject, clazz)));
+
+  // If !hasPropStorage, obj->propStorage = nullptr.
+
+  // obj->directProps[N] = SmallHermesValue::encodeRawZeroValue()
+
+  // We want to zero the rest of the object. To simplify things, we align the
+  // size to the heap alignment of 8 bytes, which ensures that the end of the
+  // fill region is aligned to 8 bytes.
+  // Start the fill at propStorage if HasPropStorage is false,
+  // otherwise start after propStorage in the directProps.
+  size_t startZeroOffset = hasPropStorage
+      ? offsetof(SHJSObjectAndDirectProps, directProps)
+      : offsetof(SHJSObject, propStorage);
+  size_t bytesToZero = heapAlignSize(cellSize<JSObject>()) - startZeroOffset;
+  size_t zeroedBytes = 0;
+  assert(bytesToZero % 4 == 0 && "Must be a multiple of 4");
+
+  // x86-64: `mov mem, imm` needs no source register, so unlike arm64 there is
+  // nothing to gain from pairing the stores and the 16-byte step disappears.
+  // If there is some amount that is not a multiple of 8, store that first.
+  if (bytesToZero & 4) {
+    a.mov(x86::dword_ptr(obj, (int32_t)startZeroOffset), asmjit::Imm(0));
+    zeroedBytes += 4;
+  }
+
+  // The rest of the fill region is a multiple of 8 and, since the end of the
+  // region is 8-byte aligned, so is every store below.
+  for (; zeroedBytes < bytesToZero; zeroedBytes += 8) {
+    a.mov(
+        x86::qword_ptr(obj, (int32_t)(startZeroOffset + zeroedBytes)),
+        asmjit::Imm(0));
+  }
+  assert(zeroedBytes == bytesToZero && "Did not zero the whole object");
+}
 
 /// Emit code to initialize the fields of a newly created environment.
 /// \param newEnvPtr contains a pointer to the object to initialise.

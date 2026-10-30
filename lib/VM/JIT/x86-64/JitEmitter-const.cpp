@@ -33,6 +33,44 @@ void Emitter::loadConstDouble(FR frRes, double val, const char *name) {
   frUpdatedWithHW(frRes, hwRes, FRType::Number);
 }
 
+void Emitter::loadSmallHermesValueInGpX(
+    const x86::Gp &dest,
+    SmallHermesValue shv,
+    const char *constName) {
+  if constexpr (sizeof(SmallHermesValue) == 4) {
+    a.mov(dest.r32(), asmjit::Imm(shv.getRaw()));
+  } else {
+    loadBits64InGp(dest, shv.getRaw(), constName);
+  }
+}
+
+void Emitter::loadConstStringInGpX(SymbolID id, const x86::Gp &out) {
+  static_assert(
+      std::is_same_v<
+          RuntimeOffsets::IdentifierTableLookupVectorType,
+          TransparentConservativeVector<
+              RuntimeOffsets::IdentifierTableLookupEntryType>>,
+      "lookupVector_ must be transparent");
+  // out = identifierTable_.lookupVector_.ptr
+  a.mov(
+      out,
+      x86::qword_ptr(
+          xRuntime,
+          (int32_t)(RuntimeOffsets::identifierTable +
+                    RuntimeOffsets::identifierTableLookupVector +
+                    TransparentConservativeVector<
+                        RuntimeOffsets::IdentifierTableLookupEntryType>::
+                        dataPointerOffset())));
+  // out = out[symID.index].strPrim_
+  size_t offset = ((size_t)id.unsafeGetIndex() *
+                   RuntimeOffsets::identifierTableLookupEntrySize) +
+      RuntimeOffsets::identifierTableLookupEntryStrPrim;
+  // x86-64: arm64 needs a register-offset fallback here; a disp32 spans the
+  // whole lookup vector, so the load is unconditional.
+  assert(offset <= (size_t)INT32_MAX && "entry offset must fit a disp32");
+  a.mov(out, x86::qword_ptr(out, (int32_t)offset));
+}
+
 void Emitter::loadConstBits64(
     FR frRes,
     uint64_t bits,

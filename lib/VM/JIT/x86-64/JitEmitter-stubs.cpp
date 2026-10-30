@@ -282,47 +282,8 @@ void Emitter::putOwnPrivateBySym(
   unsupported("putOwnPrivateBySym");
 }
 
-void Emitter::instanceOf(FR frRes, FR frLeft, FR frRight) {
-  unsupported("instanceOf");
-}
-
 void Emitter::isIn(FR frRes, FR frLeft, FR frRight) {
   unsupported("isIn");
-}
-
-void Emitter::newObject(FR frRes) {
-  unsupported("newObject");
-}
-
-void Emitter::newObjectWithParent(
-    FR frRes,
-    FR frParent,
-    uint32_t shapeTableIndex) {
-  unsupported("newObjectWithParent");
-}
-
-void Emitter::newObjectWithBuffer(
-    FR frRes,
-    uint32_t shapeTableIndex,
-    uint32_t valBufferOffset) {
-  unsupported("newObjectWithBuffer");
-}
-
-void Emitter::newObjectWithBufferAndParent(
-    FR frRes,
-    FR frParent,
-    uint32_t shapeTableIndex,
-    uint32_t valBufferOffset) {
-  unsupported("newObjectWithBufferAndParent");
-}
-
-void Emitter::newTypedObjectWithBuffer(
-    FR frRes,
-    FR frParent,
-    uint32_t shapeTableIndex,
-    uint32_t valBufferOffset,
-    uint8_t nonEnumerable) {
-  unsupported("newTypedObjectWithBuffer");
 }
 
 void Emitter::newArray(FR frRes, uint32_t size) {
@@ -427,14 +388,6 @@ void Emitter::createRegExp(
     SHSymbolID flagsID,
     uint32_t regexpID) {
   unsupported("createRegExp");
-}
-
-void Emitter::loadParentNoTraps(FR frRes, FR frObj) {
-  unsupported("loadParentNoTraps");
-}
-
-void Emitter::typedLoadParent(FR frRes, FR frObj) {
-  unsupported("typedLoadParent");
 }
 
 } // namespace hermes::vm::x86_64
