@@ -500,6 +500,25 @@ class Emitter {
   /// least one, since rbx is saved even when no FR uses it.
   unsigned gpSaveCount_ = 0;
 
+#ifndef NDEBUG
+  /// x86-64: running total of EVERY transient rsp adjustment the emitter
+  /// makes below the post-prologue rsp (see the callImpl() contract
+  /// comment). Two sites move rsp: putByIdImpl, whose two stack-argument
+  /// pushes each add 8 and whose matching `add rsp, 16` subtracts 16, and
+  /// bumpAllocAndUnpoison, whose ASan-build register save/restore adds and
+  /// then removes 8 per GP temp. callRuntime()/callRuntimeWithSavedIP()
+  /// assert it is a multiple of 16 at every call, and it must be exactly 0
+  /// at every instruction boundary and at leave(). Pure bookkeeping: no
+  /// code is emitted for it.
+  ///
+  /// Nothing tracked here survives an instruction, so it says nothing about
+  /// where rsp is when an exception is thrown -- and it does not have to:
+  /// longjmp restores rsp to its value at the setjmp, which is where the
+  /// catch table then reads the SHJmpBuf and the saved SHLocals from. See
+  /// emitCatchTable().
+  int32_t rspDelta_{0};
+#endif
+
  public:
   asmjit::CodeHolder code{};
   x86::Assembler a{};
@@ -1033,11 +1052,27 @@ class Emitter {
       RuntimeModule *runtimeModule,
       uint32_t functionID);
 
-  void getArgumentsPropByValLoose(FR frRes, FR frIndex, FR frLazyReg);
-  void getArgumentsPropByValStrict(FR frRes, FR frIndex, FR frLazyReg);
+#define DECL_GET_ARGUMENTS_PROP_BY_VAL(methodName, commentStr, shFn) \
+  void methodName(FR frRes, FR frIndex, FR frLazyReg) {              \
+    getArgumentsPropByValImpl(                                       \
+        frRes, frIndex, frLazyReg, commentStr, shFn, #shFn);         \
+  }
 
-  void reifyArgumentsLoose(FR frLazyReg);
-  void reifyArgumentsStrict(FR frLazyReg);
+  DECL_GET_ARGUMENTS_PROP_BY_VAL(
+      getArgumentsPropByValLoose,
+      "GetArgumentsPropByValLoose",
+      _sh_ljs_get_arguments_prop_by_val_loose);
+  DECL_GET_ARGUMENTS_PROP_BY_VAL(
+      getArgumentsPropByValStrict,
+      "GetArgumentsPropByValStrict",
+      _sh_ljs_get_arguments_prop_by_val_strict);
+
+  void reifyArgumentsLoose(FR frLazyReg) {
+    reifyArgumentsImpl(frLazyReg, false, "ReifyArgumentsLoose");
+  }
+  void reifyArgumentsStrict(FR frLazyReg) {
+    reifyArgumentsImpl(frLazyReg, true, "ReifyArgumentsStrict");
+  }
 
   void getArgumentsLength(FR frRes, FR frLazyReg);
 
@@ -1059,8 +1094,12 @@ class Emitter {
 
   void debugger();
   void throwInst(FR frInput);
-  void throwIfEmpty(FR frRes, FR frInput);
-  void throwIfUndefined(FR frRes, FR frInput);
+  void throwIfEmpty(FR frRes, FR frInput) {
+    throwIfEmptyUndefinedImpl(frRes, frInput, true);
+  }
+  void throwIfUndefined(FR frRes, FR frInput) {
+    throwIfEmptyUndefinedImpl(frRes, frInput, false);
+  }
   void throwIfThisInitialized(FR frInput);
 
   void createRegExp(
@@ -1348,19 +1387,22 @@ class Emitter {
   /// "nothing moves rsp afterwards" exists: an emitter may adjust rsp
   /// transiently to pass stack arguments, but only in multiples of 16 and
   /// only within its own emission, restoring it before it emits anything
-  /// else. putByIdImpl is the sole instance today -- _jit_put_by_id takes
-  /// eight arguments where SysV has six argument registers, so it pushes
-  /// two and follows the call with `add rsp, 16`. Anything emitted while
+  /// else. There are two instances today: putByIdImpl -- _jit_put_by_id
+  /// takes eight arguments where SysV has six argument registers, so it
+  /// pushes two and follows the call with `add rsp, 16` -- and, in ASan
+  /// builds, bumpAllocAndUnpoison's save/restore of the eight GP temps
+  /// around its __asan_unpoison_memory_region call. Anything emitted while
   /// rsp is lowered must therefore avoid rsp-relative frame access, which
-  /// nothing on that path does (loadFrameAddr goes through xFrame, and
+  /// nothing on either path does (loadFrameAddr goes through xFrame, and
   /// callRuntimeWithSavedIP touches only xScratch and xRuntime).
   ///
-  /// That contract is a convention, not something the emitter enforces. It
-  /// could be: a debug-only counter of the current rsp delta, bumped by the
-  /// pushes and asserted to be a multiple of 16 at every call emission and
-  /// zero at every instruction boundary, would catch both an odd push count
-  /// and a delta left unrestored. Worth adding if a second stack-argument
-  /// call site ever appears.
+  /// That contract is enforced in debug builds, not left as a convention:
+  /// x86-64: `rspDelta_` is a running count of the current rsp delta, bumped
+  /// by both of those sites and brought back down by their restores.
+  /// callRuntime() asserts it is a multiple of 16 at every call emission,
+  /// assertPostInstructionInvariants() and leave() assert it is exactly 0.
+  /// Together that catches both an odd push count and a delta left
+  /// unrestored, including if a third stack-argument call site appears.
   void callImpl(FR frRes, FR frCallee);
 
   /// Load the address of \p frameReg's frame slot into \p dst.
@@ -1492,6 +1534,22 @@ class Emitter {
       uint8_t cacheIdx,
       bool strictMode,
       bool tryProp);
+
+  void getArgumentsPropByValImpl(
+      FR frRes,
+      FR frIndex,
+      FR frLazyReg,
+      const char *name,
+      SHLegacyValue (*shImpl)(
+          SHRuntime *shr,
+          SHLegacyValue *frame,
+          SHLegacyValue *idx,
+          SHLegacyValue *lazyReg),
+      const char *shImplName);
+
+  void reifyArgumentsImpl(FR frLazyReg, bool strict, const char *name);
+
+  void throwIfEmptyUndefinedImpl(FR frRes, FR frInput, bool empty);
 
   // x86-64: \p condCode and \p swapOperands together are arm64's single
   // condCode; see DECL_JCOND.
@@ -1659,6 +1717,12 @@ class Emitter {
   /// Emit a call to \p fn without saving the IP. This should be used only
   /// where saving the IP is unnecessary or incorrect.
   void callRuntime(void *fn, const char *name);
+
+  /// Emit the code that runs when this function is longjmped to.
+  /// Performs the catch table lookup and jumps to the appropriate catch block,
+  /// and if no catch block is found, pops the SHJmpBuf and rethrows the
+  /// exception.
+  void emitCatchTable(llvh::ArrayRef<const asmjit::Label *> exceptionHandlers);
 
   void emitSlowPaths();
 

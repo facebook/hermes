@@ -5,11 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes %s > %t.int && %hermes -Xjit=force %s > %t.jit && diff %t.int %t.jit
-// RUN: %hermes %s > %t.int && %hermes -Xjit=force -Xjit-emit-type-asserts %s > %t.jit2 && diff %t.int %t.jit2
-// RUN: %hermes -O0 %s > %t.int0 && %hermes -O0 -Xjit=force %s > %t.jit0 && diff %t.int0 %t.jit0
-// RUN: %hermes -O0 %s > %t.int0 && %hermes -O0 -Xjit=force -Xjit-emit-type-asserts %s > %t.jit3 && diff %t.int0 %t.jit3
-// RUN: %hermes -fno-inline %s > %t.intn && %hermes -fno-inline -Xjit -Xjit-threshold=2 %s > %t.warm && diff %t.intn %t.warm
+// RUN: %hermes %s > %t.int && %hermes -Xjit=force -Xjit-crash-on-error %s > %t.jit && diff %t.int %t.jit
+// RUN: %hermes %s > %t.int && %hermes -Xjit=force -Xjit-crash-on-error -Xjit-emit-type-asserts %s > %t.jit2 && diff %t.int %t.jit2
+// RUN: %hermes -O0 %s > %t.int0 && %hermes -O0 -Xjit=force -Xjit-crash-on-error %s > %t.jit0 && diff %t.int0 %t.jit0
+// RUN: %hermes -O0 %s > %t.int0 && %hermes -O0 -Xjit=force -Xjit-crash-on-error -Xjit-emit-type-asserts %s > %t.jit3 && diff %t.int0 %t.jit3
+// RUN: %hermes -fno-inline %s > %t.intn && %hermes -fno-inline -Xjit -Xjit-threshold=2 -Xjit-crash-on-error %s > %t.warm && diff %t.intn %t.warm
 // RUN: %hermes -Xjit=force -Xdump-jitcode=2 %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -O0 -Xjit=force -Xdump-jitcode=2 %s | %FileCheck --match-full-lines --check-prefix=CHECK0 %s
 // RUN: %hermes -Xjit=force -Xjit-emit-counters %s 2>&1 >/dev/null | %FileCheck --check-prefix=COUNT %s
@@ -31,15 +31,22 @@
 // (NumCall) and takes the slow call path (NumCallSlow), which it does here
 // because a compiled function now reaches `print` through the global object.
 //
+// Every differential RUN line carries -Xjit-crash-on-error, because nothing
+// in this file declines in any of the five modes. The -O0 ones could not
+// until the exceptions milestone: the implicit derived constructor contains
+// a ThrowIfEmpty, which declined there. It compiles now, and the CHECK0 set
+// below pins it.
+//
 // GLOBALS. Globals themselves are covered here -- `bump` reads and writes a
 // module-level `var` and `report` reaches `print` through the global object,
-// both from compiled code. What this file cannot pin is `global` itself:
-// every string literal in the top-level code below (`"acc"`, `"alpha"`,
-// `"beta"`, `"extra"`) needs LoadConstString, which still declines, so
-// `global` declines here for that reason and not for a globals reason. The
-// `global` compile-status pin -- and with it the first execution of
-// CreateTopLevelEnvironment in compiled code -- lives in globals.js, which
-// is written without a single string constant.
+// both from compiled code. `global` itself is pinned here now too: it used
+// to decline on the string literals in the top-level code below (`"acc"`,
+// `"alpha"`, `"beta"`, `"extra"`), which needed LoadConstString, and this
+// header said so and pointed at globals.js for the pin. LoadConstString
+// landed in milestone 5, `global` compiles at both -O and -O0, and the pin
+// below says so. globals.js remains the file that pins `global` in
+// ISOLATION, with no string constant anywhere in it, which is a different
+// and still useful guarantee.
 //
 // THE SPECIALIZED TIERS NEED A WARM CACHE. Both specializations are emitted
 // only when the site's ReadPropertyCacheEntry already has
@@ -51,26 +58,40 @@
 // callSum reads a method off the prototype, which selects the
 // parent-specialization tier. Together they are the only coverage in this
 // suite of the two tiers that compare HiddenClass lazy JIT ids -- the ids
-// pinned through usedHCs by initHCLazyIDMayAlloc.
+// pinned through usedHCs by initHCLazyIDMayAlloc, and the only coverage
+// anywhere of emit_sh_cp_decode_non_null_preserve_input, which lives inside
+// the object-specialization tier and nowhere else. Strings landing did not
+// disturb this: threshold mode still runs each function interpreted before
+// compiling it, so the caches still warm, and the SPEC lines below still
+// match. DO NOT convert this RUN line to -Xjit=force.
 //
-// NOT covered, and why:
+// NOT exercised BY THIS FILE, and why -- as of milestone 5 none of these
+// decline anymore (verified by hand: super[k] read/write, private fields and
+// methods, computed-key getter/setter definitions and array-literal defines
+// all compile and match the interpreter). This file simply does not happen
+// to construct those shapes; each entry says where, if anywhere, it is
+// covered:
 //  - Property names as string values. `o["x"]`, `delete o.x` and `"x" in o`
-//    all need LoadConstString, which still declines, so every by-val site
-//    here takes its key from a parameter and the strings are built by the
-//    interpreter.
+//    needed LoadConstString; every by-val site here still takes its key
+//    from a parameter, which is what makes the by-val opcodes rather than
+//    the by-id ones fire. strings.js covers the const-key forms of all
+//    three.
 //  - getByValWithReceiver / putByValWithReceiver: emitted for `super[k]`
-//    and assignment through it, which needs a computed key; the shapes that
-//    produce them here also produce opcodes that still decline.
+//    and assignment through it, which needs a computed key. Not covered by
+//    any lit test; checked by hand to compile and match under -Xjit=force.
 //  - Private names (addOwnPrivateBySym and friends) and
-//    defineOwnGetterSetterByVal: emitted from class bodies, which decline on
-//    other opcodes. They are ported as plain runtime calls.
-//  - defineOwnInDenseArray / defineOwnByIndex: array-literal opcodes, which
-//    arrive with the array task.
+//    defineOwnGetterSetterByVal: emitted from class bodies. Not covered by
+//    any lit test; checked by hand to compile and match, including a
+//    private method call and a computed-key accessor pair, under
+//    -Xjit=force.
+//  - defineOwnInDenseArray / defineOwnByIndex: array-literal opcodes,
+//    covered by arrays.js.
 //  - getOwnBySlotIdx: emitted only for PrLoadInst, which comes from typed
 //    (Flow) class IRGen, so it is not reachable from plain JS at all --
-//    the same situation as typedLoadParent. putOwnBySlotIdx IS reachable
-//    and is covered by `nested` below, but only at -O; at -O0 a literal
-//    lowers to NewObject plus DefineOwnById instead.
+//    the same situation as typedLoadParent, and unrelated to what compiles
+//    or declines. putOwnBySlotIdx IS reachable and is covered by `nested`
+//    below, but only at -O; at -O0 a literal lowers to NewObject plus
+//    DefineOwnById instead.
 
 // A constructor that stores into `this`. Its body is PutByIdLoose twice,
 // which is what objects.js could not compile.
@@ -203,8 +224,14 @@ var p1 = new Point(3, 4);
 // Warm the two inline caches before their functions cross the JIT
 // threshold. This is what makes the specialized tiers reachable in the SPEC
 // run: a site whose cache entry is still cold compiles with the generic tier
-// only. `global` runs interpreted here (see the header), so the warm-up is
-// interpreted too, which is exactly what fills the caches.
+// only. The caches that matter are getX's and callSum's own, and in
+// threshold mode both functions run interpreted for their first calls, which
+// is what fills them. (This comment used to say the warm-up was interpreted
+// because `global` declined. `global` compiles in threshold mode now that
+// LoadConstString has landed, and it makes no difference: the cache entries
+// belong to the read sites inside getX and callSum, not to their caller.
+// The SPEC lines at the bottom of this file are what actually verify the
+// specialized tiers are still emitted, and they still match.)
 for (var w = 0; w < 50; ++w) {
   getX(p1);
   callSum(p1);
@@ -215,6 +242,10 @@ print(getX(p1), p1.y, callSum(p1));
 // -Xjit=force compiles them: the constructor (two PutByIdLoose), the
 // monomorphic read site, the prototype-method read site, and the anonymous
 // `sum` the method read resolves to.
+// `global` compiles here too now -- it is the first compile event of the
+// run, before any of these.
+// CHECK: JIT successfully compiled FunctionID 0, 'global'
+// CHECK0: JIT successfully compiled FunctionID 0, 'global'
 // CHECK: JIT successfully compiled FunctionID 1, 'Point'
 // CHECK: JIT successfully compiled FunctionID 2, 'getX'
 // CHECK: JIT successfully compiled FunctionID 4, 'callSum'
@@ -320,16 +351,18 @@ report("counter", counter);
 // CHECK0-NEXT: counter 5
 
 print(callWho(new Derived()));
-// The implicit derived constructor compiles at -O but not at -O0, where it
-// still contains ThrowIfEmpty for the TDZ check on the base class binding.
-// The two 'who' methods and the call site compile in both modes; 21 is
-// Derived's, the one holding the LoadParentNoTraps.
+// The implicit derived constructor contains a ThrowIfEmpty for the TDZ check
+// on the base class binding, which is why it used to compile at -O but not
+// at -O0. Both modes compile it now. The two 'who' methods and the call site
+// compile in both modes; 21 is Derived's, the one holding the
+// LoadParentNoTraps.
 // CHECK: JIT successfully compiled FunctionID 20, 'Derived'
 // CHECK: JIT successfully compiled FunctionID 18, 'Base'
 // CHECK: JIT successfully compiled FunctionID 15, 'callWho'
 // CHECK: JIT successfully compiled FunctionID 21, 'who'
 // CHECK: JIT successfully compiled FunctionID 19, 'who'
 // CHECK-NEXT: 15
+// CHECK0: JIT successfully compiled FunctionID 20, 'Derived'
 // CHECK0: JIT successfully compiled FunctionID 18, 'Base'
 // CHECK0: JIT successfully compiled FunctionID 15, 'callWho'
 // CHECK0: JIT successfully compiled FunctionID 21, 'who'

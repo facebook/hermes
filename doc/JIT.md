@@ -31,8 +31,8 @@ The machine-code emitter is [asmjit](https://asmjit.com) (vendored in
 
 | File | Role |
 |---|---|
-| `include/hermes/VM/JIT/Config.h` | Decides `HERMESVM_JIT` from `HERMESVM_ALLOW_JIT` + platform. Requires arm64 and either no compressed pointers or a contiguous heap. On Apple platforms the JIT is additionally disabled *except* on macOS and Mac Catalyst, so arm64 macOS is a supported (and convenient) host for testing the JIT. |
-| `include/hermes/VM/JIT/JIT.h` | Dispatches to the per-arch `JITContext`; provides a no-op `JITContext` when the JIT is disabled. Already contains an `#elif defined(__x86_64__)` branch expecting `hermes/VM/JIT/x86-64/JIT.h` (does not exist yet). |
+| `include/hermes/VM/JIT/Config.h` | Decides `HERMESVM_JIT` from `HERMESVM_ALLOW_JIT` + platform: arm64, or x86-64 SysV (`__x86_64__`/`_M_X64`, non-Windows), each requiring no compressed pointers or a contiguous heap. On Apple platforms the JIT is additionally disabled *except* on macOS and Mac Catalyst, so arm64 macOS is a supported (and convenient) host for testing the JIT. Also defines the per-arch selectors `HERMESVM_JIT_ARM64`/`HERMESVM_JIT_X86_64` (exactly one set when the JIT is enabled), which `JIT.h` and arch-specific sources dispatch/guard on. |
+| `include/hermes/VM/JIT/JIT.h` | Dispatches to the per-arch `JITContext` via `HERMESVM_JIT_ARM64`/`HERMESVM_JIT_X86_64`, including `hermes/VM/JIT/arm64/JIT.h` or `hermes/VM/JIT/x86-64/JIT.h` accordingly; provides a no-op `JITContext` when the JIT is disabled. |
 | `include/hermes/VM/JIT/arm64/JIT.h` | Public `JITContext`: enablement, thresholds, `shouldCompile`/`compile`, counters, `markRoots`. |
 | `lib/VM/JIT/JitCompiler.cpp` | `JITContext::Compiler`: per-opcode `emitXXX` methods that decode operands and forward to the `Emitter`. Drives BB-by-BB compilation. Arch-independent; compiled inside the arch namespace selected by `JitCurArch.h`. |
 | `lib/VM/JIT/arm64/JIT.cpp` | `JITContext` housekeeping: construction, `setHCIdLimit`, `dumpCounters`, `markRoots`. |
@@ -40,13 +40,15 @@ The machine-code emitter is [asmjit](https://asmjit.com) (vendored in
 | `lib/VM/JIT/arm64/JitEmitter.cpp` | Emitter lifecycle: constructor, `enter`/`frameSetup`/`leave` (prologue/epilogue), `newBasicBlock`, the runtime-call plumbing (`callRuntime*`), slow-path/catch-table/RO-data emission, `initHCLazyIDMayAlloc`, `addToRuntime`. |
 | `lib/VM/JIT/arm64/JitEmitter-regalloc.cpp` | The register-file engine: `getOrAllocFRIn*`, `movHW*`, sync/spill/free. |
 | `lib/VM/JIT/arm64/JitEmitter-internal.{h,cpp}` | Shared emission helpers: the `emit_sh_ljs_*` tag/encoding helpers, `emit_load_from_base_offset`, the SHV decoder, `EMIT_RUNTIME_CALL*` macros (`.h`); cold non-member helpers, object/environment init, asmjit error handler and logger (`.cpp`). |
-| `lib/VM/JIT/arm64/JitEmitter-{alloc,const,object,property,call,env,array,arith,control}.cpp` | The per-instruction emitters, split by topic: young-gen allocation; constant materialization; object construction; the property protocol (incl. `GetByIdImpl`); JS calls; environments/closures; arrays/iterators/arguments; arithmetic and comparisons; control flow, switches and throws. See `doc/specs/2026-08-18-jitemitter-split-design.md` for the split rationale and boundaries. |
+| `lib/VM/JIT/arm64/JitEmitter-{alloc,const,object,property,call,env,array,arith,control}.cpp` | The per-instruction emitters, split by topic: young-gen allocation; constant materialization; object construction; the property protocol (incl. `GetByIdImpl`); JS calls; environments/closures; arrays/iterators/arguments; arithmetic and comparisons; control flow, switches and throws. See `doc/superpowers/specs/2026-08-18-jitemitter-split-design.md` for the split rationale and boundaries. |
 | `lib/VM/JIT/arm64/JitImpl.h` | `JITContext::Impl`: the asmjit `JitRuntime` (owns executable memory), HC lazy-ID counter, and `usedHCs` root array. |
+| `include/hermes/VM/JIT/x86-64/JIT.h`, `lib/VM/JIT/x86-64/*` | The x86-64 backend: 16 files under `lib/VM/JIT/x86-64/` (`JIT.cpp`, `JitEmitter.{h,cpp}`, `JitEmitter-regalloc.cpp`, `JitEmitter-internal.{h,cpp}`, `JitEmitter-{alloc,arith,array,call,const,control,env,object,property}.cpp`, `JitImpl.h`) plus the public header, mirroring the arm64 rows above file-for-file with the same class/method surface. See "The x86-64 backend" below for the arch-specific design (register budget, condition-code mapping, tag encoding, and so on). |
 | `lib/VM/JIT/JitHandlers.{h,cpp}` | C++ helpers callable from emitted code that are JIT-specific (the generic ones are the `_sh_ljs_*` functions from the SH runtime). Arch-independent. |
 | `include/hermes/VM/JIT/JitCounters.h` | The `JIT_COUNTERS` list and `JitCounter` enum. The counter array is ABI between the VM and emitted code; arch-independent. |
 | `lib/VM/JIT/DiscoverBB.cpp` | Scans bytecode to find basic-block boundaries (branch targets, fallthroughs after branches, Catch, switch tables, exception handler targets). Arch-independent. |
 | `lib/VM/JIT/RuntimeOffsets.h` | `offsetof` constants for fields the emitted code touches directly (Runtime, StackOverflowGuard, CodeBlock, JSFunction, HiddenClass, IdentifierTable, Hades young-gen fields...). Arch-independent. |
 | `lib/VM/JIT/PerfJitDump.cpp` | Linux `perf` jitdump support. Arch-independent. |
+| `doc/JITTesting.md` | The CI-shaped build/test matrix for all five JIT configs (arm64-qemu, x86-64 HV64/HV32/BOXED ASan+Debug, x86-64 Release), the dump-baseline workflow summary, the release-build validation writeup, and the perf sanity table. Companion to this file and `utils/jit/README.md`. |
 
 ### Tiering / when compilation happens
 
@@ -488,32 +490,299 @@ emulation catches logic divergence but not the memory bugs an ASan build on
 real hardware would. arm64 macOS remains a supported (and much faster)
 JIT host — see the Config.h row in the source layout table.
 
-## x86-64 porting notes
+## The x86-64 backend
 
-The x86-64 backend (`lib/VM/JIT/x86-64/`) compiles arithmetic, comparisons,
-branches, bit operations, type assertions, young-gen allocation, environments,
-closures, and calls. Milestone 3 adds young-gen inline allocation (bump-alloc
-with overflow slow path, pulled forward from the spec's milestone 4 because
-environments allocate inline), environment creation and field access (get/load/
-store all forms), closures with captured-environment fast paths, class and
-generator object creation (initialization only), and the full call family
-(Call/Call1-4, CallBuiltin under -fstatic-builtins, Construct/CallWithNewTarget
-(Long), CallRequire) with JIT-to-JIT direct-call fast path; recursive and
-higher-order JS now runs in machine code. Opcode coverage includes LoadParam/
-LoadConst*/Mov/Ret (M1), Add/Sub/Mul/Div/Mod with N variants, Inc/Dec/Negate,
-ToNumber/ToNumeric, all comparisons, all branches, BitAnd/Or/Xor, shifts,
-BitNot, ToInt32/ToUint32, type asserts. Tests live at test/jit/x86-64/ (9 total:
-skeleton, arith, cmp, loops, bitops, type-asserts, closures, calls, callbuiltin);
-test/jit itself is still gated to arm64 (test/jit/lit.local.cfg) during
-bring-up, so the main JIT suite does not exercise this backend yet.
--Xjit-emit-counters works (NumCall/NumCallSlow). Still declining: property
-access, object/array/string literals and ops, typeof/instanceof/in, switches,
-exceptions/try, iterator resume, for-in, arguments, globals. To build:
+**Milestone 5 status: the backend reaches arm64's full opcode surface.**
+`JitEmitter-stubs.cpp` -- the file that once held every emitter that
+declined outright -- is gone; there is no x86-64-specific "unsupported
+opcode" list left to enumerate. The one permanent decline is
+`AsyncBreakCheck`, and it is not an x86-64 gap at all: `EMIT_UNIMPLEMENTED
+(AsyncBreakCheck)` lives in the architecture-independent driver
+(`JitCompiler.cpp`) and declines identically on both backends. Everything
+else -- exceptions/try/catch/finally with the per-function catch table,
+switches (dense uint jump table and string), iterators/for-of, arguments
+(reified and not), for-in, strings (AddS, AddEmptyString, LoadConstString,
+LoadConstBigInt), typeof/typeOfIs/jmpBuiltinIs, direct eval -- compiles,
+in all three heap-value modes.
+
+The headline gate is `test/jit/x86-64/stress.js`, a standing lit copy of
+`aarch64/jit-stress.js` (the differential soak test the plan requires):
+one program that touches arithmetic, strings, property ICs with shape
+transitions, object/array literals, closures/recursion, exceptions across
+frames, switches, classes/super/getters, generators, destructuring,
+for-of/for-in, `arguments`, higher-order builtin callbacks and a JSON
+round-trip. Under `-Xjit=force -Xjit-crash-on-error`, at both -O and -O0,
+with and without `-Xjit-emit-type-asserts`, on HV64, HV32 and BOXED alike,
+every function in it compiles and the output is byte-identical to the
+interpreter -- zero declines, ASan clean. That property, not any single
+opcode's test, is what "opcode-complete" means for this backend now.
+
+**Fixed: destination-FR exclusion from pre-call syncs in try regions.**
+Milestone 6 confirmed that excluding an instruction's own destination FR
+from the pre-call `syncAllFRTempExcept` is unsound inside a try: register
+allocation coalesces a live variable's phi with that destination, so the
+prior value was dropped instead of stored, and the handler read the frame
+slot's `_sh_enter` zero fill --
+`var y = "prior"; try { y = o.throwingGetter; } catch { use(y); }` yielded
+`0`. Identical on arm64 and x86-64, on HV64/HV32/BOXED, at `-O` only.
+Plain calls were unaffected (`CallInst` syncs the whole frame), and the
+JIT asserts could not catch it: the value is well-formed, merely stale.
+
+The exclusion spanned 54 sites per backend, 108 across both (39 of the
+guarded `frRes != x ? frRes : FR()` form plus 15 unconditional
+`syncAllFRTempExcept(frRes)`, the latter having no aliasing guard at all),
+so the fix is central rather than per-site: `syncAllFRTempExcept` itself
+now drops the exclusion when `isInTry()`, in both backends. That is sound
+because syncing an extra FR only stores that FR's current value -- the
+exclusion was always a pure optimization, and every call site issues it
+before allocating its destination register, so the destination still holds
+its pre-instruction value at sync time. The cost is one extra store per
+throwing instruction, and only in functions that contain a try; those have
+no global registers anyway (`RegisterAllocator::getRegClass` forces
+`RegClass::Other` there), so the store goes straight to the memory frame.
+`test/jit/try-catch-dest-reg.js` is the minimal repro and is now a plain
+passing regression test on both architectures; its header carries the
+before/after dump evidence. This is the first deliberate divergence of
+arm64 emission from the export base: the port's byte-identical constraint
+covered the port itself, not a subsequent cross-backend bug fix.
+
+The 497-file differential sweep over `test/hermes/*.js` (plain `hermes`
+vs `-Xjit=force`, same binary) went from ~270 files compiling at least one
+function in milestone 4 to 480 in milestone 5, run on all three
+heap-value modes (HV64: 480; HV32: 479, one file crossed the sweep's
+10-second interpreter timeout under this mode's extra decode overhead;
+BOXED: 480). Of 497 files, the same 6 differ between the interpreter and
+the JIT run in every mode, and all 6 are explained and not JIT bugs: 3
+are nondeterministic even between two plain interpreter runs with no JIT
+involved at all (random array-literal contents, a wall-clock timestamp,
+a property-limit count that depends on incidental memory layout), and 3
+are deliberate stack-exhaustion tests (`stack-overflow.js` and friends)
+where the JIT recurses measurably deeper before hitting the
+native-stack-overflow check than the interpreter does, because a
+compiled JS frame uses less native stack per call than an interpreted
+one -- a stable capacity difference between the two execution modes,
+verified by running each side several times and confirming it lands on
+the same value (or, for one file, oscillates between two ASLR-adjacent
+values) every time, never anywhere near the other side's number. Five
+further files time out under the sweep's plain invocation in most modes;
+all five have their own lit `RUN:` line with flags the sweep does not
+pass (`-time-limit=`, `-gc-max-heap=`, `-test262`, `-lazy`) and are
+unrelated to JIT correctness.
+
+Milestone 4 added object and array literals via inline heap buffers, the
+three-tier property inline-cache architecture with HiddenClass lazy-ID
+pinning (object specialization, parent specialization, generic tier),
+globals, and the fast-array family under -typed, in all three heap-value
+modes (HV64, HV32, BOXED; see the build matrix below).
+
+Milestone 3 adds arithmetic, comparisons, branches, bit operations, type
+assertions, young-gen bump allocation, environments, closures, calls
+(Call/Call1-4, Construct, CallWithNewTarget, CallBuiltin, CallRequire)
+with JIT-to-JIT fast path, class and generator initialization. Opcode
+coverage: LoadParam/LoadConst*/Mov/Ret, Add/Sub/Mul/Div/Mod (N variants),
+Inc/Dec/Negate, ToNumber/ToNumeric, all comparisons/branches, BitAnd/Or/
+Xor/shifts/BitNot, ToInt32/ToUint32, type asserts, environment and
+function field access.
+
+**Status: the x86-64 port is complete, per the spec's v1 definition**
+(`doc/superpowers/specs/2026-08-23-x86-64-jit-design.md`, "Scope and
+goals": full `test/jit` plus the differential stress matrix passing
+natively under ASan, in both heap modes, with perf "sane"). All 6
+bring-up milestones are done:
+
+- `test/jit/*.js` (the arm64-authored suite) is no longer gated to
+  arm64: `test/jit/lit.local.cfg` skips the directory only when no
+  `jit-arch-*` feature exists at all, and the audit that came with the
+  un-gating found no file needing an architecture gate. Its 50 files
+  (one still `!slow_debug`-gated; the former `XFAIL` repro above now
+  passes outright) run green on x86-64 alongside the 23
+  x86-64-specific tests under
+  `test/jit/x86-64/` -- natively, under ASan+Debug, in all three
+  heap-value modes (HV64, HV32, BOXED), and again on the Release build
+  with asserts compiled out. The Release run's unsupported file is a
+  *different* one, though: `slow_debug`/`debug_options` flip with
+  build type, so `large_literal_obj.js` runs there and
+  `getbyid-fast.js` (`REQUIRES: debug_options`) is skipped instead --
+  same 72/1 count, not the same membership (see `doc/JITTesting.md`,
+  "Release-build validation").
+- The `aarch64/jit-stress.js` differential matrix -- interpreter vs.
+  `-Xjit=force`, with and without `-Xjit-emit-type-asserts`, at both
+  `-O` and `-O0` -- is byte-identical on every config exercised,
+  including the Release tree (the first NDEBUG x86-64 run in this
+  port; no assert-side-effect-dependent divergence found).
+- A first perf sanity pass on the Release build clears the spec's "must
+  not lose to the interpreter on hot loops" bar on all three sanity
+  workloads: 2.25x (numeric loop), 1.61x (scaled `stress.js` shapes),
+  1.45x (property/IC-heavy loop). No tuning attempted; that is
+  post-v1 work per the spec.
+- arm64 stayed byte-identical throughout every milestone-6 change: the
+  self-compare and stored-baseline-diff gates were re-run after each
+  x86-64-only commit and after the final corpus growth (see "x86-64
+  dump baseline" below), and every diff traces to test-corpus additions,
+  never to a changed instruction in an existing function.
+- x86-64 has its own dump-baseline and `jit-diff.sh`-based regression
+  workflow (below), a documented five-configuration CI-shaped matrix
+  with the gates each one carries, and the perf sanity pass above.
+  Counter support (`-Xjit-emit-counters`, NumCall/NumCallSlow) has
+  worked since it landed and needed no milestone-6 changes.
+
+Full commands and gate-by-gate evidence are in `doc/JITTesting.md` (see
+the pointer paragraph at the end of this section); the CI-recipes
+paragraph there also documents the release-build/perf run in detail.
+
+**Findings from the port.** All three were originally left to the
+maintainer, since each is cross-backend or arm64-only and so touches
+arm64's byte-identical contract; all three have since been fixed on this
+branch. They are recorded in full, with reproductions, in
+`doc/superpowers/specs/2026-08-23-x86-64-jit-design.md`'s "Delivered"
+section:
+
+1. **Try-region destination-sync bug** (fixed): the pre-call
+   `syncAllFRTempExcept` excluded the instruction's own destination FR,
+   which is unsound inside a try -- see the paragraph above. Fixed
+   2026-08-26 centrally in both backends' `syncAllFRTempExcept`, which
+   now ignores the exclusion when `isInTry()`. Regression test
+   `test/jit/try-catch-dest-reg.js` (previously `XFAIL`) passes outright
+   on both architectures. Unlike finding 2, this one does change emitted
+   code: `jit-diff.sh` reports `INSTRUCTIONS CHANGED` on both stored
+   baselines, in each case a single added store of the destination FR
+   before the throwing call in the repro's try region (arm64 folds it
+   into the neighbouring `stp`). That divergence from the export base is
+   deliberate.
+2. **arm64 reify-arguments stale-type hole** (fixed): after
+   `reifyArgumentsImpl`, arm64 never widened the lazy-arguments FR's
+   recorded type past its pre-reification `FRType::OtherNonPtr`, so a
+   later type-sensitive fast path could trust a stale "non-pointer"
+   claim. x86-64 hit this under `-Xjit-emit-type-asserts` and fixed it
+   locally (`lib/VM/JIT/x86-64/JitEmitter-array.cpp`,
+   `reifyArgumentsImpl`); arm64 was originally left as-is to keep its
+   emission byte-identical to its stored baseline. Fixed 2026-08-26 by
+   mirroring the x86-64 line; regression test
+   `test/jit/reify-arguments-type.js` runs on both architectures. The
+   fix is compile-time type bookkeeping only -- `jit-diff.sh` against
+   both stored baselines shows the fix adds no change to any
+   previously-existing function's emitted code (the only diff on
+   either architecture is the new test's own dump, appended once as
+   the file joins the default corpus).
+3. A static_assert message-form inconsistency across both backends'
+   `JitEmitter-*` files (some bare-condition, some message-form, no
+   pattern to which) -- a style sweep, not a correctness issue.
+   Swept 2026-08-26: every `static_assert(cond && "msg")` now uses the
+   two-argument form, and the arm64 `HVTag_Str` message was corrected.
+   Bare one-argument asserts (e.g. `static_assert(HERMESVALUE_VERSION ==
+   2)`) were left as-is.
+
+**x86-64 dump baseline and the byte-identical-refactor workflow.**
+`utils/jit/jit-dump.sh` / `jit-diff.sh` now cover x86-64 with no
+architecture flag: the canonicalizer's rules are keyed on the disassembly
+syntax each backend emits (arm64's `mov x.., 0x..` / `ldr .., [RO_DATA]` /
+`.xword`; x86-64's `.dq`), so both sets coexist in the same script. x86-64
+turned out to need *fewer* new rules than expected. Its `loadBits64InGp`
+(`lib/VM/JIT/x86-64/JitEmitter.h`) is an unconditional `mov reg, imm64` --
+no `isCheapConst()` split, no RO-data fallback for GP constants -- so the
+thing that makes two arm64 runs of the *same* binary diverge doesn't exist
+on this backend. What still varies with ASLR (call targets, `runtimeModule`,
+`codeBlock_`, property-cache addresses) always prints as `mov reg, 0x<8+
+hex digits>`, confirmed against a real dump by diffing two raw runs over
+`test/jit/*.js` and `test/jit/x86-64/*.js`: every differing line matches
+that shape, none shorter. The pre-existing trailing `s/0x[0-9A-Fa-f]{8,}/
+ADDR/g` rule already collapsed all of them; the only addition was
+`/^\.dq /d`, dropping the RO_DATA payload listing exactly as `/^\.xword /d`
+does on arm64 (the `[RO_DATA]`/`[RO_DATA+N]` references in code carry no
+embedded hex, so only the listing needed it).
+
+That trailing rule is width-only, not origin-aware, which is a real
+limitation and not just a theoretical one: a `mov reg, imm64` whose
+immediate is a genuine 64-bit constant -- a NaN-boxing tag mask, an
+IEEE 754 double's bit pattern -- prints at 8+ hex digits just like an
+ASLR-moved pointer, and gets collapsed to `ADDR` the same way. A change
+to such a constant is therefore invisible on the instruction line; it
+surfaces only as a comment-line diff, which `--comments-ok` suppresses.
+See `utils/jit/README.md`'s "Limitations" section for the full writeup.
+
+The workflow mirrors arm64's exactly:
+
+```sh
+cmake --build cmake-build-x86jit --target hermes
+cp cmake-build-x86jit/bin/hermes /tmp/hermes-x86-before
+# ... make an emitter change ...
+cmake --build cmake-build-x86jit --target hermes
+utils/jit/jit-diff.sh /tmp/hermes-x86-before cmake-build-x86jit/bin/hermes
+```
+
+`cmake-build-x86jit/jit-baseline.dump` is the x86-64 analogue of arm64's
+`cmake-build-arm64/jit-baseline.dump` (both untracked build artifacts,
+recaptured with `jit-dump.sh -o ... bin/hermes` after an intentional
+change). Two runs of an unchanged x86-64 binary produce byte-identical
+canonicalized dumps, same as arm64; verified over both the default
+`test/jit/*.js` corpus and the `test/jit/x86-64/*.js` corpus, and the
+`jit-diff.sh` prove-can-fail check (a one-instruction operand-order swap
+in `mulN`'s fast path, `vmulsd(res, dl, dr)` -> `vmulsd(res, dr, dl)` --
+value-transparent under IEEE 754 commutativity, so it cannot itself hang or
+misbehave at runtime, but the differently-encoded instruction shows up
+cleanly in `jit-diff.sh` as 62 changed lines, `RESULT: INSTRUCTIONS
+CHANGED`) confirms the tool still catches a real emitter change on this
+backend. arm64 is unaffected: the extended script still produces
+byte-identical arm64 self-compares, and `mulN`'s arm64 body was never
+touched.
+
+To build:
 
   cmake -B cmake-build-x86jit -G Ninja -DCMAKE_BUILD_TYPE=Debug \
     -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
     -DHERMES_ENABLE_ADDRESS_SANITIZER=ON \
     -DCMAKE_CXX_FLAGS="-O1" -DCMAKE_C_FLAGS="-O1" -DHERMESVM_ALLOW_JIT=2
+
+**The heap-value-mode build matrix.** The recipe above is
+`HEAP_HV_MODE=HEAP_HV_64`, in which every compressed-pointer and
+boxed-double branch of the emitter compiles to nothing. Two further trees
+compile those branches, and both must be built and run for any change
+that touches heap value width. The rule is not a fixed helper list: it
+is any code that computes a heap slot offset or a heap-value width,
+since `sizeof(SHGCSmallHermesValue)` changes across modes and so does
+that arithmetic's result. That covers the obvious decode/encode helpers
+-- `emit_load_cp`/`emit_store_cp`/`emit_sh_cp_{en,de}code*`,
+`Emit_sh_shv_decode`, `emit_shv_string`, the `newObjectWithBuffer`
+inline-versus-slow choice, `fastArrayLength`/`fastArrayLoad` -- and, just
+as much, sites that only look like plain address arithmetic: the
+property IC's slot addressing (`GetByIdImpl::emitLoadFromSlot`, the
+generic tier's shift/bias, `getOwnBySlotIdx`), the object-literal buffer
+visitor, and `emit_load_shv`/`emit_store_shv`/`loadSmallHermesValueInGpX`.
+Treat the names above as examples of the rule, not the list to check
+against.
+
+(Deliberate backend drift: x86-64 carries two Class-D type-assert sites,
+in `fastArrayLength`/`fastArrayLoad`, that arm64 lacks; this is
+design-sanctioned for now, to be reconciled deliberately later.)
+
+Build and run both:
+
+  cmake -B cmake-build-x86jit-hv32 -G Ninja -DCMAKE_BUILD_TYPE=Debug \
+    -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
+    -DHERMES_ENABLE_ADDRESS_SANITIZER=ON \
+    -DCMAKE_CXX_FLAGS="-O1" -DCMAKE_C_FLAGS="-O1" \
+    -DHERMESVM_ALLOW_JIT=2 -DHERMESVM_HEAP_HV_MODE=HEAP_HV_PREFER32
+
+  cmake -B cmake-build-x86jit-boxed -G Ninja -DCMAKE_BUILD_TYPE=Debug \
+    -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
+    -DHERMES_ENABLE_ADDRESS_SANITIZER=ON \
+    -DCMAKE_CXX_FLAGS="-O1" -DCMAKE_C_FLAGS="-O1" \
+    -DHERMESVM_ALLOW_JIT=2 -DHERMESVM_HEAP_HV_MODE=HEAP_HV_BOXED
+
+On x86-64, `HEAP_HV_PREFER32` defines `HERMESVM_COMPRESSED_POINTERS`,
+`HERMESVM_BOXED_DOUBLES` and `HERMESVM_CONTIGUOUS_HEAP` together (the JIT
+`#error`s on compressed pointers without a contiguous heap, so the iOS
+segment-table encoding is out of scope for this backend), while
+`HEAP_HV_BOXED` defines only `HERMESVM_BOXED_DOUBLES` and therefore
+isolates the boxed-double decode from pointer compression. All three modes
+run the same `test/jit/x86-64` suite; `test/jit/x86-64/hvmodes.js` exists
+for the matrix and is the one test whose emitted code differs deliberately
+in all three, covering every SmallHermesValue tag through the GetById
+decode, the nullable compressed-pointer decode via `super`, and the single
+place where the emitter picks a different code SHAPE per mode rather than a
+different encoding of one shape -- a literal double that `canInlineDouble`
+rejects sends `newObjectWithBuffer` to `newObjectWithBufferSlow`, which is
+unreachable in HV64.
 
 **Free-after-call invariant (read before adding call emitters).** On
 x86-64, every temp-eligible register is caller-saved: all 8 GP temps
@@ -579,6 +848,30 @@ call-emitting milestone must preserve it.
   allocator. Decide this before the temp allocator's register set is fixed.
 - **IP materialization** (`getBytecodeIP`) and pc-relative RO data (`adr`)
   become RIP-relative `lea`.
+
+**CI recipes, release-build validation and perf sanity (milestone 6,
+Task 3).** A fifth build configuration joins the four above:
+`cmake-build-x86jit-rel` (Release, clang, `HERMESVM_ALLOW_JIT=2`, no
+ASan) — the first non-ASan, non-Debug x86-64 build exercised in this
+port, and therefore the first run where `NDEBUG` strips every assert
+(including ones with potential side effects, e.g. the rspDelta
+bookkeeping counter and the per-instruction invariant checks). It builds
+clean and passes both standing gates with no NDEBUG-only divergence:
+`LIT_FILTER="jit/"` matches the ASan trees exactly (72 pass /
+1 unsupported), and the `aarch64/jit-stress.js` differential is
+byte-identical to the interpreter in all three variants (`-Xjit=force`,
+plus `-Xjit-emit-type-asserts`, and `-O0`), with all 31 functions
+compiling and zero declines per `-Xdump-jitcode=2`. A first perf sanity
+pass on this Release build times interpreter vs. `-Xjit=force` on a hot
+numeric loop, a scaled-up `stress.js`-shaped workload, and a
+property/IC-heavy loop: the JIT wins on all three (1.45x-2.25x),
+clearing the spec's "must not lose to the interpreter on hot loops" bar
+with no tuning attempted.
+**Full commands, the complete CI-shaped matrix for all five configs
+(exact configure+test invocations, which gates each carries, the
+dump-baseline workflow for both architectures, and the full perf table)
+are in `doc/JITTesting.md`** — that document is the CI/perf companion to
+this architecture writeup.
 
 ## Appendix: findings from the 2026-08-15 review
 
