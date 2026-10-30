@@ -6,7 +6,7 @@
  */
 
 #include "hermes/VM/JIT/Config.h"
-#if HERMESVM_JIT
+#if HERMESVM_JIT_ARM64
 #include "JitEmitter-internal.h"
 #include "JitEmitter.h"
 
@@ -137,4 +137,4 @@ void Emitter::alloc2InYoung(
 
 } // namespace hermes::vm::arm64
 
-#endif // HERMESVM_JIT
+#endif // HERMESVM_JIT_ARM64

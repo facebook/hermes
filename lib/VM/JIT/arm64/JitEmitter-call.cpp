@@ -6,7 +6,7 @@
  */
 
 #include "hermes/VM/JIT/Config.h"
-#if HERMESVM_JIT
+#if HERMESVM_JIT_ARM64
 #include "../JitHandlers.h"
 #include "JitEmitter-internal.h"
 #include "JitEmitter.h"
@@ -586,4 +586,4 @@ void Emitter::getBuiltinClosure(FR frRes, uint32_t builtinIndex) {
 }
 
 } // namespace hermes::vm::arm64
-#endif // HERMESVM_JIT
+#endif // HERMESVM_JIT_ARM64

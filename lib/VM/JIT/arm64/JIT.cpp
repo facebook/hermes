@@ -6,7 +6,7 @@
  */
 
 #include "hermes/VM/JIT/Config.h"
-#if HERMESVM_JIT
+#if HERMESVM_JIT_ARM64
 #include "hermes/VM/JIT/arm64/JIT.h"
 
 #include "JitImpl.h"
@@ -51,4 +51,4 @@ void JITContext::markRoots(
 } // namespace arm64
 } // namespace vm
 } // namespace hermes
-#endif // HERMESVM_JIT
+#endif // HERMESVM_JIT_ARM64
