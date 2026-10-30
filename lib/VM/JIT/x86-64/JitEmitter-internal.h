@@ -120,6 +120,18 @@ inline void emit_sh_ljs_tag_is_string(
   a.cmp(tagReg, asmjit::Imm(HVTag_Str));
 }
 
+/// Emit code to check whether the input reg is an object, using the
+/// specified temp register. The input reg is not modified unless it is
+/// the same as the temp, which is allowed.
+/// CPU flags are updated as result. je on success.
+inline void emit_sh_ljs_is_object(
+    x86::Assembler &a,
+    const x86::Gp &tempReg,
+    const x86::Gp &inputReg) {
+  emit_sh_ljs_get_tag(a, tempReg, inputReg);
+  emit_sh_ljs_tag_is_object(a, tempReg);
+}
+
 /// Extract the pointer out of the HermesValue in \p in into \p out.
 ///
 /// x86-64: kHV_DataMask does not fit in a sign-extended imm32 and this
@@ -151,6 +163,30 @@ inline void emit_sh_ljs_is_double(
       "numbers must be lower than HVTag_First << kHV_NumDataBits");
   a.mov(tmp, asmjit::Imm((uint64_t)HVTag_First << kHV_NumDataBits));
   a.cmp(input, tmp);
+}
+
+/// Emit code to check whether the input reg is bool, using the specified
+/// temp register.
+/// The input reg is not modified unless it is the same as the temp,
+/// which is allowed.
+/// CPU flags are updated as result. je on success.
+///
+/// x86-64: the two-operand shift needs a copy when tempReg and inputReg
+/// differ, unlike arm64's three-operand asr; when they are the same
+/// register the shift simply runs in place, exactly as arm64 allows.
+inline void emit_sh_ljs_is_bool(
+    x86::Assembler &a,
+    const x86::Gp &tempReg,
+    const x86::Gp &inputReg) {
+  // Get the ETag bits by right shifting one bit further than the tag, and
+  // compare against the sign-extended ETag constant directly (imm32 is
+  // sign-extended on x86, so there is no arm64-style cmn-with-negation).
+  static_assert(
+      (int16_t)HVETag_Bool == (int16_t)(-10) && "HVETag_Bool must be -10");
+  if (tempReg != inputReg)
+    a.mov(tempReg, inputReg);
+  a.sar(tempReg, kHV_NumDataBits - 1);
+  a.cmp(tempReg, asmjit::Imm(HVETag_Bool));
 }
 
 /// For a register \p dInput, which contains a double, check whether it is

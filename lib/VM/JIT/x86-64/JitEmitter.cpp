@@ -141,12 +141,6 @@ void Emitter::assertPostInstructionInvariants() {
 #endif
 
 void Emitter::enter(uint32_t numCount, uint32_t npCount) {
-  // x86-64: the emitted type-assert check sequences land with the tag-helper
-  // milestone. Decline rather than silently emit code without the checks the
-  // caller asked for.
-  if (LLVM_UNLIKELY(emitTypeAsserts_))
-    unsupported("type asserts");
-
   // x86-64: SysV has no callee-saved vector registers, so there is a single
   // pool of global registers, kGPSavedList, which both number FRs and
   // non-pointer FRs draw from, numbers first. arm64's second (vector) loop
@@ -540,6 +534,7 @@ void Emitter::leave(llvh::ArrayRef<const asmjit::Label *> exceptionHandlers) {
   a.ret();
 
   emitSlowPaths();
+  emitTypeAssertFailTail();
   emitROData();
 }
 
@@ -597,6 +592,157 @@ void Emitter::emitSlowPaths() {
     slowPaths_.pop_front();
   }
   emittingIP = nullptr;
+}
+
+void Emitter::emitTypeAssert(FR fr, HWReg hwVal, TypePred pred) {
+  if (LLVM_LIKELY(!emitTypeAsserts_))
+    return;
+  comment("// type assert r%u is %s", fr.index(), typePredName(pred));
+  if (hwVal.isVecD()) {
+    // x86-64: arm64's fmov bit-reinterprets a vector register into a GpX
+    // in place; the x86 analogue crossing register files is vmovq.
+    a.vmovq(xScratch, hwVal.xmm());
+    emitTypeAssertGpX(fr, xScratch, pred);
+  } else {
+    emitTypeAssertGpX(fr, hwVal.gpq(), pred);
+  }
+}
+
+void Emitter::emitTypeAssertFR(FR fr, TypePred pred) {
+  if (LLVM_LIKELY(!emitTypeAsserts_))
+    return;
+  comment("// type assert r%u is %s", fr.index(), typePredName(pred));
+  readFRForAssert(fr);
+  emitTypeAssertGpX(fr, xScratch, pred);
+}
+
+void Emitter::emitPendingTypeAssertsSlow() {
+  assert(!typeAssertPendingWrites_.empty() && "nothing to emit");
+  for (FR fr : typeAssertPendingWrites_) {
+    FRState &frState = frameRegs_[fr.index()];
+    TypePred pred = frState.globalType == FRType::Number ? TypePred::IsNumber
+                                                         : TypePred::NotPointer;
+    emitTypeAssertFR(fr, pred);
+  }
+  typeAssertPendingWrites_.clear();
+}
+
+void Emitter::emitTypeAssertGpX(FR fr, const x86::Gp &val, TypePred pred) {
+  assert(emitTypeAsserts_ && "caller must check emitTypeAsserts_");
+  if (!typeAssertSites_) {
+    typeAssertSites_ = &jitImpl_.typeAssertSites.emplace_back();
+    typeAssertFailLab_ = newPrefLabel("TYPEASSERT_FAIL", 0);
+  }
+
+  uint32_t idx = (uint32_t)typeAssertSites_->size();
+  typeAssertSites_->push_back(
+      TypeAssertSite{
+          codeBlock_,
+          codeBlock_->getOffsetOf(emittingIP),
+          (uint16_t)fr.index(),
+          pred});
+
+  asmjit::Label failLab = newPrefLabel("TYPEASSERT_", idx);
+
+  // x86-64: arm64 tests IsNumber/BitComparable's "is this a double" step by
+  // comparing the raw 64-bit value against the shifted tag boundary
+  // (emit_sh_ljs_is_double), which needs a second register to hold that
+  // 64-bit constant, distinct from val -- arm64 has one (xScratch2), this
+  // backend does not. Rather than borrow one from the temp allocator (which
+  // would be unsafe here: several call sites, e.g. jStrictEqual's raw-bit
+  // path, free their operand registers back to the allocator before their
+  // own final use of them, relying on no intervening allocation stealing
+  // that exact register), the check below extracts the tag into xScratch
+  // with the same non-destructive get_tag used by NotPointer -- val is
+  // never written -- and compares *that* against HVTag_First as a small
+  // sign-extended immediate. This is exactly equivalent to the raw-value
+  // form: is_double's threshold has zero low 48 bits, so unsigned
+  // `val < (HVTag_First << 48)` holds iff unsigned `(val >> 48) <
+  // HVTag_First` (sar's sign extension commutes with the shift on both
+  // sides of the comparison). The whole predicate table below therefore
+  // uses only xScratch, exactly as arm64 uses only its two dedicated
+  // scratch registers -- a pure insertion that never touches the
+  // allocator.
+  switch (pred) {
+    case TypePred::IsNumber:
+      emit_sh_ljs_get_tag(a, xScratch, val);
+      a.cmp(xScratch, asmjit::Imm(HVTag_First));
+      a.jae(failLab);
+      break;
+    case TypePred::IsBool:
+      emit_sh_ljs_is_bool(a, xScratch, val);
+      a.jne(failLab);
+      break;
+    case TypePred::NotPointer:
+      emit_sh_ljs_get_tag(a, xScratch, val);
+      emit_sh_ljs_tag_is_pointer(a, xScratch);
+      a.jae(failLab);
+      break;
+    case TypePred::BitComparable:
+      emit_sh_ljs_get_tag(a, xScratch, val);
+      a.cmp(xScratch, asmjit::Imm(HVTag_First));
+      a.jb(failLab);
+      emit_sh_ljs_tag_is_pointer(a, xScratch);
+      a.jae(failLab);
+      break;
+    case TypePred::IsObject:
+      emit_sh_ljs_is_object(a, xScratch, val);
+      a.jne(failLab);
+      break;
+  }
+
+  slowPaths_.emplace_back(
+      failLab, emittingIP, [idx](Emitter &em, SlowPath &sp) {
+        em.comment("// Type assert failure %u", idx);
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(x86::edi, asmjit::Imm(idx));
+        em.a.jmp(em.typeAssertFailLab_);
+      });
+}
+
+void Emitter::readFRForAssert(FR fr) {
+  assert(emitTypeAsserts_ && "caller must check emitTypeAsserts_");
+  FRState &frState = frameRegs_[fr.index()];
+  assert(!frState.regIsDirty && "reading an FR that is about to be written");
+
+  // Locals always hold the latest value; a global reg holds it only if
+  // globalRegUpToDate; otherwise the frame must be up to date.
+  if (frState.localGpX) {
+    a.mov(xScratch, frState.localGpX.gpq());
+  } else if (frState.localVecD) {
+    a.vmovq(xScratch, frState.localVecD.xmm());
+  } else if (frState.globalReg && frState.globalRegUpToDate) {
+    // x86-64: globals are GP-only here (see kGPSavedList; there are no
+    // callee-saved XMM registers in SysV), so the isGpX() split's else arm
+    // is unreachable on this backend. Kept for textual parity with arm64,
+    // which does have vector globals.
+    if (frState.globalReg.isGpX())
+      a.mov(xScratch, frState.globalReg.gpq());
+    else
+      a.vmovq(xScratch, frState.globalReg.xmm());
+  } else {
+    assert(frState.frameUpToDate && "FR has no up-to-date location");
+    _loadFrame(HWReg(xScratch), fr);
+  }
+}
+
+void Emitter::emitTypeAssertFailTail() {
+  if (!typeAssertSites_)
+    return;
+  comment("// Type assert failure tail");
+  a.bind(typeAssertFailLab_);
+  // edi already holds the site index, set by the per-site stub. SysV's
+  // second integer argument register is rsi.
+  a.mov(
+      x86::rsi,
+      roConst64((uint64_t)typeAssertSites_, "type assert site table"));
+  // Not EMIT_RUNTIME_CALL: that saves the current IP, and emitSlowPaths()
+  // has already cleared emittingIP by the time this runs. The handler does
+  // not need the IP anyway - the site record carries the bytecode offset.
+  EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(
+      *this,
+      void (*)(uint32_t, const std::vector<TypeAssertSite> *),
+      _jit_type_assert_failed);
 }
 
 void Emitter::mov(FR frRes, FR frInput, bool logComment) {

@@ -217,6 +217,38 @@ static constexpr uint8_t kGPReturnStash = 3;
 // exist in SysV, so there are no vector globals.
 static constexpr std::pair<uint8_t, uint8_t> kVecTemp(0, 15);
 
+/// \return true if \p id falls within [range.first, range.second].
+static constexpr bool idInRange(
+    uint32_t id,
+    std::pair<uint8_t, uint8_t> range) {
+  return id >= range.first && id <= range.second;
+}
+/// \return true if \p id appears in kGPSavedList.
+static constexpr bool idInGPSavedList(uint32_t id) {
+  for (uint8_t saved : kGPSavedList)
+    if (saved == id)
+      return true;
+  return false;
+}
+
+// xScratch/xFrame/xRuntime are dedicated registers, never handed out by
+// TempRegAlloc. Slow paths rely on this: they pass xScratch as a tag temp
+// alongside live allocatable registers, so if xScratch (or xFrame/xRuntime)
+// aliased a temp or saved-global id, that code would silently clobber a
+// live value.
+static_assert(
+    !idInRange(xScratch.id(), kGPTemp1) &&
+        !idInRange(xScratch.id(), kGPTemp2) && !idInGPSavedList(xScratch.id()),
+    "xScratch must not overlap the GP temp ranges or saved-global pool");
+static_assert(
+    !idInRange(xFrame.id(), kGPTemp1) && !idInRange(xFrame.id(), kGPTemp2) &&
+        !idInGPSavedList(xFrame.id()),
+    "xFrame must not overlap the GP temp ranges or saved-global pool");
+static_assert(
+    !idInRange(xRuntime.id(), kGPTemp1) &&
+        !idInRange(xRuntime.id(), kGPTemp2) && !idInGPSavedList(xRuntime.id()),
+    "xRuntime must not overlap the GP temp ranges or saved-global pool");
+
 static constexpr uint32_t bitMask32(unsigned first, unsigned last) {
   return ((1u << (last - first + 1)) - 1u) << first;
 }
@@ -295,10 +327,13 @@ class TempRegAlloc {
 };
 
 class Emitter {
-  // x86-64: unreferenced in the milestone-1 tree -- used from milestone 2;
-  // keeps -Wunused-private-field clean until then.
+  // x86-64: still unreferenced -- kept for parity with arm64 and for the
+  // runtime calls a later milestone will add; keeps -Wunused-private-field
+  // clean until then.
   [[maybe_unused]] Runtime &runtime_;
-  [[maybe_unused]] JITContext::Impl &jitImpl_;
+  // Used by emitTypeAssertGpX() to claim this function's entry in
+  // jitImpl_.typeAssertSites (JitEmitter.cpp).
+  JITContext::Impl &jitImpl_;
 
   /// Level of dumping JIT code. Bit 0 indicates code printing on or off.
   unsigned const dumpJitCode_;
@@ -407,6 +442,13 @@ class Emitter {
   /// slowPaths_.size() -- this backend does not reuse an index once it is
   /// handed out. See newSlowPathLabel()/newContLabel().
   unsigned slowPathLabelCounter_{0};
+
+  /// Records for every emitted type check, in site-index order. Owned by
+  /// JITContext::Impl, which outlives the emitted code that refers to it;
+  /// this is only a pointer to that entry, claimed on first use.
+  std::vector<TypeAssertSite> *typeAssertSites_ = nullptr;
+  /// The shared failure tail, bound only if there is at least one site.
+  asmjit::Label typeAssertFailLab_{};
 
   /// FRs written by the bytecode instruction currently being emitted whose
   /// global register class requires a check. Drained at each instruction
@@ -1019,27 +1061,40 @@ class Emitter {
   /// that the value of \p fr, currently held in \p hwVal, satisfies
   /// \p pred.
   ///
-  /// x86-64: a placeholder. The check sequences land with the type-assert
-  /// milestone; until then enter() declines any function that asks for
-  /// them, so the flag is never set here. The call sites exist already so
-  /// that the ported emitters stay textually identical to arm64's.
-  void emitTypeAssert(FR fr, HWReg hwVal, TypePred pred) {
-    (void)fr;
-    (void)hwVal;
-    (void)pred;
-    assert(!emitTypeAsserts_ && "type asserts are not implemented yet");
-  }
+  /// Uses only xScratch (r11) and never touches the register allocator, so
+  /// it is a pure insertion -- unlike arm64, which reserves a second
+  /// dedicated scratch register (xScratch2) for predicates that would
+  /// otherwise need two registers, this backend has none to spare and
+  /// instead formulates every check as a single non-destructive tag
+  /// extraction into xScratch (see emitTypeAssertGpX). It clobbers EFLAGS,
+  /// so the caller must have verified that flags are dead at the
+  /// insertion point. That is an obligation, not a property emitters have
+  /// in general: the arm64 backend has selectObject (still a stub in
+  /// x86-64), which holds flags across getOrAllocFRInGpX.
+  ///
+  /// Where an emitter knows a type fact per operand, guard each check on
+  /// that operand's own fact, never on the emitter's combined fast-path
+  /// condition: the point is to assert every fact the JIT holds, not only
+  /// the ones the chosen code shape happens to rely on.
+  void emitTypeAssert(FR fr, HWReg hwVal, TypePred pred);
 
   /// Emit, at a bytecode instruction boundary, the global-register-class
-  /// checks for every FR recorded since the last call.
-  /// x86-64: the check sequences themselves land with the tag-helper
-  /// milestone. The recording side is ported now so that the register
-  /// allocator stays textually identical to arm64's; draining here keeps
-  /// newBasicBlock()'s "nothing pending at a boundary" invariant true.
-  /// enter() declines any function when type asserts are requested, so a
-  /// caller asking for them never silently gets code without them.
+  /// checks for every FR recorded by recordFRWriteForAssert() since the
+  /// last call, then clear the recorded set. Called from compileBB as a
+  /// sibling of assertPostInstructionInvariants(), never from inside it:
+  /// that function's body is compiled out under NDEBUG, and emitting
+  /// checks from within it would silently disable Class C in
+  /// release-with-flag builds.
+  ///
+  /// This checks the value each FR holds at the boundary, not at the
+  /// instruction's write to it. An instruction that writes a
+  /// non-conforming value, calls the runtime (a GC safepoint), and then
+  /// overwrites it with a conforming one is not caught; only the value
+  /// that survives the instruction is.
   void emitPendingTypeAsserts() {
-    typeAssertPendingWrites_.clear();
+    if (LLVM_LIKELY(typeAssertPendingWrites_.empty()))
+      return;
+    emitPendingTypeAssertsSlow();
   }
 
  private:
@@ -1221,15 +1276,6 @@ class Emitter {
   /// unless the FR owns a global register. Callers must check
   /// emitTypeAsserts_ themselves; this does not.
   void recordFRWriteForAssert(FR fr);
-
-  /// Like \c emitTypeAssert, but for an \p fr that the fast path never
-  /// materializes into a register. x86-64: a placeholder, exactly as
-  /// \c emitTypeAssert is.
-  void emitTypeAssertFR(FR fr, TypePred pred) {
-    (void)fr;
-    (void)pred;
-    assert(!emitTypeAsserts_ && "type asserts are not implemented yet");
-  }
 
   /// Load the address of \p frameReg's frame slot into \p dst.
   /// x86-64: every frame slot is reachable through lea's signed 32-bit
@@ -1431,6 +1477,35 @@ class Emitter {
   int32_t uint64Const(uint64_t bits, const char *comment);
 
   void emitROData();
+
+  /// Emit \c emitTypeAssert's check sequence for \p pred against \p val,
+  /// which holds the current value of \p fr, recording a TypeAssertSite.
+  /// The caller emits the dump comment, so that it precedes any load it
+  /// had to emit to produce \p val.
+  void emitTypeAssertGpX(FR fr, const x86::Gp &val, TypePred pred);
+
+  /// Like \c emitTypeAssert, but for an \p fr that the fast path never
+  /// materializes into a register: reads it with \c readFRForAssert first.
+  /// Like \c emitTypeAssert, it does nothing unless emitTypeAsserts_ is
+  /// set, so callers need not check it themselves.
+  void emitTypeAssertFR(FR fr, TypePred pred);
+
+  /// Read the current value of \p fr into xScratch, for use immediately
+  /// before an \c emitTypeAssertGpX call, without allocating or perturbing
+  /// any FRState. Honors the FRState up-to-date invariants rather than
+  /// merely the location priority: the local register if any (locals are
+  /// always current), else the global register only if
+  /// globalRegUpToDate, else the frame slot (asserting frameUpToDate).
+  /// \pre \p fr is not dirty (regIsDirty).
+  void readFRForAssert(FR fr);
+
+  /// The out-of-line body of \c emitPendingTypeAsserts.
+  /// \pre the pending set is not empty.
+  void emitPendingTypeAssertsSlow();
+
+  /// Emit the shared out-of-line tail that all type assert failure stubs
+  /// jump to, if any type assert was emitted for this function.
+  void emitTypeAssertFailTail();
 
   /// Report that the emitter does not yet support \p what, aborting
   /// compilation of the current function cleanly (the JITContext::Compiler

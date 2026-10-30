@@ -490,24 +490,40 @@ JIT host — see the Config.h row in the source layout table.
 
 ## x86-64 porting notes
 
-Observations from this analysis, to be refined into a plan:
-
-The x86-64 backend skeleton (`lib/VM/JIT/x86-64/`) now compiles functions
-consisting only of LoadParam/LoadParamLong, all LoadConst* forms, Mov/
-MovLong, and Ret; all other instructions decline per-function and fall back
-to the interpreter. To build and test:
+The x86-64 backend (`lib/VM/JIT/x86-64/`) compiles arithmetic, comparisons,
+branches, bit operations, and type assertions. Opcode coverage: LoadParam/
+LoadConst*/Mov/Ret (milestone 1), Add/Sub/Mul/Div/Mod with N variants,
+Inc/Dec/Negate, ToNumber/ToNumeric, all comparisons (loose+strict, both
+polarities), all conditional/unconditional jumps (JLess families, JmpTrue/
+False/Undefined/StrictEqual), BitAnd/Or/Xor, shifts (all three), BitNot,
+ToInt32/ToUint32. Loops execute fully in machine code. Type asserts
+(`-Xjit-emit-type-asserts`) are implemented; `enter()` no longer declines for
+it. `-Xjit-emit-counters` still has no decline of its own, since a declined
+function legitimately emits no counters and counter output stays honest either
+way. Tests live at test/jit/x86-64/ (skeleton, arith, cmp, loops, bitops,
+type-asserts); test/jit itself is still gated to arm64 during bring-up
+(test/jit/lit.local.cfg), so the main JIT suite does not exercise this
+backend yet. To build:
 
   cmake -B cmake-build-x86jit -G Ninja -DCMAKE_BUILD_TYPE=Debug \
     -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
     -DHERMES_ENABLE_ADDRESS_SANITIZER=ON \
     -DCMAKE_CXX_FLAGS="-O1" -DCMAKE_C_FLAGS="-O1" -DHERMESVM_ALLOW_JIT=2
 
-The skeleton test lives at test/jit/x86-64/skeleton.js (gated by
-jit-arch-x86-64); test/jit itself is gated to arm64 during bring-up.
-`enter()` declines under `-Xjit-emit-type-asserts` -- a caller asking for
-checks must not silently get code without them -- while `-Xjit-emit-counters`
-needs no such decline, since a declined function legitimately emits no
-counters and counter output stays honest either way.
+**Free-after-call invariant (read before adding call emitters).** On
+x86-64, every temp-eligible register is caller-saved: all 8 GP temps
+(`kGPTemp1`/`kGPTemp2`) and all 16 xmm registers (`kVecTemp`). Unlike
+arm64, there is no callee-saved temp subset a call can leave alone.
+Emitters must sync AND free all temps around any emitted call, not just
+sync them -- a temp merely synced-but-not-freed still holds a pre-call
+value the callee is free to clobber. Globals survive calls unharmed only
+because they live in the callee-saved GPRs rbx/r12/r13 (`kGPSavedList`),
+never in a temp. One safety net: under `-Xjit-emit-type-asserts`,
+`readFRForAssert` prefers live registers over the frame, so a
+sync-without-free bug that leaves a stale temp registered as an FR's
+location produces a spurious assert trap rather than silently reading
+garbage. That is a deliberate property, not a byproduct, and the
+call-emitting milestone must preserve it.
 
 - **asmjit already supports x86-64** and the vendored copy ships the backend
   (`external/asmjit/.../x86`). CMake currently compiles only `arm64/*.cpp`
