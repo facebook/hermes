@@ -1257,7 +1257,9 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
 
         case Opcode::U16MatchChar32: {
           const auto *insn = llvh::cast<U16MatchChar32Insn>(base);
-          if (c.atEnd() || c.consumeUTF16() != (CodePoint)insn->c)
+          // Compare as uint32_t: casting the operand to CodePoint would
+          // truncate it to a byte in the char executor.
+          if (c.atEnd() || (uint32_t)c.consumeUTF16() != insn->c)
             BACKTRACK();
           s->ip_ += sizeof(U16MatchChar32Insn);
           break;
@@ -1283,10 +1285,12 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
           const auto *insn = llvh::cast<U16MatchCharICase32Insn>(base);
           bool matched = false;
           if (!c.atEnd()) {
-            CodePoint cp = c.consumeUTF16();
+            // Compare as uint32_t so a wide operand is not truncated to
+            // CodePoint (a byte in the char executor).
+            uint32_t cp = c.consumeUTF16();
             matched =
-                (cp == (CodePoint)insn->c ||
-                 traits_.canonicalize(cp, true) == (CodePoint)insn->c);
+                (cp == insn->c ||
+                 (uint32_t)traits_.canonicalize(cp, true) == insn->c);
           }
           if (!matched)
             BACKTRACK();

@@ -1198,6 +1198,11 @@ TEST(Regex, StartFilterTransparent) {
       {u"\\uD83D", u"u"},
       {u"\\uDE00", u"u"},
       {u"\\uD83D", u""},
+      // 32-bit operands whose low byte is ASCII ('a'), searched over bytes.
+      {u"\\uD861", u"u"},
+      {u"\\uD861", u"iu"},
+      {u"\\u{1F461}", u"u"},
+      {u"\\u{1F461}", u"iu"},
       {u"\\u2028|\\n", u""},
       {u"(?i:a)b", u""},
       {u"a(?i:b)", u""},
@@ -1218,6 +1223,42 @@ TEST(Regex, StartFilterTransparent) {
   };
   for (const auto &entry : corpus)
     expectStartFilterTransparent(entry.first, entry.second);
+}
+
+/// The char executor must not truncate a 32-bit pattern code point to its
+/// low byte: a byte can never equal U+D861 or U+1F461, whose low byte is
+/// 'a'.
+TEST(Regex, CharPathDoesNotTruncateCodePoints) {
+  static const char16_t *const patterns[][2] = {
+      {u"\\uD861", u"u"},
+      {u"\\uD861", u"iu"},
+      {u"\\u{1F461}", u"u"},
+      {u"\\u{1F461}", u"iu"},
+  };
+  static const std::string inputs[] = {
+      "a",
+      "\xC3\xA9"
+      "a",
+      "xa\x80"
+      "a\xff",
+      "\xe2\x80\xa8"
+      "a",
+  };
+  for (const auto &p : patterns) {
+    cregex re(p[0], p[1]);
+    ASSERT_TRUE(re.valid()) << printable(p[0]) << "/" << printable(p[1]);
+    const std::vector<uint8_t> bytecode = re.compile();
+    for (const std::string &in : inputs) {
+      for (constants::MatchFlagType mode :
+           {constants::matchDefault,
+            constants::matchDefault | constants::matchNoStartFilter}) {
+        EXPECT_EQ(
+            "nomatch", searchOutcome(bytecode, in.data(), in.size(), 0, mode))
+            << "/" << printable(p[0]) << "/" << printable(p[1])
+            << " on bytes of \"" << printableBytes(in) << "\"";
+      }
+    }
+  }
 }
 
 TEST(Regex, StartFilterAvoidsOverflow) {
