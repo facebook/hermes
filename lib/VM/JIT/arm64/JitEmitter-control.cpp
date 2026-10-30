@@ -501,7 +501,9 @@ void Emitter::uintSwitchImm(
   comment(
       "// uintSwitchImm r%u, min %u, max %u", frInput.index(), minVal, maxVal);
 
-  asmjit::Error err;
+  // minVal is compared against and subtracted below; both are add/sub
+  // immediate forms with the same encoding limit.
+  const bool minValIsImm = a64::Utils::isAddSubImm(minVal);
 
   // End of the basic block.
   syncAllFRTempExcept({});
@@ -527,8 +529,9 @@ void Emitter::uintSwitchImm(
 
   // Check if the integer value in xTemp is in range.
   // First check minVal.
-  EXPECT_ERROR(asmjit::kErrorInvalidImmediate, err = a.cmp(wTempInput, minVal));
-  if (err) {
+  if (minValIsImm) {
+    a.cmp(wTempInput, minVal);
+  } else {
     a.mov(hwTempTarget.a64GpX().w(), minVal);
     a.cmp(wTempInput, hwTempTarget.a64GpX().w());
   }
@@ -536,8 +539,9 @@ void Emitter::uintSwitchImm(
   a.b_lo(defaultLabel);
 
   // Now check maxVal.
-  EXPECT_ERROR(asmjit::kErrorInvalidImmediate, err = a.cmp(wTempInput, maxVal));
-  if (err) {
+  if (a64::Utils::isAddSubImm(maxVal)) {
+    a.cmp(wTempInput, maxVal);
+  } else {
     a.mov(hwTempTarget.a64GpX().w(), maxVal);
     a.cmp(wTempInput, hwTempTarget.a64GpX().w());
   }
@@ -547,10 +551,9 @@ void Emitter::uintSwitchImm(
   // Compute the offset into the jump table, dereference, and jump.
   // Offset by the minVal if necessary.
   if (minVal != 0) {
-    EXPECT_ERROR(
-        asmjit::kErrorInvalidImmediate,
-        err = a.sub(wTempInput, wTempInput, minVal));
-    if (err) {
+    if (minValIsImm) {
+      a.sub(wTempInput, wTempInput, minVal);
+    } else {
       a.mov(hwTempTarget.a64GpX().w(), minVal);
       a.sub(wTempInput, wTempInput, hwTempTarget.a64GpX().w());
     }
