@@ -150,6 +150,107 @@ inline void emit_sh_ljs_get_pointer(
   a.shr(out, 64 - kHV_NumDataBits);
 }
 
+/// Encode a native pointer into a tagged object pointer (SHLegacyValue).
+/// The same register is used for input and output.
+///
+/// x86-64: arm64 folds the tag in with `movk`, which x86 has no equivalent
+/// of: the only 16-bit subregister x86 can write is the low one, and the tag
+/// constant is far too wide for a sign-extended imm32. Rather than
+/// materializing it in xScratch, the top 16 bits are rotated down to the
+/// bottom, where the tag does fit an imm32, and rotated back, which leaves
+/// xScratch untouched for the callers. The input is a raw heap pointer, whose
+/// top 16 bits are zero, which is what makes `or` equivalent to arm64's `movk`.
+///
+/// All three instructions write EFLAGS, where arm64's single `movk` writes no
+/// condition flags at all, so a caller must not hold live flags across this
+/// helper. The same applies to emit_sh_ljs_object2() below, which ends in it.
+inline void emit_sh_ljs_object(x86::Assembler &a, const x86::Gp &inOut) {
+  static_assert(
+      HERMESVALUE_VERSION == 2,
+      "HVTag_Object << kHV_NumDataBits is 0x1111...0000...");
+  constexpr unsigned kTagBits = 64 - kHV_NumDataBits;
+  static_assert(kTagBits == 16, "the tag must be exactly the top 16 bits");
+  a.rol(inOut, kTagBits);
+  a.or_(inOut, asmjit::Imm((uint16_t)HVTag_Object));
+  a.ror(inOut, kTagBits);
+}
+
+/// Encode a native pointer into a tagged object pointer (SHLegacyValue).
+/// Takes an input and output register, which can be the same.
+///
+/// x86-64: arm64 gets the extra register for free, since its `orr` is
+/// three-operand; here it costs a move.
+inline void
+emit_sh_ljs_object2(x86::Assembler &a, const x86::Gp &out, const x86::Gp &in) {
+  if (out != in)
+    a.mov(out, in);
+  emit_sh_ljs_object(a, out);
+}
+
+/// Given a compressed pointer in \p inOut that is known to be non-null,
+/// decompress it and place the result in \p inOut.
+///
+/// x86-64: the compressed-pointer branch below is transcribed from arm64 for
+/// parity, but no x86-64 build configuration compiles it yet -- this backend
+/// is only built for HEAP_HV_64. The HV32 build matrix arrives with a later
+/// milestone, and this branch gets its first compile and test there.
+inline void emit_sh_cp_decode_non_null(
+    x86::Assembler &a,
+    const x86::Gp &inOut) {
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  a.add(inOut, xRuntime);
+#endif
+}
+
+/// Given a pointer in \p inOut that is known to be non-null, compress it and
+/// place the result in \p inOut.
+///
+/// x86-64: see emit_sh_cp_decode_non_null() -- the compressed-pointer branch
+/// is not compiled on x86-64 yet.
+inline void emit_sh_cp_encode_non_null(
+    x86::Assembler &a,
+    const x86::Gp &inOut) {
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  a.sub(inOut, xRuntime);
+#endif
+}
+
+/// Load a compressed pointer from \p mem into \p dest.
+///
+/// x86-64: an x86::Mem carries its own operand size, and the callers build
+/// theirs with the size-less x86::ptr(), so each branch stamps the width it
+/// needs onto a copy. The 32-bit load zero-extends into the full register,
+/// which is what makes the narrow branch a decompressible value.
+/// See emit_sh_cp_decode_non_null() -- that branch is not compiled yet.
+inline void
+emit_load_cp(x86::Assembler &a, const x86::Gp &dest, const x86::Mem &mem) {
+  x86::Mem m = mem;
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  m.setSize(4);
+  a.mov(dest.r32(), m);
+#else
+  m.setSize(8);
+  a.mov(dest, m);
+#endif
+}
+
+/// Store the compressed pointer in \p val to \p mem.
+///
+/// x86-64: see emit_load_cp() for the operand-size handling. As on arm64 the
+/// narrow case here is selected with `if constexpr` on the size rather than
+/// with the preprocessor, so both halves are always compiled.
+inline void
+emit_store_cp(x86::Assembler &a, const x86::Gp &val, const x86::Mem &mem) {
+  x86::Mem m = mem;
+  if constexpr (sizeof(CompressedPointer) == 4) {
+    m.setSize(4);
+    a.mov(m, val.r32());
+  } else {
+    m.setSize(8);
+    a.mov(m, val);
+  }
+}
+
 /// Emit code to check whether the input HermesValue is a double.
 /// The input reg is not modified.
 /// The temp reg is modified.
@@ -323,6 +424,20 @@ inline void emit_sh_ljs_is_undefined(
   a.mov(tempReg, asmjit::Imm(_sh_ljs_undefined().raw));
   a.cmp(inputReg, tempReg);
 }
+
+/// Emit code to initialize the fields of a newly created environment.
+/// \param newEnvPtr contains a pointer to the object to initialise.
+/// \param parentEnv contains a compressed pointer to the parent environment.
+/// \param temp is a temporary register for use by the emitted code.
+/// \param vTemp is a temporary vector register for use by the emitted code.
+/// \param size is the number of slots in the new environment.
+void emit_environment_init(
+    x86::Assembler &a,
+    const x86::Gp &newEnvPtr,
+    const x86::Gp &parentEnv,
+    const x86::Gp &temp,
+    const x86::Xmm &vTemp,
+    uint32_t size);
 
 class OurErrorHandler : public asmjit::ErrorHandler {
   asmjit::Error &expectedError_;

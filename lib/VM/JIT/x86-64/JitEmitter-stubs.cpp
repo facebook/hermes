@@ -405,66 +405,6 @@ void Emitter::declareGlobalVar(SHSymbolID symID) {
   unsupported("declareGlobalVar");
 }
 
-void Emitter::createTopLevelEnvironment(FR frRes, uint32_t size) {
-  unsupported("createTopLevelEnvironment");
-}
-
-void Emitter::createFunctionEnvironment(FR frRes, uint32_t size) {
-  unsupported("createFunctionEnvironment");
-}
-
-void Emitter::createEnvironment(FR frRes, FR frParent, uint32_t size) {
-  unsupported("createEnvironment");
-}
-
-void Emitter::getParentEnvironment(FR frRes, uint32_t level) {
-  unsupported("getParentEnvironment");
-}
-
-void Emitter::getEnvironment(FR frRes, FR frSource, uint32_t level) {
-  unsupported("getEnvironment");
-}
-
-void Emitter::getClosureEnvironment(FR frRes, FR frClosure) {
-  unsupported("getClosureEnvironment");
-}
-
-void Emitter::loadFromEnvironment(FR frRes, FR frEnv, uint32_t slot) {
-  unsupported("loadFromEnvironment");
-}
-
-void Emitter::storeToEnvironment(bool np, FR frEnv, uint32_t slot, FR frValue) {
-  unsupported("storeToEnvironment");
-}
-
-void Emitter::createClosure(
-    FR frRes,
-    FR frEnv,
-    RuntimeModule *runtimeModule,
-    uint32_t functionID) {
-  unsupported("createClosure");
-}
-
-void Emitter::createBaseClass(FR frRes, FR frPrototypeOut, FR frEnv) {
-  unsupported("createBaseClass");
-}
-
-void Emitter::createDerivedClass(
-    FR frRes,
-    FR frPrototypeOut,
-    FR frEnv,
-    FR frSuperClass) {
-  unsupported("createDerivedClass");
-}
-
-void Emitter::createGenerator(
-    FR frRes,
-    FR frEnv,
-    RuntimeModule *runtimeModule,
-    uint32_t functionID) {
-  unsupported("createGenerator");
-}
-
 void Emitter::getArgumentsPropByValLoose(FR frRes, FR frIndex, FR frLazyReg) {
   unsupported("getArgumentsPropByValLoose");
 }

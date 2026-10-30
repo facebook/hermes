@@ -1388,6 +1388,67 @@ class Emitter {
       void *slowCall,
       const char *slowCallName);
 
+  /// Bump allocate \p sz bytes on the GC heap and store the result in \p out.
+  /// If not possible, jump to the \p slowPathLab.
+  /// \param sz is the aligned number of bytes to bump the pointer by.
+  /// \param out is the register to store the address of the new object.
+  /// \param temp1 is a temporary register.
+  /// \param temp2 is a temporary register.
+  /// \param slowPathLab is the label to jump to if the allocation fails.
+  void bumpAllocAndUnpoison(
+      uint32_t sz,
+      const x86::Gp &out,
+      const x86::Gp &temp1,
+      const x86::Gp &temp2,
+      const asmjit::Label &slowPathLab);
+
+  /// Initialize a GCCell at the pointer given.
+  /// \param kind the CellKind to populate.
+  /// \param sz the aligned total size of the cell.
+  /// \param cell pointer to the start of the cell.
+  /// \param temp1 is a temporary, must not be the same as cell.
+  void initGCCell(
+      CellKind kind,
+      uint32_t sz,
+      const x86::Gp &cell,
+      const x86::Gp &temp1);
+
+  /// Emit the code to perform an allocation in the young generation, populating
+  /// the fields of the new GCCell.
+  /// \param kind is the CellKind of object to allocate.
+  /// \param sz is the size of the object to allocate.
+  /// \param out is the register to store the address of the new object.
+  /// \param temp1 is a temporary register.
+  /// \param temp2 is a temporary register.
+  /// \param slowPathLab is the label to jump to if the allocation fails.
+  void allocInYoung(
+      CellKind kind,
+      uint32_t sz,
+      const x86::Gp &out,
+      const x86::Gp &temp1,
+      const x86::Gp &temp2,
+      const asmjit::Label &slowPathLab);
+
+  /// Emit the code to perform an allocation in the young generation, populating
+  /// the fields of the new GCCell.
+  /// \param kind1 is the CellKind of object 1 to allocate.
+  /// \param sz1 is the size of the object 1 to allocate.
+  /// \param kind2 is the CellKind of object 2 to allocate.
+  /// \param sz2 is the size of the object 2 to allocate.
+  /// \param out1 is the register to store the address of the first object.
+  /// \param out2 is the register to store the address of the second object.
+  /// \param temp is a temporary register.
+  /// \param slowPathLab is the label to jump to if the allocation fails.
+  void alloc2InYoung(
+      CellKind kind1,
+      uint32_t sz1,
+      CellKind kind2,
+      uint32_t sz2,
+      const x86::Gp &out1,
+      const x86::Gp &out2,
+      const x86::Gp &temp,
+      const asmjit::Label &slowPathLab);
+
  private:
   /// Allocate or return the offset in RO DATA of the current function's debug
   /// name, in the format ID(name).
