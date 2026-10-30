@@ -121,31 +121,12 @@ void Emitter::urShift(FR rRes, FR rLeft, FR rRight) {
   unsupported("urShift");
 }
 
-void Emitter::jmpTrueFalse(
-    bool onTrue,
-    const asmjit::Label &target,
-    FR frInput) {
-  unsupported("jmpTrueFalse");
-}
-
-void Emitter::jmpUndefined(const asmjit::Label &target, FR frInput) {
-  unsupported("jmpUndefined");
-}
-
-void Emitter::jmp(const asmjit::Label &target) {
-  unsupported("jmp");
-}
-
 void Emitter::jmpBuiltinIs(
     bool invert,
     const asmjit::Label &target,
     uint8_t builtinIndex,
     FR frInput) {
   unsupported("jmpBuiltinIs");
-}
-
-void Emitter::booleanNot(FR frRes, FR frInput) {
-  unsupported("booleanNot");
 }
 
 void Emitter::bitNot(FR frRes, FR frInput) {
@@ -185,94 +166,6 @@ void Emitter::createPrivateName(FR frRes, SHSymbolID symID) {
   unsupported("createPrivateName");
 }
 
-void Emitter::greater(FR rRes, FR rLeft, FR rRight) {
-  unsupported("greater");
-}
-
-void Emitter::greaterEqual(FR rRes, FR rLeft, FR rRight) {
-  unsupported("greaterEqual");
-}
-
-void Emitter::less(FR rRes, FR rLeft, FR rRight) {
-  unsupported("less");
-}
-
-void Emitter::lessEqual(FR rRes, FR rLeft, FR rRight) {
-  unsupported("lessEqual");
-}
-
-void Emitter::equal(FR rRes, FR rLeft, FR rRight) {
-  unsupported("equal");
-}
-
-void Emitter::notEqual(FR rRes, FR rLeft, FR rRight) {
-  unsupported("notEqual");
-}
-
-void Emitter::strictEqual(FR frRes, FR frLeft, FR frRight) {
-  unsupported("strictEqual");
-}
-
-void Emitter::strictNotEqual(FR frRes, FR frLeft, FR frRight) {
-  unsupported("strictNotEqual");
-}
-
-void Emitter::jGreater(
-    bool invert,
-    const asmjit::Label &target,
-    FR rLeft,
-    FR rRight) {
-  unsupported("jGreater");
-}
-
-void Emitter::jGreaterEqual(
-    bool invert,
-    const asmjit::Label &target,
-    FR rLeft,
-    FR rRight) {
-  unsupported("jGreaterEqual");
-}
-
-void Emitter::jLess(
-    bool invert,
-    const asmjit::Label &target,
-    FR rLeft,
-    FR rRight) {
-  unsupported("jLess");
-}
-
-void Emitter::jLessEqual(
-    bool invert,
-    const asmjit::Label &target,
-    FR rLeft,
-    FR rRight) {
-  unsupported("jLessEqual");
-}
-
-void Emitter::jLessN(
-    bool invert,
-    const asmjit::Label &target,
-    FR rLeft,
-    FR rRight) {
-  unsupported("jLessN");
-}
-
-void Emitter::jLessEqualN(
-    bool invert,
-    const asmjit::Label &target,
-    FR rLeft,
-    FR rRight) {
-  unsupported("jLessEqualN");
-}
-
-void Emitter::jEqual(
-    bool invert,
-    const asmjit::Label &target,
-    FR rLeft,
-    FR rRight) {
-  unsupported("jEqual");
-}
-
 void Emitter::jmpTypeOfIs(
     const asmjit::Label &target,
     FR frInput,
@@ -282,14 +175,6 @@ void Emitter::jmpTypeOfIs(
 
 void Emitter::typeOfIs(FR frRes, FR frInput, TypeOfIsTypes types) {
   unsupported("typeOfIs");
-}
-
-void Emitter::jStrictEqual(
-    bool invert,
-    const asmjit::Label &target,
-    FR frLeft,
-    FR frRight) {
-  unsupported("jStrictEqual");
 }
 
 void Emitter::uintSwitchImm(

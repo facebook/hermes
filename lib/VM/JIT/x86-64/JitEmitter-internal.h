@@ -62,6 +62,149 @@ static_assert(
     (em).callRuntime((void *)func, #func);                 \
   } while (0)
 
+/// Get the tag for the HermesValue in \p in and place it in \p out.
+///
+/// x86-64: the shift is two-operand, so unlike arm64 \p out is always
+/// written, and \p in is preserved only when the two differ.
+inline void
+emit_sh_ljs_get_tag(x86::Assembler &a, const x86::Gp &out, const x86::Gp &in) {
+  static_assert(
+      HERMESVALUE_VERSION == 2,
+      "kHV_NumDataBits is 48 and can be easily shifted");
+  if (out != in)
+    a.mov(out, in);
+  a.sar(out, kHV_NumDataBits);
+}
+
+/// Check whether \p tagReg is the tag for a pointer value.
+/// CPU flags are updated as result. jae on success.
+///
+/// x86-64: arm64 has to phrase the comparison as `cmn tag, -tag`, since its
+/// immediates are unsigned; x86's imm32 is sign-extended, so the negative
+/// tag is a plain `cmp` operand.
+inline void emit_sh_ljs_tag_is_pointer(
+    x86::Assembler &a,
+    const x86::Gp &tagReg) {
+  static_assert(
+      HERMESVALUE_VERSION == 2,
+      "All tags above HVTag_FirstPointer are pointers");
+  // The valid pointer tags are: 0xfd (HVTag_FirstPointer) to 0xff
+  // (HVTag_Last), but all sign extended to 64 bits.
+  // We need an unsigned comparison (tag >= 0xfd) to catch all pointers.
+  // Doubles may have 0 in the tag bits, e.g. so we have to use
+  // unsigned condition codes to make sure they don't get detected as pointers.
+  a.cmp(tagReg, asmjit::Imm(HVTag_FirstPointer));
+}
+
+/// Emit code to check whether \p tagReg is an object tag.
+/// The input reg is not modified.
+/// CPU flags are updated as result. je on success.
+inline void emit_sh_ljs_tag_is_object(
+    x86::Assembler &a,
+    const x86::Gp &tagReg) {
+  static_assert(
+      (int16_t)HVTag_Object == (int16_t)(-1) && "HV_TagObject must be -1");
+  a.cmp(tagReg, asmjit::Imm(HVTag_Object));
+}
+
+/// Emit code to check whether \p tagReg is a string tag.
+/// The input reg is not modified.
+/// CPU flags are updated as result. je on success.
+inline void emit_sh_ljs_tag_is_string(
+    x86::Assembler &a,
+    const x86::Gp &tagReg) {
+  // x86-64: the message is deliberately not arm64's. Its copy of this
+  // assert says "HV_TagObject must be -1", copied from the object helper
+  // above and never updated; the condition here is about HVTag_Str.
+  static_assert((int16_t)HVTag_Str == (int16_t)(-3) && "HVTag_Str must be -3");
+  a.cmp(tagReg, asmjit::Imm(HVTag_Str));
+}
+
+/// Extract the pointer out of the HermesValue in \p in into \p out.
+///
+/// x86-64: kHV_DataMask does not fit in a sign-extended imm32 and this
+/// helper has no scratch register, so the tag is shifted out and back in
+/// instead of masked off with arm64's single `and`.
+inline void emit_sh_ljs_get_pointer(
+    x86::Assembler &a,
+    const x86::Gp &out,
+    const x86::Gp &in) {
+  static_assert(
+      HERMESVALUE_VERSION == 2,
+      "kHV_DataMask is 0x000...1111... and is exactly the low kHV_NumDataBits");
+  if (out != in)
+    a.mov(out, in);
+  a.shl(out, 64 - kHV_NumDataBits);
+  a.shr(out, 64 - kHV_NumDataBits);
+}
+
+/// Emit code to check whether the input HermesValue is a double.
+/// The input reg is not modified.
+/// The temp reg is modified.
+/// CPU flags are updated as result. jb on success.
+inline void emit_sh_ljs_is_double(
+    x86::Assembler &a,
+    const x86::Gp &input,
+    const x86::Gp &tmp) {
+  static_assert(
+      HERMESVALUE_VERSION == 2,
+      "numbers must be lower than HVTag_First << kHV_NumDataBits");
+  a.mov(tmp, asmjit::Imm((uint64_t)HVTag_First << kHV_NumDataBits));
+  a.cmp(input, tmp);
+}
+
+/// Encode the boolean in the low bit of \p inOut as a HermesValue in place.
+/// The high bits of \p inOut must be zero.
+///
+/// x86-64: arm64 folds the tag in with `movk`, which x86 has no equivalent
+/// of, and the tag constant is too large for a sign-extended imm32, so the
+/// caller supplies \p tempReg to materialize it.
+inline void emit_sh_ljs_bool(
+    x86::Assembler &a,
+    const x86::Gp &inOut,
+    const x86::Gp &tempReg) {
+  static constexpr SHLegacyValue baseBool = HermesValue::encodeBoolValue(false);
+  static_assert(HERMESVALUE_VERSION == 2);
+  static_assert(
+      (llvh::isShiftedUInt<16, kHV_NumDataBits>(baseBool.raw)) &&
+      "Boolean tag must be 16 bits.");
+  assert(tempReg != inOut && "temp register must differ from the input");
+  a.shl(inOut, kHV_BoolBitIdx);
+  // Add the bool tag.
+  a.mov(tempReg, asmjit::Imm(baseBool.raw));
+  a.or_(inOut, tempReg);
+}
+
+/// Store the HermesValue for the bool \p val into \p out.
+///
+/// x86-64: any 64-bit constant is a single `mov`, so unlike arm64 there is
+/// no mov/movk pair for the true case.
+inline void
+emit_sh_ljs_bool_const(x86::Assembler &a, const x86::Gp &out, bool val) {
+  static constexpr SHLegacyValue baseBool = HermesValue::encodeBoolValue(false);
+  static_assert(HERMESVALUE_VERSION == 2);
+  a.mov(
+      out,
+      asmjit::Imm(
+          baseBool.raw | (val ? (uint64_t)1 << kHV_BoolBitIdx : (uint64_t)0)));
+}
+
+/// Load the lengthAndFlags of a HermesValue that contains a StringPrimitive
+/// into \p out.
+/// out and in may be the same, but in will be clobbered.
+///
+/// x86-64: inline here rather than out of line as on arm64; the body is two
+/// instructions. The 32-bit load zeroes the upper half of \p out.
+inline void emit_stringprim_get_length_and_flags(
+    x86::Assembler &a,
+    const x86::Gp &out,
+    const x86::Gp &in) {
+  emit_sh_ljs_get_pointer(a, out, in);
+  a.mov(
+      out.r32(),
+      x86::dword_ptr(out, RuntimeOffsets::stringPrimitiveLengthAndFlags));
+}
+
 /// Emit code to check whether the input reg holds undefined, using the
 /// specified temp register, which must differ from the input.
 /// CPU flags are updated as a result: je on success.

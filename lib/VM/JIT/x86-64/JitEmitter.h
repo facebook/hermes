@@ -651,26 +651,115 @@ class Emitter {
 
   void createPrivateName(FR frRes, SHSymbolID symID);
 
-  void greater(FR rRes, FR rLeft, FR rRight);
-  void greaterEqual(FR rRes, FR rLeft, FR rRight);
-  void less(FR rRes, FR rLeft, FR rRight);
-  void lessEqual(FR rRes, FR rLeft, FR rRight);
-  void equal(FR rRes, FR rLeft, FR rRight);
-  void notEqual(FR rRes, FR rLeft, FR rRight);
+  // x86-64: where arm64 supplies a single a64::CondCode, the x86 tables
+  // supply an x86::CondCode *plus* a swapOperands flag. Only the
+  // above-family conditions (kA, kAE) are false on unordered, which is the
+  // property arm64's kGT/kGE/kMI/kLS all have and which the emitters rely
+  // on; "less" and "less or equal" therefore become "above" and "above or
+  // equal" on reversed operands rather than the NaN-unsafe kB/kBE.
+#define DECL_COMPARE(                             \
+    methodName,                                   \
+    commentStr,                                   \
+    slowCall,                                     \
+    condCode,                                     \
+    swapOperands,                                 \
+    invSlow,                                      \
+    passArgsByVal)                                \
+  void methodName(FR rRes, FR rLeft, FR rRight) { \
+    compareImpl(                                  \
+        rRes,                                     \
+        rLeft,                                    \
+        rRight,                                   \
+        commentStr,                               \
+        x86::CondCode::condCode,                  \
+        swapOperands,                             \
+        (void *)slowCall,                         \
+        #slowCall,                                \
+        invSlow,                                  \
+        passArgsByVal);                           \
+  }
+  DECL_COMPARE(greater, "greater", _sh_ljs_greater_rjs, kA, false, false, false)
+  DECL_COMPARE(
+      greaterEqual,
+      "greater_equal",
+      _sh_ljs_greater_equal_rjs,
+      kAE,
+      false,
+      false,
+      false)
+  DECL_COMPARE(less, "less", _sh_ljs_less_rjs, kA, true, false, false)
+  DECL_COMPARE(
+      lessEqual,
+      "less_equal",
+      _sh_ljs_less_equal_rjs,
+      kAE,
+      true,
+      false,
+      false)
+  DECL_COMPARE(equal, "Eq", _sh_ljs_equal_rjs, kE, false, false, false)
+  DECL_COMPARE(notEqual, "Neq", _sh_ljs_equal_rjs, kNE, false, true, false)
+#undef DECL_COMPARE
 
-  void strictEqual(FR frRes, FR frLeft, FR frRight);
-  void strictNotEqual(FR frRes, FR frLeft, FR frRight);
+  void strictEqual(FR frRes, FR frLeft, FR frRight) {
+    strictEqualImpl(false, frRes, frLeft, frRight);
+  }
+  void strictNotEqual(FR frRes, FR frLeft, FR frRight) {
+    strictEqualImpl(true, frRes, frLeft, frRight);
+  }
 
-  void jGreater(bool invert, const asmjit::Label &target, FR rLeft, FR rRight);
-  void
-  jGreaterEqual(bool invert, const asmjit::Label &target, FR rLeft, FR rRight);
-  void jLess(bool invert, const asmjit::Label &target, FR rLeft, FR rRight);
-  void
-  jLessEqual(bool invert, const asmjit::Label &target, FR rLeft, FR rRight);
-  void jLessN(bool invert, const asmjit::Label &target, FR rLeft, FR rRight);
-  void
-  jLessEqualN(bool invert, const asmjit::Label &target, FR rLeft, FR rRight);
-  void jEqual(bool invert, const asmjit::Label &target, FR rLeft, FR rRight);
+  // x86-64: see DECL_COMPARE above for the extra swapOperands column.
+#define DECL_JCOND(                                                    \
+    methodName,                                                        \
+    forceNum,                                                          \
+    passArgsByVal,                                                     \
+    commentStr,                                                        \
+    slowCall,                                                          \
+    condCode,                                                          \
+    swapOperands)                                                      \
+  void methodName(                                                     \
+      bool invert, const asmjit::Label &target, FR rLeft, FR rRight) { \
+    jCond(                                                             \
+        forceNum,                                                      \
+        invert,                                                        \
+        passArgsByVal,                                                 \
+        target,                                                        \
+        rLeft,                                                         \
+        rRight,                                                        \
+        commentStr,                                                    \
+        x86::CondCode::condCode,                                       \
+        swapOperands,                                                  \
+        (void *)slowCall,                                              \
+        #slowCall);                                                    \
+  }
+  DECL_JCOND(jGreater, false, false, "greater", _sh_ljs_greater_rjs, kA, false)
+  DECL_JCOND(
+      jGreaterEqual,
+      false,
+      false,
+      "greater_equal",
+      _sh_ljs_greater_equal_rjs,
+      kAE,
+      false)
+  DECL_JCOND(jLess, false, false, "less", _sh_ljs_less_rjs, kA, true)
+  DECL_JCOND(
+      jLessEqual,
+      false,
+      false,
+      "less_equal",
+      _sh_ljs_less_equal_rjs,
+      kAE,
+      true)
+  DECL_JCOND(jLessN, true, false, "less_n", _sh_ljs_less_rjs, kA, true)
+  DECL_JCOND(
+      jLessEqualN,
+      true,
+      false,
+      "less_equal_n",
+      _sh_ljs_less_equal_rjs,
+      kAE,
+      true)
+  DECL_JCOND(jEqual, false, false, "eq", _sh_ljs_equal_rjs, kE, false)
+#undef DECL_JCOND
 
   void
   jmpTypeOfIs(const asmjit::Label &target, FR frInput, TypeOfIsTypes types);
@@ -1131,6 +1220,50 @@ class Emitter {
           const x86::Xmm &res,
           const x86::Xmm &dl,
           const x86::Xmm &dr),
+      void *slowCall,
+      const char *slowCallName);
+
+  /// x86-64 helper with no arm64 counterpart: materialize the boolean result
+  /// of a preceding \c vucomisd into \p res as 0 or 1.
+  /// \p cc must be one of kA/kAE/kE/kNE. kA and kAE are false when the
+  /// compare was unordered, exactly like the arm64 condition codes the
+  /// emitters were written against, so \c setcc alone is correct for them.
+  /// kE and kNE read ZF, which \c vucomisd *sets* on unordered, so where
+  /// unordered can still reach here (\p unorderedPossible) the result is
+  /// patched to what an unordered compare must produce: not equal.
+  void setBoolFromCompare(
+      const x86::Gp &res,
+      x86::CondCode cc,
+      bool unorderedPossible);
+
+  // x86-64: \p condCode and \p swapOperands together are arm64's single
+  // condCode; see DECL_COMPARE.
+  void compareImpl(
+      FR frRes,
+      FR frLeft,
+      FR frRight,
+      const char *name,
+      x86::CondCode condCode,
+      bool swapOperands,
+      void *slowCall,
+      const char *slowCallName,
+      bool invSlow,
+      bool passArgsByVal);
+
+  void strictEqualImpl(bool invert, FR frRes, FR frLeft, FR frRight);
+
+  // x86-64: \p condCode and \p swapOperands together are arm64's single
+  // condCode; see DECL_JCOND.
+  void jCond(
+      bool forceNumber,
+      bool invert,
+      bool passArgsByVal,
+      const asmjit::Label &target,
+      FR frLeft,
+      FR frRight,
+      const char *name,
+      x86::CondCode condCode,
+      bool swapOperands,
       void *slowCall,
       const char *slowCallName);
 

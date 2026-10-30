@@ -198,6 +198,34 @@ void Emitter::arithUnop(
       });
 }
 
+void Emitter::booleanNot(FR frRes, FR frInput) {
+  comment("// Not r%u, r%u", frRes.index(), frInput.index());
+
+  // TODO: Add a fast path, perhaps by sharing some code with JmpTrue.
+  // x86-64: the by-value SHLegacyValue argument goes in rdi, not in the
+  // first allocatable Gp (arm64's x0 is both).
+  syncAndFreeTempReg(HWReg(x86::rdi));
+  movHWFromFR(HWReg(x86::rdi), frInput);
+
+  // Since we already loaded the input, no need to check for frRes == frInput.
+  syncAllFRTempExcept(frRes);
+  freeAllFRTempExcept({});
+  EMIT_RUNTIME_CALL(*this, bool (*)(SHLegacyValue), _sh_ljs_to_boolean);
+
+  HWReg hwRes = getOrAllocFRInGpX(frRes, false);
+  // x86-64: SysV leaves everything above al undefined for a bool return, so
+  // the value has to be zero-extended before it can be negated and encoded
+  // (arm64 gets a clean 0/1 in x0).
+  a.movzx(hwRes.gpq().r32(), x86::al);
+  // Negate the result.
+  a.xor_(hwRes.gpq().r32(), asmjit::Imm(1));
+  // Add the bool tag.
+  HWReg hwTmp = allocTempGpX();
+  freeReg(hwTmp);
+  emit_sh_ljs_bool(a, hwRes.gpq(), hwTmp.gpq());
+  frUpdatedWithHW(frRes, hwRes, FRType::Bool);
+}
+
 void Emitter::mod(bool forceNumber, FR frRes, FR frLeft, FR frRight) {
   comment(
       "// %s%s r%u, r%u, r%u",
@@ -381,6 +409,374 @@ void Emitter::arithBinOp(
         em.loadFrameAddr(x86::rdx, frRight);
         em.callRuntimeWithSavedIP(slowCall, slowCallName);
         em.movHWFromHW<false>(hwRes, HWReg::gpX(0));
+        em.a.jmp(sp.contLab);
+      });
+}
+
+void Emitter::setBoolFromCompare(
+    const x86::Gp &res,
+    x86::CondCode cc,
+    bool unorderedPossible) {
+  a.set(cc, res.r8());
+  if (unorderedPossible &&
+      (cc == x86::CondCode::kE || cc == x86::CondCode::kNE)) {
+    // Unordered means at least one operand is a NaN, so the two are not
+    // equal; ZF says the opposite. PF distinguishes the two cases.
+    asmjit::Label doneLab = a.newLabel();
+    a.jnp(doneLab);
+    a.mov(res.r8(), asmjit::Imm(cc == x86::CondCode::kNE ? 1 : 0));
+    a.bind(doneLab);
+  }
+  // setcc writes 8 bits; the rest of the register must be cleared before the
+  // value can be used as a number. Zeroing afterwards rather than before the
+  // compare keeps this correct when res aliases one of the compared
+  // registers, which happens whenever the result FR is also an operand.
+  a.movzx(res.r32(), res.r8());
+}
+
+void Emitter::strictEqualImpl(bool invert, FR frRes, FR frLeft, FR frRight) {
+  comment(
+      "// %s r%u, r%u, r%u",
+      !invert ? "StrictEq" : "StrictNEq",
+      frRes.index(),
+      frLeft.index(),
+      frRight.index());
+
+  // Fast path for raw-only comparison. One of the operands is a non-number
+  // non-pointer value, meaning we can compare bits directly.
+  if (isFRKnownBool(frLeft) || isFRKnownBool(frRight) ||
+      isFRKnownOtherNonPtr(frLeft) || isFRKnownOtherNonPtr(frRight)) {
+    HWReg hwLeft = getOrAllocFRInGpX(frLeft, true);
+    HWReg hwRight = getOrAllocFRInGpX(frRight, true);
+
+    // Evaluate and check the guards before frRes is declared updated below:
+    // frRes may alias frLeft/frRight, and frUpdatedWithHW would otherwise
+    // make isFRKnownBool/isFRKnownOtherNonPtr true only because of the
+    // result declaration, asserting a predicate against a register that
+    // still holds the (differently-typed) original operand.
+    if (isFRKnownBool(frLeft) || isFRKnownOtherNonPtr(frLeft))
+      emitTypeAssert(frLeft, hwLeft, TypePred::BitComparable);
+    if (isFRKnownBool(frRight) || isFRKnownOtherNonPtr(frRight))
+      emitTypeAssert(frRight, hwRight, TypePred::BitComparable);
+
+    HWReg hwRes = getOrAllocFRInGpX(frRes, false);
+    frUpdatedWithHW(frRes, hwRes, FRType::Bool);
+    // x86-64: scratch for the bool tag constant (see emit_sh_ljs_bool).
+    // Allocated after hwRes and the operands so it cannot alias them.
+    HWReg hwTmpTag = allocTempGpX();
+    freeReg(hwTmpTag);
+
+    a.cmp(hwLeft.gpq(), hwRight.gpq());
+    // An integer compare is never unordered.
+    setBoolFromCompare(
+        hwRes.gpq(),
+        !invert ? x86::CondCode::kE : x86::CondCode::kNE,
+        /* unorderedPossible */ false);
+    emit_sh_ljs_bool(a, hwRes.gpq(), hwTmpTag.gpq());
+    return;
+  }
+
+  // Fast path for number (double) comparison.
+  // One of the operands is a number, so there's two cases:
+  // * It's NaN: it'll compare false against everything which is what we want.
+  // * It's not NaN: It won't have NaN tag bits so it'll compare false against
+  //   all non-double HVs and correctly compare true against the same number.
+  if (isFRKnownNumber(frLeft) || isFRKnownNumber(frRight)) {
+    // Do this always, since this could be the end of the BB.
+    HWReg hwLeftD = getOrAllocFRInVecD(frLeft, true);
+    HWReg hwRightD = getOrAllocFRInVecD(frRight, true);
+
+    // See the raw-bit tier above: evaluate and check the guards before
+    // frRes is declared updated, since frRes may alias frLeft/frRight and
+    // frUpdatedWithHW would otherwise perturb isFRKnownNumber's answer.
+    if (isFRKnownNumber(frLeft))
+      emitTypeAssert(frLeft, hwLeftD, TypePred::IsNumber);
+    if (isFRKnownNumber(frRight))
+      emitTypeAssert(frRight, hwRightD, TypePred::IsNumber);
+
+    HWReg hwRes = getOrAllocFRInGpX(frRes, false);
+    frUpdatedWithHW(frRes, hwRes, FRType::Bool);
+    HWReg hwTmpTag = allocTempGpX();
+    freeReg(hwTmpTag);
+
+    a.vucomisd(hwLeftD.xmm(), hwRightD.xmm());
+    // x86-64: nothing has peeled off the unordered case here -- either
+    // operand may be a NaN, whether the JS NaN or a NaN-boxed non-number --
+    // and kE/kNE alone would answer it backwards.
+    setBoolFromCompare(
+        hwRes.gpq(),
+        !invert ? x86::CondCode::kE : x86::CondCode::kNE,
+        /* unorderedPossible */ true);
+    emit_sh_ljs_bool(a, hwRes.gpq(), hwTmpTag.gpq());
+    return;
+  }
+
+  HWReg hwLeftD = getOrAllocFRInVecD(frLeft, true);
+  HWReg hwRightD = getOrAllocFRInVecD(frRight, true);
+
+  // Allocate registers used for non-number comparisons.
+  HWReg hwLeft = getOrAllocFRInGpX(frLeft, true);
+  HWReg hwRight = getOrAllocFRInGpX(frRight, true);
+  HWReg hwTmpLeft = allocTempGpX();
+  HWReg hwTmpRight = allocTempGpX();
+  x86::Gp xTmpLeft = hwTmpLeft.gpq();
+  x86::Gp xTmpRight = hwTmpRight.gpq();
+  freeReg(hwTmpLeft);
+  freeReg(hwTmpRight);
+
+  // Labels for non-number comparisons.
+  auto nonNumberLab = a.newLabel();
+  auto equalLab = a.newLabel();
+  auto notEqualLab = a.newLabel();
+
+  // Set up slow path.
+  auto slowPathLab = newSlowPathLabel();
+  auto contLab = newContLabel();
+  syncAllFRTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
+  syncToFrame(frLeft);
+  syncToFrame(frRight);
+  freeAllFRTempExcept({});
+
+  HWReg hwRes = getOrAllocFRInGpX(frRes, false, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes, FRType::Bool);
+  x86::Gp xRes = hwRes.gpq();
+  // x86-64: scratch for the bool tag constant. It is only ever written on
+  // the fall-through (number) path, which is past the `jp` below, so it may
+  // safely land on a register the non-number path still reads.
+  HWReg hwTmpTag = allocTempGpX();
+  freeReg(hwTmpTag);
+
+  // Start by comparing doubles.
+  a.vucomisd(hwLeftD.xmm(), hwRightD.xmm());
+
+  // Since HermesValue is NaN-boxed we know that all non-number values will be
+  // NaN. So we can conveniently test for non-number values by checking for
+  // NaN. x86-64: unordered is reported in PF, which is what arm64 reads out
+  // of the VS condition code.
+  static_assert(HERMESVALUE_VERSION == 2, "Non-numbers must be NaN");
+  a.jp(nonNumberLab);
+
+  // Store the result of the comparison in the lowest bit of xRes.
+  // The unordered case has just been routed away, so kE/kNE are exact.
+  setBoolFromCompare(
+      xRes,
+      invert ? x86::CondCode::kNE : x86::CondCode::kE,
+      /* unorderedPossible */ false);
+  emit_sh_ljs_bool(a, xRes, hwTmpTag.gpq());
+
+  a.jmp(contLab);
+
+  // May be JS NaN (not a number, but really it is a number).
+  a.bind(nonNumberLab);
+  emit_sh_ljs_is_double(a, hwLeft.gpq(), xTmpLeft);
+  // Left is actually the JS NaN, which is never equal to anything.
+  // No need to check RHS for JS NaN, because it won't cause false positive
+  // on the raw bit check below.
+  a.jb(notEqualLab);
+
+  // Compare bits directly.
+  // If they match exactly, the two values are equal.
+  a.cmp(hwLeft.gpq(), hwRight.gpq());
+  a.je(equalLab);
+
+  // First compare the tags. If they don't match, the two values are NOT equal.
+  emit_sh_ljs_get_tag(a, xTmpLeft, hwLeft.gpq());
+  emit_sh_ljs_get_tag(a, xTmpRight, hwRight.gpq());
+  a.cmp(xTmpLeft, xTmpRight);
+  a.jne(notEqualLab);
+
+  // If the LHS is either a non-pointer or an object, we can compare raw values
+  // only. We've already checked and we know that the raw values are not the
+  // same, so if this is a non-pointer or an object, then the two values are NOT
+  // strictly equal.
+  emit_sh_ljs_tag_is_pointer(a, xTmpLeft);
+  a.jb(notEqualLab);
+  emit_sh_ljs_tag_is_object(a, xTmpLeft);
+  a.je(notEqualLab);
+
+  // Now we know that the LHS is a non-object pointer.
+
+  // Fast string path: string inequality can be easily determined by checking
+  // the lengths. If the LHS isn't a string, go to slow path.
+  emit_sh_ljs_tag_is_string(a, xTmpLeft);
+  a.jne(slowPathLab);
+
+  emit_stringprim_get_length_and_flags(a, xTmpLeft, hwLeft.gpq());
+  emit_stringprim_get_length_and_flags(a, xTmpRight, hwRight.gpq());
+  // XOR the lengths together and mask the result.
+  // xTmpLeft will be nonzero if the lengths don't match.
+  // x86-64: the loads zero-extend, so 32-bit operations are equivalent to
+  // arm64's 64-bit ones here, and the mask fits in an imm32.
+  a.xor_(xTmpLeft.r32(), xTmpRight.r32());
+  a.and_(
+      xTmpLeft.r32(), asmjit::Imm(RuntimeOffsets::stringPrimitiveLengthMask));
+  // Length mismatch means we're done, the two values are NOT equal.
+  a.jnz(notEqualLab);
+  a.jmp(slowPathLab);
+
+  // Jump here if the result should be "equal".
+  // Returns true if not inverted, false if inverted.
+  a.bind(equalLab);
+  emit_sh_ljs_bool_const(a, xRes, !invert);
+  a.jmp(contLab);
+
+  // Jump here if the result should be "not equal".
+  // Returns false if not inverted, true if inverted.
+  a.bind(notEqualLab);
+  emit_sh_ljs_bool_const(a, xRes, invert);
+
+  a.bind(contLab);
+
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      emittingIP,
+      [invert, frRes, frLeft, frRight, hwRes](Emitter &em, SlowPath &sp) {
+        em.comment(
+            "// Slow path: %s r%u, r%u, r%u",
+            !invert ? "StrictEq" : "StrictNEq",
+            frRes.index(),
+            frLeft.index(),
+            frRight.index());
+        em.a.bind(sp.slowPathLab);
+        // _sh_ljs_strict_equal takes its arguments by value.
+        em._loadFrame(HWReg(x86::rdi), frLeft);
+        em._loadFrame(HWReg(x86::rsi), frRight);
+        em.callRuntimeWithSavedIP(
+            (void *)_sh_ljs_strict_equal, "_sh_ljs_strict_equal");
+
+        // x86-64: SysV leaves everything above al undefined for a bool
+        // return, so zero-extend before using it as a 0/1 value.
+        em.a.movzx(hwRes.gpq().r32(), x86::al);
+        // Invert the slow path result if needed.
+        if (invert)
+          em.a.xor_(hwRes.gpq().r32(), asmjit::Imm(1));
+
+        // Comparison functions return bool, so encode it. x86-64: the tag
+        // constant needs a scratch register; xScratch is dead here, since
+        // its only role is holding the call target.
+        emit_sh_ljs_bool(em.a, hwRes.gpq(), xScratch);
+        em.a.jmp(sp.contLab);
+      });
+}
+
+void Emitter::compareImpl(
+    FR frRes,
+    FR frLeft,
+    FR frRight,
+    const char *name,
+    x86::CondCode condCode,
+    bool swapOperands,
+    void *slowCall,
+    const char *slowCallName,
+    bool invSlow,
+    bool passArgsByVal) {
+  comment(
+      "// %s r%u, r%u, r%u",
+      name,
+      frRes.index(),
+      frLeft.index(),
+      frRight.index());
+  HWReg hwLeft, hwRight;
+  asmjit::Label slowPathLab;
+  asmjit::Label contLab;
+  bool leftIsNum, rightIsNum, slow;
+
+  leftIsNum = isFRKnownNumber(frLeft);
+  rightIsNum = isFRKnownNumber(frRight);
+  slow = !(rightIsNum && leftIsNum);
+
+  hwLeft = getOrAllocFRInVecD(frLeft, true);
+  hwRight = getOrAllocFRInVecD(frRight, true);
+  if (leftIsNum)
+    emitTypeAssert(frLeft, hwLeft, TypePred::IsNumber);
+  if (rightIsNum)
+    emitTypeAssert(frRight, hwRight, TypePred::IsNumber);
+  if (slow) {
+    slowPathLab = newSlowPathLabel();
+    contLab = newContLabel();
+    syncAllFRTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
+    syncToFrame(frLeft);
+    syncToFrame(frRight);
+    freeAllFRTempExcept({});
+  }
+
+  HWReg hwRes = getOrAllocFRInGpX(frRes, false, HWReg::gpX(0));
+  x86::Gp xRes = hwRes.gpq();
+  // x86-64: scratch for the bool tag constant (see emit_sh_ljs_bool).
+  // Allocated before the compare so that a spill cannot disturb the flags.
+  HWReg hwTmpTag = allocTempGpX();
+  freeReg(hwTmpTag);
+
+  // x86-64: "less" and "less or equal" compare the reversed operands, so
+  // that the condition stays in the above family, which is the family that
+  // is false on unordered. See the condition mapping in the design.
+  a.vucomisd(
+      swapOperands ? hwRight.xmm() : hwLeft.xmm(),
+      swapOperands ? hwLeft.xmm() : hwRight.xmm());
+
+  if (slow) {
+    // Since HermesValue is NaN-boxed we know that all non-number values will be
+    // NaN. So we can conveniently test for non-number values by checking for
+    // NaN. x86-64: unordered is reported in PF.
+    static_assert(HERMESVALUE_VERSION == 2, "Non-numbers must be NaN");
+    a.jp(slowPathLab);
+  }
+
+  // Store the result of the comparison in the lowest bit of xRes. When there
+  // is no slow path both operands are statically numbers, but either can
+  // still be the JS NaN, so the unordered case has not been ruled out.
+  setBoolFromCompare(xRes, condCode, /* unorderedPossible */ !slow);
+
+  // Encode bool.
+  emit_sh_ljs_bool(a, xRes, hwTmpTag.gpq());
+  frUpdatedWithHW(frRes, hwRes, FRType::Bool);
+
+  if (!slow)
+    return;
+
+  a.bind(contLab);
+
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      emittingIP,
+      [name,
+       frRes,
+       frLeft,
+       frRight,
+       hwRes,
+       invSlow,
+       passArgsByVal,
+       slowCall,
+       slowCallName](Emitter &em, SlowPath &sp) {
+        em.comment(
+            "// Slow path: j_%s r%u, r%u, r%u",
+            name,
+            frRes.index(),
+            frLeft.index(),
+            frRight.index());
+        em.a.bind(sp.slowPathLab);
+        if (passArgsByVal) {
+          em._loadFrame(HWReg(x86::rdi), frLeft);
+          em._loadFrame(HWReg(x86::rsi), frRight);
+        } else {
+          em.a.mov(x86::rdi, xRuntime);
+          em.loadFrameAddr(x86::rsi, frLeft);
+          em.loadFrameAddr(x86::rdx, frRight);
+        }
+        em.callRuntimeWithSavedIP(slowCall, slowCallName);
+
+        // x86-64: SysV leaves everything above al undefined for a bool
+        // return, so zero-extend before using it as a 0/1 value.
+        em.a.movzx(hwRes.gpq().r32(), x86::al);
+        // Invert the slow path result if needed.
+        if (invSlow)
+          em.a.xor_(hwRes.gpq().r32(), asmjit::Imm(1));
+
+        // Comparison functions return bool, so encode it. x86-64: xScratch
+        // is dead after the call and holds the tag constant.
+        emit_sh_ljs_bool(em.a, hwRes.gpq(), xScratch);
         em.a.jmp(sp.contLab);
       });
 }
