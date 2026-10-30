@@ -122,9 +122,13 @@ struct ChromeStackTreeNode {
 
 TEST_P(HeapSnapshotAPITest, HeapTimeline) {
   startTrackingHeapObjects();
-  facebook::jsi::Function alloc = eval("function alloc() { return {}; }; alloc")
-                                      .asObject(*rt)
-                                      .asFunction(*rt);
+  // Allocate with a call rather than an object literal: unless the debugger
+  // is enabled, source is compiled with locations only for instructions that
+  // can throw, and a function without any has no locations at all.
+  facebook::jsi::Function alloc =
+      eval("function alloc() { return new Object(); }; alloc")
+          .asObject(*rt)
+          .asFunction(*rt);
   facebook::jsi::Object obj = alloc.call(*rt).asObject(*rt);
   const uint64_t objID = rt->getUniqueID(obj);
 
@@ -193,7 +197,7 @@ TEST_P(HeapSnapshotAPITest, HeapTimeline) {
   // Use regex to match the script ID since internal modules may be
   // added/removed, changing the ID assigned to the test script.
   std::regex expectedPattern(
-      R"#(\n\(root\)\(0\) @ \(0\):0:0\nglobal\(1\) @ test\.js\([0-9]+\):1:1\nalloc\(2\) @ test\.js\([0-9]+\):1:27)#");
+      R"#(\n\(root\)\(0\) @ \(0\):0:0\nglobal\(1\) @ test\.js\([0-9]+\):1:1\nalloc\(2\) @ test\.js\([0-9]+\):1:37)#");
   std::string actualTrace =
       stackTreeNode->second->buildStackTrace(traceFunctionInfos, strings);
   EXPECT_TRUE(std::regex_match(actualTrace, expectedPattern))
