@@ -10,6 +10,7 @@
 
 #include "hermes/ADT/TransparentOwningPtr.h"
 #include "hermes/VM/CodeBlock.h"
+#include "hermes/VM/JIT/JitCounters.h"
 #include "hermes/VM/JIT/PerfJitDump.h"
 
 namespace hermes {
@@ -27,20 +28,6 @@ enum : unsigned {
   EntryExit = 0x80,
 };
 }
-
-/// List of counters that can be incremented from JIT emitted code.
-#define JIT_COUNTERS(X) \
-  X(NumCall)            \
-  X(NumCallSlow)
-
-/// Enum with an entry for each JIT counter. This is used to index into the list
-/// of counters.
-enum class JitCounter : unsigned {
-#define COUNTER_NAME(name) name,
-  JIT_COUNTERS(COUNTER_NAME)
-#undef COUNTER_NAME
-      _Last,
-};
 
 /// All state related to JIT compilation.
 class JITContext {

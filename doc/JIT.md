@@ -40,8 +40,9 @@ The machine-code emitter is [asmjit](https://asmjit.com) (vendored in
 | `lib/VM/JIT/arm64/JitEmitter-regalloc.cpp` | The register-file engine: `getOrAllocFRIn*`, `movHW*`, sync/spill/free. |
 | `lib/VM/JIT/arm64/JitEmitter-internal.{h,cpp}` | Shared emission helpers: the `emit_sh_ljs_*` tag/encoding helpers, `emit_load_from_base_offset`, the SHV decoder, `EMIT_RUNTIME_CALL*` macros (`.h`); cold non-member helpers, object/environment init, asmjit error handler and logger (`.cpp`). |
 | `lib/VM/JIT/arm64/JitEmitter-{alloc,const,object,property,call,env,array,arith,control}.cpp` | The per-instruction emitters, split by topic: young-gen allocation; constant materialization; object construction; the property protocol (incl. `GetByIdImpl`); JS calls; environments/closures; arrays/iterators/arguments; arithmetic and comparisons; control flow, switches and throws. See `doc/specs/2026-08-18-jitemitter-split-design.md` for the split rationale and boundaries. |
-| `lib/VM/JIT/arm64/JitHandlers.{h,cpp}` | C++ helpers callable from emitted code that are JIT-specific (the generic ones are the `_sh_ljs_*` functions from the SH runtime). Nothing arm64-specific in them. |
 | `lib/VM/JIT/arm64/JitImpl.h` | `JITContext::Impl`: the asmjit `JitRuntime` (owns executable memory), HC lazy-ID counter, and `usedHCs` root array. |
+| `lib/VM/JIT/JitHandlers.{h,cpp}` | C++ helpers callable from emitted code that are JIT-specific (the generic ones are the `_sh_ljs_*` functions from the SH runtime). Arch-independent. |
+| `include/hermes/VM/JIT/JitCounters.h` | The `JIT_COUNTERS` list and `JitCounter` enum. The counter array is ABI between the VM and emitted code; arch-independent. |
 | `lib/VM/JIT/DiscoverBB.cpp` | Scans bytecode to find basic-block boundaries (branch targets, fallthroughs after branches, Catch, switch tables, exception handler targets). Arch-independent. |
 | `lib/VM/JIT/RuntimeOffsets.h` | `offsetof` constants for fields the emitted code touches directly (Runtime, StackOverflowGuard, CodeBlock, JSFunction, HiddenClass, IdentifierTable, Hades young-gen fields...). Arch-independent. |
 | `lib/VM/JIT/PerfJitDump.cpp` | Linux `perf` jitdump support. Arch-independent. |
@@ -495,9 +496,9 @@ Observations from this analysis, to be refined into a plan:
   when targeting arm64; a parallel `lib/VM/JIT/x86-64/` tree is expected by
   `include/hermes/VM/JIT/JIT.h`.
 - **Arch-independent pieces** usable as-is: DiscoverBB, RuntimeOffsets,
-  PerfJitDump, JitHandlers (C++ helpers — nothing arm64-specific in them),
-  the Compiler driver in JIT.cpp (contains no assembly; it could move to a
-  shared location or be duplicated with the namespace changed).
+  PerfJitDump, JitHandlers and JitCounters (both already moved out of
+  `arm64/`), the Compiler driver in JIT.cpp (contains no assembly; it could
+  move to a shared location or be duplicated with the namespace changed).
 - **The file split is a map for the arch split.** The `JitEmitter-*.cpp`
   topical boundaries separate the register-file engine (`-regalloc`), the
   shared inline helpers (`-internal.h`), and lifecycle (`JitEmitter.cpp`)
