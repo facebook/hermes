@@ -298,7 +298,8 @@ CallResult<RegExpMatch> performSearch(
     uint32_t stringLength,
     uint32_t searchStartOffset,
     regex::constants::MatchFlagType matchFlags) {
-  std::vector<regex::CapturedRange> nativeMatchRanges;
+  std::vector<regex::CapturedRange> &nativeMatchRanges =
+      runtime.regExpSearchCaptures;
   auto matchResult = regex::searchWithBytecode(
       bytecode,
       start,

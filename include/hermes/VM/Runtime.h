@@ -80,6 +80,10 @@ class BytecodeModule;
 struct CompileFlags;
 } // namespace hbc
 
+namespace regex {
+struct CapturedRange;
+} // namespace regex
+
 namespace vm {
 
 // External forward declarations.
@@ -933,6 +937,16 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   JSObject *functionPrototypeRawPtr{};
 
   RegExpMatch regExpLastMatch{};
+
+  /// The capture ranges of the latest regex search, reused by every search
+  /// to avoid an allocation per search, so it keeps its peak capacity for
+  /// the lifetime of the runtime. It is used only between the executor's
+  /// return and the copy into a RegExpMatch (performSearch in
+  /// JSRegExp.cpp); the executor runs no JS and allocates nothing on the GC
+  /// heap, so it is never in use twice at once. regex::CapturedRange is
+  /// incomplete here, so this has no default member initializer: GCC would
+  /// instantiate the vector's destructor at it.
+  std::vector<regex::CapturedRange> regExpSearchCaptures;
 
   /// A global counter that increments, used to provide unique object IDs.
   /// Each successive value is hashed by JSObject before being stored as the ID.

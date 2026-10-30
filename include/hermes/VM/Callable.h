@@ -724,44 +724,26 @@ class NativeFunction : public Callable {
   }
 #endif
 
+  /// Run \p body, which takes no arguments and returns
+  /// CallResult<HermesValue>, as the body of a call of \p self: inside the
+  /// native depth check and the frame setup and teardown that every call of
+  /// a NativeFunction performs. The caller has pushed the frame (callee
+  /// \p self, this and arguments), as for _nativeCall.
+  template <typename Body>
+  static inline CallResult<PseudoHandle<>>
+  runNativeCallBody(NativeFunction *self, Runtime &runtime, const Body &body);
+
   /// This is a lightweight and unsafe wrapper intended to be used only by the
   /// interpreter. Its purpose is to avoid needlessly exposing the private
   /// fields.
   static CallResult<PseudoHandle<>> _nativeCall(
       NativeFunction *self,
       Runtime &runtime) {
-    ScopedNativeDepthTracker depthTracker{runtime};
-    if (LLVM_UNLIKELY(depthTracker.overflowed())) {
-      return runtime.raiseStackOverflow(
-          Runtime::StackOverflowKind::NativeStack);
-    }
-
-    // Ensure the IP was correctly saved before we create the new frame.
-    runtime.validateSavedIPBeforeCall();
-    auto newFrame = runtime.setCurrentFrameToTopOfStack();
-    // We don't need to allocate CalleeExtraRegistersAtStart here because the
-    // only register is DebugEnvironment, which is not useful in a
-    // NativeFunction.
-    static_assert(
-        StackFrameLayout::FirstLocal - 1 ==
-            StackFrameLayout::DebugEnvironment &&
-        StackFrameLayout::CalleeExtraRegistersAtStart == 1);
-
-#ifdef HERMESVM_PROFILER_NATIVECALL
-    auto t1 = HERMESVM_RDTSC();
-#endif
-
-    auto res = self->functionPtr_(self->context_, runtime);
-
-#ifdef HERMESVM_PROFILER_NATIVECALL
-    self->callDuration_ = HERMESVM_RDTSC() - t1;
-    ++self->callCount_;
-#endif
-    runtime.restoreStackAndPreviousFrame(newFrame);
-    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    return createPseudoHandle(*res);
+    NativeFunctionPtr functionPtr = self->functionPtr_;
+    void *context = self->context_;
+    return runNativeCallBody(self, runtime, [functionPtr, context, &runtime]() {
+      return functionPtr(context, runtime);
+    });
   }
 
   /// Create an instance of NativeFunction with Function.prototype as the parent
@@ -857,6 +839,48 @@ class NativeFunction : public Callable {
   /// native calling convention.
   static HermesValue _jitCallImpl(Runtime *runtime, JSObject *self);
 };
+
+template <typename Body>
+inline CallResult<PseudoHandle<>> NativeFunction::runNativeCallBody(
+    NativeFunction *self,
+    Runtime &runtime,
+    const Body &body) {
+  ScopedNativeDepthTracker depthTracker{runtime};
+  if (LLVM_UNLIKELY(depthTracker.overflowed())) {
+    return runtime.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
+  }
+
+  // Ensure the IP was correctly saved before we create the new frame.
+  runtime.validateSavedIPBeforeCall();
+  auto newFrame = runtime.setCurrentFrameToTopOfStack();
+  // We don't need to allocate CalleeExtraRegistersAtStart here because the
+  // only register is DebugEnvironment, which is not useful in a
+  // NativeFunction.
+  static_assert(
+      StackFrameLayout::FirstLocal - 1 == StackFrameLayout::DebugEnvironment &&
+      StackFrameLayout::CalleeExtraRegistersAtStart == 1);
+
+#ifdef HERMESVM_PROFILER_NATIVECALL
+  auto t1 = HERMESVM_RDTSC();
+#endif
+
+  CallResult<HermesValue> res = body();
+
+#ifdef HERMESVM_PROFILER_NATIVECALL
+  // body() may have moved the heap, so \p self may be stale. Reload the
+  // callee from the frame's callee slot, which the GC updates.
+  self = vmcast<NativeFunction>(newFrame.getCalleeClosureOrCBRef());
+  self->callDuration_ = HERMESVM_RDTSC() - t1;
+  ++self->callCount_;
+#else
+  (void)self;
+#endif
+  runtime.restoreStackAndPreviousFrame(newFrame);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return createPseudoHandle(*res);
+}
 
 /// A NativeFunction to be used as a constructor for native objects other than
 /// Object.
