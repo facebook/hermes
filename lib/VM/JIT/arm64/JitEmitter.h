@@ -305,6 +305,8 @@ class Emitter {
   unsigned const dumpJitCode_;
   /// Whether to emit asserts in the JIT'ed code.
   bool const emitAsserts_;
+  /// Whether to verify FR type assumptions in the JIT'ed code.
+  bool const emitTypeAsserts_;
   /// Whether to emit counters in the JIT'ed code.
   bool const emitCounters_;
 
@@ -462,6 +464,7 @@ class Emitter {
       JITContext::Impl &jitImpl,
       unsigned dumpJitCode,
       bool emitAsserts,
+      bool emitTypeAsserts,
       bool emitCounters,
       PerfJitDump *perfJitDump,
       CodeBlock *codeBlock,

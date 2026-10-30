@@ -126,6 +126,9 @@ class JITContext {
   /// Set the flag to emit asserts in the JIT'ed code.
   void setEmitAsserts(bool emitAsserts) {}
 
+  /// Set the flag to verify FR type assumptions in the JIT'ed code.
+  void setEmitTypeAsserts(bool emitTypeAsserts) {}
+
   /// Set whether we should emit counters in the JIT'ed code.
   void setEmitCounters(bool emitCounters) {}
 
@@ -134,6 +137,11 @@ class JITContext {
 
   /// \return true if we should emit asserts in the JIT'ed code.
   bool getEmitAsserts() {
+    return false;
+  }
+
+  /// \return true if we should verify FR type assumptions in JIT'ed code.
+  bool getEmitTypeAsserts() {
     return false;
   }
 

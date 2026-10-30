@@ -54,6 +54,7 @@ Emitter::Emitter(
     JITContext::Impl &jitImpl,
     unsigned dumpJitCode,
     bool emitAsserts,
+    bool emitTypeAsserts,
     bool emitCounters,
     PerfJitDump *perfJitDump,
     CodeBlock *codeBlock,
@@ -62,6 +63,7 @@ Emitter::Emitter(
       jitImpl_(jitImpl),
       dumpJitCode_(dumpJitCode),
       emitAsserts_(emitAsserts),
+      emitTypeAsserts_(emitTypeAsserts),
       emitCounters_(emitCounters),
       frameRegs_(codeBlock->getFrameSize()),
       codeBlock_(codeBlock) {

@@ -121,6 +121,7 @@ class JITContext::Compiler {
             *jc.impl_,
             jc.getDumpJITCode(),
             jc.getEmitAsserts(),
+            jc.getEmitTypeAsserts(),
             jc.counters_.get() != nullptr,
             jc.perfJitDump_.get(),
             codeBlock,

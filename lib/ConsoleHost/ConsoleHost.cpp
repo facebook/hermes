@@ -953,6 +953,7 @@ bool executeHBCBytecodeImpl(
   runtime->getJITContext().setDumpJITCode(options.dumpJITCode);
   runtime->getJITContext().setCrashOnError(options.jitCrashOnError);
   runtime->getJITContext().setEmitAsserts(options.jitEmitAsserts);
+  runtime->getJITContext().setEmitTypeAsserts(options.jitEmitTypeAsserts);
   runtime->getJITContext().setEmitCounters(options.jitEmitCounters);
   runtime->getJITContext().setHCIdLimit(options.jitHCIdLimit);
 
