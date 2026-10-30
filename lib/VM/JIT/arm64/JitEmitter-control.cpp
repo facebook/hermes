@@ -80,23 +80,20 @@ void Emitter::throwIfEmptyUndefinedImpl(FR frRes, FR frInput, bool empty) {
   movHWFromHW<false>(hwRes, hwInput);
   frUpdatedWithHW(frRes, hwRes);
 
-  slowPaths_.push_back(
-      {.slowPathLab = slowPathLab,
-       .name = empty ? "ThrowIfEmpty" : "ThrowIfUndefined",
-       .frRes = frRes,
-       .frInput1 = frInput,
-       .emittingIP = emittingIP,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment(
-             "// Slow path: %s r%u, r%u",
-             sl.name,
-             sl.frRes.index(),
-             sl.frInput1.index());
-         em.a.bind(sl.slowPathLab);
-         em.a.mov(a64::x0, xRuntime);
-         EMIT_RUNTIME_CALL(em, void (*)(SHRuntime *), _sh_throw_empty);
-         // Call does not return.
-       }});
+  slowPaths_.emplace_back(
+      slowPathLab,
+      emittingIP,
+      [empty, frRes, frInput](Emitter &em, SlowPath &sp) {
+        em.comment(
+            "// Slow path: %s r%u, r%u",
+            empty ? "ThrowIfEmpty" : "ThrowIfUndefined",
+            frRes.index(),
+            frInput.index());
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(a64::x0, xRuntime);
+        EMIT_RUNTIME_CALL(em, void (*)(SHRuntime *), _sh_throw_empty);
+        // Call does not return.
+      });
 }
 
 void Emitter::throwIfThisInitialized(FR frInput) {
@@ -129,19 +126,15 @@ void Emitter::throwIfThisInitialized(FR frInput) {
   emit_sh_ljs_is_empty(a, hwTemp.a64GpX(), hwInput.a64GpX());
   a.b_ne(slowPathLab);
 
-  slowPaths_.push_back(
-      {.slowPathLab = slowPathLab,
-       .frInput1 = frInput,
-       .emittingIP = emittingIP,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment(
-             "// Slow path: ThrowIfThisInitialized r%u", sl.frInput1.index());
-         em.a.bind(sl.slowPathLab);
-         em.a.mov(a64::x0, xRuntime);
-         EMIT_RUNTIME_CALL(
-             em, void (*)(SHRuntime *), _sh_throw_this_already_initialized);
-         // Call does not return.
-       }});
+  slowPaths_.emplace_back(
+      slowPathLab, emittingIP, [frInput](Emitter &em, SlowPath &sp) {
+        em.comment("// Slow path: ThrowIfThisInitialized r%u", frInput.index());
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(a64::x0, xRuntime);
+        EMIT_RUNTIME_CALL(
+            em, void (*)(SHRuntime *), _sh_throw_this_already_initialized);
+        // Call does not return.
+      });
 }
 
 void Emitter::jmpTypeOfIs(
@@ -811,41 +804,40 @@ void Emitter::jCond(
   // Do this always, since this is the end of the BB.
   freeAllFRTempExcept(FR());
 
-  slowPaths_.push_back(
-      {.slowPathLab = slowPathLab,
-       .contLab = contLab,
-       .target = target,
-       .name = name,
-       .frInput1 = frLeft,
-       .frInput2 = frRight,
-       .invert = invert,
-       .passArgsByVal = passArgsByVal,
-       .slowCall = slowCall,
-       .slowCallName = slowCallName,
-       .emittingIP = emittingIP,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment(
-             "// Slow path: j_%s%s Lx, r%u, r%u",
-             sl.invert ? "not_" : "",
-             sl.name,
-             sl.frInput1.index(),
-             sl.frInput2.index());
-         em.a.bind(sl.slowPathLab);
-         if (sl.passArgsByVal) {
-           em._loadFrame(HWReg::gpX(0), sl.frInput1);
-           em._loadFrame(HWReg::gpX(1), sl.frInput2);
-         } else {
-           em.a.mov(a64::x0, xRuntime);
-           em.loadFrameAddr(a64::x1, sl.frInput1);
-           em.loadFrameAddr(a64::x2, sl.frInput2);
-         }
-         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
-         if (!sl.invert)
-           em.a.cbnz(a64::w0, sl.target);
-         else
-           em.a.cbz(a64::w0, sl.target);
-         em.a.b(sl.contLab);
-       }});
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      emittingIP,
+      [name,
+       slowCall,
+       slowCallName,
+       target,
+       frLeft,
+       frRight,
+       invert,
+       passArgsByVal](Emitter &em, SlowPath &sp) {
+        em.comment(
+            "// Slow path: j_%s%s Lx, r%u, r%u",
+            invert ? "not_" : "",
+            name,
+            frLeft.index(),
+            frRight.index());
+        em.a.bind(sp.slowPathLab);
+        if (passArgsByVal) {
+          em._loadFrame(HWReg::gpX(0), frLeft);
+          em._loadFrame(HWReg::gpX(1), frRight);
+        } else {
+          em.a.mov(a64::x0, xRuntime);
+          em.loadFrameAddr(a64::x1, frLeft);
+          em.loadFrameAddr(a64::x2, frRight);
+        }
+        em.callThunkWithSavedIP(slowCall, slowCallName);
+        if (!invert)
+          em.a.cbnz(a64::w0, target);
+        else
+          em.a.cbz(a64::w0, target);
+        em.a.b(sp.contLab);
+      });
 }
 
 void Emitter::jStrictEqual(
@@ -985,33 +977,27 @@ void Emitter::jStrictEqual(
 
   a.bind(contLab);
 
-  slowPaths_.push_back(
-      {.slowPathLab = slowPathLab,
-       .contLab = contLab,
-       .target = target,
-       .name = invert ? "j_strict_not_eq" : "j_strict_eq",
-       .frInput1 = frLeft,
-       .frInput2 = frRight,
-       .invert = invert,
-       .slowCall = (void *)_sh_ljs_strict_equal,
-       .slowCallName = "_sh_ljs_strict_equal",
-       .emittingIP = emittingIP,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment(
-             "// Slow path: %s Lx, r%u, r%u",
-             sl.name,
-             sl.frInput1.index(),
-             sl.frInput2.index());
-         em.a.bind(sl.slowPathLab);
-         em._loadFrame(HWReg::gpX(0), sl.frInput1);
-         em._loadFrame(HWReg::gpX(1), sl.frInput2);
-         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
-         if (!sl.invert)
-           em.a.cbnz(a64::w0, sl.target);
-         else
-           em.a.cbz(a64::w0, sl.target);
-         em.a.b(sl.contLab);
-       }});
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      emittingIP,
+      [target, frLeft, frRight, invert](Emitter &em, SlowPath &sp) {
+        em.comment(
+            "// Slow path: %s Lx, r%u, r%u",
+            invert ? "j_strict_not_eq" : "j_strict_eq",
+            frLeft.index(),
+            frRight.index());
+        em.a.bind(sp.slowPathLab);
+        em._loadFrame(HWReg::gpX(0), frLeft);
+        em._loadFrame(HWReg::gpX(1), frRight);
+        em.callThunkWithSavedIP(
+            (void *)_sh_ljs_strict_equal, "_sh_ljs_strict_equal");
+        if (!invert)
+          em.a.cbnz(a64::w0, target);
+        else
+          em.a.cbz(a64::w0, target);
+        em.a.b(sp.contLab);
+      });
 }
 
 } // namespace hermes::vm::arm64

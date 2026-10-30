@@ -27,6 +27,14 @@
 
 namespace hermes::vm::arm64 {
 
+// Disable warnings about missing designated initializers, which the
+// roDataDesc_ entries below rely on.
+#ifdef __clang__
+#if __has_warning("-Wmissing-designated-field-initializers")
+#pragma clang diagnostic ignored "-Wmissing-designated-field-initializers"
+#endif
+#endif
+
 llvh::raw_ostream &operator<<(
     llvh::raw_ostream &os,
     const hermes::vm::arm64::HWReg &hwReg) {
@@ -321,20 +329,21 @@ void Emitter::frameSetup(
   // check if the bounds have changed.
   a.b_hi(nativeOverflowLab);
   a.bind(nativeOverflowContLab);
-  slowPaths_.push_back(
-      {.slowPathLab = nativeOverflowLab,
-       .contLab = nativeOverflowContLab,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment("// Slow path: _sh_check_native_stack_overflow");
-         em.a.bind(sl.slowPathLab);
-         em.a.mov(a64::x0, xRuntime);
-         // Do not save the IP because we have not yet set up the stack frame
-         // for this function. If this throws, the exception should appear in
-         // the caller.
-         EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(
-             em, void (*)(SHRuntime *), _sh_check_native_stack_overflow);
-         em.a.b(sl.contLab);
-       }});
+  slowPaths_.emplace_back(
+      nativeOverflowLab,
+      nativeOverflowContLab,
+      /* emittingIP */ nullptr,
+      [](Emitter &em, SlowPath &sp) {
+        em.comment("// Slow path: _sh_check_native_stack_overflow");
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(a64::x0, xRuntime);
+        // Do not save the IP because we have not yet set up the stack frame
+        // for this function. If this throws, the exception should appear in
+        // the caller.
+        EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(
+            em, void (*)(SHRuntime *), _sh_check_native_stack_overflow);
+        em.a.b(sp.contLab);
+      });
 
   comment("// xFrame");
   a.ldr(xFrame, a64::Mem(xRuntime, RuntimeOffsets::stackPointer));
@@ -375,20 +384,19 @@ void Emitter::frameSetup(
       slowCallName = "_sh_throw_invalid_construct";
     }
 
-    slowPaths_.push_back(
-        {.slowPathLab = throwInvalidInvokeLab,
-         .slowCall = (void *)slowCall,
-         .slowCallName = slowCallName,
-         .emit = [](Emitter &em, SlowPath &sl) {
-           em.comment("// Slow path: %s", sl.slowCallName);
-           em.a.bind(sl.slowPathLab);
-           em.a.mov(a64::x0, xRuntime);
-           // We don't register a thunk since there will only be a single call
-           // to this. Note that we also don't save the IP, because this is
-           // being thrown in the caller's context.
-           em.callWithoutThunk(sl.slowCall, sl.slowCallName);
-           // Function does not return.
-         }});
+    slowPaths_.emplace_back(
+        throwInvalidInvokeLab,
+        /* emittingIP */ nullptr,
+        [slowCall, slowCallName](Emitter &em, SlowPath &sp) {
+          em.comment("// Slow path: %s", slowCallName);
+          em.a.bind(sp.slowPathLab);
+          em.a.mov(a64::x0, xRuntime);
+          // We don't register a thunk since there will only be a single call
+          // to this. Note that we also don't save the IP, because this is
+          // being thrown in the caller's context.
+          em.callWithoutThunk((void *)slowCall, slowCallName);
+          // Function does not return.
+        });
   }
 
   // NOTE: Unlike _sh_enter, we do not push an SHLocals object.
@@ -465,17 +473,18 @@ void Emitter::frameSetup(
   }
 
   // Create the slow path for throwing a register stack overflow.
-  slowPaths_.push_back(
-      {.slowPathLab = registerOverflowLab,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment("// Slow path: _sh_throw_register_stack_overflow");
-         em.a.bind(sl.slowPathLab);
-         em.a.mov(a64::x0, xRuntime);
-         // Do not save the IP because we have not yet set up the stack frame
-         // for this function. The exception should appear in the caller.
-         EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(
-             em, void (*)(SHRuntime *), _sh_throw_register_stack_overflow);
-       }});
+  slowPaths_.emplace_back(
+      registerOverflowLab,
+      /* emittingIP */ nullptr,
+      [](Emitter &em, SlowPath &sp) {
+        em.comment("// Slow path: _sh_throw_register_stack_overflow");
+        em.a.bind(sp.slowPathLab);
+        em.a.mov(a64::x0, xRuntime);
+        // Do not save the IP because we have not yet set up the stack frame
+        // for this function. The exception should appear in the caller.
+        EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(
+            em, void (*)(SHRuntime *), _sh_throw_register_stack_overflow);
+      });
 
   if (catchTableLabel_.isValid()) {
     comment("// _sh_try");
@@ -825,19 +834,16 @@ void Emitter::loadParam(FR frRes, uint32_t paramIndex) {
   a.bind(contLab);
   frUpdatedWithHW(frRes, hwRes);
 
-  slowPaths_.push_back(
-      {.slowPathLab = slowPathLab,
-       .contLab = contLab,
-       .frRes = frRes,
-       .hwRes = hwRes,
-       .emittingIP = emittingIP,
-       .emit = [](Emitter &em, SlowPath &sl) {
-         em.comment("// Slow path: LoadParam r%u", sl.frRes.index());
-         em.a.bind(sl.slowPathLab);
-         em.loadBits64InGp(
-             sl.hwRes.a64GpX(), _sh_ljs_undefined().raw, "undefined");
-         em.a.b(sl.contLab);
-       }});
+  slowPaths_.emplace_back(
+      slowPathLab,
+      contLab,
+      emittingIP,
+      [frRes, hwRes](Emitter &em, SlowPath &sp) {
+        em.comment("// Slow path: LoadParam r%u", frRes.index());
+        em.a.bind(sp.slowPathLab);
+        em.loadBits64InGp(hwRes.a64GpX(), _sh_ljs_undefined().raw, "undefined");
+        em.a.b(sp.contLab);
+      });
 }
 
 void Emitter::getGlobalObject(FR frRes) {
@@ -997,7 +1003,7 @@ void Emitter::emitSlowPaths() {
   while (!slowPaths_.empty()) {
     SlowPath &sp = slowPaths_.front();
     emittingIP = sp.emittingIP;
-    sp.emit(*this, sp);
+    sp.emit(*this);
     slowPaths_.pop_front();
   }
   emittingIP = nullptr;
