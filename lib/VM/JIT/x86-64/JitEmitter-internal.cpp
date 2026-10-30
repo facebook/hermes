@@ -95,6 +95,25 @@ void emit_environment_init(
   assert(slotsToFill == 0 && "All slots must be filled");
 }
 
+/// Helper function to load a pointer to the builtin closure with index
+/// \p builtinIndex and place it in \p res.
+void emit_load_builtin_closure(
+    x86::Assembler &a,
+    const x86::Gp &res,
+    uint32_t builtinIndex) {
+  static_assert(
+      std::is_same_v<
+          TransparentOwningPtr<Callable *, llvh::FreeDeleter>,
+          RuntimeOffsets::BuiltinsType>,
+      "builtins_ is a list of Callable *");
+  static_assert(
+      offsetof(TransparentOwningPtr<Callable *>, ptr) == 0,
+      "TransparentOwningPtr must be transparent");
+
+  a.mov(res, x86::qword_ptr(xRuntime, RuntimeOffsets::builtins));
+  a.mov(res, x86::qword_ptr(res, (int32_t)(builtinIndex * sizeof(Callable *))));
+}
+
 void OurErrorHandler::handleError(
     asmjit::Error err,
     const char *message,

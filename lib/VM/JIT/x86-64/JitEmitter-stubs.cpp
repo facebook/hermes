@@ -31,42 +31,6 @@ void Emitter::directEval(FR frRes, FR frText, bool strictCaller) {
   unsupported("directEval");
 }
 
-void Emitter::call(FR frRes, FR frCallee, uint32_t argc) {
-  unsupported("call");
-}
-
-void Emitter::callN(FR frRes, FR frCallee, llvh::ArrayRef<FR> args) {
-  unsupported("callN");
-}
-
-void Emitter::callBuiltin(FR frRes, uint32_t builtinIndex, uint32_t argc) {
-  unsupported("callBuiltin");
-}
-
-void Emitter::callWithNewTarget(
-    FR frRes,
-    FR frCallee,
-    FR frNewTarget,
-    uint32_t argc) {
-  unsupported("callWithNewTarget");
-}
-
-void Emitter::callWithNewTargetLong(
-    FR frRes,
-    FR frCallee,
-    FR frNewTarget,
-    FR frArgc) {
-  unsupported("callWithNewTargetLong");
-}
-
-void Emitter::callRequire(FR frRes, FR frRequireFunc, uint32_t modIndex) {
-  unsupported("callRequire");
-}
-
-void Emitter::getBuiltinClosure(FR frRes, uint32_t builtinIndex) {
-  unsupported("getBuiltinClosure");
-}
-
 void Emitter::catchInst(FR frRes) {
   unsupported("catchInst");
 }
@@ -423,31 +387,6 @@ void Emitter::reifyArgumentsStrict(FR frLazyReg) {
 
 void Emitter::getArgumentsLength(FR frRes, FR frLazyReg) {
   unsupported("getArgumentsLength");
-}
-
-void Emitter::createThis(
-    FR frRes,
-    FR frCallee,
-    FR frNewTarget,
-    uint8_t cacheIdx,
-    uint32_t shapeTableIndex) {
-  unsupported("createThis");
-}
-
-void Emitter::selectObject(FR frRes, FR frThis, FR frConstructed) {
-  unsupported("selectObject");
-}
-
-void Emitter::loadThisNS(FR frRes) {
-  unsupported("loadThisNS");
-}
-
-void Emitter::coerceThisNS(FR frRes, FR frThis) {
-  unsupported("coerceThisNS");
-}
-
-void Emitter::getNewTarget(FR frRes) {
-  unsupported("getNewTarget");
 }
 
 void Emitter::iteratorBegin(FR frRes, FR frSource) {

@@ -30,7 +30,7 @@
 // GetParentEnvironment and the load/store pair. -O0 keeps the scopes apart
 // and additionally exercises CreateEnvironment (whose parent arrives in a
 // register), GetEnvironment with a non-zero level and StoreNPToEnvironment.
-// The last -O0 RUN line pins two of the functions it compiles, so a future
+// The last -O0 RUN line pins four of the functions it compiles, so a future
 // decline cannot quietly turn the -O0 differential into interpreter versus
 // interpreter. The unprefixed CHECK lines below are the -O statuses; the
 // CHECK0 lines are the -O0 ones, and the FunctionIDs differ between them
@@ -91,8 +91,10 @@ function mkLate(v) {
 }
 // Three levels of nesting. At -O the inliner folds inner() and innermost()
 // into nest, which leaves nest with no calls and no environments at all, so
-// it compiles here and pins only the arithmetic. At -O0 the calls survive and
-// nest declines -- which is why the -O0 lines above are differential only.
+// it compiles here and pins only the arithmetic. At -O0 the calls survive,
+// and now that calls are implemented all three levels compile: this is the
+// one place in the file where a compiled function calls another compiled
+// function that reads its grandparent's environment.
 function nest(x) {
   var y = x * 2;
   function inner() {
@@ -144,7 +146,8 @@ function churnLate(iters) {
 // empty name and only the FunctionID tells them apart: 8 is mkCounter's, 9 is
 // mkAdder's, and 10 and 12 are mkAdd3's two levels. mkLate's is named 'g'
 // after the variable it is assigned to. churn and churnLate have no status
-// lines of their own: they call other functions, and calls still decline.
+// lines of their own: they name mkCounter and mkLate, which are global
+// bindings, and reading a global still declines.
 var c = mkCounter(10);
 // CHECK: JIT successfully compiled FunctionID 1, 'mkCounter'
 // CHECK0: JIT successfully compiled FunctionID 1, 'mkCounter'
@@ -163,10 +166,13 @@ print(add5(3));
 print(add5(-0.5));
 // CHECK-NEXT: 4.5
 print(nest(7));
-// At -O the inliner leaves nest callless and it compiles; at -O0 nest and
-// inner both decline on their calls, and innermost -- which -O never emits at
-// all -- is what compiles instead.
+// At -O the inliner leaves nest callless and it is the only one of the three
+// that exists. At -O0 all three survive and all three compile, in the order
+// they are first entered; inner and innermost are the file's only compiled
+// calls into compiled code.
 // CHECK: JIT successfully compiled FunctionID 5, 'nest'
+// CHECK0: JIT successfully compiled FunctionID 5, 'nest'
+// CHECK0: JIT successfully compiled FunctionID 12, 'inner'
 // CHECK0: JIT successfully compiled FunctionID 14, 'innermost'
 // CHECK-NEXT: 36
 print(churn(30000));

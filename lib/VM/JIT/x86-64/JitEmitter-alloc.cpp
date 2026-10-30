@@ -42,13 +42,13 @@ void Emitter::bumpAllocAndUnpoison(
 #if LLVM_ADDRESS_SANITIZER_BUILD
   // Save all the temporary registers.
   //
-  // x86-64: arm64 saves only its GP temps, and the same set is what needs
-  // saving here, for the same reason: no vector register holds a live value
-  // at this point (the callers' vector temp is written for the first time
-  // *after* the allocation), while their GP temps do -- the newly allocated
-  // pointer, the parent environment, the bumped level. Every x86-64 temp is
-  // caller-saved, so all of them are pushed; the callers' result register may
-  // instead be a callee-saved global, which the callee preserves for us.
+  // x86-64: this relies on the precondition documented on the declaration
+  // in JitEmitter.h -- no live value in any vector temp or xScratch across
+  // this call -- so only the 8 GP temps (kGPTemp1/kGPTemp2) need saving.
+  // Every one of them is caller-saved, so all of them are pushed; the
+  // callers' result register may instead be a callee-saved global, which
+  // the callee preserves for us. arm64 has the same shape: its save set
+  // likewise excludes its scratch register and vector temps.
   //
   // The count must be even to keep rsp 16-byte aligned across the call, which
   // is the same property arm64's paired stp relies on.

@@ -194,6 +194,10 @@ emit_sh_ljs_object2(x86::Assembler &a, const x86::Gp &out, const x86::Gp &in) {
 /// parity, but no x86-64 build configuration compiles it yet -- this backend
 /// is only built for HEAP_HV_64. The HV32 build matrix arrives with a later
 /// milestone, and this branch gets its first compile and test there.
+///
+/// x86-64: `add` also writes EFLAGS, where arm64's three-operand `add` does
+/// not touch flags at all, so a caller must not hold live flags across this
+/// helper.
 inline void emit_sh_cp_decode_non_null(
     x86::Assembler &a,
     const x86::Gp &inOut) {
@@ -207,6 +211,10 @@ inline void emit_sh_cp_decode_non_null(
 ///
 /// x86-64: see emit_sh_cp_decode_non_null() -- the compressed-pointer branch
 /// is not compiled on x86-64 yet.
+///
+/// x86-64: `sub` also writes EFLAGS, where arm64's three-operand `sub` does
+/// not touch flags at all, so a caller must not hold live flags across this
+/// helper.
 inline void emit_sh_cp_encode_non_null(
     x86::Assembler &a,
     const x86::Gp &inOut) {
@@ -222,6 +230,9 @@ inline void emit_sh_cp_encode_non_null(
 /// needs onto a copy. The 32-bit load zero-extends into the full register,
 /// which is what makes the narrow branch a decompressible value.
 /// See emit_sh_cp_decode_non_null() -- that branch is not compiled yet.
+///
+/// x86-64: unlike its neighbors above, `mov` is flag-clean, so this narrow
+/// branch leaves no EFLAGS divergence for a caller to worry about.
 inline void
 emit_load_cp(x86::Assembler &a, const x86::Gp &dest, const x86::Mem &mem) {
   x86::Mem m = mem;
@@ -249,6 +260,50 @@ emit_store_cp(x86::Assembler &a, const x86::Gp &val, const x86::Mem &mem) {
     m.setSize(8);
     a.mov(m, val);
   }
+}
+
+/// For a register containing a pointer to a GCCell, retrieve its CellKind (a
+/// single byte) and place it in \p out.
+/// \p out and \p in may refer to the same register.
+///
+/// x86-64: arm64 routes this through emit_load_from_base_offset because its
+/// byte load has a limited immediate range; every x86 displacement is a
+/// signed 32-bit one, so this is a single movzx. The 32-bit destination
+/// zeroes the upper half of \p out, which is what lets
+/// emit_cellkind_in_range() and the jitCallArray index treat it as a plain
+/// unsigned value.
+inline void
+emit_gccell_get_kind(x86::Assembler &a, const x86::Gp &out, const x86::Gp &in) {
+  a.movzx(
+      out.r32(),
+      x86::byte_ptr(
+          in.r64(),
+          (int32_t)(offsetof(SHGCCell, kindAndSize) +
+                    RuntimeOffsets::kindAndSizeKind)));
+}
+
+/// For a register \p input that contains a CellKind, check whether it falls
+/// within the kind range [first, last].
+/// \p input is not modified unless it is the same as \p temp, which is
+/// allowed.
+/// CPU flags are updated as a result: jbe on success, or ja on failure.
+///
+/// x86-64: the subtract-and-unsigned-compare trick is arm64's, but the
+/// subtraction has to be non-destructive and x86's sub is two-operand, so it
+/// is done with an lea. \p input's upper 32 bits are zero (see
+/// emit_gccell_get_kind), so computing the address in 64 bits and keeping
+/// the low 32 is exactly the 32-bit subtraction arm64 performs.
+inline void emit_cellkind_in_range(
+    x86::Assembler &a,
+    const x86::Gp &temp,
+    const x86::Gp &input,
+    CellKind first,
+    CellKind last) {
+  if ((uint32_t)first != 0)
+    a.lea(temp.r32(), x86::ptr(input.r64(), -(int32_t)(uint32_t)first));
+  else if (temp != input)
+    a.mov(temp.r32(), input.r32());
+  a.cmp(temp.r32(), asmjit::Imm((uint32_t)last - (uint32_t)first));
 }
 
 /// Emit code to check whether the input HermesValue is a double.
@@ -438,6 +493,13 @@ void emit_environment_init(
     const x86::Gp &temp,
     const x86::Xmm &vTemp,
     uint32_t size);
+
+/// Helper function to load a pointer to the builtin closure with index
+/// \p builtinIndex and place it in \p res.
+void emit_load_builtin_closure(
+    x86::Assembler &a,
+    const x86::Gp &res,
+    uint32_t builtinIndex);
 
 class OurErrorHandler : public asmjit::ErrorHandler {
   asmjit::Error &expectedError_;

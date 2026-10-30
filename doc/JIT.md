@@ -491,19 +491,24 @@ JIT host — see the Config.h row in the source layout table.
 ## x86-64 porting notes
 
 The x86-64 backend (`lib/VM/JIT/x86-64/`) compiles arithmetic, comparisons,
-branches, bit operations, and type assertions. Opcode coverage: LoadParam/
-LoadConst*/Mov/Ret (milestone 1), Add/Sub/Mul/Div/Mod with N variants,
-Inc/Dec/Negate, ToNumber/ToNumeric, all comparisons (loose+strict, both
-polarities), all conditional/unconditional jumps (JLess families, JmpTrue/
-False/Undefined/StrictEqual), BitAnd/Or/Xor, shifts (all three), BitNot,
-ToInt32/ToUint32. Loops execute fully in machine code. Type asserts
-(`-Xjit-emit-type-asserts`) are implemented; `enter()` no longer declines for
-it. `-Xjit-emit-counters` still has no decline of its own, since a declined
-function legitimately emits no counters and counter output stays honest either
-way. Tests live at test/jit/x86-64/ (skeleton, arith, cmp, loops, bitops,
-type-asserts); test/jit itself is still gated to arm64 during bring-up
-(test/jit/lit.local.cfg), so the main JIT suite does not exercise this
-backend yet. To build:
+branches, bit operations, type assertions, young-gen allocation, environments,
+closures, and calls. Milestone 3 adds young-gen inline allocation (bump-alloc
+with overflow slow path, pulled forward from the spec's milestone 4 because
+environments allocate inline), environment creation and field access (get/load/
+store all forms), closures with captured-environment fast paths, class and
+generator object creation (initialization only), and the full call family
+(Call/Call1-4, CallBuiltin under -fstatic-builtins, Construct/CallWithNewTarget
+(Long), CallRequire) with JIT-to-JIT direct-call fast path; recursive and
+higher-order JS now runs in machine code. Opcode coverage includes LoadParam/
+LoadConst*/Mov/Ret (M1), Add/Sub/Mul/Div/Mod with N variants, Inc/Dec/Negate,
+ToNumber/ToNumeric, all comparisons, all branches, BitAnd/Or/Xor, shifts,
+BitNot, ToInt32/ToUint32, type asserts. Tests live at test/jit/x86-64/ (9 total:
+skeleton, arith, cmp, loops, bitops, type-asserts, closures, calls, callbuiltin);
+test/jit itself is still gated to arm64 (test/jit/lit.local.cfg) during
+bring-up, so the main JIT suite does not exercise this backend yet.
+-Xjit-emit-counters works (NumCall/NumCallSlow). Still declining: property
+access, object/array/string literals and ops, typeof/instanceof/in, switches,
+exceptions/try, iterator resume, for-in, arguments, globals. To build:
 
   cmake -B cmake-build-x86jit -G Ninja -DCMAKE_BUILD_TYPE=Debug \
     -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \

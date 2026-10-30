@@ -558,14 +558,37 @@ void Emitter::newBasicBlock(const asmjit::Label &label) {
   a.bind(label);
 }
 
+void Emitter::getBytecodeIP(const x86::Gp &out) {
+  // x86-64: the IP is a single 64-bit immediate, so there is no analogue of
+  // arm64's "materialize the function start, then add the offset" chain, and
+  // no immediate-range special case for offsets above 16MB.
+  loadBits64InGp(
+      out,
+      (uint64_t)codeBlock_->begin() + codeBlock_->getOffsetOf(emittingIP),
+      "Bytecode IP");
+}
+
+void Emitter::emitIncrementCounter(JitCounter counter) {
+  if (!emitCounters_)
+    return;
+  // x86-64: arm64 has to load, add and store through two registers, which it
+  // makes room for by pushing them; x86 increments memory in place, so the
+  // only register needed is the one holding the counter array pointer, and
+  // xScratch is reserved for exactly this kind of transient use. The counter
+  // array is non-null whenever emitCounters_ is set (JITContext::setEmit-
+  // Counters allocates it), so there is no null check here, just as on arm64.
+  //
+  // Unlike arm64's `add`, `inc` writes EFLAGS. Both call sites -- the top of
+  // callImpl and the head of its slow path -- have no live flags.
+  a.mov(xScratch, x86::qword_ptr(xRuntime, RuntimeOffsets::runtimeJitCounters));
+  a.inc(
+      x86::qword_ptr(
+          xScratch, (int32_t)((unsigned)counter * sizeof(uint64_t))));
+}
+
 void Emitter::callRuntimeWithSavedIP(void *fn, const char *name) {
   // Save the current IP in the runtime.
-  // x86-64: the IP is a single 64-bit immediate, so there is no analogue of
-  // arm64's "materialize the function start, then add the offset" chain.
-  a.mov(
-      xScratch,
-      asmjit::Imm(
-          (uint64_t)codeBlock_->begin() + codeBlock_->getOffsetOf(emittingIP)));
+  getBytecodeIP(xScratch);
   a.mov(x86::qword_ptr(xRuntime, RuntimeOffsets::currentIP), xScratch);
 
   // Call the passed function.

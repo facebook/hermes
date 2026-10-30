@@ -21,6 +21,7 @@ void Emitter::createTopLevelEnvironment(FR frRes, uint32_t size) {
 
   a.mov(x86::rdi, xRuntime);
   // The parent environment is nullptr.
+  // x86-64: `xor` also writes EFLAGS, where arm64's `mov x1, 0` does not.
   a.xor_(x86::esi, x86::esi);
   a.mov(x86::edx, asmjit::Imm(size));
 
