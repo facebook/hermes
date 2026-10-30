@@ -7,19 +7,19 @@ This document describes how to build and run Hermes as a standalone compiler and
 
 ## Dependencies
 
-Hermes is a C++17 project. clang, gcc, and Visual C++ are supported. Hermes also requires cmake, git, Python. It builds with [CMake](https://cmake.org) and [ninja](https://ninja-build.org).
+Hermes is a C++17 project. clang, gcc, and Visual C++ are supported, but clang is strongly recommended: gcc produces noticeably worse code. Hermes also requires cmake, git, Python. It builds with [CMake](https://cmake.org) and [ninja](https://ninja-build.org).
 
 The Hermes REPL will also use libreadline, if available.
 
-ICU is not required for a default build: Unicode case conversion, normalization, collation and date formatting are all self-contained. ICU is needed only for `-DHERMES_ENABLE_INTL=ON` (off by default), and even then only on Linux and Windows, since Apple and Android builds use their platform's own Intl implementation. Install `libicu-dev` (Ubuntu) or `icu` (Arch) if you are enabling Intl.
+ICU is not required: Unicode case conversion, normalization, collation and date formatting are all self-contained. `-DHERMES_ENABLE_INTL=ON` (off by default) is supported only on Apple and Android, which use their platform's own Intl implementation; configuring it on any other platform fails.
 
 To install dependencies on Ubuntu:
 
-    apt install build-essential cmake git ninja-build python3 tzdata libreadline-dev
+    apt install clang build-essential cmake git ninja-build python3 tzdata libreadline-dev
 
 On Arch Linux:
 
-    pacman -S cmake git ninja python zip readline
+    pacman -S clang cmake git ninja python zip readline
 
 On Mac via Homebrew:
 
@@ -35,7 +35,8 @@ Create a base directory to work in, e.g. `~/workspace`, and cd into it.
 After `cd`ing, follow the steps below to generate the Hermes build system:
 
     git clone https://github.com/facebook/hermes.git
-    cmake -S hermes -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+    cmake -S hermes -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug \
+      -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
 
 The build system has now been generated in the `build` directory. To perform the build:
 
@@ -46,7 +47,8 @@ The build system has now been generated in the `build` directory. To perform the
 
 The above instructions create an unoptimized debug build. The `-DCMAKE_BUILD_TYPE=Release` flag will create a release build:
 
-    cmake -S hermes -B build_release -G Ninja -DCMAKE_BUILD_TYPE=Release
+    cmake -S hermes -B build_release -G Ninja -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
     cmake --build ./build_release
 
 ## Building on Windows
