@@ -689,20 +689,21 @@ void Emitter::loadFrameAddr(a64::GpX dst, FR frameReg) {
 }
 
 void Emitter::getBytecodeIP(const a64::GpX &xOut) {
-  auto ofs = codeBlock_->getOffsetOf(emittingIP);
+  uint32_t ofs = codeBlock_->getOffsetOf(emittingIP);
+  // ADD's immediate is 12 bits, optionally shifted left by 12, so an offset
+  // of 16MB or above cannot be reached by adding to the base at all.
+  // Materialize the whole address instead. That costs a constant pool entry
+  // per call site rather than one shared for the function, which is why it is
+  // not the general case.
+  if (LLVM_UNLIKELY(ofs > 0xFFFFFF)) {
+    loadBits64InGp(xOut, (uint64_t)codeBlock_->begin() + ofs, "Bytecode IP");
+    return;
+  }
   loadBits64InGp(xOut, (uint64_t)codeBlock_->begin(), "Bytecode start");
   // The first instruction of a function is at offset zero, which needs no
   // add at all.
-  if (!ofs)
-    return;
-  // The add instruction takes a 12 bit immediate optionally shifted by 12 bits.
-  // So we do the add as up to two 12 bit steps. Note that this means that it
-  // will currently fail on any function that is larger than 16MB.
-  auto low12Bits = ofs & llvh::maskTrailingOnes<uint32_t>(12);
-  assert(a64::Utils::isAddSubImm(low12Bits) && "immediate should be 12 bits");
-  a.add(xOut, xOut, low12Bits);
-  if (auto restBits = ofs - low12Bits)
-    a.add(xOut, xOut, restBits);
+  if (ofs)
+    emit_add_imm_u24(a, xOut, ofs);
 }
 
 void Emitter::unreachable() {
