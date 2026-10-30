@@ -419,6 +419,11 @@ TEST_F(RegExpBytecodeTest, SHUnitSharesPrecompiledBytecode) {
   const SHSymbolID flags = symbol("g");
 
   const size_t sizeBefore = sh_unit_additional_memory_size(&unit);
+  // Must count the SHUnitExt object itself plus the cache slot sized at
+  // construction, not just a pointer to it.
+  EXPECT_GE(
+      sizeBefore,
+      sizeof(SHUnitExt) + sizeof(llvh::IntrusiveRefCntPtr<RegExpBytecode>));
   auto create = [&]() {
     SHLegacyValue v =
         _sh_ljs_create_regexp(getSHRuntime(runtime), &unit, pattern, flags, 0);

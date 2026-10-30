@@ -210,7 +210,7 @@ size_t hermes::vm::sh_unit_additional_memory_size(const SHUnit *unit) {
     if (entry)
       regExpSize += entry->mallocSize();
   }
-  return sizeof(unit->runtime_ext) + ext->templateMap.getMemorySize() +
+  return sizeof(*ext) + ext->templateMap.getMemorySize() +
       ext->addCacheEntries.capacity_in_bytes() + regExpSize;
 }
 
