@@ -22,11 +22,12 @@
 // under test were in fact compiled, so the differential cannot degrade into
 // comparing the interpreter against itself.
 //
-// Every object here is BUILT by compiled code and READ by the interpreter:
-// reading a property still declines (getById), so a function that touched
-// `o.a` would not compile and would prove nothing. `global` declines too, on
-// DeclareGlobalVar, which is why the reads at the bottom of the file run
-// interpreted.
+// Every object here is BUILT by compiled code and READ by the interpreter.
+// That was forced when this file was written -- getById declined -- and it
+// is kept deliberately now that it no longer does: the reads stay in
+// `global`, which still declines (on typeOf, from the `typeof` in the
+// churn loops), so the values are checked by an interpreter that never saw
+// the emitter. props.js covers reading properties from compiled code.
 //
 // The literals are all-constant on purpose. A literal with a computed value
 // lowers to NewObjectWithBuffer followed by PutOwnBySlotIdx for that value,
@@ -52,21 +53,19 @@
 // alloc2InYoung.
 //
 // NOT covered, and why:
-//  - `new` with a property-storing constructor. The construct call site
-//    itself compiles and is covered by calls.js, but a constructor that
-//    stores into `this` does not: a function constructor's body declines on
-//    PutByIdLoose, a class constructor's on GetById, and a derived class
-//    constructor additionally on ThrowIfThisInitialized. Naming the
-//    constructor as a global adds GetGlobalObject to the caller on top of
-//    that. Task 2 lands getById/putById and getGlobalObject, which makes
-//    this reachable; ThrowIfThisInitialized waits for the exceptions
-//    milestone.
+//  - `new` with a property-storing constructor. It was unreachable when
+//    this file was written -- a function constructor's body declined on
+//    PutByIdLoose, a class constructor's on GetById -- and the property
+//    milestone has since landed both, so props.js covers it. A derived
+//    class constructor still declines on ThrowIfThisInitialized, which
+//    waits for the exceptions milestone.
 //  - loadParentNoTraps: emitted only for `super` -- a super method call, a
 //    super property read, or the implicit callee load in a derived
-//    constructor. Every one of those functions also contains getById,
-//    getByIdWithReceiver or throwIfThisInitialized, all of which decline, so
-//    no function containing LoadParentNoTraps compiles today. It is ported
-//    and unreachable; coverage has to come with the property milestone.
+//    constructor. getById no longer declines, but every one of those
+//    functions still contains getByIdWithReceiver or
+//    throwIfThisInitialized, both of which do, so no function containing
+//    LoadParentNoTraps compiles today. It stays ported and unreachable
+//    until the exceptions milestone.
 //  - typedLoadParent: emitted only from typed-class IRGen, i.e. not from
 //    plain JS at all.
 //  - newTypedObjectWithBuffer: likewise typed-class only.

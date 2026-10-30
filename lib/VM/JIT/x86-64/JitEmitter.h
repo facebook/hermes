@@ -902,8 +902,16 @@ class Emitter {
   void getByVal(FR frRes, FR frSource, FR frKey);
   void getByIndex(FR frRes, FR frSource, uint32_t key);
 
-  void putByValLoose(FR frTarget, FR frKey, FR frValue);
-  void putByValStrict(FR frTarget, FR frKey, FR frValue);
+#define DECL_PUT_BY_VAL(methodName, commentStr, shFn)                \
+  void methodName(FR frTarget, FR frKey, FR frValue) {               \
+    putByValImpl(frTarget, frKey, frValue, commentStr, shFn, #shFn); \
+  }
+
+  DECL_PUT_BY_VAL(putByValLoose, "putByValLoose", _sh_ljs_put_by_val_loose_rjs);
+  DECL_PUT_BY_VAL(
+      putByValStrict,
+      "putByValStrict",
+      _sh_ljs_put_by_val_strict_rjs);
 
   void putByValWithReceiver(
       FR frTarget,
@@ -912,8 +920,10 @@ class Emitter {
       FR frReceiver,
       bool isStrict);
 
-  void getById(FR frRes, SHSymbolID symID, FR frSource, uint8_t cacheIdx);
-  void tryGetById(FR frRes, SHSymbolID symID, FR frSource, uint8_t cacheIdx);
+#define DECL_GET_BY_ID(methodName, commentStr, shFn)                           \
+  void methodName(FR frRes, SHSymbolID symID, FR frSource, uint8_t cacheIdx) { \
+    getByIdImpl(frRes, symID, frSource, cacheIdx, commentStr, shFn, #shFn);    \
+  }
 
   void getByIdWithReceiver(
       FR frRes,
@@ -923,14 +933,19 @@ class Emitter {
       uint8_t cacheIdx);
   void getByValWithReceiver(FR frRes, FR frSource, FR frKey, FR frReceiver);
 
-  void
-  putByIdLoose(FR frTarget, SHSymbolID symID, FR frValue, uint8_t cacheIdx);
-  void
-  putByIdStrict(FR frTarget, SHSymbolID symID, FR frValue, uint8_t cacheIdx);
-  void
-  tryPutByIdLoose(FR frTarget, SHSymbolID symID, FR frValue, uint8_t cacheIdx);
-  void
-  tryPutByIdStrict(FR frTarget, SHSymbolID symID, FR frValue, uint8_t cacheIdx);
+  DECL_GET_BY_ID(getById, "getById", _sh_ljs_get_by_id_rjs)
+  DECL_GET_BY_ID(tryGetById, "tryGetById", _sh_ljs_try_get_by_id_rjs)
+
+#define DECL_PUT_BY_ID(methodName, strictMode, tryProp)                   \
+  void methodName(                                                        \
+      FR frTarget, SHSymbolID symID, FR frValue, uint8_t cacheIdx) {      \
+    putByIdImpl(frTarget, symID, frValue, cacheIdx, strictMode, tryProp); \
+  }
+
+  DECL_PUT_BY_ID(putByIdLoose, false, false);
+  DECL_PUT_BY_ID(putByIdStrict, true, false);
+  DECL_PUT_BY_ID(tryPutByIdLoose, false, true);
+  DECL_PUT_BY_ID(tryPutByIdStrict, true, true);
 
   void defineOwnInDenseArray(FR frArray, FR frProp, uint32_t idx);
 
@@ -1326,9 +1341,26 @@ class Emitter {
   /// contLab then adds the first argument, rdi = Runtime, and calls rdx.
   /// Every temp is free at this point (everything was synced above), which
   /// is what lets the two paths agree on fixed registers at all. rsp % 16
-  /// == 0 holds throughout the function body -- nothing moves rsp after
-  /// the prologue -- so the call site is SysV-aligned without any
-  /// adjustment here.
+  /// == 0 holds at every instruction an emitter can be entered at, so the
+  /// call site is SysV-aligned without any adjustment here.
+  ///
+  /// The prologue is what establishes that alignment, and one exception to
+  /// "nothing moves rsp afterwards" exists: an emitter may adjust rsp
+  /// transiently to pass stack arguments, but only in multiples of 16 and
+  /// only within its own emission, restoring it before it emits anything
+  /// else. putByIdImpl is the sole instance today -- _jit_put_by_id takes
+  /// eight arguments where SysV has six argument registers, so it pushes
+  /// two and follows the call with `add rsp, 16`. Anything emitted while
+  /// rsp is lowered must therefore avoid rsp-relative frame access, which
+  /// nothing on that path does (loadFrameAddr goes through xFrame, and
+  /// callRuntimeWithSavedIP touches only xScratch and xRuntime).
+  ///
+  /// That contract is a convention, not something the emitter enforces. It
+  /// could be: a debug-only counter of the current rsp delta, bumped by the
+  /// pushes and asserted to be a multiple of 16 at every call emission and
+  /// zero at every instruction boundary, would catch both an odd push count
+  /// and a delta left unrestored. Worth adding if a second stack-argument
+  /// call site ever appears.
   void callImpl(FR frRes, FR frCallee);
 
   /// Load the address of \p frameReg's frame slot into \p dst.
@@ -1426,6 +1458,40 @@ class Emitter {
       bool passArgsByVal);
 
   void strictEqualImpl(bool invert, FR frRes, FR frLeft, FR frRight);
+
+  void putByValImpl(
+      FR frTarget,
+      FR frKey,
+      FR frValue,
+      const char *name,
+      void (*shImpl)(
+          SHRuntime *shr,
+          SHLegacyValue *target,
+          SHLegacyValue *key,
+          SHLegacyValue *value),
+      const char *shImplName);
+
+  class GetByIdImpl;
+  void getByIdImpl(
+      FR frRes,
+      SHSymbolID symID,
+      FR frSource,
+      uint8_t cacheIdx,
+      const char *name,
+      SHLegacyValue (*shImpl)(
+          SHRuntime *shr,
+          const SHLegacyValue *source,
+          SHSymbolID symID,
+          SHReadPropertyCacheEntry *propCacheEntry),
+      const char *shImplName);
+
+  void putByIdImpl(
+      FR frTarget,
+      SHSymbolID symID,
+      FR frValue,
+      uint8_t cacheIdx,
+      bool strictMode,
+      bool tryProp);
 
   // x86-64: \p condCode and \p swapOperands together are arm64's single
   // condCode; see DECL_JCOND.

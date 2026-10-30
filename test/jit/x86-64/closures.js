@@ -36,10 +36,14 @@
 // CHECK0 lines are the -O0 ones, and the FunctionIDs differ between them
 // because -O inlines functions that -O0 keeps.
 //
-// NOT covered here, in either mode: CreateTopLevelEnvironment. It is emitted
-// only in `global`, and `global` declines on DeclareGlobalVar at -O and at
-// -O0 alike, so none of its code runs. Its coverage has to come with the
-// milestone that lands declareGlobalVar and getGlobalObject.
+// CreateTopLevelEnvironment IS covered here, as of the property milestone.
+// It is emitted only in `global`, and `global` used to decline on
+// DeclareGlobalVar in both modes, so none of its code ran. Now that
+// declareGlobalVar and getGlobalObject are emitted, `global` compiles at -O
+// and -O0 alike, and the first CHECK/CHECK0 pair below pins that -- which is
+// what makes this file's top-level environment, and every closure created
+// from it, come out of compiled code. globals.js covers the globals
+// themselves.
 
 // Captures a parameter in a mutable variable, so the closure both loads from
 // and stores to the environment. The environment outlives mkCounter, so the
@@ -145,9 +149,12 @@ function churnLate(iters) {
 // Most of the returned closures are anonymous, so their status lines carry an
 // empty name and only the FunctionID tells them apart: 8 is mkCounter's, 9 is
 // mkAdder's, and 10 and 12 are mkAdd3's two levels. mkLate's is named 'g'
-// after the variable it is assigned to. churn and churnLate have no status
-// lines of their own: they name mkCounter and mkLate, which are global
-// bindings, and reading a global still declines.
+// after the variable it is assigned to. churn and churnLate name mkCounter
+// and mkLate, which are global bindings; reading a global used to decline,
+// so they had no status lines of their own, and now they do.
+
+// CHECK: JIT successfully compiled FunctionID 0, 'global'
+// CHECK0: JIT successfully compiled FunctionID 0, 'global'
 var c = mkCounter(10);
 // CHECK: JIT successfully compiled FunctionID 1, 'mkCounter'
 // CHECK0: JIT successfully compiled FunctionID 1, 'mkCounter'
@@ -176,9 +183,11 @@ print(nest(7));
 // CHECK0: JIT successfully compiled FunctionID 14, 'innermost'
 // CHECK-NEXT: 36
 print(churn(30000));
-// churn's own (declined) compilation prints between this and the line above,
-// so this one cannot be a CHECK-NEXT.
-// CHECK: 450043674
+// churn's own status line prints between this and the line above, so this
+// one cannot be a CHECK-NEXT.
+// CHECK: JIT successfully compiled FunctionID 6, 'churn'
+// CHECK0: JIT successfully compiled FunctionID 6, 'churn'
+// CHECK-NEXT: 450043674
 var add2 = mkAdd3(1);
 // CHECK: JIT successfully compiled FunctionID 3, 'mkAdd3'
 var add21 = add2(2);
@@ -196,5 +205,7 @@ print(late() === late);
 // CHECK: JIT successfully compiled FunctionID 11, 'g'
 // CHECK-NEXT: true
 print(churnLate(30000));
-// churnLate's declined compilation prints in between, as churn's does.
-// CHECK: 30000
+// churnLate's status line prints in between, as churn's does.
+// CHECK: JIT successfully compiled FunctionID 7, 'churnLate'
+// CHECK0: JIT successfully compiled FunctionID 7, 'churnLate'
+// CHECK-NEXT: 30000

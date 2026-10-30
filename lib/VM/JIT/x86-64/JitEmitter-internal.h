@@ -288,6 +288,32 @@ inline void emit_sh_cp_decode(
 #endif
 }
 
+/// Similar to \c emit_sh_cp_decode_non_null(), but used when the input
+/// register needs to be preserved. It returns the result register which must
+/// then be used by the caller.
+/// The result register is either \p in or \p mayBeRes.
+///
+/// x86-64: arm64's three-operand `add` becomes an `lea`, which computes the
+/// same sum into a third register and, unlike `add`, writes no EFLAGS.
+///
+/// See emit_sh_cp_decode_non_null() -- the branch below is not compiled on
+/// x86-64 yet, so \p mayBeRes is unused in the HV64 build.
+[[nodiscard]] inline const x86::Gp &emit_sh_cp_decode_non_null_preserve_input(
+    x86::Assembler &a,
+    [[maybe_unused]] const x86::Gp &mayBeRes,
+    const x86::Gp &in) {
+  // sizeof(SmallHermesValue) == 4 holds exactly when pointers are compressed:
+  // the only build state with a 4-byte SmallHermesValue also sets
+  // HERMESVM_COMPRESSED_POINTERS (see the HEAP_HV_MODE table in
+  // CMakeLists.txt). This is arm64's condition, kept verbatim.
+  if constexpr (sizeof(SmallHermesValue) == 4) {
+    a.lea(mayBeRes, x86::ptr(xRuntime, in));
+    return mayBeRes;
+  } else {
+    return in;
+  }
+}
+
 /// Given a pointer in \p inOut that is known to be non-null, compress it and
 /// place the result in \p inOut.
 ///
@@ -344,6 +370,23 @@ emit_store_cp(x86::Assembler &a, const x86::Gp &val, const x86::Mem &mem) {
   }
 }
 
+/// Load a SmallHermesValue from \p mem into \p dest.
+///
+/// x86-64: see emit_load_cp() for the operand-size handling. The narrow load
+/// writes the 32-bit destination, which zeroes the upper half of \p dest --
+/// exactly what the decoder below expects to see.
+inline void
+emit_load_shv(x86::Assembler &a, const x86::Gp &dest, const x86::Mem &mem) {
+  x86::Mem m = mem;
+  if constexpr (sizeof(SmallHermesValue) == 4) {
+    m.setSize(4);
+    a.mov(dest.r32(), m);
+  } else {
+    m.setSize(8);
+    a.mov(dest, m);
+  }
+}
+
 /// Store a SmallHermesValue held in \p val to \p mem.
 ///
 /// x86-64: see emit_load_cp() for the operand-size handling. arm64's version
@@ -361,6 +404,123 @@ emit_store_shv(x86::Assembler &a, const x86::Gp &val, const x86::Mem &mem) {
     m.setSize(8);
     a.mov(m, val);
   }
+}
+
+/// Load the slot16 from a read property cache entry.
+/// \param resReg The register to load the slot16 into. It is written as a
+///   32-bit register, so its upper half ends up zero and it is usable as a
+///   scaled index.
+/// \param propCacheReg The register containing the pointer to the start of
+///   the read property cache.
+/// \param cacheIdx The index of the cache entry to load.
+///
+/// x86-64: arm64 routes this through emit_load_from_base_offset and therefore
+/// needs \p resReg to differ from \p propCacheReg, since that helper may use
+/// the destination as a scratch. Here it is a single movzx off a signed
+/// 32-bit displacement, so the two registers may alias; the callers keep them
+/// distinct anyway, matching arm64.
+inline void emit_load_slot16(
+    x86::Assembler &a,
+    const x86::Gp &resReg,
+    const x86::Gp &propCacheReg,
+    uint8_t cacheIdx) {
+  size_t ofs = sizeof(SHReadPropertyCacheEntry) * cacheIdx +
+      offsetof(SHReadPropertyCacheEntry, _slot16);
+  assert(ofs <= (size_t)INT32_MAX && "cache entry offset must fit a disp32");
+  a.movzx(resReg.r32(), x86::word_ptr(propCacheReg, (int32_t)ofs));
+}
+
+/// A class implementing SmallHermesValue to HermesValue decoding.
+/// Given a SmallHermesValue in \p inOut, decompress it and place the result in
+/// \p inOut. Jump to \p doneLab if decoding is done early (but not in the
+/// fall-through case).
+///
+/// To facilitate sharing the decoding without an extra branch, the code is
+/// split into two parts: the first case and the rest of the cases. The first
+/// case checks its condition: if it doesn't match, it jumps to the rest of the
+/// cases. If it matches, it performs the decode and falls through.
+/// The intent is that the "rest cases" will be shared, while the first case
+/// may be emitted multiple times to save a branch.
+///
+/// x86-64: in the boxed-doubles configuration the emitted code clobbers
+/// xScratch, where arm64 needs no scratch at all (it composes the HermesValue
+/// tag with movk/bfi, which x86 has no equivalent of). Callers must therefore
+/// not hold a live value in xScratch across emitFirstCase()/emitRestCases().
+/// That is the same rule every other transient user of xScratch follows, and
+/// both call sites in this backend -- the GetById inline cache and
+/// getOwnBySlotIdx -- are straight-line code with no call in sight.
+/// In the default HV64 build nothing at all is emitted and the class is empty.
+class Emit_sh_shv_decode {
+#ifdef HERMESVM_BOXED_DOUBLES
+  const x86::Gp inOut;
+  asmjit::Label ptrLab;
+  const asmjit::Label &doneLab;
+#endif
+#ifndef NDEBUG
+  bool restEmitted = false;
+#endif
+
+ public:
+  explicit Emit_sh_shv_decode(
+      [[maybe_unused]] x86::Assembler &a,
+      [[maybe_unused]] const x86::Gp &inOut,
+      [[maybe_unused]] const asmjit::Label &doneLab)
+#ifdef HERMESVM_BOXED_DOUBLES
+      : inOut(inOut), doneLab(doneLab) {
+    ptrLab = a.newLabel();
+  }
+#else
+  {
+  }
+#endif
+
+  /// Emit the code checking and decoding the first case of SHV values. Can be
+  /// invoked multiple times. Emitted code looks like:
+  /// \code
+  ///    check
+  ///    jcc ptrLab
+  ///    decode
+  /// \endcode
+  ///
+  /// Note that it simply falls through on success.
+  void emitFirstCase(x86::Assembler &a);
+
+  /// Emit the code checking and decoding all other cases of SHV values. Can
+  /// only be invoked once. Emitted code at high level looks like:
+  /// \code
+  ///    ptrLab:
+  ///      check_ptr
+  ///      jcc otherLab
+  ///      decode
+  ///      jmp doneLab
+  ///    otherLab:
+  ///      decode
+  /// \endcode
+  ///
+  /// Note that the last case does not branch to doneLab, so the caller must
+  /// do it (or fall through to doneLab).
+  void emitRestCases(x86::Assembler &a);
+
+  /// Emit the first case, followed by a branch to doneLab, and the rest of the
+  /// cases.
+  void emitAll(x86::Assembler &a) {
+    emitFirstCase(a);
+#ifdef HERMESVM_BOXED_DOUBLES
+    // emitFirstCase() falls through, so add an explicit branch to doneLab.
+    a.jmp(doneLab);
+#endif
+    emitRestCases(a);
+  }
+};
+
+/// Given a SmallHermesValue in \p inOut, decompress it into a HermesValue and
+/// place the result in \p inOut. Jump to \p doneLab if decoding is done early
+/// (but not in the fall-through case).
+inline void emit_sh_shv_decode(
+    x86::Assembler &a,
+    const x86::Gp &inOut,
+    const asmjit::Label &doneLab) {
+  Emit_sh_shv_decode(a, inOut, doneLab).emitAll(a);
 }
 
 /// For a register containing a pointer to a GCCell, retrieve its CellKind (a

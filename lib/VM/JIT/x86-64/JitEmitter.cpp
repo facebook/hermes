@@ -908,6 +908,25 @@ void Emitter::loadParam(FR frRes, uint32_t paramIndex) {
       });
 }
 
+void Emitter::getGlobalObject(FR frRes) {
+  comment("// GetGlobalObject r%u", frRes.index());
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false);
+  movHWFromMem(hwRes, x86::ptr(xRuntime, RuntimeOffsets::globalObject));
+  frUpdatedWithHW(frRes, hwRes);
+}
+
+void Emitter::declareGlobalVar(SHSymbolID symID) {
+  comment("// DeclareGlobalVar %u", symID);
+
+  syncAllFRTempExcept({});
+  freeAllFRTempExcept({});
+
+  a.mov(x86::rdi, xRuntime);
+  a.mov(x86::esi, asmjit::Imm(symID));
+  EMIT_RUNTIME_CALL(
+      *this, void (*)(SHRuntime *, SHSymbolID), _sh_ljs_declare_global_var);
+}
+
 asmjit::Label Emitter::newPrefLabel(const char *pref, size_t index) {
   char buf[16];
   snprintf(buf, sizeof(buf), "%s%lu", pref, index);
