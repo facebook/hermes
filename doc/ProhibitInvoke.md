@@ -137,7 +137,7 @@ Emitted **inline at the compiled function's own prologue**
 `getHeaderFlags().getProhibitInvoke()`, loads `new.target`, compares to
 undefined, and branches to an out-of-line slow path that calls the shared
 helpers `_sh_throw_invalid_call` / `_sh_throw_invalid_construct`
-(`lib/VM/JIT/arm64/JitHandlers.cpp`) — same two error messages. Complete and
+(`lib/VM/JIT/JitHandlers.cpp`) — same two error messages. Complete and
 caller-agnostic. (arm64 is the only JIT backend present.)
 
 #### SH native backend (`NativeJSFunction` callees) — flag enforcement gap
@@ -312,7 +312,7 @@ callee's `CellKind`, both hold uniformly regardless of the caller:
   - Predicate: `include/hermes/BCGen/HBC/BytecodeFileFormat.h` (`isCallProhibited`)
   - Set: `lib/BCGen/HBC/BytecodeGenerator.cpp` (bytecode), `lib/BCGen/SH/SH.cpp` (SH)
   - Interpreter enforcement: `lib/VM/Interpreter.cpp`
-  - JIT enforcement: `lib/VM/JIT/arm64/JitEmitter.cpp`, `lib/VM/JIT/arm64/JitHandlers.cpp`
+  - JIT enforcement: `lib/VM/JIT/arm64/JitEmitter.cpp`, `lib/VM/JIT/JitHandlers.cpp`
   - SH flag gap: `lib/BCGen/SH/SH.cpp`, `lib/VM/StaticH.cpp` (`TODO(T168592126)`)
 
 Constructor rule (`CellKind`-based, caller-side):

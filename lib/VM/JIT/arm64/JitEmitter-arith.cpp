@@ -7,9 +7,9 @@
 
 #include "hermes/VM/JIT/Config.h"
 #if HERMESVM_JIT
+#include "../JitHandlers.h"
 #include "JitEmitter-internal.h"
 #include "JitEmitter.h"
-#include "JitHandlers.h"
 
 #include "../RuntimeOffsets.h"
 

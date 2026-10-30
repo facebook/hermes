@@ -9,7 +9,7 @@
 
 #include "asmjit/a64.h"
 
-#include "JitHandlers.h"
+#include "../JitHandlers.h"
 
 #include "hermes/ADT/DenseUInt64.h"
 #include "hermes/ADT/SimpleLRU.h"

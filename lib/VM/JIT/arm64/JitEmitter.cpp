@@ -11,7 +11,7 @@
 #include "JitEmitter.h"
 #include "JitImpl.h"
 
-#include "JitHandlers.h"
+#include "../JitHandlers.h"
 
 #include "../RuntimeOffsets.h"
 #include "hermes/Support/ErrorHandling.h"
