@@ -37,6 +37,7 @@ set(source_files
   JSObject.cpp
   JSProxy.cpp
   JSRegExp.cpp
+  RegExpBytecode.cpp
   JSRegExpStringIterator.cpp
   JSMapImpl.cpp
   JSNativeFunctions.cpp

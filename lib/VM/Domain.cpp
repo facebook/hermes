@@ -63,7 +63,8 @@ size_t Domain::_mallocSizeImpl(GCCell *cell) {
   auto *self = vmcast<Domain>(cell);
   size_t rmSize = 0;
   for (auto *rm : self->runtimeModules_)
-    rmSize += sizeof(RuntimeModule) + rm->additionalMemorySize();
+    rmSize += sizeof(RuntimeModule) + rm->additionalMemorySize() +
+        rm->regExpCacheMemorySize();
 
   return self->cjsRuntimeModules_.capacity_in_bytes() +
       self->cjsModuleTable_.getMemorySize() +

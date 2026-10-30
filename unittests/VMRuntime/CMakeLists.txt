@@ -56,6 +56,7 @@ set(RTSources
   PropertyCacheTest.cpp
   ProfileGeneratorTest.cpp
   HandleTest.cpp
+  RegExpBytecodeTest.cpp
   RuntimeConfigTest.cpp
   SamplingHeapProfilerTest.cpp
   SamplingProfilerTest.cpp

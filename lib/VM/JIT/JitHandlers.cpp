@@ -230,8 +230,8 @@ SHLegacyValue _interpreter_create_array_from_buffer(
   return res->getHermesValue();
 }
 
-/// Alternative to _sh_ljs_create_regexp that allows using the precompiled
-/// regexp bytecode.
+/// Counterpart of _sh_ljs_create_regexp that takes the precompiled regexp
+/// bytecode from the RuntimeModule cache of \p codeBlock.
 SHLegacyValue _interpreter_create_regexp(
     SHRuntime *shr,
     SHCodeBlock *codeBlock,

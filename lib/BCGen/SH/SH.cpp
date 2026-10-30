@@ -25,6 +25,7 @@
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRVerifier.h"
 #include "hermes/IR/Instrs.h"
+#include "hermes/Regex/RegexSerialization.h"
 #include "hermes/Support/BigIntSupport.h"
 #include "hermes/Support/DenseMapInfoSpecializations.h"
 #include "hermes/Support/HashString.h"
@@ -174,6 +175,33 @@ class SHStringTable {
   }
 };
 
+/// Emit \p buf as a C array of unsigned char named \p name.
+static void generateBuffer(
+    llvh::raw_ostream &os,
+    llvh::StringRef name,
+    llvh::ArrayRef<unsigned char> buf) {
+  os << "static unsigned char " << name << "[" << buf.size() << "] = {";
+  for (unsigned char c : buf) {
+    os << (int)c << ",";
+  }
+  os << "};\n";
+}
+
+/// Emit the regexp bytecode storage and the table that locates each
+/// regexp in it.
+static void generateRegExpTable(
+    llvh::raw_ostream &os,
+    const UniquingRegExpTable &table) {
+  generateBuffer(os, "s_regexp_storage", table.getBytecodeBuffer());
+  os << "static const SHRegExpTableEntry s_regexp_table[] = {\n";
+  for (const RegExpTableEntry &entry : table.getEntryList()) {
+    os.indent(2);
+    os << "{ .offset = " << entry.offset << ", .length = " << entry.length
+       << " },\n";
+  }
+  os << "};\n";
+}
+
 class SHLiteralBuffers {
  public:
   /// Table of constants used to initialize constant arrays/object values.
@@ -228,18 +256,6 @@ class SHLiteralBuffers {
       os.indent(2);
       os << "{ .key_buffer_offset = " << entry.keyBufferOffset
          << ", .num_props = " << entry.numProps << " },\n";
-    }
-    os << "};\n";
-  }
-
- private:
-  void generateBuffer(
-      llvh::raw_ostream &os,
-      llvh::StringRef name,
-      llvh::ArrayRef<unsigned char> buf) const {
-    os << "static unsigned char " << name << "[" << buf.size() << "] = {";
-    for (unsigned char c : buf) {
-      os << (int)c << ",";
     }
     os << "};\n";
   }
@@ -439,6 +455,9 @@ struct ModuleGen {
 
   /// Table of JS native functions
   SHNativeJSFunctionTable nativeFunctionTable;
+
+  /// Uniqued table of the module's regexp literals and their bytecode.
+  UniquingRegExpTable regExpTable{};
 
   explicit ModuleGen(Module *M, bool optimizationEnabled)
       : literalBuffers{M, stringTable, optimizationEnabled},
@@ -1790,26 +1809,19 @@ class InstrGen {
     uint32_t flagsStrID =
         moduleGen_.stringTable.add(inst.getFlags()->getValue().str());
 
-    // Compile the regexp. We expect this to succeed because the AST went
-    // through the SemanticValidator. This is a bit of a hack: what we would
-    // really like to do is have the Parser emit a CompiledRegExp that can be
-    // threaded through the AST and then through the IR to this instruction
-    // selection, but that is too awkward, so we compile again here.
-    // uint32_t reBytecodeID = UINT32_MAX;
-    // if (auto regexp = CompiledRegExp::tryCompile(
-    //         inst.getPattern()->getValue().str(),
-    //         inst.getFlags()->getValue().str())) {
-    //   reBytecodeID = moduleGen_.regexpTable.addRegExp(std::move(*regexp));
-    // }
+    // Semantic resolution compiled every regexp literal into the Context.
+    CompiledRegExp &regexp = F_.getContext().getCompiledRegExp(
+        inst.getPattern()->getValue().getUnderlyingPointer(),
+        inst.getFlags()->getValue().getUnderlyingPointer());
+    uint32_t regExpID = moduleGen_.regExpTable.addRegExp(&regexp);
 
-    // TODO(T132343328): Compile the regexp bytecode ahead of time.
     generateValue(inst);
     os_ << " = ";
-    os_ << "_sh_ljs_create_regexp(shr, ";
+    os_ << "_sh_ljs_create_regexp(shr, shUnit, ";
     os_ << llvh::format("get_symbols(shUnit)[%u]", patternStrID);
     os_ << ", ";
     os_ << llvh::format("get_symbols(shUnit)[%u]", flagsStrID);
-    os_ << ");\n";
+    os_ << ", " << regExpID << ");\n";
   }
   void generateTryEndInst(TryEndInst &inst) {
     // Restore the tryState to the state of the Try enclosing the catch.
@@ -3184,6 +3196,7 @@ static SHNativeFuncInfo s_function_info_table[];
 
   if (options.format == DumpBytecode || options.format == EmitBundle) {
     moduleGen.literalBuffers.generate(OS);
+    generateRegExpTable(OS, moduleGen.regExpTable);
     moduleGen.srcLocationTable.generate(
         OS, M->getContext().getSourceErrorManager());
     moduleGen.nativeFunctionTable.generate(OS);
@@ -3225,6 +3238,10 @@ static SHNativeFuncInfo s_function_info_table[];
        << ".obj_shape_table_count = "
        << moduleGen.literalBuffers.objShapeTable.size() << ", "
        << ".object_literal_class_cache = unit_data->object_literal_class_cache, "
+       << ".regexp_storage = s_regexp_storage, "
+       << ".regexp_table = s_regexp_table, "
+       << ".num_regexps = " << moduleGen.regExpTable.getEntryList().size()
+       << ", "
        << ".source_locations = s_source_locations, "
        << ".source_locations_size = " << moduleGen.srcLocationTable.size()
        << ", " << ".unit_main = _0_global, "

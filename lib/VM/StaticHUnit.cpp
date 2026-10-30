@@ -114,7 +114,7 @@ extern "C" SHLegacyValue _sh_unit_init(
   // populating it.
   std::fill_n(unit->symbols, unit->num_symbols, SymbolID::EMPTY_ID);
 
-  unit->runtime_ext = new SHUnitExt{};
+  unit->runtime_ext = new SHUnitExt{unit->num_regexps};
 
   // Register the unit with the runtime before it is initialized, because the
   // GC could run in the middle of initialization and the already defined
@@ -204,9 +204,28 @@ void hermes::vm::sh_unit_done(Runtime &runtime, SHUnit *unit) {
 }
 
 size_t hermes::vm::sh_unit_additional_memory_size(const SHUnit *unit) {
-  return sizeof(unit->runtime_ext) +
-      unit->runtime_ext->templateMap.getMemorySize() +
-      unit->runtime_ext->addCacheEntries.capacity_in_bytes();
+  const SHUnitExt *ext = unit->runtime_ext;
+  size_t regExpSize = ext->regExpCache.capacity() * sizeof(ext->regExpCache[0]);
+  for (const auto &entry : ext->regExpCache) {
+    if (entry)
+      regExpSize += entry->mallocSize();
+  }
+  return sizeof(unit->runtime_ext) + ext->templateMap.getMemorySize() +
+      ext->addCacheEntries.capacity_in_bytes() + regExpSize;
+}
+
+llvh::IntrusiveRefCntPtr<RegExpBytecode>
+hermes::vm::sh_unit_get_regexp_bytecode(SHUnit *unit, uint32_t regExpID) {
+  auto &cache = unit->runtime_ext->regExpCache;
+  assert(regExpID < cache.size() && "Invalid regexp id");
+  llvh::IntrusiveRefCntPtr<RegExpBytecode> &entry = cache[regExpID];
+  if (LLVM_UNLIKELY(!entry)) {
+    const SHRegExpTableEntry &te = unit->regexp_table[regExpID];
+    entry = RegExpBytecode::create(
+        {unit->regexp_storage + te.offset, te.length},
+        RegExpBytecode::Ownership::Cached);
+  }
+  return entry;
 }
 
 void hermes::vm::sh_unit_mark_roots(

@@ -11,6 +11,7 @@
 #include "hermes/Regex/Regex.h"
 #include "hermes/Regex/RegexTypes.h"
 #include "hermes/VM/JSObject.h"
+#include "hermes/VM/RegExpBytecode.h"
 #include "hermes/VM/RegExpMatch.h"
 #include "hermes/VM/SmallXString.h"
 
@@ -50,12 +51,14 @@ class JSRegExp final : public JSObject {
   /// Initializes RegExp with existing bytecode. Populates fields for the
   /// pattern and flags, but performs no validation on them. It is assumed that
   /// the bytecode is correct and corresponds to the given pattern/flags.
+  /// \p bytecode is shared, not copied. The regexp must not have been
+  /// initialized before.
   static void initialize(
       Handle<JSRegExp> selfHandle,
       Runtime &runtime,
       Handle<StringPrimitive> pattern,
       Handle<StringPrimitive> flags,
-      llvh::ArrayRef<uint8_t> bytecode);
+      llvh::IntrusiveRefCntPtr<RegExpBytecode> bytecode);
 
   /// Initialize a RegExp based on another RegExp \p otherHandle. If \p flags
   /// matches the internal flags of the other RegExp, this lets us avoid
@@ -100,6 +103,17 @@ class JSRegExp final : public JSObject {
     self->syntaxFlags_ = flags;
   }
 
+  /// \return the bytecode. The regexp must have been initialized.
+  llvh::ArrayRef<uint8_t> getBytecode() const {
+    return bytecode_->bytecode();
+  }
+
+  /// \return the object holding the bytecode, or null before
+  /// initialization.
+  const RegExpBytecode *getBytecodeEntry() const {
+    return bytecode_.get();
+  }
+
   Handle<JSObject> getGroupNameMappings(Runtime &runtime);
 
   void setGroupNameMappings(Runtime &runtime, JSObject *groupObj);
@@ -133,8 +147,12 @@ class JSRegExp final : public JSObject {
  private:
   ~JSRegExp();
 
-  /// Store a copy of the \p bytecode array.
-  void initializeBytecode(llvh::ArrayRef<uint8_t> bytecode);
+  /// Take the reference \p bytecode and set syntaxFlags_ from its header.
+  void setBytecode(llvh::IntrusiveRefCntPtr<RegExpBytecode> bytecode);
+
+  /// \return the bytecode object if this regexp owns it exclusively and so
+  /// reports its memory, otherwise null.
+  const RegExpBytecode *exclusiveBytecode() const;
 
   static ExecutionStatus initializeGroupNameMappingObj(
       Runtime &runtime,
@@ -148,8 +166,9 @@ class JSRegExp final : public JSObject {
   /// that the native pointer is always 8 byte aligned without extra padding.
   GCPointer<StringPrimitive> pattern_;
 
-  uint8_t *bytecode_{};
-  uint32_t bytecodeSize_{0};
+  /// The bytecode, owned exclusively or shared with a literal cache. One
+  /// pointer, so the GC may relocate the cell by copying it.
+  llvh::IntrusiveRefCntPtr<RegExpBytecode> bytecode_{};
 
   regex::SyntaxFlags syntaxFlags_ = {};
 

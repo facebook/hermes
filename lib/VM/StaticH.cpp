@@ -1798,27 +1798,33 @@ extern "C" SHLegacyValue _sh_ljs_create_private_name(
 }
 
 LLVM_ATTRIBUTE_NOINLINE
-extern "C" SHLegacyValue
-_sh_ljs_create_regexp(SHRuntime *shr, SHSymbolID pattern, SHSymbolID flags) {
+extern "C" SHLegacyValue _sh_ljs_create_regexp(
+    SHRuntime *shr,
+    SHUnit *unit,
+    SHSymbolID pattern,
+    SHSymbolID flags,
+    uint32_t regexp_id) {
   Runtime &runtime = getRuntime(shr);
-  CallResult<HermesValue> cr =
-      [&runtime, pattern, flags]() -> CallResult<HermesValue> {
-    GCScopeMarkerRAII marker{runtime};
-    Handle<JSRegExp> re = runtime.makeHandle(JSRegExp::create(runtime));
-    auto patternHandle = runtime.makeHandle(
-        runtime.getStringPrimFromSymbolID(SymbolID::unsafeCreate(pattern)));
-    auto flagsHandle = runtime.makeHandle(
-        runtime.getStringPrimFromSymbolID(SymbolID::unsafeCreate(flags)));
-    if (LLVM_UNLIKELY(
-            JSRegExp::initialize(re, runtime, patternHandle, flagsHandle) ==
-            ExecutionStatus::EXCEPTION))
-      return ExecutionStatus::EXCEPTION;
-    return re.getHermesValue();
-  }();
-  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
-    _sh_throw_current(shr);
+  GCScopeMarkerRAII marker{runtime};
+  struct : public Locals {
+    PinnedValue<JSRegExp> re;
+    PinnedValue<StringPrimitive> pattern;
+    PinnedValue<StringPrimitive> flags;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
 
-  return *cr;
+  lv.re = JSRegExp::create(runtime);
+  lv.pattern =
+      runtime.getStringPrimFromSymbolID(SymbolID::unsafeCreate(pattern));
+  lv.flags = runtime.getStringPrimFromSymbolID(SymbolID::unsafeCreate(flags));
+  // The bytecode was compiled ahead of time; nothing is parsed here.
+  JSRegExp::initialize(
+      lv.re,
+      runtime,
+      lv.pattern,
+      lv.flags,
+      sh_unit_get_regexp_bytecode(unit, regexp_id));
+  return lv.re.getHermesValue();
 }
 
 LLVM_ATTRIBUTE_NOINLINE

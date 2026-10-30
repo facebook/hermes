@@ -9,11 +9,13 @@
 
 #include "hermes/ADT/TransparentConservativeVector.h"
 #include "hermes/VM/PropertyCache.h"
+#include "hermes/VM/RegExpBytecode.h"
 #include "hermes/VM/static_h.h"
 
 #include "llvh/ADT/DenseMap.h"
 
 #include <cstdint>
+#include <vector>
 
 /// Data associated with SHUnit, but fully managed by the runtime.
 struct SHUnitExt {
@@ -26,7 +28,12 @@ struct SHUnitExt {
   hermes::TransparentConservativeVector<hermes::vm::AddPropertyCacheEntry>
       addCacheEntries{};
 
-  explicit SHUnitExt() {
+  /// The shared bytecode of each regexp literal, indexed like
+  /// SHUnit::regexp_table and created on first use. Mutator thread only.
+  std::vector<llvh::IntrusiveRefCntPtr<hermes::vm::RegExpBytecode>> regExpCache;
+
+  /// Create the data for a unit with \p numRegExps regexp literals.
+  explicit SHUnitExt(uint32_t numRegExps) : regExpCache(numRegExps) {
     // Reserve entry 0.
     addCacheEntries.emplace_back();
   }
@@ -53,5 +60,12 @@ inline AddPropertyCacheEntry &sh_unit_get_add_cache_entry(
     uint32_t index) {
   return unit->runtime_ext->addCacheEntries[index];
 }
+
+/// \return the shared bytecode of regexp literal \p regExpID of \p unit,
+/// creating it from the unit's precompiled bytecode on first use. Mutator
+/// thread only.
+llvh::IntrusiveRefCntPtr<RegExpBytecode> sh_unit_get_regexp_bytecode(
+    SHUnit *unit,
+    uint32_t regExpID);
 
 } // namespace hermes::vm

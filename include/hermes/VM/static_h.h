@@ -37,6 +37,14 @@ typedef struct SHShapeTableEntry {
   uint32_t num_props;
 } SHShapeTableEntry;
 
+/// Locates the bytecode of one regexp literal in SHUnit::regexp_storage.
+typedef struct SHRegExpTableEntry {
+  /// Offset of the bytecode in regexp_storage, in bytes.
+  uint32_t offset;
+  /// Length of the bytecode, in bytes.
+  uint32_t length;
+} SHRegExpTableEntry;
+
 /// This represents a source JS location. This is only valid in a particular
 /// SHUnit, since the filename is stored as an index into the SHUnit's global
 /// string table.
@@ -140,6 +148,15 @@ typedef struct SHUnit {
   /// NOTE: These should always be treated as WeakRoots, which means a read
   /// barrier is needed to safely read out the value.
   SHCompressedPointer *object_literal_class_cache;
+
+  /// Concatenated bytecode of the unit's regexp literals, compiled ahead of
+  /// time.
+  const unsigned char *regexp_storage;
+  /// One entry per regexp literal, indexed by the id passed to
+  /// _sh_ljs_create_regexp.
+  const SHRegExpTableEntry *regexp_table;
+  /// Number of entries in regexp_table.
+  uint32_t num_regexps;
 
   /// The module exports cache: a map from non-negative integer module indexes
   /// to the export of the module.  An empty value indicates that the module has
@@ -888,8 +905,15 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_del_by_val_loose(
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_get_string(SHRuntime *shr, SHSymbolID symID);
 
-SHERMES_EXPORT SHLegacyValue
-_sh_ljs_create_regexp(SHRuntime *shr, SHSymbolID pattern, SHSymbolID flags);
+/// Create a regexp from literal \p regexp_id of \p unit, whose pattern and
+/// flags are the symbols \p pattern and \p flags. The bytecode was compiled
+/// ahead of time and is shared by every evaluation of the literal.
+SHERMES_EXPORT SHLegacyValue _sh_ljs_create_regexp(
+    SHRuntime *shr,
+    SHUnit *unit,
+    SHSymbolID pattern,
+    SHSymbolID flags,
+    uint32_t regexp_id);
 
 /// \param value the string of the BigInt.
 /// \param size  the size of the string \c value.

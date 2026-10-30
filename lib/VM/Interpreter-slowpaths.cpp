@@ -614,8 +614,12 @@ PseudoHandle<JSRegExp> Interpreter::createRegExp(
   RuntimeModule *runtimeModule = curCodeBlock->getRuntimeModule();
   lv.pattern = runtime.getStringPrimFromSymbolID(patternID);
   lv.flags = runtime.getStringPrimFromSymbolID(flagsID);
-  auto bytecode = runtimeModule->getRegExpBytecodeFromRegExpID(regexpID);
-  JSRegExp::initialize(lv.re, runtime, lv.pattern, lv.flags, bytecode);
+  JSRegExp::initialize(
+      lv.re,
+      runtime,
+      lv.pattern,
+      lv.flags,
+      runtimeModule->getRegExpBytecode(regexpID));
 
   return createPseudoHandle(*lv.re);
 }
